@@ -1,0 +1,64 @@
+name: spdrivercalendar
+description: Calendar application for spare drivers.
+
+publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.0.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.2
+  table_calendar: ^3.0.9
+  intl: ^0.18.1
+  shared_preferences: ^2.2.2
+  collection: ^1.17.1
+  csv: ^5.1.1
+  
+  # Google Calendar integration
+  google_sign_in: ^6.1.4
+  googleapis: ^11.4.0
+  googleapis_auth: ^1.4.1
+  extension_google_sign_in_as_googleapis_auth: ^2.0.9
+  
+  # Utils
+  uuid: ^3.0.7
+  http: ^1.1.0
+  url_launcher: ^6.1.14
+  package_info_plus: ^4.1.0  # Added this for version info
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^2.0.0
+  flutter_launcher_icons: ^0.13.1 # Moved here
+
+flutter:
+  uses-material-design: true
+  
+  assets:
+    - assets/
+    - assets/bank_holidays.json
+    - assets/M-F_DUTIES_PZ1.csv
+    - assets/M-F_DUTIES_PZ3.csv
+    - assets/M-F_DUTIES_PZ4.csv
+    - assets/SAT_DUTIES_PZ1.csv
+    - assets/SAT_DUTIES_PZ3.csv
+    - assets/SAT_DUTIES_PZ4.csv
+    - assets/SUN_DUTIES_PZ1.csv
+    - assets/SUN_DUTIES_PZ3.csv
+    - assets/SUN_DUTIES_PZ4.csv
+    - assets/UNI_7DAYs.csv
+    - assets/UNI_M-F.csv
+    - assets/Zone3BoardsMF.csv
+    - assets/Zone3BoardsSat.csv
+    - assets/Zone3BoardsSun.csv
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/app_icon.png"
+  min_sdk_android: 21
