@@ -7,6 +7,7 @@ import 'package:spdrivercalendar/google_calendar_service.dart';
 import 'package:spdrivercalendar/models/event.dart'; // Import existing Event class
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:spdrivercalendar/features/calendar/services/shift_service.dart';
 
 // Removed duplicate Event class since we're now importing it from models/event.dart
 
@@ -124,6 +125,7 @@ class CalendarTestHelper {
     required String title,
     required DateTime startTime,
     required DateTime endTime,
+    String? description,  // Added description parameter
   }) async {
     try {
       // Store context.mounted in a local variable to safely check throughout the method
@@ -157,6 +159,7 @@ class CalendarTestHelper {
       // Create a new event
       final event = cal.Event();
       event.summary = title;
+      event.description = description;  // Set the description if provided
       
       // Set start time
       final startEventDateTime = cal.EventDateTime();
@@ -427,6 +430,7 @@ class CalendarTestHelper {
   static Future<Map<String, int>> syncMissingEventsToGoogleCalendar(BuildContext context) async {
     try {
       int syncedCount = 0;
+      int updatedCount = 0;
       
       // If we haven't run a check yet, do it now
       if (_unmatchedEvents.isEmpty) {
@@ -480,8 +484,14 @@ class CalendarTestHelper {
             event.endTime.minute,
           );
 
+          // Get workout information
+          final breakTime = await ShiftService.getBreakTime(event);
+          final isWorkout = breakTime?.toLowerCase().contains('workout') ?? false;
+          final description = isWorkout ? 'Workout' : null;
+
           // Check if event already exists
           bool eventExists = false;
+          String? existingEventId;
           for (final existingEvent in existingEvents.items ?? []) {
             if (existingEvent.summary == event.title) {
               // If event has same title, check if it's on the same day and approximately same time
@@ -491,6 +501,27 @@ class CalendarTestHelper {
                 if (timeDifference <= 1) {  // Allow 1 minute difference for rounding
                   print('Event already exists: ${event.title}');
                   eventExists = true;
+                  existingEventId = existingEvent.id;
+                  
+                  // If it's a workout and the existing event doesn't have workout info, update it
+                  if (isWorkout && (existingEvent.description == null || !existingEvent.description!.toLowerCase().contains('workout'))) {
+                    print('Updating existing event with workout information: ${event.title}');
+                    final success = await updateEventInCalendar(
+                      context: context,
+                      eventId: existingEventId!,
+                      title: event.title,
+                      startTime: startDateTime,
+                      endTime: endDateTime,
+                      description: description,
+                    );
+                    
+                    if (success) {
+                      print('Successfully updated event with workout info: ${event.title}');
+                      updatedCount++;
+                    } else {
+                      print('Failed to update event with workout info: ${event.title}');
+                    }
+                  }
                   break;
                 }
               }
@@ -505,6 +536,7 @@ class CalendarTestHelper {
               title: event.title,
               startTime: startDateTime,
               endTime: endDateTime,
+              description: description,
             );
             
             if (success) {
@@ -523,11 +555,12 @@ class CalendarTestHelper {
       // Clear the unmatched events list
       _unmatchedEvents = [];
       
-      print('Sync complete. Synced $syncedCount out of $totalToSync events');
+      print('Sync complete. Synced $syncedCount new events and updated $updatedCount existing events');
       
       return {
         'totalToSync': totalToSync,
         'syncedCount': syncedCount,
+        'updatedCount': updatedCount,
       };
     } catch (e) {
       print('Error syncing events to Google Calendar: $e');
@@ -583,5 +616,80 @@ class CalendarTestHelper {
     );
 
     return events.items ?? [];
+  }
+
+  /// Updates an existing event in Google Calendar
+  static Future<bool> updateEventInCalendar({
+    required BuildContext context,
+    required String eventId,
+    required String title,
+    required DateTime startTime,
+    required DateTime endTime,
+    String? description,
+  }) async {
+    try {
+      final bool isContextMounted = context.mounted;
+      
+      print('Updating event in calendar...');
+      
+      // Get Google Sign-In status
+      final isSignedIn = await GoogleCalendarService.isSignedIn();
+      if (!isSignedIn) {
+        if (isContextMounted) {
+          _showSnackBar(context, 'Please sign in to Google Calendar first');
+        }
+        return false;
+      }
+      
+      // Get the HTTP client
+      final httpClient = await GoogleCalendarService.getAuthenticatedClient();
+      if (httpClient == null) {
+        if (isContextMounted) {
+          _showSnackBar(context, 'Failed to authenticate with Google');
+        }
+        return false;
+      }
+      
+      // Create Calendar API client
+      final calendarApi = cal.CalendarApi(httpClient);
+      
+      // Get the existing event
+      final existingEvent = await calendarApi.events.get('primary', eventId);
+      
+      // Update the event
+      existingEvent.summary = title;
+      if (description != null) {
+        existingEvent.description = description;
+      }
+      
+      // Update start time
+      final startEventDateTime = cal.EventDateTime();
+      startEventDateTime.dateTime = startTime;
+      startEventDateTime.timeZone = 'Europe/Dublin';
+      existingEvent.start = startEventDateTime;
+      
+      // Update end time
+      final endEventDateTime = cal.EventDateTime();
+      endEventDateTime.dateTime = endTime;
+      endEventDateTime.timeZone = 'Europe/Dublin';
+      existingEvent.end = endEventDateTime;
+      
+      // Update the event
+      await calendarApi.events.update(existingEvent, 'primary', eventId);
+      
+      print('Event updated successfully: $title');
+      
+      if (isContextMounted) {
+        _showSnackBar(
+          context, 
+          'Event updated in your Google Calendar',
+        );
+      }
+      
+      return true;
+    } catch (e) {
+      print('Error updating event in calendar: $e');
+      return false;
+    }
   }
 }

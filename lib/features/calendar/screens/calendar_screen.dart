@@ -696,6 +696,20 @@ class CalendarScreenState extends State<CalendarScreen>
           event.endTime.hour,
           event.endTime.minute,
         );
+
+        // Get break information
+        final breakTime = await ShiftService.getBreakTime(event);
+        final breakStartTime = event.breakStartTime;
+        final breakEndTime = event.breakEndTime;
+        
+        // Build description with all break information
+        String? description;
+        if (breakTime != null) {
+          description = 'Break: $breakTime';
+          if (breakStartTime != null && breakEndTime != null) {
+            description += '\nBreak Time: ${breakStartTime.format(context)} - ${breakEndTime.format(context)}';
+          }
+        }
         
         // Add to Google Calendar
         final success = await CalendarTestHelper.addWorkShiftToCalendar(
@@ -703,6 +717,7 @@ class CalendarScreenState extends State<CalendarScreen>
           title: event.title,
           startTime: startDateTime,
           endTime: endDateTime,
+          description: description,
         );
         
         if (success && mounted) {
@@ -822,6 +837,33 @@ class CalendarScreenState extends State<CalendarScreen>
                       
                       // Delete the event from local storage
                       await EventService.deleteEvent(event);
+                      
+                      // Check if Google Calendar sync is enabled and delete from Google Calendar
+                      final syncEnabled = await StorageService.getBool(AppConstants.syncToGoogleCalendarKey, defaultValue: false);
+                      final isSignedIn = await GoogleCalendarService.isSignedIn();
+                      
+                      if (syncEnabled && isSignedIn) {
+                        try {
+                          // Create a full DateTime for the event's start time
+                          final startDateTime = DateTime(
+                            event.startDate.year,
+                            event.startDate.month,
+                            event.startDate.day,
+                            event.startTime.hour,
+                            event.startTime.minute,
+                          );
+                          
+                          // Delete from Google Calendar
+                          await CalendarTestHelper.deleteEventFromCalendar(
+                            context: context,
+                            title: event.title,
+                            eventStartTime: startDateTime,
+                          );
+                        } catch (e) {
+                          print('Error deleting from Google Calendar: $e');
+                          // Don't show error - the local event was deleted successfully
+                        }
+                      }
                       
                       // Update the UI state immediately after local deletion
                       setState(() {});
