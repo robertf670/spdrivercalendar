@@ -399,8 +399,20 @@ class _SettingsScreenState extends State<SettingsScreen> with TextRenderingMixin
       
       // Show the result
       if (context.mounted) {
+        final syncedCount = result['syncedCount'] ?? 0;
+        final updatedCount = result['updatedCount'] ?? 0;
+        String message;
+        if (syncedCount > 0 && updatedCount > 0) {
+          message = 'Synced $syncedCount new events and updated $updatedCount existing events in Google Calendar';
+        } else if (syncedCount > 0) {
+          message = 'Synced $syncedCount new events to Google Calendar';
+        } else if (updatedCount > 0) {
+          message = 'Updated $updatedCount existing events in Google Calendar';
+        } else {
+          message = 'No events needed syncing or updating';
+        }
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Synced ${result['syncedCount']} events to Google Calendar')),
+          SnackBar(content: Text(message)),
         );
       }
     } catch (e) {
