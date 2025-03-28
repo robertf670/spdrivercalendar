@@ -8,8 +8,15 @@ import 'package:spdrivercalendar/models/event.dart'; // Import existing Event cl
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:spdrivercalendar/features/calendar/services/shift_service.dart';
+import 'package:spdrivercalendar/models/holiday.dart'; // Import the Holiday model
+import 'package:intl/intl.dart'; // For date formatting
 
 // Removed duplicate Event class since we're now importing it from models/event.dart
+
+// Constant for Holiday event color in Google Calendar (Teal)
+const String _holidayColorId = '8';
+// Constant prefix for storing the app's holiday ID in the description
+const String _holidayIdPrefix = 'App Holiday ID: ';
 
 class CalendarTestHelper {
   /// Adds a test event to the user's Google Calendar
@@ -338,6 +345,170 @@ class CalendarTestHelper {
     
     // Default color if we can't determine
     return '9'; // Bold blue as default
+  }
+
+  /// Adds a user-defined holiday to the Google Calendar
+  static Future<bool> addHolidayToCalendar(Holiday holiday) async {
+    try {
+      print('Adding holiday to Google Calendar: ${holiday.type} (${holiday.id})');
+
+      // Check sign-in status
+      final isSignedIn = await GoogleCalendarService.isSignedIn();
+      if (!isSignedIn) {
+        print('User not signed in, cannot add holiday event');
+        return false;
+      }
+
+      // Get Calendar API client
+      final calendarApi = await GoogleCalendarService.getCalendarApi();
+      if (calendarApi == null) {
+        print('Failed to get Calendar API client');
+        return false;
+      }
+
+      // Create the event object for an all-day event
+      final event = cal.Event();
+
+      // Determine summary based on holiday type
+      switch (holiday.type) {
+        case 'winter':
+          event.summary = 'Winter Holiday';
+          break;
+        case 'summer':
+          event.summary = 'Summer Holiday';
+          break;
+        case 'other':
+          event.summary = 'Holiday';
+          break;
+        default:
+          event.summary = 'Holiday';
+      }
+
+      // Add unique identifier to description
+      event.description = '$_holidayIdPrefix${holiday.id}';
+
+      // Set start date (all-day) - Use DateTime directly
+      final startEventDateTime = cal.EventDateTime();
+      // Use only the date part (set time to 00:00:00 UTC)
+      startEventDateTime.date = DateTime.utc(holiday.startDate.year, holiday.startDate.month, holiday.startDate.day);
+      event.start = startEventDateTime;
+
+      // Set end date (all-day events end date is exclusive)
+      final endEventDateTime = cal.EventDateTime();
+      // Google Calendar API expects the end date to be the day *after* the last day of the event
+      final endDateExclusive = holiday.endDate.add(const Duration(days: 1));
+      // Use only the date part (set time to 00:00:00 UTC)
+      endEventDateTime.date = DateTime.utc(endDateExclusive.year, endDateExclusive.month, endDateExclusive.day);
+      event.end = endEventDateTime;
+
+      // Disable notifications
+      final reminders = cal.EventReminders();
+      reminders.useDefault = false;
+      reminders.overrides = [];
+      event.reminders = reminders;
+
+      // Set color for holidays
+      event.colorId = _holidayColorId;
+
+      // Insert the event
+      final createdEvent = await calendarApi.events.insert(
+        event,
+        'primary', // Use the user's primary calendar
+      );
+
+      print('Holiday event added with ID: ${createdEvent.id}');
+      return true;
+    } catch (e) {
+      print('Error adding holiday to calendar: $e');
+      return false;
+    }
+  }
+
+  /// Deletes a user-defined holiday from Google Calendar
+  static Future<bool> deleteHolidayFromCalendar(Holiday holiday) async {
+    try {
+      print('Deleting holiday from Google Calendar: ${holiday.type} (${holiday.id})');
+
+      // Check sign-in status
+      final isSignedIn = await GoogleCalendarService.isSignedIn();
+      if (!isSignedIn) {
+        print('User not signed in, cannot delete holiday event');
+        return false;
+      }
+
+      // Get Calendar API client
+      final calendarApi = await GoogleCalendarService.getCalendarApi();
+      if (calendarApi == null) {
+        print('Failed to get Calendar API client');
+        return false;
+      }
+
+      // Determine expected summary
+      String expectedSummary;
+       switch (holiday.type) {
+        case 'winter':
+          expectedSummary = 'Winter Holiday';
+          break;
+        case 'summer':
+          expectedSummary = 'Summer Holiday';
+          break;
+        case 'other':
+        default:
+          expectedSummary = 'Holiday';
+          break;
+      }
+
+      // Define search window slightly wider than the holiday period
+      final timeMin = holiday.startDate.subtract(const Duration(days: 1)).toUtc();
+      // Add 2 days to end date because end date is exclusive in Google API
+      final timeMax = holiday.endDate.add(const Duration(days: 2)).toUtc();
+
+      print('Searching for events between $timeMin and $timeMax with summary "$expectedSummary"');
+
+      // Find events that match the title and date range
+      final events = await calendarApi.events.list(
+        'primary',
+        timeMin: timeMin,
+        timeMax: timeMax,
+        q: expectedSummary, // Search by summary
+        singleEvents: true, // Expand recurring events if needed (though holidays shouldn't be recurring)
+        maxResults: 50, // Limit results
+      );
+
+      // If no events found, return
+      if (events.items == null || events.items!.isEmpty) {
+        print('No matching Google Calendar events found to delete for holiday ID ${holiday.id}');
+        return false;
+      }
+
+      print('Found ${events.items!.length} potential matches.');
+
+      // Find the specific event using the unique ID in the description
+      String? eventIdToDelete;
+      final expectedDescription = '$_holidayIdPrefix${holiday.id}';
+
+      for (var event in events.items!) {
+         print('Checking event: ${event.summary} - ${event.description} (ID: ${event.id})');
+        if (event.summary == expectedSummary && event.description == expectedDescription) {
+           print('Found matching event based on summary and description: ID ${event.id}');
+           eventIdToDelete = event.id;
+           break; // Found the unique event, no need to check further
+        }
+      }
+
+      if (eventIdToDelete != null) {
+        print('Attempting to delete event ID: $eventIdToDelete');
+        await calendarApi.events.delete('primary', eventIdToDelete);
+        print('Successfully deleted holiday event from Google Calendar');
+        return true;
+      } else {
+        print('No Google Calendar event found with the exact description: $expectedDescription');
+        return false;
+      }
+    } catch (e) {
+      print('Error deleting holiday from calendar: $e');
+      return false;
+    }
   }
 
   /// Checks if all local events are synced to Google Calendar
