@@ -95,22 +95,22 @@ class RosterService {
     final shift = pattern[dayOfWeek];
     
     // Debug info
-    print('Date: ${date.toString()}, Day: ${getDayOfWeek(date)}, dayOfWeek: $dayOfWeek');
-    print('startDate: ${startDate.toString()}, startWeek: $startWeek');
-    print('daysSinceStart: $daysSinceStart');
-    if (daysSinceStart >= 0) {
-      print('weeksSinceStart: ${daysSinceStart ~/ 7}');
-    } else {
-      final dateSunday = date.subtract(Duration(days: dayOfWeek));
-      final startDateSunday = startDate.subtract(Duration(days: startDate.weekday % 7));
-      if (dateSunday == startDateSunday) {
-        print('In same week as start date');
-      } else {
-        final sundayDiff = startDateSunday.difference(dateSunday).inDays ~/ 7;
-        print('Weeks before start: $sundayDiff');
-      }
-    }
-    print('weekNumber: $weekNumber, pattern: ${pattern.join('')}, shift: $shift');
+    // print('Date: ${date.toString()}, Day: ${getDayOfWeek(date)}, dayOfWeek: $dayOfWeek');
+    // print('startDate: ${startDate.toString()}, startWeek: $startWeek');
+    // print('daysSinceStart: $daysSinceStart');
+    // if (daysSinceStart >= 0) {
+    //   print('weeksSinceStart: ${daysSinceStart ~/ 7}');
+    // } else {
+    //   final dateSunday = date.subtract(Duration(days: dayOfWeek));
+    //   final startDateSunday = startDate.subtract(Duration(days: startDate.weekday % 7));
+    //   if (dateSunday == startDateSunday) {
+    //     print('In same week as start date');
+    //   } else {
+    //     final sundayDiff = startDateSunday.difference(dateSunday).inDays ~/ 7;
+    //     print('Weeks before start: $sundayDiff');
+    //   }
+    // }
+    // print('weekNumber: $weekNumber, pattern: ${pattern.join('')}, shift: $shift');
     
     return shift;
   }
