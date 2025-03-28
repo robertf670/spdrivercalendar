@@ -44,6 +44,8 @@ class _EventCardState extends State<EventCard> {
   String? startBreakLocation;
   String? finishBreakLocation;
   String? workTime;
+  String? _departTimeStr;
+  String? _finishTimeStr;
   bool isLoading = true;
   String? _assignedDutyStartTime;
   String? _assignedDutyEndTime;
@@ -154,9 +156,11 @@ class _EventCardState extends State<EventCard> {
         
         final shift = parts[0];
         if (shift == shiftCode) {
-          // Found the matching shift, get locations
+          // Found the matching shift, get report/finish locations and times
           final reportLocation = parts.length > 4 ? parts[4].trim() : '';
           final finishLoc = parts.length > 11 ? parts[11].trim() : '';
+          final departTimeRaw = parts.length > 3 ? parts[3].trim() : '';
+          final finishTimeRaw = parts.length > 10 ? parts[10].trim() : '';
           
           // Get break locations
           final breakStartLoc = parts.length > 6 ? parts[6].trim() : '';
@@ -172,6 +176,8 @@ class _EventCardState extends State<EventCard> {
           // Format locations for display
           final start = reportLocation.isNotEmpty ? mapLocationName(reportLocation) : '';
           final end = finishLoc.isNotEmpty ? mapLocationName(finishLoc) : '';
+          final departFormatted = _formatTimeWithoutSeconds(departTimeRaw);
+          final finishFormatted = _formatTimeWithoutSeconds(finishTimeRaw);
           
           // Format break locations only if not a workout
           String? breakStart = null;
@@ -188,6 +194,8 @@ class _EventCardState extends State<EventCard> {
               startBreakLocation = breakStart;
               finishBreakLocation = breakEnd;
               workTime = work.isNotEmpty ? work : null;
+              _departTimeStr = departFormatted;
+              _finishTimeStr = finishFormatted;
             });
           }
           return;
@@ -579,6 +587,7 @@ class _EventCardState extends State<EventCard> {
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                   // Status badges row
@@ -624,11 +633,60 @@ class _EventCardState extends State<EventCard> {
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 8),
+              
+              // NEW: Report - Sign Off line (only for PZ shifts)
+              if (widget.event.title.startsWith('PZ'))
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 4.0), // Keep space below
+                  // Add Row for Icon
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.schedule, // Use schedule icon
+                        size: 16,
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.white
+                            : Colors.black,
+                      ),
+                      const SizedBox(width: 8),
+                      // Use RichText for styling consistency
+                      Expanded( // Ensure RichText expands
+                        child: RichText(
+                          overflow: TextOverflow.ellipsis, // Prevent overflow
+                          text: TextSpan(
+                            // Default style (bold for the whole line)
+                            style: TextStyle(
+                              color: Theme.of(context).brightness == Brightness.dark
+                                  ? Colors.white
+                                  : Colors.black,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600, // Make entire line bold
+                            ),
+                            children: <TextSpan>[
+                              const TextSpan(text: 'Report: '), // No specific style needed now
+                              TextSpan(
+                                text: widget.event.formattedStartTime,
+                                // style: const TextStyle(fontWeight: FontWeight.w600), // Inherits bold
+                              ),
+                              const TextSpan(text: ' - Sign Off: '), // No specific style needed now
+                              TextSpan(
+                                text: widget.event.formattedEndTime,
+                                // style: const TextStyle(fontWeight: FontWeight.w600), // Inherits bold
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              
+              // MODIFIED: Depart - Finish time with locations (PZ) or Start-End time (others)
               Row(
                 children: [
                   Icon(
-                    Icons.access_time,
+                    Icons.route,
                     size: 16,
                     color: Theme.of(context).brightness == Brightness.dark
                         ? Colors.white
@@ -637,54 +695,60 @@ class _EventCardState extends State<EventCard> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: RichText(
+                      overflow: TextOverflow.ellipsis, // Prevent overflow
                       text: TextSpan(
+                        // Default style for the row
                         style: TextStyle(
                           color: Theme.of(context).brightness == Brightness.dark
                               ? Colors.white
                               : Colors.black,
                           fontSize: 14,
                         ),
-                        children: [
-                          if (startLocation != null) ...[
-                            TextSpan(
-                              text: '$startLocation ',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w500,
-                                color: Theme.of(context).brightness == Brightness.dark
-                                    ? Colors.white
-                                    : Colors.black,
+                        children: widget.event.title.startsWith('PZ')
+                          // PZ Shift: Location + Depart - Finish + Location
+                          ? <TextSpan>[
+                              if (startLocation != null && startLocation!.isNotEmpty) ...[
+                                TextSpan(
+                                  text: '$startLocation ',
+                                  style: const TextStyle(fontWeight: FontWeight.w500),
+                                ),
+                              ],
+                              TextSpan(
+                                text: _departTimeStr ?? '',
+                                style: const TextStyle(fontWeight: FontWeight.w600),
                               ),
-                            ),
-                          ],
-                          TextSpan(
-                            text: widget.event.formattedStartTime,
-                            style: TextStyle(fontWeight: FontWeight.w600),
-                          ),
-                          TextSpan(text: ' - '),
-                          TextSpan(
-                            text: widget.event.formattedEndTime,
-                            style: TextStyle(fontWeight: FontWeight.w600),
-                          ),
-                          if (finishLocation != null) ...[
-                            TextSpan(
-                              text: ' $finishLocation',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w500,
-                                color: Theme.of(context).brightness == Brightness.dark
-                                    ? Colors.white
-                                    : Colors.black,
+                              const TextSpan(text: ' - '),
+                              TextSpan(
+                                text: _finishTimeStr ?? '',
+                                style: const TextStyle(fontWeight: FontWeight.w600),
                               ),
-                            ),
-                          ],
-                        ],
+                              if (finishLocation != null && finishLocation!.isNotEmpty) ...[
+                                TextSpan(
+                                  text: ' $finishLocation',
+                                  style: const TextStyle(fontWeight: FontWeight.w500),
+                                ),
+                              ],
+                            ]
+                          // Non-PZ Shift: Start - End Time (Original Logic)
+                          : <TextSpan>[
+                              TextSpan(
+                                text: widget.event.formattedStartTime,
+                                style: const TextStyle(fontWeight: FontWeight.w600),
+                              ),
+                              const TextSpan(text: ' - '),
+                              TextSpan(
+                                text: widget.event.formattedEndTime,
+                                style: const TextStyle(fontWeight: FontWeight.w600),
+                              ),
+                            ],
                       ),
                     ),
                   ),
                 ],
               ),
+              const SizedBox(height: 8),
               // Break times row (if available)
               if (breakTime != null) ...[
-                const SizedBox(height: 8),
                 Row(
                   children: [
                     Icon(
@@ -1295,14 +1359,13 @@ class _EventCardState extends State<EventCard> {
     );
   }
 
-  String _formatTimeWithoutSeconds(String time) {
-    // Check if the time contains seconds (HH:MM:SS)
-    final timeParts = time.split(':');
-    if (timeParts.length == 3) {
-      // Return only hours and minutes (HH:MM)
-      return '${timeParts[0]}:${timeParts[1]}';
+  String _formatTimeWithoutSeconds(String timeStr) {
+    if (timeStr.isEmpty || timeStr.toLowerCase() == 'nan') return '';
+    final parts = timeStr.split(':');
+    if (parts.length >= 2) {
+      return '${parts[0].padLeft(2, '0')}:${parts[1].padLeft(2, '0')}';
     }
-    return time; // Return original if not in expected format
+    return timeStr; // Return original if format is unexpected
   }
 
   Widget _buildAssignedDuties() {
