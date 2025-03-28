@@ -5,7 +5,6 @@ import 'package:spdrivercalendar/google_calendar_service.dart';
 import 'package:spdrivercalendar/features/settings/screens/google_calendar_settings_screen.dart';
 import 'package:spdrivercalendar/theme/app_theme.dart';
 import 'package:spdrivercalendar/calendar_test_helper.dart';
-import 'package:spdrivercalendar/core/mixins/text_rendering_mixin.dart';
 import 'package:spdrivercalendar/services/notification_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -29,7 +28,7 @@ class SettingsScreen extends StatefulWidget {
   _SettingsScreenState createState() => _SettingsScreenState();
 }
 
-class _SettingsScreenState extends State<SettingsScreen> with TextRenderingMixin {
+class _SettingsScreenState extends State<SettingsScreen> {
   late bool _isDarkMode;
   bool _isGoogleSignedIn = false;
   String _googleAccount = '';
