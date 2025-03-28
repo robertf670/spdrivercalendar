@@ -27,6 +27,7 @@ import 'package:spdrivercalendar/features/calendar/services/shift_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'package:spdrivercalendar/services/rest_days_service.dart'; // Added import
+import 'package:spdrivercalendar/features/contacts/contacts_page.dart'; // Add this line
 
 class CalendarScreen extends StatefulWidget {
   final ValueNotifier<bool> isDarkModeNotifier;
@@ -1484,6 +1485,10 @@ class CalendarScreenState extends State<CalendarScreen>
                 child: Text('Holidays'),
               ),
               PopupMenuItem(
+                value: 'contacts',
+                child: Text('Contacts'),
+              ),
+              PopupMenuItem(
                 value: 'settings',
                 child: Text('Settings'),
               ),
@@ -1497,6 +1502,8 @@ class CalendarScreenState extends State<CalendarScreen>
                 _showSettingsPage();
               } else if (value == 'add_holidays') {
                 _showAddHolidaysDialog();
+              } else if (value == 'contacts') { // Add this condition
+                _showContactsPage();
               }
             },
           ),
@@ -2786,5 +2793,13 @@ class CalendarScreenState extends State<CalendarScreen>
         });
       }
     });
+  }
+
+  void _showContactsPage() { // Add this method
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const ContactsPage(),
+      ),
+    );
   }
 }
