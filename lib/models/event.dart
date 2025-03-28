@@ -36,6 +36,43 @@ class Event {
     this.notes, // Add notes to constructor
   });
 
+  // Add copyWith method
+  Event copyWith({
+    String? id,
+    String? title,
+    DateTime? startDate,
+    TimeOfDay? startTime,
+    DateTime? endDate,
+    TimeOfDay? endTime,
+    Duration? workTime,
+    TimeOfDay? breakStartTime,
+    TimeOfDay? breakEndTime,
+    List<String>? assignedDuties,
+    String? firstHalfBus,
+    String? secondHalfBus,
+    bool? isHoliday,
+    String? holidayType,
+    String? notes,
+  }) {
+    return Event(
+      id: id ?? this.id,
+      title: title ?? this.title,
+      startDate: startDate ?? this.startDate,
+      startTime: startTime ?? this.startTime,
+      endDate: endDate ?? this.endDate,
+      endTime: endTime ?? this.endTime,
+      workTime: workTime ?? this.workTime,
+      breakStartTime: breakStartTime ?? this.breakStartTime,
+      breakEndTime: breakEndTime ?? this.breakEndTime,
+      assignedDuties: assignedDuties ?? this.assignedDuties,
+      firstHalfBus: firstHalfBus ?? this.firstHalfBus,
+      secondHalfBus: secondHalfBus ?? this.secondHalfBus,
+      isHoliday: isHoliday ?? this.isHoliday,
+      holidayType: holidayType ?? this.holidayType,
+      notes: notes ?? this.notes,
+    );
+  }
+
   // Convert to map for storage
   Map<String, dynamic> toMap() {
     return {

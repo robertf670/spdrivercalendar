@@ -6,6 +6,12 @@ import 'package:spdrivercalendar/features/settings/screens/google_calendar_setti
 import 'package:spdrivercalendar/theme/app_theme.dart';
 import 'package:spdrivercalendar/calendar_test_helper.dart';
 import 'package:spdrivercalendar/core/mixins/text_rendering_mixin.dart';
+import 'package:spdrivercalendar/services/notification_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+// Define Preference Keys for Notifications (Consider moving to AppConstants if not already there)
+const String kNotificationsEnabledKey = 'notificationsEnabled';
+const String kNotificationOffsetHoursKey = 'notificationOffsetHours';
 
 class SettingsScreen extends StatefulWidget {
   final VoidCallback resetRestDaysCallback;
@@ -28,6 +34,10 @@ class _SettingsScreenState extends State<SettingsScreen> with TextRenderingMixin
   bool _syncToGoogleCalendar = false;
   bool _isLoading = false;
 
+  // Notification state variables
+  bool _notificationsEnabled = false;
+  int _notificationOffsetHours = 1; // Default offset
+
   @override
   void initState() {
     super.initState();
@@ -37,10 +47,15 @@ class _SettingsScreenState extends State<SettingsScreen> with TextRenderingMixin
   }
 
   Future<void> _loadSettings() async {
-    final syncToGoogle = await StorageService.getBool(AppConstants.syncToGoogleCalendarKey, defaultValue: false);
+    final prefs = await SharedPreferences.getInstance(); // Use SharedPreferences directly here
+    final syncToGoogle = prefs.getBool(AppConstants.syncToGoogleCalendarKey) ?? false;
+    final notificationsEnabled = prefs.getBool(kNotificationsEnabledKey) ?? false;
+    final notificationOffset = prefs.getInt(kNotificationOffsetHoursKey) ?? 1;
     
     setState(() {
       _syncToGoogleCalendar = syncToGoogle;
+      _notificationsEnabled = notificationsEnabled;
+      _notificationOffsetHours = notificationOffset;
     });
   }
 
@@ -74,6 +89,51 @@ class _SettingsScreenState extends State<SettingsScreen> with TextRenderingMixin
     await StorageService.saveBool(AppConstants.syncToGoogleCalendarKey, value);
   }
 
+  // --- Notification Preference Saving Methods ---
+  Future<void> _saveNotificationsEnabled(bool enabled) async {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(kNotificationsEnabledKey, enabled);
+      setState(() {
+        _notificationsEnabled = enabled;
+      });
+  }
+  
+  Future<void> _saveNotificationOffset(int hours) async {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt(kNotificationOffsetHoursKey, hours);
+      setState(() {
+        _notificationOffsetHours = hours;
+      });
+  }
+
+  // --- Notification Toggle Method ---
+  Future<void> _toggleNotificationsEnabled(bool value) async {
+    if (value) {
+      // Request permissions when enabling
+      bool? permissionsGranted = await NotificationService().requestPermissions();
+      if (permissionsGranted == true && mounted) {
+         await _saveNotificationsEnabled(true);
+         ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Notifications enabled.')),
+         );
+      } else if (mounted) {
+        // Permission denied or null (e.g., platform not supported)
+         await _saveNotificationsEnabled(false); // Keep it disabled
+         ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Notification permissions denied or unavailable.')),
+         );
+      }
+    } else {
+      // Just disable if turning off
+      await _saveNotificationsEnabled(false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Notifications disabled.')),
+         );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -92,6 +152,14 @@ class _SettingsScreenState extends State<SettingsScreen> with TextRenderingMixin
           _buildGoogleAccountSection(),
           _buildGoogleSyncOption(),
           _buildManualSyncOption(),
+          
+          // --- Add Notifications Section --- 
+          const Divider(height: 32),
+          _buildSectionHeader('Notifications'),
+          _buildNotificationsEnabledSwitch(),
+          _buildNotificationOffsetDropdown(),
+          _buildTestNotificationButton(),
+          // --- End Notifications Section --- 
           
           const Divider(height: 32),
           _buildSectionHeader('Schedule'),
@@ -249,6 +317,99 @@ class _SettingsScreenState extends State<SettingsScreen> with TextRenderingMixin
             arguments: true, // This indicates it's opened from settings
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildNotificationsEnabledSwitch() {
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 4.0),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppTheme.borderRadius),
+      ),
+      child: SwitchListTile(
+        title: const Text('Enable Shift Notifications'),
+        subtitle: const Text('Get notified before your shift starts'),
+        secondary: Icon(
+          _notificationsEnabled ? Icons.notifications_active : Icons.notifications_off,
+          color: _notificationsEnabled ? AppTheme.primaryColor : Colors.grey,
+        ),
+        value: _notificationsEnabled,
+        onChanged: _toggleNotificationsEnabled, // Calls the method we added earlier
+      ),
+    );
+  }
+
+  Widget _buildNotificationOffsetDropdown() {
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 4.0),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppTheme.borderRadius),
+      ),
+      child: ListTile(
+        leading: Icon(
+          Icons.timer_outlined,
+          color: _notificationsEnabled ? Theme.of(context).iconTheme.color : Colors.grey,
+          ),
+        title: Text(
+          'Notify Before Shift',
+          style: TextStyle(
+            color: _notificationsEnabled ? Theme.of(context).textTheme.bodyLarge?.color : Colors.grey,
+          )
+        ),
+        trailing: DropdownButton<int>(
+          value: _notificationOffsetHours,
+          // Disable dropdown if notifications are off
+          onChanged: _notificationsEnabled 
+            ? (int? newValue) {
+                if (newValue != null) {
+                  _saveNotificationOffset(newValue);
+                }
+              }
+            : null, 
+          items: <int>[1, 2, 4] // Allowed hour offsets
+              .map<DropdownMenuItem<int>>((int value) {
+            return DropdownMenuItem<int>(
+              value: value,
+              child: Text('$value hour${value > 1 ? 's' : ''}'),
+            );
+          }).toList(),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTestNotificationButton() {
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 4.0),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppTheme.borderRadius),
+      ),
+      child: ListTile(
+        leading: Icon(
+          Icons.notification_important_outlined,
+           color: _notificationsEnabled ? Theme.of(context).iconTheme.color : Colors.grey,
+        ),
+        title: Text(
+            'Test Notification',
+            style: TextStyle(
+              color: _notificationsEnabled ? Theme.of(context).textTheme.bodyLarge?.color : Colors.grey,
+            )
+          ),
+        trailing: ElevatedButton(
+          // Disable button if notifications are off
+          onPressed: _notificationsEnabled
+            ? () async {
+                await NotificationService().showTestNotification();
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Test notification sent!')),
+                  );
+                }
+              }
+            : null, 
+          child: const Text('Send Test'),
+        ),
       ),
     );
   }

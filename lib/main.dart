@@ -12,9 +12,13 @@ import 'package:spdrivercalendar/google_calendar_service.dart';
 import 'package:spdrivercalendar/services/rest_days_service.dart';
 import 'package:spdrivercalendar/core/config/flutter_config.dart';
 import 'package:spdrivercalendar/core/widgets/rebuild_text.dart';
+import 'package:spdrivercalendar/services/notification_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialize Notification Service
+  await NotificationService().init();
   
   // Configure Flutter settings
   await FlutterConfig.configure();

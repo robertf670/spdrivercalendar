@@ -48,6 +48,16 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
       'description': 'Add and track your given holidays, and any personal holidays alongside your shifts.',
       'icon': Icons.event_busy,
     },
+    {
+      'title': 'Add Notes to Events',
+      'description': 'Easily add and view notes for any shift or event directly from the event card.',
+      'icon': Icons.note_add,
+    },
+    {
+      'title': 'Contacts Page',
+      'description': 'Quickly access important phone numbers and contact information.',
+      'icon': Icons.contacts,
+    },
   ];
   
   @override
