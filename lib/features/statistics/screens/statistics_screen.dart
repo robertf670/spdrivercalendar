@@ -5,6 +5,9 @@ import 'package:spdrivercalendar/theme/app_theme.dart';
 import 'package:spdrivercalendar/services/rest_days_service.dart';
 import 'package:flutter/services.dart';
 import 'dart:convert';
+import 'package:spdrivercalendar/features/calendar/services/roster_service.dart';
+import 'package:spdrivercalendar/core/services/storage_service.dart';
+import 'package:spdrivercalendar/core/constants/app_constants.dart';
 
 enum ShiftType {
   Early,   // 04:00 - 09:59
@@ -43,6 +46,31 @@ class StatisticsScreenState extends State<StatisticsScreen> with AutomaticKeepAl
 
   // Constants for work durations
   static const Duration spareDutyWorkDuration = Duration(hours: 7, minutes: 38);
+
+  // Roster settings
+  DateTime? _startDate;
+  int _startWeek = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadRosterSettings();
+  }
+
+  Future<void> _loadRosterSettings() async {
+    final startDateString = await StorageService.getString(AppConstants.startDateKey);
+    final startWeek = await StorageService.getInt(AppConstants.startWeekKey) ?? 0;
+    
+    // Use mounted check before calling setState
+    if (mounted) {
+      setState(() {
+        if (startDateString != null) {
+          _startDate = DateTime.parse(startDateString);
+        }
+        _startWeek = startWeek;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -92,6 +120,15 @@ class StatisticsScreenState extends State<StatisticsScreen> with AutomaticKeepAl
                     'Shift Type Statistics',
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Rest Days not included in calculation',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[600],
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
                   const SizedBox(height: 16),
                   _buildTimeRangeSelector(),
                   const SizedBox(height: 16),
@@ -108,7 +145,7 @@ class StatisticsScreenState extends State<StatisticsScreen> with AutomaticKeepAl
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    'Most Frequent Shifts (All Time)',
+                    'Most Frequent Shifts (Mon-Fri)',
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 16),
@@ -219,17 +256,21 @@ class StatisticsScreenState extends State<StatisticsScreen> with AutomaticKeepAl
     
     widget.events.forEach((date, events) {
       for (final event in events) {
-        // Update to check for work shifts without "Shift:" prefix
-        if (event.isWorkShift) {
-          final shiftType = event.title;
-          
-          if (!countedIds.contains(event.id ?? '')) {
-            countedIds.add(event.id ?? '');
+        // Only count shifts occurring Mon-Fri
+        final dayOfWeek = event.startDate.weekday;
+        if (dayOfWeek >= DateTime.monday && dayOfWeek <= DateTime.friday) {
+          // Update to check for work shifts without "Shift:" prefix
+          if (event.isWorkShift) {
+            final shiftType = event.title;
             
-            if (shiftCounts.containsKey(shiftType)) {
-              shiftCounts[shiftType] = shiftCounts[shiftType]! + 1;
-            } else {
-              shiftCounts[shiftType] = 1;
+            if (!countedIds.contains(event.id ?? '')) {
+              countedIds.add(event.id ?? '');
+              
+              if (shiftCounts.containsKey(shiftType)) {
+                shiftCounts[shiftType] = shiftCounts[shiftType]! + 1;
+              } else {
+                shiftCounts[shiftType] = 1;
+              }
             }
           }
         }
@@ -339,8 +380,13 @@ class StatisticsScreenState extends State<StatisticsScreen> with AutomaticKeepAl
     
     // Process events
     widget.events.forEach((date, events) {
-      // Skip if this is a rest day
-      if (RestDaysService.isRestDay(date)) return;
+      // Skip if this is a rest day based on roster
+      final String shiftType = (_startDate != null) 
+          ? RosterService.getShiftForDate(date, _startDate!, _startWeek)
+          : ''; // Default to empty if roster not loaded
+      final bool isRest = shiftType == 'R';
+      
+      if (isRest) return;
 
       for (final event in events) {
         // Only consider work shifts
@@ -701,8 +747,13 @@ class StatisticsScreenState extends State<StatisticsScreen> with AutomaticKeepAl
       // Normalize the date to midnight for rest day comparison
       final normalizedDate = DateTime(date.year, date.month, date.day);
       
-      // Skip if this is a rest day
-      if (RestDaysService.isRestDay(normalizedDate)) continue;
+      // Skip if this is a rest day based on roster
+      final String shiftType = (_startDate != null) 
+          ? RosterService.getShiftForDate(date, _startDate!, _startWeek)
+          : ''; // Default to empty if roster not loaded
+      final bool isRest = shiftType == 'R';
+      
+      if (isRest) continue;
 
       for (final event in events) {
         if (!event.isWorkShift || processedIds.contains(event.id)) continue;
