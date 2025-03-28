@@ -26,6 +26,7 @@ import 'package:spdrivercalendar/features/calendar/dialogs/view_board_dialog.dar
 import 'package:spdrivercalendar/features/calendar/services/shift_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
+import 'package:spdrivercalendar/services/rest_days_service.dart'; // Added import
 
 class CalendarScreen extends StatefulWidget {
   final ValueNotifier<bool> isDarkModeNotifier;
@@ -59,8 +60,10 @@ class CalendarScreenState extends State<CalendarScreen>
 
   @override
   void initState() {
+    // print("*** initState: Entered ***"); // Basic Debug 1 -- Removed
     super.initState();
-    _initializeData();
+    // print("*** initState: After super.initState() ***"); // Basic Debug 2 -- Removed
+    _initializeData(); // Call the async initialization method
     _selectedDay = DateTime.now();
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 300),
@@ -70,26 +73,42 @@ class CalendarScreenState extends State<CalendarScreen>
     WidgetsBinding.instance.addObserver(this);
     
     // Add this line to update all events when the app starts
-    _updateAllEvents();
+    // _updateAllEvents(); // Temporarily comment out if suspected to interfere
+    // print("*** initState: Exiting ***"); // Basic Debug 3 -- Removed
   }
 
   Future<void> _initializeData() async {
+    // print("*** _initializeData: Entered ***"); // Basic Debug 4 -- Removed
+    // print("[Init Debug] Starting _initializeData..."); // Keep previous debug -- Removed
     try {
+      // Ensure RestDaysService is initialized before loading other data that might depend on it
+      await RestDaysService.initialize(); 
+      // print("[Init Debug] RestDaysService initialized."); // Debug -- Removed
+      
       // Load bank holidays
       _bankHolidays = await RosterService.loadBankHolidays();
+      // print("[Init Debug] Bank holidays loaded."); // Debug -- Removed
       
       // Load holidays
       _holidays = await HolidayService.getHolidays();
+      // print("[Init Debug] Holidays loaded."); // Debug -- Removed
       
-      // Load settings
+      // Load settings (which might depend on RosterService indirectly)
       await _loadSettings();
+      // print("[Init Debug] Settings loaded."); // Debug -- Removed
       
       // Load events
       _events = await EventService.loadEvents();
+      // print("[Init Debug] Events loaded."); // Debug -- Removed
       
-      setState(() {});
+      // Update UI only after all data is loaded
+      if (mounted) {
+          setState(() {});
+          // print("[Init Debug] _initializeData complete, calling setState."); // Debug -- Removed
+      }
     } catch (e) {
-      print('Error initializing data: $e');
+      // print('[Init Debug] Error initializing data: $e'); // Debug -- Removed
+      // Optionally show an error message to the user
     }
   }
 
@@ -678,7 +697,10 @@ class CalendarScreenState extends State<CalendarScreen>
     final syncEnabled = await StorageService.getBool(AppConstants.syncToGoogleCalendarKey, defaultValue: false);
     final isSignedIn = await GoogleCalendarService.isSignedIn();
     
+    // print('[Sync Debug] Checking sync for event: ${event.title} on ${event.startDate.toIso8601String()}'); // Debug -- Removed
+    
     if (syncEnabled && isSignedIn) {
+      // print('[Sync Debug] Sync enabled and user signed in.'); // Debug -- Removed
       try {
         // Convert to full DateTime objects for Google Calendar
         final startDateTime = DateTime(
@@ -703,13 +725,41 @@ class CalendarScreenState extends State<CalendarScreen>
         final breakEndTime = event.breakEndTime;
         
         // Build description with all break information
-        String? description;
+        String description = ''; // Initialize as empty string
         if (breakTime != null) {
           description = 'Break: $breakTime';
           if (breakStartTime != null && breakEndTime != null) {
-            description += '\nBreak Time: ${breakStartTime.format(context)} - ${breakEndTime.format(context)}';
+            // Ensure context is still valid before using it
+            if (context.mounted) {
+              description += '\nBreak Time: ${breakStartTime.format(context)} - ${breakEndTime.format(context)}';
+            }
           }
         }
+        
+        // print('[Sync Debug] Initial description: "$description"'); // Debug -- Removed
+        
+        // Check if it's a rest day using RosterService
+        // final normalizedDate = DateTime(event.startDate.year, event.startDate.month, event.startDate.day); // Not needed anymore
+        // final bool isRest = RestDaysService.isRestDay(normalizedDate); // Replaced with RosterService check
+        final String shiftType = getShiftForDate(event.startDate); // Use existing screen method
+        final bool isRest = shiftType == 'R';
+        // print('[Sync Debug] Is Rest Day based on Roster ($shiftType)? $isRest'); // Updated Debug -- Removed
+        
+        if (isRest) {
+          // print('[Sync Debug] Appending rest day info.'); // Debug -- Removed
+          if (description.isNotEmpty) {
+            description += '\n(Working on Rest Day)';
+          } else {
+            description = '(Working on Rest Day)';
+          }
+        }
+        
+        // print('[Sync Debug] Final description before check: "$description"'); // Debug -- Removed
+        
+        // Handle case where description might still be empty
+        final finalDescription = description.isEmpty ? null : description;
+        
+        // print('[Sync Debug] Final description passed to helper: "$finalDescription"'); // Debug -- Removed
         
         // Add to Google Calendar
         final success = await CalendarTestHelper.addWorkShiftToCalendar(
@@ -717,10 +767,11 @@ class CalendarScreenState extends State<CalendarScreen>
           title: event.title,
           startTime: startDateTime,
           endTime: endDateTime,
-          description: description,
+          description: finalDescription, // Use the updated description
         );
         
-        if (success && mounted) {
+        // Ensure context is still valid before showing SnackBar
+        if (success && context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Shift added to Google Calendar')),
           );

@@ -12,25 +12,23 @@ class RestDaysService {
     try {
       final prefs = await SharedPreferences.getInstance();
       final restDaysJson = prefs.getStringList(_restDaysKey) ?? [];
+      
       _restDays = restDaysJson.map((dateStr) {
         try {
           return DateTime.parse(dateStr);
         } catch (e) {
-          print('Error parsing date: $dateStr');
           return null;
         }
       }).whereType<DateTime>().toList();
       
       _isInitialized = true;
     } catch (e) {
-      print('Error initializing RestDaysService: $e');
       _restDays = [];
     }
   }
 
   static List<DateTime> getRestDays() {
     if (!_isInitialized) {
-      print('Warning: RestDaysService not initialized');
       return [];
     }
     return List.unmodifiable(_restDays);
@@ -43,14 +41,12 @@ class RestDaysService {
       await prefs.setStringList(_restDaysKey, restDaysJson);
       _restDays = restDays;
     } catch (e) {
-      print('Error setting rest days: $e');
       rethrow;
     }
   }
 
   static Future<void> addRestDay(DateTime date) async {
     if (!_isInitialized) {
-      print('Warning: RestDaysService not initialized');
       return;
     }
 
@@ -66,7 +62,6 @@ class RestDaysService {
 
   static Future<void> removeRestDay(DateTime date) async {
     if (!_isInitialized) {
-      print('Warning: RestDaysService not initialized');
       return;
     }
 
@@ -83,23 +78,23 @@ class RestDaysService {
 
   static bool isRestDay(DateTime date) {
     if (!_isInitialized) {
-      print('Warning: RestDaysService not initialized');
       return false;
     }
 
-    // Normalize the date to midnight to avoid time component issues
-    final normalizedDate = DateTime(date.year, date.month, date.day);
+    // Normalize the input date to midnight UTC to avoid timezone issues in comparison
+    final normalizedInputDate = DateTime.utc(date.year, date.month, date.day);
     
-    return _restDays.any((d) => 
-      d.year == normalizedDate.year && 
-      d.month == normalizedDate.month && 
-      d.day == normalizedDate.day
-    );
+    // Check if ANY date in the list matches year, month, and day in UTC
+    return _restDays.any((storedDate) {
+      // Also normalize the stored date to midnight UTC for a robust comparison
+      final normalizedStoredDate = DateTime.utc(storedDate.year, storedDate.month, storedDate.day);
+      bool match = normalizedStoredDate.isAtSameMomentAs(normalizedInputDate);
+      return match;
+    });
   }
 
   static Future<void> clearRestDays() async {
     if (!_isInitialized) {
-      print('Warning: RestDaysService not initialized');
       return;
     }
 
@@ -108,7 +103,6 @@ class RestDaysService {
       await prefs.remove(_restDaysKey);
       _restDays = [];
     } catch (e) {
-      print('Error clearing rest days: $e');
       rethrow;
     }
   }
