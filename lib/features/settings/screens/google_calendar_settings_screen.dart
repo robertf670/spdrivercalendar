@@ -4,6 +4,8 @@ import 'package:spdrivercalendar/google_calendar_service.dart';
 import 'package:spdrivercalendar/theme/app_theme.dart';
 
 class GoogleCalendarSettingsScreen extends StatefulWidget {
+  const GoogleCalendarSettingsScreen({super.key});
+
   @override
   _GoogleCalendarSettingsScreenState createState() => _GoogleCalendarSettingsScreenState();
 }
@@ -81,7 +83,7 @@ class _GoogleCalendarSettingsScreenState extends State<GoogleCalendarSettingsScr
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: _isConnected ? AppTheme.successColor : AppTheme.errorColor,
-              borderRadius: BorderRadius.only(
+              borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(AppTheme.borderRadius),
                 topRight: Radius.circular(AppTheme.borderRadius),
               ),
@@ -230,7 +232,7 @@ class _GoogleCalendarSettingsScreenState extends State<GoogleCalendarSettingsScr
                                   child: ListTile(
                                     title: Text(event.summary ?? 'No title'),
                                     subtitle: Text(event.start?.dateTime?.toString().substring(0, 16) ?? 'No start time'),
-                                    leading: Icon(Icons.event, color: AppTheme.primaryColor),
+                                    leading: const Icon(Icons.event, color: AppTheme.primaryColor),
                                   ),
                                 );
                               },

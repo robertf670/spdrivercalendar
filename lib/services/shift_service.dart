@@ -3,7 +3,7 @@ import 'package:spdrivercalendar/models/work_shift.dart';
 
 class ShiftService {
   // List to store shifts in memory (replace with actual database implementation)
-  static List<WorkShift> _shifts = [];
+  static final List<WorkShift> _shifts = [];
 
   // Get all shifts
   static List<WorkShift> getAllShifts() {

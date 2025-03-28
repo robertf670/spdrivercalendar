@@ -32,7 +32,7 @@ class _GoogleLoginScreenState extends State<GoogleLoginScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(
+              const Icon(
                 Icons.calendar_month,
                 size: 120,
                 color: AppTheme.primaryColor,

@@ -7,12 +7,7 @@ import 'package:spdrivercalendar/features/calendar/services/shift_service.dart';
 import 'package:spdrivercalendar/core/utils/location_utils.dart';
 import 'package:flutter/services.dart';
 import 'package:spdrivercalendar/features/calendar/services/roster_service.dart';
-import 'package:spdrivercalendar/models/shift_data.dart';
 import 'package:spdrivercalendar/features/calendar/services/event_service.dart';
-import 'package:spdrivercalendar/core/services/storage_service.dart';
-import 'package:spdrivercalendar/google_calendar_service.dart';
-import 'package:spdrivercalendar/calendar_test_helper.dart';
-import 'package:spdrivercalendar/core/constants/app_constants.dart';
 import 'package:csv/csv.dart';
 
 class EventCard extends StatefulWidget {
@@ -182,8 +177,8 @@ class _EventCardState extends State<EventCard> {
           final finishFormatted = _formatTimeWithoutSeconds(finishTimeRaw);
           
           // Format break locations only if not a workout
-          String? breakStart = null;
-          String? breakEnd = null;
+          String? breakStart;
+          String? breakEnd;
           if (!isWorkout) {
             breakStart = breakStartLoc.isNotEmpty ? mapLocationName(breakStartLoc) : null;
             breakEnd = breakFinishLoc.isNotEmpty ? mapLocationName(breakFinishLoc) : null;
@@ -561,7 +556,7 @@ class _EventCardState extends State<EventCard> {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppTheme.borderRadius),
         side: widget.isBankHoliday
-            ? BorderSide(color: AppTheme.errorColor, width: 1.5)
+            ? const BorderSide(color: AppTheme.errorColor, width: 1.5)
             : BorderSide.none,
       ),
       color: cardColor,
@@ -679,7 +674,7 @@ class _EventCardState extends State<EventCard> {
                           overflow: TextOverflow.ellipsis, // Prevent overflow
                           text: TextSpan(
                             // Default style (slightly de-emphasized)
-                            style: TextStyle(
+                            style: const TextStyle(
                               color: Colors.black, // Lighter color -> Changed to black
                               fontSize: 14,
                               // fontWeight: FontWeight.w600, // REMOVE overall bold
@@ -688,14 +683,14 @@ class _EventCardState extends State<EventCard> {
                               const TextSpan(text: 'Report: '),
                               TextSpan(
                                 text: widget.event.formattedStartTime,
-                                style: TextStyle( // Removed const
+                                style: const TextStyle( // Removed const
                                   color: Colors.black, // Use theme color for time -> Changed to black
                                 ),
                               ),
                               const TextSpan(text: ' - Sign Off: '),
                               TextSpan(
                                 text: widget.event.formattedEndTime,
-                                style: TextStyle( // Removed const
+                                style: const TextStyle( // Removed const
                                   color: Colors.black, // Use theme color for time -> Changed to black
                                 ),
                               ),
@@ -788,9 +783,7 @@ class _EventCardState extends State<EventCard> {
                       child: Text(
                         // Only show break locations for PZ shifts that are not workouts
                         (!breakTime!.toLowerCase().contains('workout') && widget.event.title.contains('PZ')) 
-                            ? '${startBreakLocation != null ? "$startBreakLocation " : ""}' +
-                              breakTime! +
-                              '${finishBreakLocation != null ? " $finishBreakLocation" : ""}'
+                            ? '${startBreakLocation != null ? "$startBreakLocation " : ""}${breakTime!}${finishBreakLocation != null ? " $finishBreakLocation" : ""}'
                             : breakTime!.toLowerCase().contains('workout') ? 'Workout' : breakTime!,
                         style: TextStyle(
                           color: Theme.of(context).brightness == Brightness.dark
@@ -1138,7 +1131,7 @@ class _EventCardState extends State<EventCard> {
                       
                       // Add the half indicator if this is a half duty
                       final newDuty = halfIndicator != null 
-                          ? '${selectedDuty}$halfIndicator'
+                          ? '$selectedDuty$halfIndicator'
                           : selectedDuty;
                       
                       // Initialize or update the assignedDuties list
@@ -1210,7 +1203,7 @@ class _EventCardState extends State<EventCard> {
                 },
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 12),
-                  side: BorderSide(color: AppTheme.primaryColor),
+                  side: const BorderSide(color: AppTheme.primaryColor),
                 ),
                 child: const Text('Full Duty'),
               ),
@@ -1224,7 +1217,7 @@ class _EventCardState extends State<EventCard> {
                 },
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 12),
-                  side: BorderSide(color: AppTheme.primaryColor),
+                  side: const BorderSide(color: AppTheme.primaryColor),
                 ),
                 child: const Text('First Half'),
               ),
@@ -1238,7 +1231,7 @@ class _EventCardState extends State<EventCard> {
                 },
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 12),
-                  side: BorderSide(color: AppTheme.primaryColor),
+                  side: const BorderSide(color: AppTheme.primaryColor),
                 ),
                 child: const Text('Second Half'),
               ),
@@ -1355,8 +1348,8 @@ class _EventCardState extends State<EventCard> {
                       ),
                       TextButton(
                         onPressed: () => Navigator.of(context).pop(true),
-                        child: const Text('Delete'),
                         style: TextButton.styleFrom(foregroundColor: Colors.red),
+                        child: const Text('Delete'),
                       ),
                     ],
                   ),

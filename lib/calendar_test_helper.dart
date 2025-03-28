@@ -1,15 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:googleapis/calendar/v3.dart' as cal;
-import 'package:googleapis_auth/auth_io.dart';
-import 'package:google_sign_in/google_sign_in.dart';
-import 'package:extension_google_sign_in_as_googleapis_auth/extension_google_sign_in_as_googleapis_auth.dart';
 import 'package:spdrivercalendar/google_calendar_service.dart';
 import 'package:spdrivercalendar/models/event.dart'; // Import existing Event class
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:spdrivercalendar/features/calendar/services/shift_service.dart';
 import 'package:spdrivercalendar/models/holiday.dart'; // Import the Holiday model
-import 'package:intl/intl.dart'; // For date formatting
+// For date formatting
 
 // Removed duplicate Event class since we're now importing it from models/event.dart
 

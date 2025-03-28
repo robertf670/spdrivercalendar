@@ -10,11 +10,11 @@ class OAuthHelper {
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text('Google Test Mode Restriction'),
-          content: SingleChildScrollView(
+          content: const SingleChildScrollView(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
-              children: const [
+              children: [
                 Text(
                   'This app is currently in test mode with Google and can only be accessed by approved test users.',
                 ),

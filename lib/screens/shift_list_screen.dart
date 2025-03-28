@@ -4,6 +4,8 @@ import 'package:spdrivercalendar/services/shift_service.dart';
 import 'package:intl/intl.dart';
 
 class ShiftListScreen extends StatefulWidget {
+  const ShiftListScreen({super.key});
+
   @override
   _ShiftListScreenState createState() => _ShiftListScreenState();
 }
@@ -22,16 +24,16 @@ class _ShiftListScreenState extends State<ShiftListScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('All Shifts'),
+        title: const Text('All Shifts'),
       ),
       body: _shifts.isEmpty
-          ? Center(child: Text('No shifts created yet'))
+          ? const Center(child: Text('No shifts created yet'))
           : ListView.builder(
               itemCount: _shifts.length,
               itemBuilder: (context, index) {
                 final shift = _shifts[index];
                 return Card(
-                  margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   child: ListTile(
                     title: Text(shift.title),
                     subtitle: Column(
@@ -44,12 +46,12 @@ class _ShiftListScreenState extends State<ShiftListScreen> {
                       ],
                     ),
                     trailing: IconButton(
-                      icon: Icon(Icons.calendar_today),
+                      icon: const Icon(Icons.calendar_today),
                       onPressed: () async {
                         final success = await shift.addToGoogleCalendar(context);
                         if (success) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Added to Google Calendar')),
+                            const SnackBar(content: Text('Added to Google Calendar')),
                           );
                         }
                       },

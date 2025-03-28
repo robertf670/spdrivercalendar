@@ -36,7 +36,6 @@ class ShiftService {
   static Future<String?> getBreakTime(Event event) async {
     // Extract the shift code from the title
     final shiftCode = event.title.replaceAll('Shift: ', '').trim();
-    print('Getting break time for shift code: $shiftCode');
     
     // Handle Spare shifts which don't have break times
     if (shiftCode.startsWith('SP')) {
@@ -44,14 +43,12 @@ class ShiftService {
     }
     
     final dayOfWeek = RosterService.getDayOfWeek(event.startDate);
-    print('Day of week: $dayOfWeek');
     
     // Try to determine if this is a UNI/Euro shift
     bool isUniEuro = shiftCode.startsWith('UNI') || 
                      shiftCode.contains('EURO') || 
                      RegExp(r'^\d{2,3}/\d{2}').hasMatch(shiftCode);
     
-    print('Is UNI/Euro shift: $isUniEuro');
     
     if (isUniEuro) {
       return await _getUniShiftBreakTime(shiftCode, dayOfWeek, event.startDate);
@@ -63,7 +60,6 @@ class ShiftService {
   // Helper method to get break time for UNI/Euro shifts
   static Future<String> _getUniShiftBreakTime(String shiftCode, String dayOfWeek, DateTime date) async {
     try {
-      print('Looking for UNI shift: $shiftCode');
       
       // Check 7-day UNI shifts first - include all lines (no skipping first line)
       final file7Days = await rootBundle.loadString('assets/UNI_7DAYs.csv');
@@ -73,22 +69,16 @@ class ShiftService {
         if (line.trim().isEmpty) continue;
         final parts = line.split(',');
         if (parts.length < 5) {
-          print('Skipping line with insufficient parts: ${parts.length}');
           continue;
         }
         final shift = parts[0];
-        print('Checking shift: $shift against $shiftCode');
         
         if (shift == shiftCode) {
-          print('Found matching shift in UNI_7DAYs.csv');
-          print('Raw line data: $line');
-          print('All parts: ${parts.join(", ")}');
           
           // For UNI files, break start is at index 2 and break finish at index 3
           final breakStart = parts[2].trim();
           final breakEnd = parts[3].trim();
           
-          print('Break times - Start: $breakStart, End: $breakEnd');
           
           // Check if this is a workout shift or has "nan" values
           // For UNI shifts, if break times are the same, it's a workout
@@ -96,7 +86,6 @@ class ShiftService {
               breakStart.isEmpty || breakEnd.isEmpty ||
               breakStart.toLowerCase() == 'nan' || breakEnd.toLowerCase() == 'nan' ||
               breakStart == breakEnd) {  // Added check for equal times
-            print('Detected as workout shift');
             return 'Workout';
           }
           
@@ -104,20 +93,16 @@ class ShiftService {
           final formattedStart = breakStart.split(':').take(2).join(':');
           final formattedEnd = breakEnd.split(':').take(2).join(':');
           
-          print('Formatted break times: $formattedStart - $formattedEnd');
           return '$formattedStart - $formattedEnd';
         }
       }
       
-      print('Not found in UNI_7DAYs.csv, checking M-F file');
       
       // Then check M-F shifts if appropriate - include all lines (no skipping first line)
       final bankHoliday = getBankHoliday(date, _bankHolidays);
       final isBankHoliday = bankHoliday != null;
       
-      print('Day of week: $dayOfWeek, Is bank holiday: $isBankHoliday');
       if (isBankHoliday) {
-        print('Bank holiday detected: ${bankHoliday!.name}');
       }
       
       if (dayOfWeek != 'Saturday' && dayOfWeek != 'Sunday' && !isBankHoliday) {
@@ -128,22 +113,15 @@ class ShiftService {
           if (line.trim().isEmpty) continue;
           final parts = line.split(',');
           if (parts.length < 5) {
-            print('Skipping line with insufficient parts: ${parts.length}');
             continue;
           }
           final shift = parts[0];
-          print('Checking shift: $shift against $shiftCode');
           
           if (shift == shiftCode) {
-            print('Found matching shift in UNI_M-F.csv');
-            print('Raw line data: $line');
-            print('All parts: ${parts.join(", ")}');
-            
             // For UNI files, break start is at index 2 and break finish at index 3
             final breakStart = parts[2].trim();
             final breakEnd = parts[3].trim();
             
-            print('Break times - Start: $breakStart, End: $breakEnd');
             
             // Check if this is a workout shift or has "nan" values
             // For UNI shifts, if break times are the same, it's a workout
@@ -151,7 +129,6 @@ class ShiftService {
                 breakStart.isEmpty || breakEnd.isEmpty ||
                 breakStart.toLowerCase() == 'nan' || breakEnd.toLowerCase() == 'nan' ||
                 breakStart == breakEnd) {  // Added check for equal times
-              print('Detected as workout shift');
               return 'Workout';
             }
             
@@ -159,16 +136,13 @@ class ShiftService {
             final formattedStart = breakStart.split(':').take(2).join(':');
             final formattedEnd = breakEnd.split(':').take(2).join(':');
             
-            print('Formatted break times: $formattedStart - $formattedEnd');
             return '$formattedStart - $formattedEnd';
           }
         }
       }
       
-      print('No matching shift found in either file');
       return 'No break info';
     } catch (e) {
-      print('Error loading UNI/Euro shift details: $e');
       return 'Error loading break info';
     }
   }
@@ -183,18 +157,15 @@ class ShiftService {
         zoneNumber = match.group(1) ?? '1';
       }
       
-      print('Getting break time for zone $zoneNumber, day $dayOfWeek');
       
       // Check bank holiday status
       final bankHoliday = getBankHoliday(date, _bankHolidays);
       final isBankHoliday = bankHoliday != null;
       
       if (isBankHoliday) {
-        print('Bank holiday detected for regular shift: ${bankHoliday!.name}');
       }
     
       final filename = RosterService.getShiftFilename(zoneNumber, dayOfWeek, date);
-      print('Using shift filename: $filename');
       
       try {
         final file = await rootBundle.loadString('assets/$filename');
@@ -206,12 +177,10 @@ class ShiftService {
           if (parts.length < 4) continue;
           final shift = parts[0];
           if (shift == shiftCode) {
-            print('Found matching shift code in $filename');
             return _parseBreakTime(parts);
           }
         }
         
-        print('Shift code $shiftCode not found in $filename');
       } catch (e) {
         print('Error loading shift file: $e');
       }
@@ -228,20 +197,17 @@ class ShiftService {
     if (parts.length < 6) return 'No break info';
     
     // For debugging
-    print('Parsing break time from parts: ${parts.join(", ")}');
     
     // Get the break start/end times from the appropriate CSV columns
     // In the PZ CSV files, startbreak is column 6 (index 5) and finishbreak is column 9 (index 8)
     final breakStart = parts.length > 5 ? parts[5].trim().toLowerCase() : '';
     final breakEnd = parts.length > 8 ? parts[8].trim().toLowerCase() : '';
     
-    print('Break times from CSV - Start: $breakStart, End: $breakEnd');
     
     // Check if this is a workout shift (many formats possible in data)
     if (breakStart == 'nan' || breakStart == 'workout' || breakStart.isEmpty || 
         breakEnd == 'nan' || breakEnd == 'workout' || breakEnd.isEmpty ||
         breakStart == 'n/a' || breakEnd == 'n/a') {
-      print('Detected as workout shift - returning "Workout"');
       return 'Workout';
     }
     
@@ -252,7 +218,6 @@ class ShiftService {
       
       // Additional check for invalid formats
       if (startTimeParts.length < 2 || endTimeParts.length < 2) {
-        print('Invalid time format - returning "Workout"');
         return 'Workout'; // If time format is invalid, assume workout
       }
       
@@ -264,17 +229,14 @@ class ShiftService {
       
       // If any part couldn't be parsed, it's probably a workout
       if (startHour == null || startMinute == null || endHour == null || endMinute == null) {
-        print('Unable to parse time parts - returning "Workout"');
         return 'Workout';
       }
 
       if (startHour == endHour && startMinute == endMinute) {
-        print('Start and end times are the same - returning "No break"');
         return 'No break';
       } else {
         final formattedStart = _formatTimeOfDay(TimeOfDay(hour: startHour, minute: startMinute));
         final formattedEnd = _formatTimeOfDay(TimeOfDay(hour: endHour, minute: endMinute));
-        print('Formatted break times: $formattedStart - $formattedEnd');
         return '$formattedStart - $formattedEnd';
       }
     } catch (e) {
@@ -362,7 +324,6 @@ class ShiftService {
   static BankHoliday? getBankHoliday(DateTime date, List<BankHoliday> bankHolidays) {
     for (final holiday in bankHolidays) {
       if (holiday.matchesDate(date)) {
-        print('Bank holiday found: ${holiday.name} on ${holiday.date}');
         return holiday;
       }
     }

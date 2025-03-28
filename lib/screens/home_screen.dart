@@ -4,6 +4,8 @@ import 'package:spdrivercalendar/screens/shift_list_screen.dart';
 import 'package:spdrivercalendar/calendar_test_helper.dart';
 
 class HomeScreen extends StatefulWidget {
+  const HomeScreen({super.key});
+
   @override
   _HomeScreenState createState() => _HomeScreenState();
 }
@@ -13,7 +15,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Spare Driver Calendar'),
+        title: const Text('Spare Driver Calendar'),
       ),
       body: Center(
         child: Column(
@@ -23,27 +25,27 @@ class _HomeScreenState extends State<HomeScreen> {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => ShiftCreationScreen()),
+                  MaterialPageRoute(builder: (context) => const ShiftCreationScreen()),
                 );
               },
-              child: Text('Create New Shift'),
+              child: const Text('Create New Shift'),
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             ElevatedButton(
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => ShiftListScreen()),
+                  MaterialPageRoute(builder: (context) => const ShiftListScreen()),
                 );
               },
-              child: Text('View All Shifts'),
+              child: const Text('View All Shifts'),
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             ElevatedButton(
               onPressed: () async {
                 await CalendarTestHelper.addTestEvent(context);
               },
-              child: Text('Add Test Event to Calendar'),
+              child: const Text('Add Test Event to Calendar'),
             ),
           ],
         ),

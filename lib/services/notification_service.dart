@@ -2,6 +2,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:flutter/foundation.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class NotificationService {
   static final NotificationService _notificationService = NotificationService._internal();
@@ -101,37 +102,62 @@ class NotificationService {
     String? payload, // Optional data to pass with notification
   }) async {
     if (scheduledDateTime.isBefore(DateTime.now())) {
-        print("Scheduled time ${scheduledDateTime.toIso8601String()} is in the past. Notification not scheduled.");
+        print("[Notif Debug - Schedule] Scheduled time ${scheduledDateTime.toIso8601String()} is in the past. Notification NOT scheduled for ID: $id.");
         return; // Don't schedule notifications for past times
     }
-    
-    await flutterLocalNotificationsPlugin.zonedSchedule(
-      id,
-      title,
-      body,
-      tz.TZDateTime.from(scheduledDateTime, tz.local), // Use local timezone
-      const NotificationDetails(
-        android: AndroidNotificationDetails(
-          'shift_channel_id', // Channel ID
-          'Shift Notifications', // Channel Name
-          channelDescription: 'Notifications for upcoming shifts',
-          importance: Importance.max,
-          priority: Priority.high,
-          ticker: 'ticker',
-        ),
-        iOS: DarwinNotificationDetails(
-            presentAlert: true,
-            presentBadge: true,
-            presentSound: true,
-        ),
-      ),
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
-      payload: payload,
-      matchDateTimeComponents: DateTimeComponents.time, // Adjust if needed for repeating
-    );
-     print("Notification scheduled for ID: $id at ${scheduledDateTime.toIso8601String()}");
+
+    // --- Add permission check for Android 12+ ---
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      print("[Notif Debug - Schedule] Checking scheduleExactAlarm permission for Android for ID: $id");
+      var status = await Permission.scheduleExactAlarm.status;
+      print("[Notif Debug - Schedule] Initial scheduleExactAlarm status: ${status.name} for ID: $id");
+
+      if (!status.isGranted) {
+        print("[Notif Debug - Schedule] Requesting scheduleExactAlarm permission for ID: $id");
+        status = await Permission.scheduleExactAlarm.request();
+        print("[Notif Debug - Schedule] Permission status after request: ${status.name} for ID: $id");
+      }
+
+      if (!status.isGranted) {
+        print("[Notif Debug - Schedule] *** EXACT ALARM PERMISSION DENIED *** Notification NOT scheduled for ID: $id");
+        // Optionally: Show a user-facing message explaining why notifications won't work precisely.
+        return; // Don't attempt to schedule if permission is denied
+      }
+       print("[Notif Debug - Schedule] Exact alarm permission granted. Proceeding with scheduling for ID: $id");
+    }
+    // --- End permission check ---
+
+    try {
+        print("[Notif Debug - Schedule] Attempting flutterLocalNotificationsPlugin.zonedSchedule for ID: $id at ${scheduledDateTime.toIso8601String()}");
+        await flutterLocalNotificationsPlugin.zonedSchedule(
+          id,
+          title,
+          body,
+          tz.TZDateTime.from(scheduledDateTime, tz.local), // Use local timezone
+          const NotificationDetails(
+            android: AndroidNotificationDetails(
+              'shift_channel_id', // Channel ID
+              'Shift Notifications', // Channel Name
+              channelDescription: 'Notifications for upcoming shifts',
+              importance: Importance.max,
+              priority: Priority.high,
+              ticker: 'ticker',
+            ),
+            iOS: DarwinNotificationDetails(
+                presentAlert: true,
+                presentBadge: true,
+                presentSound: true,
+            ),
+          ),
+          androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+          uiLocalNotificationDateInterpretation:
+              UILocalNotificationDateInterpretation.absoluteTime,
+          payload: payload,
+        );
+         print("[Notif Debug - Schedule] Successfully called zonedSchedule for ID: $id at ${scheduledDateTime.toIso8601String()}");
+    } catch (e) {
+         print("[Notif Debug - Schedule] *** FAILED TO SCHEDULE *** for ID: $id. Error: $e");
+    }
   }
 
   Future<void> cancelNotification(int id) async {

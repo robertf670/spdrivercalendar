@@ -105,7 +105,7 @@ class _AboutScreenState extends State<AboutScreen> with TextRenderingMixin {
           children: [
             Text(
               title,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
                 color: AppTheme.primaryColor,
@@ -171,7 +171,7 @@ class _AboutScreenState extends State<AboutScreen> with TextRenderingMixin {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.check_circle, color: AppTheme.successColor, size: 20),
+          const Icon(Icons.check_circle, color: AppTheme.successColor, size: 20),
           const SizedBox(width: 8),
           Expanded(
             child: Column(
@@ -214,7 +214,7 @@ class _AboutScreenState extends State<AboutScreen> with TextRenderingMixin {
         _buildHowToItem('8. Customize',
             'Adjust app settings including dark mode in the Settings screen.'),
         _buildHowToItem('9. Add Notes',
-            'Tap an event card and use the \"Notes\" button to view or edit notes for that specific event.'),
+            'Tap an event card and use the "Notes" button to view or edit notes for that specific event.'),
         _buildHowToItem('10. Use Contacts',
             'Access the Contacts page from the side menu to manage your important numbers.'),
       ],

@@ -561,13 +561,6 @@ class CalendarScreenState extends State<CalendarScreen>
                         shiftTimes = await _getShiftTimes(selectedZone, selectedShiftNumber, shiftDate);
                       }
                       
-                      if (shiftTimes == null) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Error loading shift times')),
-                        );
-                        return;
-                      }
-                      
                       // Create the event with non-null assurances
                       final event = Event(
                         id: DateTime.now().millisecondsSinceEpoch.toString(),
@@ -829,10 +822,10 @@ class CalendarScreenState extends State<CalendarScreen>
                           // Convert duty numbers to their actual numbers
                           if (dutyNumber.length == 1) {
                             // If it's a single digit (1 or 2), it's a bogey duty
-                            dutyNumber = '35${dutyNumber}';
+                            dutyNumber = '35$dutyNumber';
                           } else {
                             // For two-digit numbers (01-10), prepend 3 to make it 301-310
-                            dutyNumber = '3${dutyNumber}';
+                            dutyNumber = '3$dutyNumber';
                           }
                           
                           // Load board entries
@@ -875,7 +868,7 @@ class CalendarScreenState extends State<CalendarScreen>
                       Navigator.of(context).pop();
                       
                       // Show a loading indicator that can be dismissed
-                      final snackBar = SnackBar(
+                      const snackBar = SnackBar(
                         content: Row(
                           children: [
                             SizedBox(
@@ -886,11 +879,11 @@ class CalendarScreenState extends State<CalendarScreen>
                                 valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                               ),
                             ),
-                            const SizedBox(width: 12),
-                            const Text('Deleting event...'),
+                            SizedBox(width: 12),
+                            Text('Deleting event...'),
                           ],
                         ),
-                        duration: const Duration(seconds: 3),
+                        duration: Duration(seconds: 3),
                       );
                       
                       // Show the loading snackbar
@@ -958,12 +951,12 @@ class CalendarScreenState extends State<CalendarScreen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
+                      const Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Icon(Icons.directions_bus, size: 20, color: AppTheme.primaryColor),
-                          const SizedBox(width: 8),
-                          const Text(
+                          Icon(Icons.directions_bus, size: 20, color: AppTheme.primaryColor),
+                          SizedBox(width: 8),
+                          Text(
                             'Bus Assignment',
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
@@ -1211,11 +1204,11 @@ class CalendarScreenState extends State<CalendarScreen>
                                   ),
                                   minimumSize: const Size(0, 48),
                                 ),
-                                child: Container(
+                                child: const SizedBox(
                                   width: double.infinity,
                                   child: Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
-                                    children: const [
+                                    children: [
                                       Icon(Icons.directions_bus, size: 18),
                                       SizedBox(width: 8),
                                       Text('Add Bus'),
@@ -1322,11 +1315,11 @@ class CalendarScreenState extends State<CalendarScreen>
                                         ),
                                         minimumSize: const Size(0, 48),
                                       ),
-                                      child: Container(
+                                      child: const SizedBox(
                                         width: double.infinity,
                                         child: Row(
                                           mainAxisAlignment: MainAxisAlignment.center,
-                                          children: const [
+                                          children: [
                                             Icon(Icons.directions_bus, size: 18),
                                             SizedBox(width: 8),
                                             Text('1st Half'),
@@ -1430,11 +1423,11 @@ class CalendarScreenState extends State<CalendarScreen>
                                         ),
                                         minimumSize: const Size(0, 48),
                                       ),
-                                      child: Container(
+                                      child: const SizedBox(
                                         width: double.infinity,
                                         child: Row(
                                           mainAxisAlignment: MainAxisAlignment.center,
-                                          children: const [
+                                          children: [
                                             Icon(Icons.directions_bus, size: 18),
                                             SizedBox(width: 8),
                                             Text('2nd Half'),
@@ -1477,8 +1470,8 @@ class CalendarScreenState extends State<CalendarScreen>
       context: context,
       builder: (context) => AlertDialog(
         // 1. Add Icon to Title
-        title: Row(
-          children: const [
+        title: const Row(
+          children: [
             Icon(Icons.notes_rounded, color: AppTheme.primaryColor), 
             SizedBox(width: 8),
             Text('Notes'),

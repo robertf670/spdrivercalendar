@@ -4,6 +4,8 @@ import 'package:spdrivercalendar/services/shift_service.dart';
 import 'package:uuid/uuid.dart';
 
 class ShiftCreationScreen extends StatefulWidget {
+  const ShiftCreationScreen({super.key});
+
   @override
   _ShiftCreationScreenState createState() => _ShiftCreationScreenState();
 }
@@ -23,7 +25,7 @@ class _ShiftCreationScreenState extends State<ShiftCreationScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Create New Shift'),
+        title: const Text('Create New Shift'),
       ),
       body: Form(
         key: _formKey,
@@ -33,7 +35,7 @@ class _ShiftCreationScreenState extends State<ShiftCreationScreen> {
             children: [
               TextFormField(
                 controller: _titleController,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   labelText: 'Shift Title',
                   hintText: 'Enter the shift title',
                 ),
@@ -44,19 +46,19 @@ class _ShiftCreationScreenState extends State<ShiftCreationScreen> {
                   return null;
                 },
               ),
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
               
               // Start time picker
               ListTile(
-                title: Text('Start Time'),
+                title: const Text('Start Time'),
                 subtitle: Text(_startTime.toString()),
-                trailing: Icon(Icons.edit),
+                trailing: const Icon(Icons.edit),
                 onTap: () async {
                   final date = await showDatePicker(
                     context: context,
                     initialDate: _startTime,
-                    firstDate: DateTime.now().subtract(Duration(days: 365)),
-                    lastDate: DateTime.now().add(Duration(days: 365)),
+                    firstDate: DateTime.now().subtract(const Duration(days: 365)),
+                    lastDate: DateTime.now().add(const Duration(days: 365)),
                   );
                   
                   if (date != null) {
@@ -77,7 +79,7 @@ class _ShiftCreationScreenState extends State<ShiftCreationScreen> {
                         
                         // Make sure end time is after start time
                         if (_endTime.isBefore(_startTime)) {
-                          _endTime = _startTime.add(Duration(hours: 8));
+                          _endTime = _startTime.add(const Duration(hours: 8));
                         }
                       });
                     }
@@ -87,15 +89,15 @@ class _ShiftCreationScreenState extends State<ShiftCreationScreen> {
               
               // End time picker
               ListTile(
-                title: Text('End Time'),
+                title: const Text('End Time'),
                 subtitle: Text(_endTime.toString()),
-                trailing: Icon(Icons.edit),
+                trailing: const Icon(Icons.edit),
                 onTap: () async {
                   final date = await showDatePicker(
                     context: context,
                     initialDate: _endTime,
-                    firstDate: DateTime.now().subtract(Duration(days: 365)),
-                    lastDate: DateTime.now().add(Duration(days: 365)),
+                    firstDate: DateTime.now().subtract(const Duration(days: 365)),
+                    lastDate: DateTime.now().add(const Duration(days: 365)),
                   );
                   
                   if (date != null) {
@@ -121,21 +123,21 @@ class _ShiftCreationScreenState extends State<ShiftCreationScreen> {
               
               TextFormField(
                 controller: _locationController,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   labelText: 'Location (Optional)',
                 ),
               ),
               
               TextFormField(
                 controller: _notesController,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   labelText: 'Notes (Optional)',
                 ),
                 maxLines: 3,
               ),
 
               SwitchListTile(
-                title: Text('Add to Google Calendar'),
+                title: const Text('Add to Google Calendar'),
                 value: _addToGoogleCalendar,
                 onChanged: (bool value) {
                   setState(() {
@@ -144,11 +146,11 @@ class _ShiftCreationScreenState extends State<ShiftCreationScreen> {
                 },
               ),
               
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
               
               ElevatedButton(
                 onPressed: _saveShift,
-                child: Text('Save Shift'),
+                child: const Text('Save Shift'),
               ),
             ],
           ),
@@ -164,7 +166,7 @@ class _ShiftCreationScreenState extends State<ShiftCreationScreen> {
         context: context,
         barrierDismissible: false,
         builder: (BuildContext context) {
-          return Center(child: CircularProgressIndicator());
+          return const Center(child: CircularProgressIndicator());
         },
       );
 
@@ -195,7 +197,7 @@ class _ShiftCreationScreenState extends State<ShiftCreationScreen> {
         
         // Show success message and return to previous screen
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Shift saved successfully')),
+          const SnackBar(content: Text('Shift saved successfully')),
         );
         Navigator.of(context).pop();
       } catch (e) {
