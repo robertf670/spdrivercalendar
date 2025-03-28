@@ -216,16 +216,23 @@ class EventService {
       final String reportTimeFormatted = DateFormat('HH:mm').format(reportDateTime);
       final String body = "Report at $reportTimeFormatted for ${event.title}";
 
-      await NotificationService().scheduleNotification(
-        id: notificationId,
-        title: title,
-        body: body,
-        scheduledDateTime: scheduledDateTime,
-        payload: event.id, // Pass event ID as payload if needed later
-      );
-      print("Scheduled notification for event ID: ${event.id} (Notif ID: $notificationId) at $scheduledDateTime");
+      // --- Add specific try-catch for scheduling ---
+      try {
+        await NotificationService().scheduleNotification(
+          id: notificationId,
+          title: title,
+          body: body,
+          scheduledDateTime: scheduledDateTime,
+          payload: event.id, // Pass event ID as payload if needed later
+        );
+        print("[Notif Debug] Successfully CALLED NotificationService.scheduleNotification for event ID: ${event.id} (Notif ID: $notificationId) at $scheduledDateTime"); // Modify this log
+      } catch (e) {
+        print("[Notif Debug] *** FAILED TO SCHEDULE *** for event ID: ${event.id} (Notif ID: $notificationId). Error: $e"); // Add error log
+      }
+      // --- End specific try-catch ---
+      
     } catch (e) {
-        print("Error scheduling notification for event ID: ${event.id}: $e");
+        print("[Notif Debug] Error in _scheduleWorkShiftNotification (outer catch) for event ID: ${event.id}: $e"); // Modify outer catch log
     }
   }
 
