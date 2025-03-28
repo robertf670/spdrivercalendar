@@ -16,6 +16,7 @@ class Event {
   String? secondHalfBus;  // For storing the second half bus number
   bool isHoliday;  // Whether this event represents a holiday
   String? holidayType;  // The type of holiday ('winter' or 'summer')
+  String? notes; // Add notes field
 
   Event({
     required this.id,
@@ -32,6 +33,7 @@ class Event {
     this.secondHalfBus,
     this.isHoliday = false,
     this.holidayType,
+    this.notes, // Add notes to constructor
   });
 
   // Convert to map for storage
@@ -55,6 +57,7 @@ class Event {
       'secondHalfBus': secondHalfBus,
       'isHoliday': isHoliday,
       'holidayType': holidayType,
+      'notes': notes, // Add notes to map
     };
   }
 
@@ -95,6 +98,7 @@ class Event {
       secondHalfBus: map['secondHalfBus'],
       isHoliday: map['isHoliday'] ?? false,
       holidayType: map['holidayType'],
+      notes: map['notes'], // Add notes from map
     );
   }
 
