@@ -146,7 +146,7 @@ class WelcomePage extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.info_outline, size: 22, color: Colors.blue),
+          const Icon(Icons.info_outline, size: 22, color: Colors.blue),
           const SizedBox(width: 12),
           Expanded(
             child: Text(

@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'package:flutter/services.dart';
-import 'package:flutter/material.dart';
 import 'package:spdrivercalendar/models/bank_holiday.dart';
 import 'package:spdrivercalendar/models/shift_data.dart';
 import 'package:spdrivercalendar/features/calendar/services/shift_service.dart';
@@ -137,20 +136,15 @@ class RosterService {
     // Check if it's a bank holiday
     final isBankHoliday = ShiftService.bankHolidays.any((holiday) => holiday.matchesDate(date));
     
-    print('Checking shift filename for date: ${date.toString()}, day: $dayOfWeek, isBankHoliday: $isBankHoliday');
     
     if (isBankHoliday) {
       // Use Sunday duties for bank holidays
-      print('Bank holiday detected, using Sunday duties file');
       return 'SUN_DUTIES_PZ$zoneNumber.csv';
     } else if (dayOfWeek == 'Saturday') {
-      print('Saturday detected, using Saturday duties file');
       return 'SAT_DUTIES_PZ$zoneNumber.csv';
     } else if (dayOfWeek == 'Sunday') {
-      print('Sunday detected, using Sunday duties file');
       return 'SUN_DUTIES_PZ$zoneNumber.csv';
     } else {
-      print('Weekday detected, using Monday-Friday duties file');
       return 'M-F_DUTIES_PZ$zoneNumber.csv';
     }
   }

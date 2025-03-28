@@ -484,8 +484,8 @@ class ViewBoardDialog extends StatelessWidget {
   String _getNextLocation(List<BoardEntry> entries, int currentIndex) {
     // Skip the current entry and look for the next non-SPL entry
     for (var i = currentIndex + 1; i < entries.length; i++) {
-      if (entries[i].route != 'SPL' && entries[i].location != null) {
-        return entries[i].location!;
+      if (entries[i].route != 'SPL') {
+        return entries[i].location;
       }
     }
     // If no next location found and this is the last regular trip, return Garage
@@ -513,8 +513,8 @@ class ViewBoardDialog extends StatelessWidget {
   String _getPreviousLocation(List<BoardEntry> entries, int currentIndex) {
     // Look back for the previous non-SPL entry
     for (var i = currentIndex - 1; i >= 0; i--) {
-      if (entries[i].route != 'SPL' && entries[i].location != null) {
-        return entries[i].location!;
+      if (entries[i].route != 'SPL') {
+        return entries[i].location;
       }
     }
     // If no previous location found, return the current location

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:spdrivercalendar/models/event.dart';
 import 'package:spdrivercalendar/theme/app_theme.dart';
-import 'package:spdrivercalendar/services/rest_days_service.dart';
 import 'package:flutter/services.dart';
 import 'dart:convert';
 import 'package:spdrivercalendar/features/calendar/services/roster_service.dart';

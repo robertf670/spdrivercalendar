@@ -254,7 +254,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         onTap: _isGoogleSignedIn 
             ? () => Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => GoogleCalendarSettingsScreen()),
+                MaterialPageRoute(builder: (context) => const GoogleCalendarSettingsScreen()),
               )
             : _handleGoogleSignIn,
       ),
@@ -662,7 +662,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         title: Text(request.title ?? 'No Title'),
                         subtitle: Text(
                           'ID: ${request.id}\nBody: ${request.body ?? 'No Body'}\nPayload: ${request.payload ?? 'None'}',
-                          style: TextStyle(fontSize: 12.0)
+                          style: const TextStyle(fontSize: 12.0)
                         ),
                         isThreeLine: true,
                       ),

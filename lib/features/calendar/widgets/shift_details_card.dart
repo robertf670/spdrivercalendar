@@ -93,7 +93,7 @@ class ShiftDetailsCard extends StatelessWidget {
                         color: AppTheme.errorColor.withOpacity(0.2),
                         borderRadius: BorderRadius.circular(AppTheme.borderRadius / 2),
                       ),
-                      child: Icon(Icons.celebration, color: AppTheme.errorColor, size: 20), // Smaller icon
+                      child: const Icon(Icons.celebration, color: AppTheme.errorColor, size: 20), // Smaller icon
                     ),
                     const SizedBox(width: 8),
                     Expanded(

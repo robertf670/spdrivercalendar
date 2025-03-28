@@ -2,12 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:spdrivercalendar/google_calendar_service.dart';
 import 'package:spdrivercalendar/google_login_page.dart';
-import 'package:spdrivercalendar/screens/google_calendar_settings_screen.dart';
-import 'package:spdrivercalendar/utils/preferences_util.dart';
 import 'package:spdrivercalendar/calendar_test_helper.dart';  // Add this import
 import 'package:spdrivercalendar/theme/app_theme.dart';
 import 'package:spdrivercalendar/services/notification_service.dart'; // Added import
-import 'package:spdrivercalendar/core/constants/app_constants.dart'; // Assuming keys are here or add them
+// Assuming keys are here or add them
 
 // Define Preference Keys for Notifications (Consider moving to AppConstants)
 const String kNotificationsEnabledKey = 'notificationsEnabled';
@@ -241,14 +239,14 @@ class _SettingsPageState extends State<SettingsPage> with AutomaticKeepAliveClie
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppTheme.borderRadius),
         ),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
+        child: const Padding(
+          padding: EdgeInsets.all(16.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Google Calendar'),
-              const SizedBox(height: 8),
-              const LinearProgressIndicator(),
+              Text('Google Calendar'),
+              SizedBox(height: 8),
+              LinearProgressIndicator(),
             ],
           ),
         ),
@@ -342,7 +340,7 @@ class _SettingsPageState extends State<SettingsPage> with AutomaticKeepAliveClie
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
-          title: Text('Sync Status'),
+          title: const Text('Sync Status'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -351,15 +349,15 @@ class _SettingsPageState extends State<SettingsPage> with AutomaticKeepAliveClie
               Text('Events on Google Calendar: ${syncResult['matchedEvents'] ?? 0}'),
               Text('Missing Events: ${syncResult['missingEvents'] ?? 0}'),
               if ((syncResult['missingEvents'] ?? 0) > 0) ...[
-                SizedBox(height: 16),
-                Text('Would you like to upload the missing events to Google Calendar?'),
+                const SizedBox(height: 16),
+                const Text('Would you like to upload the missing events to Google Calendar?'),
               ],
             ],
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: Text('Close'),
+              child: const Text('Close'),
             ),
             if ((syncResult['missingEvents'] ?? 0) > 0)
               TextButton(
@@ -367,7 +365,7 @@ class _SettingsPageState extends State<SettingsPage> with AutomaticKeepAliveClie
                   Navigator.of(context).pop();
                   await _syncMissingEvents(context);
                 },
-                child: Text('Sync Missing Events'),
+                child: const Text('Sync Missing Events'),
               ),
           ],
         ),

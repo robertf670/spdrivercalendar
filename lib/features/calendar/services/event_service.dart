@@ -94,7 +94,7 @@ class EventService {
     }
 
     // --- Schedule Notification --- 
-    if (eventWithId.isWorkShift && eventWithId.id != null) {
+    if (eventWithId.isWorkShift) {
       await _scheduleWorkShiftNotification(eventWithId);
     }
     // --- End Schedule Notification ---
@@ -120,7 +120,7 @@ class EventService {
   // Delete an event
   static Future<void> deleteEvent(Event event) async {
     // --- Cancel Notification --- 
-    if (event.isWorkShift && event.id != null) {
+    if (event.isWorkShift) {
       await _cancelWorkShiftNotification(event);
     }
     // --- End Cancel Notification ---
@@ -164,10 +164,8 @@ class EventService {
       // Ensure we only save unique events based on ID
       final uniqueEvents = <String, Event>{};
       for (var event in eventsList) {
-        if (event.id != null) {
-           uniqueEvents[event.id!] = event;
-        }
-      }
+         uniqueEvents[event.id] = event;
+            }
       encodedEvents[dateStr] = uniqueEvents.values
           .map((event) => event.toMap())
           .toList();
@@ -185,7 +183,7 @@ class EventService {
       final bool notificationsEnabled = prefs.getBool(kNotificationsEnabledKey) ?? false;
       print("[Notif Debug] Notifications Enabled (from prefs): $notificationsEnabled");
       
-      if (!notificationsEnabled || event.id == null) {
+      if (!notificationsEnabled) {
         print("[Notif Debug] Exiting scheduling: Notifications disabled or event ID is null.");
         return; // Don't schedule if disabled or event has no ID
       }
@@ -210,8 +208,8 @@ class EventService {
           return;
       }
 
-      final int notificationId = event.id!.hashCode; // Use hash code of string ID
-      final String title = "Upcoming Shift";
+      final int notificationId = event.id.hashCode; // Use hash code of string ID
+      const String title = "Upcoming Shift";
       // Format time for the body
       final String reportTimeFormatted = DateFormat('HH:mm').format(reportDateTime);
       final String body = "Report at $reportTimeFormatted for ${event.title}";
@@ -237,9 +235,8 @@ class EventService {
   }
 
   static Future<void> _cancelWorkShiftNotification(Event event) async {
-     if (event.id == null) return;
      try {
-        final int notificationId = event.id!.hashCode;
+        final int notificationId = event.id.hashCode;
         await NotificationService().cancelNotification(notificationId);
         print("Attempted to cancel notification for event ID: ${event.id} (Notif ID: $notificationId)");
      } catch (e) {

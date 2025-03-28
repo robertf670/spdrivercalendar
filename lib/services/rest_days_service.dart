@@ -1,5 +1,4 @@
 import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:convert';
 
 class RestDaysService {
   static const String _restDaysKey = 'rest_days';

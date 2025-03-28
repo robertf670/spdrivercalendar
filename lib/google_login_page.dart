@@ -405,19 +405,19 @@ class _GoogleLoginPageState extends State<GoogleLoginPage> {
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(color: Colors.orange),
                   ),
-                  child: Column(
+                  child: const Column(
                     children: [
-                      const Icon(Icons.info_outline, color: Colors.orange, size: 36),
-                      const SizedBox(height: 8),
-                      const Text(
+                      Icon(Icons.info_outline, color: Colors.orange, size: 36),
+                      SizedBox(height: 8),
+                      Text(
                         'Testing Mode Restriction',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      const SizedBox(height: 8),
-                      const Text(
+                      SizedBox(height: 8),
+                      Text(
                         'This app is currently in testing mode with Google. Only approved test users can access it.',
                         textAlign: TextAlign.center,
                       ),
