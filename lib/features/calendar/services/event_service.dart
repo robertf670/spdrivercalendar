@@ -2,6 +2,9 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:spdrivercalendar/core/constants/app_constants.dart';
 import 'package:spdrivercalendar/models/event.dart';
+import 'package:spdrivercalendar/services/notification_service.dart';
+import 'package:spdrivercalendar/settings_page.dart' show kNotificationsEnabledKey, kNotificationOffsetHoursKey;
+import 'package:intl/intl.dart';
 
 class EventService {
   // In-memory events cache
@@ -58,59 +61,82 @@ class EventService {
   
   // Add a new event
   static Future<void> addEvent(Event event) async {
+    // Ensure event has an ID
+    final eventWithId = event.id == null ? event.copyWith(id: DateTime.now().millisecondsSinceEpoch.toString()) : event;
+
     final normalizedStartDate = DateTime(
-      event.startDate.year, event.startDate.month, event.startDate.day
+      eventWithId.startDate.year, eventWithId.startDate.month, eventWithId.startDate.day
     );
 
     if (_events[normalizedStartDate] == null) {
       _events[normalizedStartDate] = [];
     }
 
-    // Make sure we're not adding a duplicate
-    if (!_events[normalizedStartDate]!.any((e) => e.id == event.id)) {
-      _events[normalizedStartDate]!.add(event);
+    // Make sure we're not adding a duplicate (check by ID)
+    if (!_events[normalizedStartDate]!.any((e) => e.id == eventWithId.id)) {
+      _events[normalizedStartDate]!.add(eventWithId);
     }
 
-    // If event spans multiple days, add to end date as well
-    if (event.startDate != event.endDate) {
+    // If event spans multiple days, add reference to end date as well
+    if (eventWithId.startDate != eventWithId.endDate) {
       final normalizedEndDate = DateTime(
-        event.endDate.year, event.endDate.month, event.endDate.day
+        eventWithId.endDate.year, eventWithId.endDate.month, eventWithId.endDate.day
       );
 
       if (_events[normalizedEndDate] == null) {
         _events[normalizedEndDate] = [];
       }
 
-      if (!_events[normalizedEndDate]!.any((e) => e.id == event.id)) {
-        _events[normalizedEndDate]!.add(event);
+      if (!_events[normalizedEndDate]!.any((e) => e.id == eventWithId.id)) {
+        // Store the same event instance
+        _events[normalizedEndDate]!.add(eventWithId);
       }
     }
 
+    // --- Schedule Notification --- 
+    if (eventWithId.isWorkShift && eventWithId.id != null) {
+      await _scheduleWorkShiftNotification(eventWithId);
+    }
+    // --- End Schedule Notification ---
+
     await _saveEvents();
     
-    // Return a copy of the event for UI updates
+    // Return
     return;
   }
   
   // Update an existing event
   static Future<void> updateEvent(Event oldEvent, Event newEvent) async {
-    // First delete the old event
+    // Ensure new event has an ID, preferably the same as the old one
+    final newEventWithId = newEvent.copyWith(id: oldEvent.id ?? newEvent.id ?? DateTime.now().millisecondsSinceEpoch.toString());
+
+    // First delete the old event (this will also cancel its notification)
     await deleteEvent(oldEvent);
     
-    // Then add the new event
-    await addEvent(newEvent);
+    // Then add the new event (this will schedule its notification)
+    await addEvent(newEventWithId);
   }
   
   // Delete an event
   static Future<void> deleteEvent(Event event) async {
+    // --- Cancel Notification --- 
+    if (event.isWorkShift && event.id != null) {
+      await _cancelWorkShiftNotification(event);
+    }
+    // --- End Cancel Notification ---
+
     final normalizedStartDate = DateTime(
       event.startDate.year, event.startDate.month, event.startDate.day
     );
 
     if (_events[normalizedStartDate] != null) {
       _events[normalizedStartDate]!.removeWhere((e) => e.id == event.id);
+      if (_events[normalizedStartDate]!.isEmpty) {
+        _events.remove(normalizedStartDate);
+      }
     }
 
+    // Remove reference from end date if it spans multiple days
     if (event.startDate != event.endDate) {
       final normalizedEndDate = DateTime(
         event.endDate.year, event.endDate.month, event.endDate.day
@@ -118,6 +144,9 @@ class EventService {
 
       if (_events[normalizedEndDate] != null) {
         _events[normalizedEndDate]!.removeWhere((e) => e.id == event.id);
+         if (_events[normalizedEndDate]!.isEmpty) {
+           _events.remove(normalizedEndDate);
+         }
       }
     }
 
@@ -132,11 +161,82 @@ class EventService {
     
     _events.forEach((date, eventsList) {
       final dateStr = date.toIso8601String();
-      encodedEvents[dateStr] = eventsList
+      // Ensure we only save unique events based on ID
+      final uniqueEvents = <String, Event>{};
+      for (var event in eventsList) {
+        if (event.id != null) {
+           uniqueEvents[event.id!] = event;
+        }
+      }
+      encodedEvents[dateStr] = uniqueEvents.values
           .map((event) => event.toMap())
           .toList();
     });
     
     await prefs.setString(AppConstants.eventsStorageKey, jsonEncode(encodedEvents));
+  }
+
+  // --- Notification Helper Methods ---
+
+  static Future<void> _scheduleWorkShiftNotification(Event event) async {
+    print("[Notif Debug] _scheduleWorkShiftNotification called for event ID: ${event.id}");
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final bool notificationsEnabled = prefs.getBool(kNotificationsEnabledKey) ?? false;
+      print("[Notif Debug] Notifications Enabled (from prefs): $notificationsEnabled");
+      
+      if (!notificationsEnabled || event.id == null) {
+        print("[Notif Debug] Exiting scheduling: Notifications disabled or event ID is null.");
+        return; // Don't schedule if disabled or event has no ID
+      }
+
+      final int offsetHours = prefs.getInt(kNotificationOffsetHoursKey) ?? 1;
+      
+      // Combine date and time for the report time
+      final DateTime reportDateTime = DateTime(
+        event.startDate.year,
+        event.startDate.month,
+        event.startDate.day,
+        event.startTime.hour,
+        event.startTime.minute,
+      );
+
+      final DateTime scheduledDateTime = reportDateTime.subtract(Duration(hours: offsetHours));
+      print("[Notif Debug] Calculated Schedule Time: ${scheduledDateTime.toIso8601String()}");
+
+      // Ensure notification time is in the future
+      if (scheduledDateTime.isBefore(DateTime.now())) {
+          print("[Notif Debug] Notification time ${scheduledDateTime.toIso8601String()} is in the past. Not scheduling for event ID: ${event.id}.");
+          return;
+      }
+
+      final int notificationId = event.id!.hashCode; // Use hash code of string ID
+      final String title = "Upcoming Shift";
+      // Format time for the body
+      final String reportTimeFormatted = DateFormat('HH:mm').format(reportDateTime);
+      final String body = "Report at $reportTimeFormatted for ${event.title}";
+
+      await NotificationService().scheduleNotification(
+        id: notificationId,
+        title: title,
+        body: body,
+        scheduledDateTime: scheduledDateTime,
+        payload: event.id, // Pass event ID as payload if needed later
+      );
+      print("Scheduled notification for event ID: ${event.id} (Notif ID: $notificationId) at $scheduledDateTime");
+    } catch (e) {
+        print("Error scheduling notification for event ID: ${event.id}: $e");
+    }
+  }
+
+  static Future<void> _cancelWorkShiftNotification(Event event) async {
+     if (event.id == null) return;
+     try {
+        final int notificationId = event.id!.hashCode;
+        await NotificationService().cancelNotification(notificationId);
+        print("Attempted to cancel notification for event ID: ${event.id} (Notif ID: $notificationId)");
+     } catch (e) {
+        print("Error cancelling notification for event ID: ${event.id}: $e");
+     }
   }
 }
