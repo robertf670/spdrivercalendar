@@ -8,11 +8,13 @@ import 'package:spdrivercalendar/models/shift_info.dart';
 class CalendarWidget extends StatefulWidget {
   final Function(DateTime) onDaySelected;
   final Map<String, ShiftInfo> shiftInfoMap;
+  final Function(Event) onShowNotes;
   
   const CalendarWidget({
     Key? key, 
     required this.onDaySelected,
     required this.shiftInfoMap,
+    required this.onShowNotes,
   }) : super(key: key);
   
   @override
@@ -92,11 +94,14 @@ class _CalendarWidgetState extends State<CalendarWidget> {
                     final event = _selectedEvents[index];
                     return EventCard(
                       event: event,
-                      shiftType: '',  // Will be provided by parent
+                      shiftType: '',
                       shiftInfoMap: widget.shiftInfoMap,
                       onEdit: (Event e) {
-                        // Handle edit in parent widget
+                        print("Edit requested from CalendarWidget for: ${e.title}");
                       },
+                      onShowNotes: widget.onShowNotes,
+                      isBankHoliday: false,
+                      isRestDay: false,
                     );
                   },
                 ),

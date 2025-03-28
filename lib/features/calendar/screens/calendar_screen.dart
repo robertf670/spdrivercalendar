@@ -858,6 +858,15 @@ class CalendarScreenState extends State<CalendarScreen>
                       child: const Text('View Board'),
                     ),
                   TextButton(
+                    onPressed: () {
+                      // Close the current dialog first
+                      Navigator.of(context).pop();
+                      // Show the notes dialog
+                      _showNotesDialog(event);
+                    },
+                    child: const Text('Notes'),
+                  ),
+                  TextButton(
                     style: TextButton.styleFrom(
                       foregroundColor: Colors.red,
                     ),
@@ -1459,6 +1468,112 @@ class CalendarScreenState extends State<CalendarScreen>
     );
   }
 
+  // --- Add the new _showNotesDialog function below ---
+  void _showNotesDialog(Event event) {
+    // Controller for the notes text field
+    final notesController = TextEditingController(text: event.notes);
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        // 1. Add Icon to Title
+        title: Row(
+          children: const [
+            Icon(Icons.notes_rounded, color: AppTheme.primaryColor), 
+            SizedBox(width: 8),
+            Text('Notes'),
+          ],
+        ),
+        // 2. Adjust Content Padding
+        contentPadding: const EdgeInsets.fromLTRB(24.0, 20.0, 24.0, 0), 
+        content: StatefulBuilder( // Keep StatefulBuilder for controller management
+          builder: (BuildContext context, StateSetter setState) {
+            final screenWidth = MediaQuery.of(context).size.width;
+            return SizedBox(
+              width: screenWidth * 0.8, 
+              // 3. Add Padding around TextField
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8.0),
+                child: TextField(
+                  controller: notesController,
+                  maxLines: 5, 
+                  minLines: 3, 
+                  decoration: InputDecoration(
+                    hintText: 'Add notes here...',
+                    border: const OutlineInputBorder(),
+                    // Optional: Add a subtle fill color
+                    fillColor: Theme.of(context).brightness == Brightness.dark 
+                              ? Colors.grey.shade800 
+                              : Colors.grey.shade100,
+                    filled: true,
+                  ),
+                  onChanged: (text) {
+                    // No need to call setState here unless you need UI updates on text change
+                  },
+                ),
+              ),
+            );
+          },
+        ),
+        // 4. Adjust Actions Padding
+        actionsPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          // Style Clear button as TextButton and make it red
+          TextButton(
+            onPressed: () {
+              notesController.clear();
+            },
+            // Add style to set text color to red
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.red, 
+            ),
+            child: const Text('Clear'),
+          ),
+          // Style Save button as ElevatedButton
+          ElevatedButton(
+            onPressed: () async {
+              // Get the updated notes
+              final updatedNotes = notesController.text.trim();
+              
+              if (updatedNotes != (event.notes ?? '')) {
+                final oldEvent = Event(
+                  id: event.id,
+                  title: event.title,
+                  startDate: event.startDate,
+                  startTime: event.startTime,
+                  endDate: event.endDate,
+                  endTime: event.endTime,
+                  workTime: event.workTime,
+                  breakStartTime: event.breakStartTime,
+                  breakEndTime: event.breakEndTime,
+                  assignedDuties: event.assignedDuties,
+                  firstHalfBus: event.firstHalfBus,
+                  secondHalfBus: event.secondHalfBus,
+                  isHoliday: event.isHoliday,
+                  holidayType: event.holidayType,
+                  notes: event.notes,
+                );
+
+                event.notes = updatedNotes.isEmpty ? null : updatedNotes;
+                
+                await EventService.updateEvent(oldEvent, event);
+                
+                setState(() {});
+              }
+              
+              Navigator.of(context).pop();
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -1916,6 +2031,7 @@ class CalendarScreenState extends State<CalendarScreen>
                   isBankHoliday: getBankHoliday(event.startDate) != null,
                   isRestDay: getShiftForDate(event.startDate) == 'R',
                   onEdit: _editEvent,
+                  onShowNotes: _showNotesDialog, // Pass the function here
                 )).toList(),
               ),
       ],

@@ -22,6 +22,7 @@ class EventCard extends StatefulWidget {
   final Function(Event) onEdit;
   final bool isBankHoliday;
   final bool isRestDay;
+  final Function(Event) onShowNotes;
 
   const EventCard({
     Key? key,
@@ -31,6 +32,7 @@ class EventCard extends StatefulWidget {
     required this.onEdit,
     this.isBankHoliday = false,
     this.isRestDay = false,
+    required this.onShowNotes,
   }) : super(key: key);
 
   @override
@@ -580,6 +582,7 @@ class _EventCardState extends State<EventCard> {
             children: [
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Expanded(
                     child: Text(
@@ -590,50 +593,70 @@ class _EventCardState extends State<EventCard> {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  // Status badges row
                   Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      // Rest day badge
-                      if (widget.isRestDay && widget.event.isWorkShift)
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 3.0),
-                          margin: const EdgeInsets.only(left: 4),
-                          decoration: BoxDecoration(
-                            color: widget.shiftInfoMap['R']?.color ?? Colors.blue,
-                            borderRadius: BorderRadius.circular(12.0),
-                          ),
-                          child: const Text(
-                            'Rest Day',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 12.0,
-                              fontWeight: FontWeight.bold,
-                            ),
+                      if (widget.event.notes != null && widget.event.notes!.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(left: 8.0),
+                          child: Icon(
+                            Icons.notes,
+                            size: 18,
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? Colors.white70
+                                : Colors.black54,
                           ),
                         ),
-                      // Bank holiday badge
-                      if (widget.isBankHoliday && widget.event.isWorkShift)
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 3.0),
-                          margin: const EdgeInsets.only(left: 4),
-                          decoration: BoxDecoration(
-                            color: Colors.red,
-                            borderRadius: BorderRadius.circular(12.0),
-                          ),
-                          child: const Text(
-                            'Bank Holiday',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 12.0,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
+                      Padding(
+                        padding: EdgeInsets.only(
+                          left: (widget.event.notes != null && widget.event.notes!.isNotEmpty) ? 8.0 : 0,
                         ),
+                        child: Row(
+                          children: [
+                            // Rest day badge
+                            if (widget.isRestDay && widget.event.isWorkShift)
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 3.0),
+                                margin: const EdgeInsets.only(left: 4),
+                                decoration: BoxDecoration(
+                                  color: widget.shiftInfoMap['R']?.color ?? Colors.blue,
+                                  borderRadius: BorderRadius.circular(12.0),
+                                ),
+                                child: const Text(
+                                  'Rest Day',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 12.0,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            // Bank holiday badge
+                            if (widget.isBankHoliday && widget.event.isWorkShift)
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 3.0),
+                                margin: const EdgeInsets.only(left: 4),
+                                decoration: BoxDecoration(
+                                  color: Colors.red,
+                                  borderRadius: BorderRadius.circular(12.0),
+                                ),
+                                child: const Text(
+                                  'Bank Holiday',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 12.0,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
                 ],
               ),
-              const SizedBox(height: 4.0),
+              const SizedBox(height: 6.0),
               
               // NEW: Report - Sign Off line (only for PZ shifts)
               if (widget.event.title.startsWith('PZ'))
@@ -748,7 +771,7 @@ class _EventCardState extends State<EventCard> {
                   ),
                 ],
               ),
-              const SizedBox(height: 4.0),
+              const SizedBox(height: 6.0),
               // Break times row (if available)
               if (breakTime != null) ...[
                 Row(
@@ -780,9 +803,8 @@ class _EventCardState extends State<EventCard> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 4.0),
+                const SizedBox(height: 6.0),
               ],
-              const SizedBox(height: 4.0),
               // Show assigned duty details if available
               if (widget.event.assignedDuties != null && widget.event.assignedDuties!.isNotEmpty) ...[
                 Padding(
@@ -791,8 +813,8 @@ class _EventCardState extends State<EventCard> {
                     child: _buildAssignedDuties(),
                   ),
                 ),
+                const SizedBox(height: 6.0),
               ],
-              const SizedBox(height: 4.0),
               // Date row
               Row(
                 children: [
@@ -816,6 +838,8 @@ class _EventCardState extends State<EventCard> {
                       ),
                     ),
                   ),
+                  // Add a Spacer to push work time to the right
+                  const Spacer(), 
                   if (workTime != null) ...[
                     Text(
                       'Work: $workTime',
@@ -830,7 +854,6 @@ class _EventCardState extends State<EventCard> {
                   ],
                 ],
               ),
-              const SizedBox(height: 4.0),
               // Bus assignment row
               if (widget.event.firstHalfBus != null || widget.event.secondHalfBus != null) ...[
                 Row(
@@ -870,7 +893,6 @@ class _EventCardState extends State<EventCard> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 4.0),
               ],
             ],
           ),
@@ -1360,6 +1382,22 @@ class _EventCardState extends State<EventCard> {
             ),
           ],
         ),
+        // Add actions for the dialog
+        actions: [
+          TextButton(
+            onPressed: () {
+              // Close the current dialog
+              Navigator.of(context).pop();
+              // Call the onShowNotes callback from the parent
+              widget.onShowNotes(widget.event);
+            },
+            child: const Text('Notes'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(), // Simple close action
+            child: const Text('Close'),
+          ),
+        ],
       ),
     );
   }
@@ -1378,77 +1416,102 @@ class _EventCardState extends State<EventCard> {
       return const SizedBox.shrink();
     }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: _allDutyDetails.map((duty) {
-        // Calculate work duration for this duty
-        String workDuration = '';
-        if (duty['startTime'] != null && duty['endTime'] != null) {
-          final startParts = duty['startTime']!.split(':');
-          final endParts = duty['endTime']!.split(':');
-          
-          if (startParts.length >= 2 && endParts.length >= 2) {
+    // Use map and separate with SizedBox for consistent spacing
+    final dutyWidgets = _allDutyDetails.map((duty) {
+      // Calculate work duration for this duty
+      String workDuration = '';
+      if (duty['startTime'] != null && duty['endTime'] != null) {
+        final startParts = duty['startTime']!.split(':');
+        final endParts = duty['endTime']!.split(':');
+        
+        if (startParts.length >= 2 && endParts.length >= 2) {
+          try { // Add try-catch for parsing robustness
             final start = DateTime(2024, 1, 1, int.parse(startParts[0]), int.parse(startParts[1]));
             final end = DateTime(2024, 1, 1, int.parse(endParts[0]), int.parse(endParts[1]));
             
-            final duration = end.difference(start);
+            var duration = end.difference(start);
+            // Handle potential overnight shifts
+            if (duration.isNegative) {
+              duration += const Duration(days: 1);
+            }
+
             final hours = duration.inHours;
             final minutes = duration.inMinutes % 60;
             
             workDuration = '${hours}h ${minutes}m';
+          } catch (e) {
+            print("Error calculating duty duration: $e");
+            workDuration = 'Err'; // Indicate error
           }
         }
+      }
 
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 4.0),
-          child: Row(
-            children: [
-              Icon(
-                Icons.work,
-                size: 16,
-                color: Theme.of(context).brightness == Brightness.dark
-                    ? Colors.white
-                    : Colors.black,
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        'Assigned: ${duty['dutyCode']} | '
-                        '${duty['startLocation'] ?? ""} - '
-                        '${duty['startTime'] ?? ""} '
-                        '${duty['endTime'] ?? ""} - '
-                        '${duty['endLocation'] ?? ""}',
-                        style: TextStyle(
-                          color: Theme.of(context).brightness == Brightness.dark
-                              ? Colors.white
-                              : Colors.black,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                        ),
+      return Row(
+        children: [
+          Icon(
+            Icons.work,
+            size: 16,
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.white
+                : Colors.black,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    'Assigned: ${duty['dutyCode']} | '
+                    '${duty['startLocation'] ?? ""} - '
+                    '${duty['startTime'] ?? ""} '
+                    '${duty['endTime'] ?? ""} - '
+                    '${duty['endLocation'] ?? ""}',
+                    style: TextStyle(
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white
+                          : Colors.black,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    overflow: TextOverflow.ellipsis, // Prevent overflow
+                    maxLines: 2, // Allow wrapping if needed
+                  ),
+                ),
+                if (workDuration.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 8.0), // Add padding before work duration
+                    child: Text(
+                      'Work: $workDuration',
+                      style: TextStyle(
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.white
+                            : Colors.black,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
-                    if (workDuration.isNotEmpty)
-                      Text(
-                        'Work: $workDuration',
-                        style: TextStyle(
-                          color: Theme.of(context).brightness == Brightness.dark
-                              ? Colors.white
-                              : Colors.black,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-            ],
+                  ),
+              ],
+            ),
           ),
-        );
-      }).toList(),
+        ],
+      );
+    }).toList();
+
+    // Insert SizedBox between duty widgets
+    List<Widget> spacedDutyWidgets = [];
+    for (int i = 0; i < dutyWidgets.length; i++) {
+      spacedDutyWidgets.add(dutyWidgets[i]);
+      if (i < dutyWidgets.length - 1) {
+        // Add spacing between duty rows
+        spacedDutyWidgets.add(const SizedBox(height: 6.0)); 
+      }
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: spacedDutyWidgets,
     );
   }
 
