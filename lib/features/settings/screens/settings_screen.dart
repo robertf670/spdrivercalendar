@@ -8,6 +8,8 @@ import 'package:spdrivercalendar/calendar_test_helper.dart';
 import 'package:spdrivercalendar/core/mixins/text_rendering_mixin.dart';
 import 'package:spdrivercalendar/services/notification_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:spdrivercalendar/services/backup_service.dart';
 
 // Define Preference Keys for Notifications (Consider moving to AppConstants if not already there)
 const String kNotificationsEnabledKey = 'notificationsEnabled';
@@ -159,11 +161,19 @@ class _SettingsScreenState extends State<SettingsScreen> with TextRenderingMixin
           _buildNotificationsEnabledSwitch(),
           _buildNotificationOffsetDropdown(),
           _buildTestNotificationButton(),
+          _buildViewPendingNotificationsButton(),
           // --- End Notifications Section --- 
           
           const Divider(height: 32),
           _buildSectionHeader('Schedule'),
           _buildResetRestDaysButton(),
+          
+          // --- Add Backup & Restore Section --- 
+          const Divider(height: 32),
+          _buildSectionHeader('Backup & Restore'),
+          _buildBackupButton(),
+          _buildRestoreButton(),
+          // --- End Backup & Restore Section --- 
           
           const Divider(height: 32),
           _buildSectionHeader('App'),
@@ -414,6 +424,24 @@ class _SettingsScreenState extends State<SettingsScreen> with TextRenderingMixin
     );
   }
 
+  Widget _buildViewPendingNotificationsButton() {
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 4.0),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppTheme.borderRadius),
+      ),
+      child: ListTile(
+        leading: Icon(
+          Icons.list_alt,
+          color: Theme.of(context).iconTheme.color, // Always enabled visually
+        ),
+        title: const Text('View Pending Notifications'),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: _showPendingNotifications, // Call the dialog function
+      ),
+    );
+  }
+
   Future<void> _handleGoogleSignIn() async {
     setState(() {
       _isLoading = true;
@@ -589,5 +617,199 @@ class _SettingsScreenState extends State<SettingsScreen> with TextRenderingMixin
         );
       }
     }
+  }
+
+  // --- Dialog Function --- 
+  Future<void> _showPendingNotifications() async {
+    // Show loading indicator while fetching
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const AlertDialog(
+        content: Row(
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(width: 16), 
+            Text("Fetching..."),
+          ],
+        ),
+      ),
+    );
+
+    try {
+      final List<PendingNotificationRequest> pendingRequests = 
+          await NotificationService().getPendingNotifications();
+      
+      // Close loading dialog
+      Navigator.of(context, rootNavigator: true).pop(); 
+
+      // Show results dialog
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Pending Notifications'),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: pendingRequests.isEmpty
+              ? const Center(child: Text('No pending notifications found.'))
+              : ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: pendingRequests.length,
+                  itemBuilder: (context, index) {
+                    final request = pendingRequests[index];
+                    return Card(
+                      margin: const EdgeInsets.symmetric(vertical: 4.0),
+                      child: ListTile(
+                        title: Text(request.title ?? 'No Title'),
+                        subtitle: Text(
+                          'ID: ${request.id}\nBody: ${request.body ?? 'No Body'}\nPayload: ${request.payload ?? 'None'}',
+                          style: TextStyle(fontSize: 12.0)
+                        ),
+                        isThreeLine: true,
+                      ),
+                    );
+                  },
+                ),
+          ),
+          actions: [
+            TextButton(
+              child: const Text('Close'),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      // Close loading dialog in case of error
+      Navigator.of(context, rootNavigator: true).pop();
+      // Show error message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error fetching pending notifications: $e')),
+      );
+    }
+  }
+
+  // --- Backup & Restore UI + Logic ---
+
+  Widget _buildBackupButton() {
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 4.0),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppTheme.borderRadius),
+      ),
+      child: ListTile(
+        leading: Icon(Icons.backup_outlined, color: Theme.of(context).iconTheme.color),
+        title: const Text('Backup Data'),
+        subtitle: const Text('Save events and settings to a file'),
+        onTap: _performBackup,
+      ),
+    );
+  }
+
+  Widget _buildRestoreButton() {
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 4.0),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppTheme.borderRadius),
+      ),
+      child: ListTile(
+        leading: Icon(Icons.restore_page_outlined, color: Theme.of(context).iconTheme.color),
+        title: const Text('Restore Data'),
+        subtitle: const Text('Load events and settings from a file'),
+        onTap: _confirmRestore,
+      ),
+    );
+  }
+
+  Future<void> _performBackup() async {
+    // Show loading indicator
+     _showLoadingDialog("Creating backup...");
+    
+    final bool success = await BackupService.createBackup();
+    
+    // Close loading dialog
+    Navigator.of(context, rootNavigator: true).pop();
+
+    if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(success ? 'Backup created successfully!' : 'Backup failed.')),
+        );
+    }
+  }
+
+  Future<void> _confirmRestore() async {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Confirm Restore'),
+        content: const Text('Restoring data will overwrite current events and settings. Are you sure?'),
+        actions: [
+          TextButton(
+            child: const Text('Cancel'),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+          TextButton(
+            child: const Text('Restore', style: TextStyle(color: Colors.red)),
+            onPressed: () {
+              Navigator.of(context).pop(); // Close confirmation
+              _performRestore(); // Start restore process
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _performRestore() async {
+     // Show loading indicator
+    _showLoadingDialog("Restoring backup...");
+
+    final bool success = await BackupService.restoreBackup();
+
+    // Close loading dialog
+    Navigator.of(context, rootNavigator: true).pop();
+
+    if (success) {
+      // Show success message and prompt for restart
+      if (mounted) {
+         showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (context) => AlertDialog(
+              title: const Text('Restore Complete'),
+              content: const Text('Data restored successfully. Please restart the app for changes to take full effect.'),
+              actions: [
+                TextButton(
+                  child: const Text('OK'),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+              ],
+            ),
+          );
+      }
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Restore failed. Please check the backup file and try again.')),
+        );
+      }
+    }
+  }
+  
+  // Helper for loading dialog
+  void _showLoadingDialog(String message) {
+     showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        content: Row(
+          children: [
+            const CircularProgressIndicator(),
+            const SizedBox(width: 16), 
+            Text(message),
+          ],
+        ),
+      ),
+    );
   }
 }

@@ -15,32 +15,41 @@ class NotificationService {
   final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
 
   Future<void> init() async {
-    // Initialize native timezone database
-    tz.initializeTimeZones();
+    print("[Notif Init Debug] Starting NotificationService.init()");
+    try {
+      // Initialize native timezone database
+      tz.initializeTimeZones();
+      print("[Notif Init Debug] Timezones initialized.");
 
-    // Android initialization settings
-    const AndroidInitializationSettings initializationSettingsAndroid =
-        AndroidInitializationSettings('@mipmap/ic_launcher'); // Make sure you have this icon
+      // Android initialization settings
+      const AndroidInitializationSettings initializationSettingsAndroid =
+          AndroidInitializationSettings('@mipmap/ic_launcher'); // Make sure you have this icon
 
-    // iOS initialization settings
-    final DarwinInitializationSettings initializationSettingsIOS =
-        DarwinInitializationSettings(
-      requestAlertPermission: false,
-      requestBadgePermission: false,
-      requestSoundPermission: false,
-      onDidReceiveLocalNotification: onDidReceiveLocalNotification,
-    );
+      // iOS initialization settings
+      final DarwinInitializationSettings initializationSettingsIOS =
+          DarwinInitializationSettings(
+        requestAlertPermission: false,
+        requestBadgePermission: false,
+        requestSoundPermission: false,
+        onDidReceiveLocalNotification: onDidReceiveLocalNotification,
+      );
 
-    final InitializationSettings initializationSettings = InitializationSettings(
-      android: initializationSettingsAndroid,
-      iOS: initializationSettingsIOS,
-    );
+      final InitializationSettings initializationSettings = InitializationSettings(
+        android: initializationSettingsAndroid,
+        iOS: initializationSettingsIOS,
+      );
 
-    // Initialize the plugin
-    await flutterLocalNotificationsPlugin.initialize(
-      initializationSettings,
-      onDidReceiveNotificationResponse: onDidReceiveNotificationResponse,
-    );
+      // Initialize the plugin
+      await flutterLocalNotificationsPlugin.initialize(
+        initializationSettings,
+        onDidReceiveNotificationResponse: onDidReceiveNotificationResponse,
+      );
+      print("[Notif Init Debug] FlutterLocalNotificationsPlugin initialized.");
+
+    } catch (e) {
+       print("[Notif Init Debug] ERROR during NotificationService.init(): $e");
+    }
+     print("[Notif Init Debug] Finished NotificationService.init()");
   }
 
   // Callback for when a notification is received while the app is in the foreground (iOS legacy)
@@ -157,4 +166,18 @@ class NotificationService {
     );
      print("Showing test notification");
   }
+
+  // --- Add method to get pending notifications ---
+  Future<List<PendingNotificationRequest>> getPendingNotifications() async {
+    try {
+      final List<PendingNotificationRequest> pendingRequests = 
+          await flutterLocalNotificationsPlugin.pendingNotificationRequests();
+      print("[Notif Debug] Found ${pendingRequests.length} pending notification requests.");
+      return pendingRequests;
+    } catch (e) {
+       print("Error fetching pending notifications: $e");
+       return []; // Return empty list on error
+    }
+  }
+  // --- End add method ---
 } 
