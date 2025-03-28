@@ -633,7 +633,7 @@ class _EventCardState extends State<EventCard> {
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 4.0),
               
               // NEW: Report - Sign Off line (only for PZ shifts)
               if (widget.event.title.startsWith('PZ'))
@@ -655,24 +655,26 @@ class _EventCardState extends State<EventCard> {
                         child: RichText(
                           overflow: TextOverflow.ellipsis, // Prevent overflow
                           text: TextSpan(
-                            // Default style (bold for the whole line)
+                            // Default style (slightly de-emphasized)
                             style: TextStyle(
-                              color: Theme.of(context).brightness == Brightness.dark
-                                  ? Colors.white
-                                  : Colors.black,
+                              color: Colors.black, // Lighter color -> Changed to black
                               fontSize: 14,
-                              fontWeight: FontWeight.w600, // Make entire line bold
+                              // fontWeight: FontWeight.w600, // REMOVE overall bold
                             ),
                             children: <TextSpan>[
-                              const TextSpan(text: 'Report: '), // No specific style needed now
+                              const TextSpan(text: 'Report: '),
                               TextSpan(
                                 text: widget.event.formattedStartTime,
-                                // style: const TextStyle(fontWeight: FontWeight.w600), // Inherits bold
+                                style: TextStyle( // Removed const
+                                  color: Colors.black, // Use theme color for time -> Changed to black
+                                ),
                               ),
-                              const TextSpan(text: ' - Sign Off: '), // No specific style needed now
+                              const TextSpan(text: ' - Sign Off: '),
                               TextSpan(
                                 text: widget.event.formattedEndTime,
-                                // style: const TextStyle(fontWeight: FontWeight.w600), // Inherits bold
+                                style: TextStyle( // Removed const
+                                  color: Colors.black, // Use theme color for time -> Changed to black
+                                ),
                               ),
                             ],
                           ),
@@ -746,7 +748,7 @@ class _EventCardState extends State<EventCard> {
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 4.0),
               // Break times row (if available)
               if (breakTime != null) ...[
                 Row(
@@ -778,8 +780,9 @@ class _EventCardState extends State<EventCard> {
                     ),
                   ],
                 ),
+                const SizedBox(height: 4.0),
               ],
-              const SizedBox(height: 4),
+              const SizedBox(height: 4.0),
               // Show assigned duty details if available
               if (widget.event.assignedDuties != null && widget.event.assignedDuties!.isNotEmpty) ...[
                 Padding(
@@ -789,6 +792,7 @@ class _EventCardState extends State<EventCard> {
                   ),
                 ),
               ],
+              const SizedBox(height: 4.0),
               // Date row
               Row(
                 children: [
@@ -826,9 +830,9 @@ class _EventCardState extends State<EventCard> {
                   ],
                 ],
               ),
+              const SizedBox(height: 4.0),
               // Bus assignment row
               if (widget.event.firstHalfBus != null || widget.event.secondHalfBus != null) ...[
-                const SizedBox(height: 8),
                 Row(
                   children: [
                     Icon(
@@ -866,6 +870,7 @@ class _EventCardState extends State<EventCard> {
                     ),
                   ],
                 ),
+                const SizedBox(height: 4.0),
               ],
             ],
           ),
