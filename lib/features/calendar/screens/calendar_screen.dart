@@ -2114,9 +2114,9 @@ class CalendarScreenState extends State<CalendarScreen>
                             const SizedBox(height: 8),
                             Container(
                               decoration: BoxDecoration(
-                                color: Colors.grey.shade50,
+                                color: Theme.of(context).colorScheme.surface.withOpacity(0.5), // Use theme color
                                 borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: Colors.grey.shade200),
+                                border: Border.all(color: Theme.of(context).dividerColor), // Use theme divider color
                               ),
                               child: ListView.builder(
                                 shrinkWrap: true,
@@ -2127,10 +2127,10 @@ class CalendarScreenState extends State<CalendarScreen>
                                   return Container(
                                     margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                     decoration: BoxDecoration(
-                                      color: Colors.white,
+                                      color: Theme.of(context).cardColor, // Use theme card color
                                       borderRadius: BorderRadius.circular(8),
                                       border: Border.all(
-                                        color: Colors.grey.shade200,
+                                        color: Theme.of(context).dividerColor, // Use theme divider color
                                         width: 1,
                                       ),
                                       boxShadow: [
@@ -2152,12 +2152,18 @@ class CalendarScreenState extends State<CalendarScreen>
                                         holiday.type == 'winter' ? 'Winter Holiday' : 
                                         holiday.type == 'summer' ? 'Summer Holiday' :
                                         'Other Holiday',
-                                        style: const TextStyle(fontWeight: FontWeight.bold),
+                                        style: TextStyle( // Remove const
+                                          fontWeight: FontWeight.bold,
+                                          color: Theme.of(context).textTheme.titleMedium?.color // Use theme text color
+                                        ),
                                       ),
                                       subtitle: Text(
                                         holiday.startDate == holiday.endDate
                                             ? DateFormat('MMM d').format(holiday.startDate)
                                             : '${DateFormat('MMM d').format(holiday.startDate)} - ${DateFormat('MMM d').format(holiday.endDate)}',
+                                        style: TextStyle( // Add style for subtitle
+                                          color: Theme.of(context).textTheme.bodySmall?.color // Use theme text color
+                                        ),
                                       ),
                                       trailing: IconButton(
                                         icon: const Icon(Icons.delete_outline, color: Colors.red),
