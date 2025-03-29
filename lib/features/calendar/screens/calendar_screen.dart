@@ -1617,40 +1617,39 @@ class CalendarScreenState extends State<CalendarScreen>
           ),
         ],
       ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            // TableCalendar stays fixed at the top
-            _buildCalendar(),
-            // The rest of the content becomes scrollable
-            Expanded(
-              child: SingleChildScrollView(
-                child: Column(
-                  children: [
-                    const SizedBox(height: 16),
-                    if (_selectedDay != null && _startDate != null)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
-                        child: ShiftDetailsCard(
-                          date: _selectedDay!,
-                          shift: getShiftForDate(_selectedDay!),
-                          shiftInfoMap: _shiftInfoMap,
-                          bankHoliday: getBankHoliday(_selectedDay!),
-                        ),
+      body: Column( // Removed SafeArea wrapper
+        children: [
+          // TableCalendar stays fixed at the top
+          _buildCalendar(),
+          // The rest of the content becomes scrollable
+          Expanded(
+            child: SingleChildScrollView(
+              child: Column(
+                children: [
+                  const SizedBox(height: 16),
+                  if (_selectedDay != null && _startDate != null)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+                      child: ShiftDetailsCard(
+                        date: _selectedDay!,
+                        shift: getShiftForDate(_selectedDay!),
+                        shiftInfoMap: _shiftInfoMap,
+                        bankHoliday: getBankHoliday(_selectedDay!),
                       ),
-                    if (_selectedDay != null)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                        child: _buildEventsList(),
-                      ),
-                    // Add some padding at the bottom to ensure the last item is fully visible
-                    const SizedBox(height: 24),
-                  ],
-                ),
+                    ),
+                  if (_selectedDay != null)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                      child: _buildEventsList(),
+                    ),
+                  // Add some padding at the bottom to ensure the last item is fully visible
+                  // Consider wrapping this inner Column/ScrollView in SafeArea if needed for bottom intrusions
+                  const SizedBox(height: 24),
+                ],
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -1949,7 +1948,7 @@ class CalendarScreenState extends State<CalendarScreen>
             Text(
               shift,
               style: const TextStyle(
-                fontSize: 12,
+                fontSize: 11, // Reduced font size from 12 to 11
                 fontWeight: FontWeight.bold,
               ),
             ),

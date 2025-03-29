@@ -5,6 +5,8 @@ import 'package:spdrivercalendar/models/event.dart';
 import 'package:spdrivercalendar/services/notification_service.dart';
 import 'package:spdrivercalendar/settings_page.dart' show kNotificationsEnabledKey, kNotificationOffsetHoursKey;
 import 'package:intl/intl.dart';
+import 'package:flutter/foundation.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class EventService {
   // In-memory events cache
@@ -214,8 +216,25 @@ class EventService {
       final String reportTimeFormatted = DateFormat('HH:mm').format(reportDateTime);
       final String body = "Report at $reportTimeFormatted for ${event.title}";
 
+      // --- Explicitly check SCHEDULE_EXACT_ALARM permission before scheduling ---
+      bool exactAlarmPermGranted = true; // Default to true for non-Android or older versions
+      if (defaultTargetPlatform == TargetPlatform.android) {
+        print("[Notif Debug - EventService] Checking scheduleExactAlarm status before scheduling for event ID: ${event.id}");
+        final status = await Permission.scheduleExactAlarm.status;
+        exactAlarmPermGranted = status.isGranted;
+        print("[Notif Debug - EventService] scheduleExactAlarm status: ${status.name} for event ID: ${event.id}");
+        if (!exactAlarmPermGranted) {
+           print("[Notif Debug - EventService] *** EXACT ALARM PERMISSION DENIED *** in EventService check for event ID: ${event.id}. Notification might be delayed or blocked by OS.");
+           // Consider adding user feedback here, like a SnackBar
+        }
+      }
+      // --- End permission check ---
+
       // --- Add specific try-catch for scheduling ---
       try {
+        // Only proceed if permission was granted (or not applicable)
+        // Note: We still proceed even if denied, as the inner check handles it,
+        // but the log above provides context.
         await NotificationService().scheduleNotification(
           id: notificationId,
           title: title,
@@ -223,7 +242,29 @@ class EventService {
           scheduledDateTime: scheduledDateTime,
           payload: event.id, // Pass event ID as payload if needed later
         );
-        print("[Notif Debug] Successfully CALLED NotificationService.scheduleNotification for event ID: ${event.id} (Notif ID: $notificationId) at $scheduledDateTime"); // Modify this log
+        print("[Notif Debug] Successfully CALLED NotificationService.scheduleNotification for event ID: ${event.id} (Notif ID: $notificationId) at $scheduledDateTime");
+        
+        // --- Check pending notifications immediately after scheduling ---
+        try {
+          final pending = await NotificationService().getPendingNotifications();
+          print("[Notif Debug] Found ${pending.length} pending notifications immediately after scheduling.");
+          bool found = false;
+          for (var p in pending) {
+            print("[Notif Debug] Pending ID: ${p.id}, Title: ${p.title}, Scheduled: [Needs TZDateTime conversion]");
+            if (p.id == notificationId) {
+              found = true;
+              print("[Notif Debug] *** SUCCESS: Newly scheduled notification (ID: $notificationId) IS PENDING in the system! ***");
+              break;
+            }
+          }
+          if (!found) {
+             print("[Notif Debug] *** WARNING: Newly scheduled notification (ID: $notificationId) was NOT found in pending list immediately after scheduling! ***");
+          }
+        } catch (e) {
+          print("[Notif Debug] Error checking pending notifications: $e");
+        }
+        // --- End check pending notifications ---
+
       } catch (e) {
         print("[Notif Debug] *** FAILED TO SCHEDULE *** for event ID: ${event.id} (Notif ID: $notificationId). Error: $e"); // Add error log
       }
