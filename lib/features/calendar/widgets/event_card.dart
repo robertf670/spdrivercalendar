@@ -674,8 +674,8 @@ class _EventCardState extends State<EventCard> {
                           overflow: TextOverflow.ellipsis, // Prevent overflow
                           text: TextSpan(
                             // Default style (slightly de-emphasized)
-                            style: const TextStyle(
-                              color: Colors.black, // Lighter color -> Changed to black
+                            style: TextStyle( // Removed const and hardcoded black color
+                              color: Theme.of(context).textTheme.bodyMedium?.color, // Use theme color
                               fontSize: 14,
                               // fontWeight: FontWeight.w600, // REMOVE overall bold
                             ),
@@ -683,15 +683,15 @@ class _EventCardState extends State<EventCard> {
                               const TextSpan(text: 'Report: '),
                               TextSpan(
                                 text: widget.event.formattedStartTime,
-                                style: const TextStyle( // Removed const
-                                  color: Colors.black, // Use theme color for time -> Changed to black
+                                style: TextStyle( // Removed const and hardcoded black color
+                                  color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.9), // Use theme color, slightly less emphasis
                                 ),
                               ),
                               const TextSpan(text: ' - Sign Off: '),
                               TextSpan(
                                 text: widget.event.formattedEndTime,
-                                style: const TextStyle( // Removed const
-                                  color: Colors.black, // Use theme color for time -> Changed to black
+                                style: TextStyle( // Removed const and hardcoded black color
+                                  color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.9), // Use theme color, slightly less emphasis
                                 ),
                               ),
                             ],
