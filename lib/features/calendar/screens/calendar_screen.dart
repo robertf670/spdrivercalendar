@@ -1945,20 +1945,30 @@ class CalendarScreenState extends State<CalendarScreen>
         children: [
           Text('${date.day}'),
           if (shift.isNotEmpty && !isHoliday)
-            Text(
-              shift,
-              style: const TextStyle(
-                fontSize: 11, // Reduced font size from 12 to 11
-                fontWeight: FontWeight.bold,
+            Expanded( // Added Expanded to give FittedBox constraints
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  shift,
+                  style: const TextStyle(
+                    fontSize: 11, // Keeping 11 for now
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
             ),
           if (isHoliday)
-            const Text(
-              'H',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
+            Expanded( // Added Expanded
+              child: FittedBox( // Added FittedBox
+                fit: BoxFit.scaleDown,
+                child: const Text(
+                  'H',
+                  style: TextStyle(
+                    fontSize: 12, // Keep original size, FittedBox will scale if needed
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white, // Consider using theme color here
+                  ),
+                ),
               ),
             ),
           if (hasEvents)
