@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; // Import for SystemChrome
 import 'package:spdrivercalendar/core/constants/app_constants.dart';
 import 'package:spdrivercalendar/core/services/storage_service.dart';
 import 'package:spdrivercalendar/features/calendar/services/shift_service.dart';
@@ -27,44 +28,26 @@ Future<void> main() async {
   // Initialize rest days service
   await RestDaysService.initialize();
   
-  // Get user preferences using StorageService instead of direct SharedPreferences
-  final isDarkMode = await StorageService.getBool(AppConstants.isDarkModeKey, defaultValue: false);
-  
-  // Check if the user has completed initial setup
-  bool hasCompletedInitialSetup = await StorageService.getString(AppConstants.startDateKey) != null;
-  
-  // Mark welcome as seen for existing users who have already set up the app
-  if (hasCompletedInitialSetup && !await StorageService.getBool(AppConstants.hasSeenWelcomeKey)) {
-    await StorageService.saveBool(AppConstants.hasSeenWelcomeKey, true);
-  }
-  
-  // Get onboarding status
-  final hasSeenWelcome = await StorageService.getBool(AppConstants.hasSeenWelcomeKey, defaultValue: false);
-  final hasCompletedGoogleLogin = await StorageService.getBool(AppConstants.hasCompletedGoogleLoginKey, defaultValue: false);
-
   // Initialize Google Calendar service
   await GoogleCalendarService.initialize();
 
   // Initialize bank holidays
   await ShiftService.initialize();
 
+  // Get initial dark mode setting
+  final isDarkMode = await StorageService.getBool(AppConstants.isDarkModeKey, defaultValue: false);
+  
   runApp(MyApp(
-    isDarkMode: isDarkMode,
-    hasSeenWelcome: hasSeenWelcome,
-    hasCompletedGoogleLogin: hasCompletedGoogleLogin,
+    isDarkModeInitial: isDarkMode,
   ));
 }
 
 class MyApp extends StatefulWidget {
-  final bool isDarkMode;
-  final bool hasSeenWelcome;
-  final bool hasCompletedGoogleLogin;
+  final bool isDarkModeInitial;
 
   const MyApp({
     Key? key,
-    required this.isDarkMode,
-    required this.hasSeenWelcome,
-    required this.hasCompletedGoogleLogin,
+    required this.isDarkModeInitial,
   }) : super(key: key);
 
   @override
@@ -73,43 +56,13 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   late ValueNotifier<bool> _isDarkModeNotifier;
-  late bool _hasSeenWelcome;
-  late bool _hasCompletedGoogleLogin;
-  String _initialRoute = AppConstants.welcomeRoute;
   final _rebuildKey = GlobalKey();
 
   @override
   void initState() {
     super.initState();
-    _isDarkModeNotifier = ValueNotifier(widget.isDarkMode);
-    _hasSeenWelcome = widget.hasSeenWelcome;
-    _hasCompletedGoogleLogin = widget.hasCompletedGoogleLogin;
-    
-    // Add observer for lifecycle events
+    _isDarkModeNotifier = ValueNotifier(widget.isDarkModeInitial);
     WidgetsBinding.instance.addObserver(this);
-    
-    // Determine initial route based on onboarding progress
-    if (_hasSeenWelcome && _hasCompletedGoogleLogin) {
-      _initialRoute = AppConstants.homeRoute;
-    } else if (_hasSeenWelcome && !_hasCompletedGoogleLogin) {
-      _initialRoute = AppConstants.googleLoginRoute;
-    } else {
-      _initialRoute = AppConstants.welcomeRoute;
-    }
-  }
-
-  void _onWelcomePageComplete() async {
-    await StorageService.saveBool(AppConstants.hasSeenWelcomeKey, true);
-    setState(() {
-      _hasSeenWelcome = true;
-    });
-  }
-  
-  void _onGoogleLoginComplete() async {
-    await GoogleCalendarService.saveLoginStatus(true);
-    setState(() {
-      _hasCompletedGoogleLogin = true;
-    });
   }
 
   @override
@@ -117,30 +70,41 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     return ValueListenableBuilder<bool>(
       valueListenable: _isDarkModeNotifier,
       builder: (context, bool isDarkMode, child) {
+        // Apply status bar styling here at the root
+        SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
+          statusBarColor: Colors.transparent, // Make status bar transparent
+          statusBarIconBrightness: isDarkMode ? Brightness.light : Brightness.dark, // Adjust icon brightness
+          systemNavigationBarColor: isDarkMode ? AppTheme.darkTheme().scaffoldBackgroundColor : AppTheme.lightTheme().scaffoldBackgroundColor, 
+          systemNavigationBarIconBrightness: isDarkMode ? Brightness.light : Brightness.dark, // Match nav bar icon brightness
+        ));
+
         return RebuildText(
           child: MaterialApp(
             key: _rebuildKey,
             title: AppConstants.appName,
-            theme: isDarkMode ? AppTheme.darkTheme() : AppTheme.lightTheme(),
-            initialRoute: _initialRoute,
+            theme: AppTheme.lightTheme(), // Provide light theme
+            darkTheme: AppTheme.darkTheme(), // Provide dark theme
+            themeMode: isDarkMode ? ThemeMode.dark : ThemeMode.light, // Control theme mode
+            initialRoute: AppConstants.splashRoute, // Start with the splash screen
             routes: {
+              // New Splash Route
+              AppConstants.splashRoute: (context) => const SplashScreen(),
+
+              // Existing Routes (adjusted callbacks)
               AppConstants.welcomeRoute: (context) => WelcomeScreen(
-                onGetStarted: () {
-                  _onWelcomePageComplete();
-                  // Check if this is the first run or from settings
+                onGetStarted: () async {
+                  await StorageService.saveBool(AppConstants.hasSeenWelcomeKey, true);
                   final isFromSettings = ModalRoute.of(context)?.settings.arguments as bool? ?? false;
                   if (isFromSettings) {
-                    // If from settings, just go back
                     Navigator.pop(context);
                   } else {
-                    // If first run, continue to Google login
                     Navigator.pushReplacementNamed(context, AppConstants.googleLoginRoute);
                   }
                 },
               ),
               AppConstants.googleLoginRoute: (context) => GoogleLoginScreen(
-                onLoginComplete: () {
-                  _onGoogleLoginComplete();
+                onLoginComplete: () async {
+                  await GoogleCalendarService.saveLoginStatus(true); // Save status directly
                   Navigator.pushReplacementNamed(context, AppConstants.homeRoute);
                 },
               ),
@@ -162,8 +126,57 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      // Force a complete rebuild of the entire app when it comes back to foreground
+      // Existing logic to force rebuild on resume
       setState(() {});
     }
+  }
+}
+
+// New SplashScreen Widget
+class SplashScreen extends StatefulWidget {
+  const SplashScreen({Key? key}) : super(key: key);
+
+  @override
+  _SplashScreenState createState() => _SplashScreenState();
+}
+
+class _SplashScreenState extends State<SplashScreen> {
+  @override
+  void initState() {
+    super.initState();
+    _checkOnboardingStatus();
+  }
+
+  Future<void> _checkOnboardingStatus() async {
+    // Wait a frame to ensure context is available
+    await Future.delayed(Duration.zero);
+
+    final hasSeenWelcome = await StorageService.getBool(AppConstants.hasSeenWelcomeKey, defaultValue: false);
+    final hasCompletedGoogleLogin = await StorageService.getBool(AppConstants.hasCompletedGoogleLoginKey, defaultValue: false);
+
+    // Determine the correct route based on onboarding status
+    String nextRoute;
+    if (hasSeenWelcome && hasCompletedGoogleLogin) {
+      nextRoute = AppConstants.homeRoute;
+    } else if (hasSeenWelcome) { // Welcome seen, but Google Login not complete
+      nextRoute = AppConstants.googleLoginRoute;
+    } else { // Welcome not seen
+      nextRoute = AppConstants.welcomeRoute;
+    }
+
+    // Navigate and replace the splash screen
+    if (mounted) { // Ensure the widget is still in the tree
+      Navigator.pushReplacementNamed(context, nextRoute);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Simple loading indicator while checking status
+    return const Scaffold(
+      body: Center(
+        child: CircularProgressIndicator(),
+      ),
+    );
   }
 }
