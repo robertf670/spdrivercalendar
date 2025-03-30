@@ -8,6 +8,12 @@ import 'package:spdrivercalendar/features/calendar/services/roster_service.dart'
 import 'package:spdrivercalendar/core/services/storage_service.dart';
 import 'package:spdrivercalendar/core/constants/app_constants.dart';
 
+// Import the new widgets
+import '../widgets/frequency_chart.dart';
+import '../widgets/shift_type_summary_card.dart';
+import '../widgets/time_range_selector.dart';
+import '../widgets/work_time_stats_card.dart';
+
 enum ShiftType {
   Early,   // 04:00 - 09:59
   Relief,  // 10:00 - 13:59
@@ -80,94 +86,69 @@ class StatisticsScreenState extends State<StatisticsScreen> with AutomaticKeepAl
         title: const Text('Shift Statistics'),
       ),
       body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Work Time Statistics Section (Now at the top)
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Work Time Statistics',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Break times and Rest Days not included in calculation',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey[600],
-                      fontStyle: FontStyle.italic,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  _buildWorkTimeStatisticsList(),
-                ],
+            const Text(
+              'Work Time Statistics',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Break times and Rest Days not included in calculation',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey[600],
+                fontStyle: FontStyle.italic,
               ),
+            ),
+            const SizedBox(height: 16),
+            WorkTimeStatisticsCard(
+              workTimeStatsFuture: _calculateWorkTimeStatistics(),
             ),
             const Divider(height: 32),
             
-            // Shift Type Statistics Section
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Shift Type Statistics',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Rest Days not included in calculation',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey[600],
-                      fontStyle: FontStyle.italic,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  _buildTimeRangeSelector(),
-                  const SizedBox(height: 16),
-                  _buildSummaryStatistics(),
-                ],
+            const Text(
+              'Shift Type Statistics',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Rest Days not included in calculation',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey[600],
+                fontStyle: FontStyle.italic,
               ),
+            ),
+            const SizedBox(height: 16),
+            TimeRangeSelector(
+              currentRange: _timeRange,
+              availableRanges: _timeRanges,
+              onChanged: (value) {
+                if (value != null) {
+                  setState(() {
+                    _timeRange = value;
+                  });
+                }
+              },
+            ),
+            const SizedBox(height: 16),
+            ShiftTypeSummaryCard(stats: _calculateSummaryStatistics()),
+            const Divider(height: 32),
+            
+            FrequencyChart(
+              title: 'Most Frequent Shifts (Mon-Fri)',
+              frequencyData: _getAllTimeFrequentShifts(),
+              emptyDataMessage: 'No Mon-Fri shift data available',
             ),
             const Divider(height: 32),
             
-            // Most Frequent Shifts (Now at the bottom)
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Most Frequent Shifts (Mon-Fri)',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 16),
-                  _buildAllTimeFrequentShiftsChart(),
-                ],
-              ),
-            ),
-            const Divider(height: 32),
-            
-            // Top 3 Most Frequent Buses
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Most Frequent Buses (All Time)',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 16),
-                  _buildTopBusesChart(),
-                ],
-              ),
+            FrequencyChart(
+              title: 'Most Frequent Buses (All Time)',
+              frequencyData: _getMostFrequentBuses(),
+              emptyDataMessage: 'No bus assignment data available',
             ),
           ],
         ),
@@ -175,80 +156,6 @@ class StatisticsScreenState extends State<StatisticsScreen> with AutomaticKeepAl
     );
   }
   
-  Widget _buildAllTimeFrequentShiftsChart() {
-    final shifts = _getAllTimeFrequentShifts();
-    
-    if (shifts.isEmpty) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(16.0),
-          child: Text('No shift data available'),
-        ),
-      );
-    }
-    
-    return Column(
-      children: shifts.entries.toList().take(3).map((entry) {
-        final percentage = entry.value / shifts.values.reduce((a, b) => a > b ? a : b);
-        
-        return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  SizedBox(
-                    width: 80,
-                    child: Text(
-                      '${entry.key}:',
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                  Expanded(
-                    child: Stack(
-                      children: [
-                        Container(
-                          height: 24,
-                          decoration: BoxDecoration(
-                            color: Colors.grey[300],
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        FractionallySizedBox(
-                          widthFactor: percentage,
-                          child: Container(
-                            height: 24,
-                            decoration: BoxDecoration(
-                              color: AppTheme.primaryColor,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                        ),
-                        Positioned.fill(
-                          child: Align(
-                            alignment: Alignment.centerRight,
-                            child: Padding(
-                              padding: const EdgeInsets.only(right: 8.0),
-                              child: Text(
-                                '${entry.value}',
-                                style: const TextStyle(fontWeight: FontWeight.bold),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        );
-      }).toList(),
-    );
-  }
-
   Map<String, int> _getAllTimeFrequentShifts() {
     Map<String, int> shiftCounts = {};
     Set<String> countedIds = {};
@@ -280,56 +187,6 @@ class StatisticsScreenState extends State<StatisticsScreen> with AutomaticKeepAl
       ..sort((a, b) => b.value.compareTo(a.value));
     
     return Map.fromEntries(sortedEntries);
-  }
-
-  Widget _buildSummaryStatistics() {
-    final stats = _calculateSummaryStatistics();
-    
-    return Card(
-      elevation: 2,
-      margin: const EdgeInsets.symmetric(vertical: 8.0),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppTheme.borderRadius),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Summary',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-            _buildStatRow('Total Shifts', '${stats['totalShifts']}'),
-            _buildStatRow('Early Shifts', '${stats['earlyShifts']}'),
-            _buildStatRow('Relief Shifts', '${stats['reliefShifts']}'),
-            _buildStatRow('Late Shifts', '${stats['lateShifts']}'),
-            _buildStatRow('Night Shifts', '${stats['nightShifts']}'),
-            _buildStatRow('Spare Shifts', '${stats['spareShifts']}'),
-            _buildStatRow('Bogey Shifts', '${stats['bogeyShifts']}'),
-            const Divider(height: 24),
-            _buildStatRow('Date Range', stats['dateRange'] as String),
-          ],
-        ),
-      ),
-    );
-  }
-  
-  Widget _buildStatRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label),
-          Text(
-            value,
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          ),
-        ],
-      ),
-    );
   }
 
   Map<String, dynamic> _calculateSummaryStatistics() {
@@ -589,125 +446,6 @@ class StatisticsScreenState extends State<StatisticsScreen> with AutomaticKeepAl
     }
   }
 
-  Widget _buildWorkTimeStatisticsList() {
-    return FutureBuilder<Map<String, Duration>>(
-      future: _calculateWorkTimeStatistics(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        
-        if (snapshot.hasError) {
-          return Center(
-            child: Text('Error: ${snapshot.error}'),
-          );
-        }
-
-        final stats = snapshot.data!;
-        
-        return Card(
-          elevation: 2,
-          margin: const EdgeInsets.symmetric(vertical: 8.0),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppTheme.borderRadius),
-          ),
-          child: Column(
-            children: [
-              _buildWorkTimeStatItem(
-                'This Week',
-                _formatDuration(stats['thisWeek']!),
-                Icons.calendar_today,
-                Colors.blue,
-              ),
-              const Divider(height: 1),
-              _buildWorkTimeStatItem(
-                'Last Week',
-                _formatDuration(stats['lastWeek']!),
-                Icons.calendar_month,
-                Colors.green,
-              ),
-              const Divider(height: 1),
-              _buildWorkTimeStatItem(
-                'This Month',
-                _formatDuration(stats['thisMonth']!),
-                Icons.calendar_month,
-                Colors.orange,
-              ),
-              const Divider(height: 1),
-              _buildWorkTimeStatItem(
-                'Last Month',
-                _formatDuration(stats['lastMonth']!),
-                Icons.calendar_month,
-                Colors.purple,
-              ),
-              const Divider(height: 1),
-              _buildWorkTimeStatItem(
-                'Average Weekly',
-                _formatDuration(stats['averageWeekly']!),
-                Icons.analytics,
-                Colors.teal,
-              ),
-              const Divider(height: 1),
-              _buildWorkTimeStatItem(
-                'Total (All Time)',
-                _formatDuration(stats['total']!),
-                Icons.history,
-                Colors.red,
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildWorkTimeStatItem(String title, String time, IconData icon, Color color) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(6.0),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(6.0),
-            ),
-            child: Icon(
-              icon,
-              color: color,
-              size: 20.0,
-            ),
-          ),
-          const SizedBox(width: 12.0),
-          Expanded(
-            child: Text(
-              title,
-              style: const TextStyle(
-                fontSize: 15.0,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 4.0),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12.0),
-            ),
-            child: Text(
-              time,
-              style: TextStyle(
-                color: color,
-                fontWeight: FontWeight.bold,
-                fontSize: 14.0,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Future<Map<String, Duration>> _calculateWorkTimeStatistics() async {
     final now = DateTime.now();
     
@@ -805,141 +543,6 @@ class StatisticsScreenState extends State<StatisticsScreen> with AutomaticKeepAl
       'averageWeekly': averageWeekly,
       'total': totalWork,
     };
-  }
-
-  String _formatDuration(Duration duration) {
-    final hours = duration.inHours;
-    final minutes = duration.inMinutes.remainder(60);
-    return '${hours}h ${minutes}m';
-  }
-
-  Widget _buildTimeRangeSelector() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.grey[100],
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: DropdownButton<String>(
-        value: _timeRange,
-        isExpanded: true,
-        underline: const SizedBox(), // Remove the default underline
-        items: _timeRanges.map((range) {
-          return DropdownMenuItem(
-            value: range,
-            child: Row(
-              children: [
-                Icon(
-                  _getTimeRangeIcon(range),
-                  size: 18,
-                  color: AppTheme.primaryColor,
-                ),
-                const SizedBox(width: 8),
-                Text(range),
-              ],
-            ),
-          );
-        }).toList(),
-        onChanged: (value) {
-          if (value != null) {
-            setState(() {
-              _timeRange = value;
-            });
-          }
-        },
-      ),
-    );
-  }
-
-  IconData _getTimeRangeIcon(String range) {
-    switch (range) {
-      case 'This Week':
-        return Icons.calendar_today;
-      case 'Last Week':
-        return Icons.calendar_month;
-      case 'This Month':
-        return Icons.calendar_month;
-      case 'Last Month':
-        return Icons.calendar_month;
-      case 'All Time':
-        return Icons.history;
-      default:
-        return Icons.calendar_today;
-    }
-  }
-
-  Widget _buildTopBusesChart() {
-    final buses = _getMostFrequentBuses();
-    
-    if (buses.isEmpty) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(16.0),
-          child: Text('No bus assignments available'),
-        ),
-      );
-    }
-    
-    return Column(
-      children: buses.entries.toList().take(3).map((entry) {
-        final percentage = entry.value / buses.values.reduce((a, b) => a > b ? a : b);
-        
-        return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  SizedBox(
-                    width: 80,
-                    child: Text(
-                      '${entry.key}:',
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                  Expanded(
-                    child: Stack(
-                      children: [
-                        Container(
-                          height: 24,
-                          decoration: BoxDecoration(
-                            color: Colors.grey[300],
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        FractionallySizedBox(
-                          widthFactor: percentage,
-                          child: Container(
-                            height: 24,
-                            decoration: BoxDecoration(
-                              color: AppTheme.primaryColor,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                        ),
-                        Positioned.fill(
-                          child: Align(
-                            alignment: Alignment.centerRight,
-                            child: Padding(
-                              padding: const EdgeInsets.only(right: 8.0),
-                              child: Text(
-                                '${entry.value}',
-                                style: const TextStyle(fontWeight: FontWeight.bold),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        );
-      }).toList(),
-    );
   }
 
   Map<String, int> _getMostFrequentBuses() {
