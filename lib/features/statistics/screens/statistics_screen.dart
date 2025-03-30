@@ -49,6 +49,9 @@ class StatisticsScreenState extends State<StatisticsScreen> with AutomaticKeepAl
     'All Time'
   ];
 
+  // Cache for parsed CSV data: Key = filename, Value = Map<ShiftCode, Duration>
+  final Map<String, Map<String, Duration>> _csvWorkTimeCache = {};
+
   // Constants for work durations
   static const Duration spareDutyWorkDuration = Duration(hours: 7, minutes: 38);
 
@@ -56,17 +59,36 @@ class StatisticsScreenState extends State<StatisticsScreen> with AutomaticKeepAl
   DateTime? _startDate;
   int _startWeek = 0;
 
+  // State variable to hold the future for work time stats
+  Future<Map<String, Duration>>? _workTimeStatsFuture;
+
   @override
   void initState() {
     super.initState();
-    _loadRosterSettings();
+    _initializeStatistics();
+  }
+
+  Future<void> _initializeStatistics() async {
+    await _loadRosterSettings();
+    if (mounted) {
+       setState(() {
+         _workTimeStatsFuture = _calculateWorkTimeStatistics();
+       });
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant StatisticsScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.events != oldWidget.events) {
+      _workTimeStatsFuture = _calculateWorkTimeStatistics();
+    }
   }
 
   Future<void> _loadRosterSettings() async {
     final startDateString = await StorageService.getString(AppConstants.startDateKey);
     final startWeek = await StorageService.getInt(AppConstants.startWeekKey) ?? 0;
     
-    // Use mounted check before calling setState
     if (mounted) {
       setState(() {
         if (startDateString != null) {
@@ -104,9 +126,11 @@ class StatisticsScreenState extends State<StatisticsScreen> with AutomaticKeepAl
               ),
             ),
             const SizedBox(height: 16),
-            WorkTimeStatisticsCard(
-              workTimeStatsFuture: _calculateWorkTimeStatistics(),
-            ),
+            _workTimeStatsFuture == null
+              ? const Center(child: CircularProgressIndicator())
+              : WorkTimeStatisticsCard(
+                  workTimeStatsFuture: _workTimeStatsFuture!,
+                ),
             const Divider(height: 32),
             
             const Text(
@@ -355,46 +379,91 @@ class StatisticsScreenState extends State<StatisticsScreen> with AutomaticKeepAl
   }
 
   Future<Duration?> _loadWorkTimeFromCSV(String shiftCode, String dayOfWeek) async {
+    String fileName = ''; // Declare fileName outside the try block
     try {
-      String fileName;
-      
+      // String fileName; // Remove declaration from inside
+
       // Handle different duty types
       if (shiftCode.startsWith('PZ1')) {
         fileName = '${dayOfWeek}_DUTIES_PZ1.csv';
-        print('Loading PZ1 shift $shiftCode from $fileName (dayOfWeek: $dayOfWeek)');
       } else if (shiftCode.startsWith('PZ4')) {
         fileName = '${dayOfWeek}_DUTIES_PZ4.csv';
       } else if (shiftCode.startsWith('807')) {
         fileName = 'UNI_7DAYs.csv';
       } else {
-        return null;
+        return null; // Not a known CSV-based duty type
       }
 
-      print('Loading work time for $shiftCode from $fileName');
-      final csvData = await rootBundle.loadString('assets/$fileName');
-      final lines = csvData.split('\n');
-      
-      for (final line in lines) {
-        final parts = line.split(',');
-        if (parts[0] == shiftCode && parts.length > 14) {
-          final workTimeStr = parts[14].trim();
-          print('Found matching shift code in $fileName');
-          print('Parsing break time from parts: ${parts.join(', ')}');
-          final timeParts = workTimeStr.split(':');
-          if (timeParts.length >= 2) {
-            final duration = Duration(
-              hours: int.parse(timeParts[0]),
-              minutes: int.parse(timeParts[1])
-            );
-            print('Work time for $shiftCode: ${duration.inHours}:${(duration.inMinutes % 60).toString().padLeft(2, '0')}');
-            return duration;
-          }
+      // 1. Check cache first
+      if (_csvWorkTimeCache.containsKey(fileName)) {
+        final cachedFile = _csvWorkTimeCache[fileName]!;
+        if (cachedFile.containsKey(shiftCode)) {
+          // print('Cache hit for $shiftCode in $fileName'); // Optional: debug logging
+          return cachedFile[shiftCode];
+        } else {
+          // File is cached, but shift code isn't in it (might be invalid shift code for that file)
+          // print('Shift code $shiftCode not found in cached $fileName'); // Optional: debug logging
+          return null;
         }
       }
+
+      // 2. If not in cache, load and parse the file
+      // print('Cache miss for $fileName. Loading and parsing...'); // Optional: debug logging
+      final csvData = await rootBundle.loadString('assets/$fileName');
+      final lines = csvData.split('\n');
+      final Map<String, Duration> parsedDurations = {};
+
+      for (final line in lines) {
+        // Skip empty lines or headers if necessary (adjust condition if header exists)
+        if (line.trim().isEmpty) continue;
+
+        final parts = line.split(',');
+        // Ensure sufficient parts and the first part is the shift code we might need
+        if (parts.isNotEmpty && parts.length > 14) {
+           final currentShiftCode = parts[0].trim();
+           final workTimeStr = parts[14].trim();
+           // print('Parsing line: $line'); // Optional: Debug line parsing
+           // print('ShiftCode: $currentShiftCode, WorkTimeStr: $workTimeStr');
+
+           final timeParts = workTimeStr.split(':');
+           if (timeParts.length >= 2) {
+            try {
+              final duration = Duration(
+                hours: int.parse(timeParts[0]),
+                minutes: int.parse(timeParts[1])
+              );
+              parsedDurations[currentShiftCode] = duration;
+              // print('Parsed duration for $currentShiftCode: $duration');
+             } catch (e) {
+               print('Error parsing duration for shift $currentShiftCode in $fileName: $e, Line: $line');
+             }
+           } else {
+             // print('Skipping line due to incorrect time format: $line');
+           }
+        } else {
+           // print('Skipping line due to insufficient parts: $line');
+        }
+      }
+
+      // 3. Store the parsed data in the cache
+      _csvWorkTimeCache[fileName] = parsedDurations;
+      // print('Cached data for $fileName. Size: ${parsedDurations.length}'); // Optional: debug logging
+
+      // 4. Return the requested duration from the now-cached data
+      if (parsedDurations.containsKey(shiftCode)) {
+         return parsedDurations[shiftCode];
+      } else {
+         // Shift code not found even after parsing the file
+         // print('Shift code $shiftCode not found in newly parsed $fileName'); // Optional: debug logging
+         return null;
+      }
+
     } catch (e) {
-      print('Error loading work time from CSV: $e');
+      // fileName is now accessible here
+      print('Error loading or parsing work time from CSV ($fileName): $e');
+      // Handle file not found or other errors gracefully
+      return null; // Return null if any error occurs during loading/parsing
     }
-    return null;
   }
 
   Future<String> _getDayOfWeek(DateTime date) async {
@@ -448,26 +517,31 @@ class StatisticsScreenState extends State<StatisticsScreen> with AutomaticKeepAl
 
   Future<Map<String, Duration>> _calculateWorkTimeStatistics() async {
     final now = DateTime.now();
-    
-    // This week (Sunday to Saturday)
-    final thisWeekStart = now.subtract(Duration(days: now.weekday % 7));
-    final thisWeekEnd = thisWeekStart.add(const Duration(days: 6)); // Changed from 7 to 6 to end on Saturday
-    
-    // Last week (previous Sunday to Saturday)
-    final lastWeekEnd = thisWeekStart.subtract(const Duration(days: 1)); // End on previous Saturday
-    final lastWeekStart = lastWeekEnd.subtract(const Duration(days: 6)); // Start on previous Sunday
-    
-    print('Last week range: ${lastWeekStart.toString()} to ${lastWeekEnd.toString()}');
 
+    // This week (Sunday to Saturday)
+    final thisWeekStart = DateTime(now.year, now.month, now.day).subtract(Duration(days: now.weekday % 7)); // Ensure start is at midnight
+    final thisWeekEnd = DateTime(thisWeekStart.year, thisWeekStart.month, thisWeekStart.day).add(const Duration(days: 6)); // Ensure end is at start of day
+
+    // Last week (previous Sunday to Saturday)
+    final lastWeekEnd = DateTime(thisWeekStart.year, thisWeekStart.month, thisWeekStart.day).subtract(const Duration(days: 1)); // End on previous Saturday (start of day)
+    final lastWeekStart = DateTime(lastWeekEnd.year, lastWeekEnd.month, lastWeekEnd.day).subtract(const Duration(days: 6)); // Start on previous Sunday (start of day)
+
+    // --- Re-add Month Definitions --- 
     // This month
     final thisMonthStart = DateTime(now.year, now.month, 1);
+    // End is the start of the *next* month
     final thisMonthEnd = (now.month < 12)
-      ? DateTime(now.year, now.month + 1, 1)
-      : DateTime(now.year + 1, 1, 1);
-    
+        ? DateTime(now.year, now.month + 1, 1)
+        : DateTime(now.year + 1, 1, 1);
+
     // Last month
-    final lastMonthStart = DateTime(now.year, now.month - 1, 1);
+    // Start is the start of the previous month
+    final lastMonthStart = (now.month > 1)
+        ? DateTime(now.year, now.month - 1, 1)
+        : DateTime(now.year - 1, 12, 1);
+    // End is the start of *this* month
     final lastMonthEnd = thisMonthStart;
+    // --- End Re-add --- 
 
     Duration thisWeekWork = Duration.zero;
     Duration lastWeekWork = Duration.zero;
@@ -478,56 +552,57 @@ class StatisticsScreenState extends State<StatisticsScreen> with AutomaticKeepAl
     Set<String> processedIds = {};
 
     for (final entry in widget.events.entries) {
-      final date = entry.key;
+      final date = entry.key; // This date is likely already normalized from EventService
       final events = entry.value;
-      
-      // Normalize the date to midnight for rest day comparison
-      final normalizedDate = DateTime(date.year, date.month, date.day);
-      
+
+      // Use the date from the event entry key, assuming it's midnight UTC or similar
+      final normalizedDate = DateTime.utc(date.year, date.month, date.day);
+
       // Skip if this is a rest day based on roster
-      final String shiftType = (_startDate != null) 
-          ? RosterService.getShiftForDate(date, _startDate!, _startWeek)
+      final String shiftType = (_startDate != null)
+          ? RosterService.getShiftForDate(normalizedDate, _startDate!, _startWeek)
           : ''; // Default to empty if roster not loaded
       final bool isRest = shiftType == 'R';
-      
-      if (isRest) continue;
+
+      if (isRest) {
+         continue;
+      }
 
       for (final event in events) {
-        if (!event.isWorkShift || processedIds.contains(event.id)) continue;
+        // Use event.startDate for checks, normalized to UTC midnight
+        final eventNormalizedStartDate = DateTime.utc(event.startDate.year, event.startDate.month, event.startDate.day);
+        
+        if (!event.isWorkShift || processedIds.contains(event.id)) {
+            continue;
+        }
         processedIds.add(event.id ?? '');
 
         final workTime = await _calculateWorkTime(event);
-        print('Shift: ${event.title} on ${normalizedDate.toString()} - Work time: ${workTime.inHours}:${(workTime.inMinutes % 60).toString().padLeft(2, '0')}');
+
         totalWork += workTime;
 
-        // Check each period independently since a shift could be counted in multiple periods
-        // (e.g., both this week and this month)
-        if (normalizedDate.isAfter(thisWeekStart.subtract(const Duration(days: 1))) && 
-            normalizedDate.isBefore(thisWeekEnd.add(const Duration(days: 1)))) {
+        // Check This Week (Inclusive Check: >= start AND <= end)
+        // Use event's normalized start date for comparisons
+        if (!eventNormalizedStartDate.isBefore(thisWeekStart) && !eventNormalizedStartDate.isAfter(thisWeekEnd)) {
           thisWeekWork += workTime;
         }
-        
-        // For last week, use exact date comparisons
-        if (normalizedDate.isAtSameMomentAs(lastWeekStart) || 
-            (normalizedDate.isAfter(lastWeekStart) && normalizedDate.isBefore(lastWeekEnd)) ||
-            normalizedDate.isAtSameMomentAs(lastWeekEnd)) {
+
+        // Check Last Week (Inclusive Check: >= start AND <= end)
+        if (!eventNormalizedStartDate.isBefore(lastWeekStart) && !eventNormalizedStartDate.isAfter(lastWeekEnd)) {
           lastWeekWork += workTime;
-          print('Adding to last week: ${event.title} - ${workTime.inHours}:${(workTime.inMinutes % 60).toString().padLeft(2, '0')}');
         }
-        
-        if (normalizedDate.isAfter(thisMonthStart.subtract(const Duration(days: 1))) && 
-            normalizedDate.isBefore(thisMonthEnd)) {
+
+        // Check This Month (Inclusive Start, Exclusive End: >= start AND < end)
+        if (!eventNormalizedStartDate.isBefore(thisMonthStart) && eventNormalizedStartDate.isBefore(thisMonthEnd)) {
           thisMonthWork += workTime;
         }
-        
-        if (normalizedDate.isAfter(lastMonthStart.subtract(const Duration(days: 1))) && 
-            normalizedDate.isBefore(lastMonthEnd)) {
+
+        // Check Last Month (Inclusive Start, Exclusive End: >= start AND < end)
+        if (!eventNormalizedStartDate.isBefore(lastMonthStart) && eventNormalizedStartDate.isBefore(lastMonthEnd)) {
           lastMonthWork += workTime;
         }
       }
     }
-
-    print('Final last week total: ${lastWeekWork.inHours}:${(lastWeekWork.inMinutes % 60).toString().padLeft(2, '0')}');
 
     // Calculate average weekly work time based on actual weeks with shifts
     final totalWeeks = processedIds.length / 5; // Assuming 5 shifts per week on average
