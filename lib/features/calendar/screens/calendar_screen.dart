@@ -28,6 +28,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'package:spdrivercalendar/services/rest_days_service.dart'; // Added import
 import 'package:spdrivercalendar/features/contacts/contacts_page.dart'; // Add this line
+import 'package:spdrivercalendar/core/services/cache_service.dart'; // Added import
 
 class CalendarScreen extends StatefulWidget {
   final ValueNotifier<bool> isDarkModeNotifier;
@@ -79,38 +80,85 @@ class CalendarScreenState extends State<CalendarScreen>
   }
 
   Future<void> _initializeData() async {
-    // print("*** _initializeData: Entered ***"); // Basic Debug 4 -- Removed
-    // print("[Init Debug] Starting _initializeData..."); // Keep previous debug -- Removed
     try {
-      // Ensure RestDaysService is initialized before loading other data that might depend on it
-      await RestDaysService.initialize(); 
-      // print("[Init Debug] RestDaysService initialized."); // Debug -- Removed
+      final cacheService = CacheService();
       
-      // Load bank holidays
-      _bankHolidays = await RosterService.loadBankHolidays();
-      // print("[Init Debug] Bank holidays loaded."); // Debug -- Removed
-      
-      // Load holidays
-      _holidays = await HolidayService.getHolidays();
-      // print("[Init Debug] Holidays loaded."); // Debug -- Removed
-      
-      // Load settings (which might depend on RosterService indirectly)
-      await _loadSettings();
-      // print("[Init Debug] Settings loaded."); // Debug -- Removed
-      
-      // Load events
-      _events = await EventService.loadEvents();
-      // print("[Init Debug] Events loaded."); // Debug -- Removed
-      
-      // Update UI only after all data is loaded
+      // Run independent data loading in parallel
+      final results = await Future.wait([
+        // Only initialize RestDaysService if not already initialized
+        RestDaysService.initialize(),
+        
+        // Try to get bank holidays from cache first
+        _loadBankHolidays(cacheService),
+        
+        // Try to get holidays from cache first
+        _loadHolidaysWithCache(cacheService),
+        
+        // Load settings
+        _loadSettings(),
+        
+        // Try to get events from cache first
+        _loadEvents(cacheService),
+      ]);
+
       if (mounted) {
-          setState(() {});
-          // print("[Init Debug] _initializeData complete, calling setState."); // Debug -- Removed
+        setState(() {
+          _bankHolidays = results[1] as List<BankHoliday>;
+          _holidays = results[2] as List<Holiday>;
+          _events = results[4] as Map<DateTime, List<Event>>;
+        });
       }
     } catch (e) {
-      // print('[Init Debug] Error initializing data: $e'); // Debug -- Removed
-      // Optionally show an error message to the user
+      // Handle error appropriately
     }
+  }
+
+  Future<List<BankHoliday>> _loadBankHolidays(CacheService cacheService) async {
+    const cacheKey = 'bank_holidays';
+    
+    // Try to get from cache first
+    final cached = cacheService.get<List<BankHoliday>>(cacheKey);
+    if (cached != null) return cached;
+    
+    // If not in cache, load from service
+    final holidays = await RosterService.loadBankHolidays();
+    
+    // Cache the results for 24 hours
+    cacheService.set(cacheKey, holidays, expiration: const Duration(hours: 24));
+    
+    return holidays;
+  }
+
+  Future<List<Holiday>> _loadHolidaysWithCache(CacheService cacheService) async {
+    const cacheKey = 'holidays';
+    
+    // Try to get from cache first
+    final cached = cacheService.get<List<Holiday>>(cacheKey);
+    if (cached != null) return cached;
+    
+    // If not in cache, load from service
+    final holidays = await HolidayService.getHolidays();
+    
+    // Cache the results for 24 hours
+    cacheService.set(cacheKey, holidays, expiration: const Duration(hours: 24));
+    
+    return holidays;
+  }
+
+  Future<Map<DateTime, List<Event>>> _loadEvents(CacheService cacheService) async {
+    const cacheKey = 'events';
+    
+    // Try to get from cache first
+    final cached = cacheService.get<Map<DateTime, List<Event>>>(cacheKey);
+    if (cached != null) return cached;
+    
+    // If not in cache, load from service
+    final events = await EventService.loadEvents();
+    
+    // Cache the results for 1 hour (events might change more frequently)
+    cacheService.set(cacheKey, events, expiration: const Duration(hours: 1));
+    
+    return events;
   }
 
   Future<void> _loadSettings() async {
