@@ -60,6 +60,7 @@ flutter:
     - assets/Zone3BoardsMF.csv
     - assets/Zone3BoardsSat.csv
     - assets/Zone3BoardsSun.csv
+    - assets/Zone4BoardsSat.csv
 
 flutter_launcher_icons:
   android: true

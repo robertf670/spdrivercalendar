@@ -1,0 +1,492 @@
+Duty,Reports,Departs,Location,Route,From,To,Arrival,Departure,Notes
+401,07:27,,Reports at 07:27,,,,,,Duty 401 reports at 07:27
+401,,07:35:00,Departs garage,SPL,Reports at 07:27,Departs garage,,07:35:00,
+401,,,Drimnagh Rd,122,Departs garage,Drimnagh Rd,,08:00:00,
+401,,,Ashington,122,Drimnagh Rd,Ashington,,09:30:00,
+401,,,Drimnagh Rd,122,Ashington,Drimnagh Rd,,11:00:00,
+401,,,Ashington,122,Drimnagh Rd,Ashington,,12:30:00,Takes Bus 6 (Route 122) at 20:00 psqe
+401,,,PSQE,,Ashington,PSQE,13:00:00,,
+401,,,,,,,,,Duty 401 Finished Duty
+402,,,Takes up at 13:25 PSQE,,,,,,
+402,,,PSQE,,Takes up at 13:25 PSQE,PSQE,,13:25:00,
+402,,,Limekiln,9,PSQE,Limekiln,,14:30:00,
+402,,,PSQW,,Limekiln,PSQW,15:25:00,,
+402,,,,,,,,,Duty 402 Finished Duty
+402,07:32,,Reports at 07:32,,,,,,Duty 402 reports at 07:32
+402,,07:40:00,Departs garage,SPL,Reports at 07:32,Departs garage,,07:40:00,
+402,,,Ashington,122,Departs garage,Ashington,,08:00:00,
+402,,,Drimnagh Rd,122,Ashington,Drimnagh Rd,,09:00:00,
+402,,,Ashington,122,Drimnagh Rd,Ashington,,10:30:00,Takes Bus 3 (Route 9) at 19:45 psqe
+402,,,Drimnagh Rd,122,Ashington,Drimnagh Rd,,11:40:00,
+402,,,PSQW,,Drimnagh Rd,PSQW,12:25:00,,
+402,,,Takes Bus 5 (Route 9) at 13:25 PSQE,,,,,,Takes Bus 5 (Route 9) at 13:25 psqe
+403,12:07,,Reports at 12:07,,,,,,Duty 403 reports at 12:07
+403,,12:15:00,Departs garage,SPL,Reports at 12:07,Departs garage,,12:15:00,
+403,,,Charlestown,9,Departs garage,Charlestown,,13:00:00,
+403,,,Limekiln,9,Charlestown,Limekiln,,14:45:00,
+403,,,PSQW,,Limekiln,PSQW,15:40:00,,
+403,,,,,,,,,Duty 403 Finished Duty
+403,07:57,,Reports at 07:57,,,,,,Duty 403 reports at 07:57
+403,,08:05:00,Departs garage,SPL,Reports at 07:57,Departs garage,,08:05:00,
+403,,,Drimnagh Rd,122,Departs garage,Drimnagh Rd,,08:30:00,
+403,,,Ashington,122,Drimnagh Rd,Ashington,,10:00:00,
+403,,,PSQE,,Ashington,PSQE,10:30:00,,
+403,,,Takes Bus 12 (Route 9) at 12:07 Garage,,,,,,Takes Bus 12 (Route 9) at 12:07 garage
+404,,,Takes up at 12:05 PSQW,,,,,,
+404,,,PSQW,,Takes up at 12:05 PSQW,PSQW,,12:05:00,
+404,,,Ashington,122,PSQW,Ashington,,12:50:00,
+404,,,Drimnagh Rd,122,Ashington,Drimnagh Rd,,14:20:00,
+404,,,PSQW,,Drimnagh Rd,PSQW,15:10:00,,
+404,,,,,,,,,Duty 404 Finished Duty
+404,,,,,,,,,Duty 404 Finished Duty
+404,,,Phibsboro,ROUTE 122,PSQW,Phibsboro,,,
+404,08:02,,Reports at 08:02,,,,,,Duty 404 reports at 08:02
+404,,08:10:00,Departs garage,SPL,Reports at 08:02,Departs garage,,08:10:00,
+404,,,Ashington,122,Departs garage,Ashington,,08:30:00,
+404,,,Drimnagh Rd,122,Ashington,Drimnagh Rd,,10:00:00,
+404,,,PSQW,,Drimnagh Rd,PSQW,10:40:00,,
+404,,,Takes Bus 3 (Route 122) at 12:05 PSQW,,,,,,Duty 404 Finished Duty
+405,08:22,,Reports at 08:22,,,,,,Duty 405 reports at 08:22
+405,,08:30:00,Departs garage,SPL,Reports at 08:22,Departs garage,,08:30:00,
+405,,,Charlestown,9,Departs garage,Charlestown,,09:00:00,
+405,,,Limekiln,9,Charlestown,Limekiln,,10:20:00,
+405,,,PSQW,,Limekiln,PSQW,11:10:00,,
+405,,,Takes Bus 2 (Route 122) at 12:25 PSQW,,,,,,Takes Bus 2 (Route 122) at 12:25 psqw
+405,,,Takes up at 12:25 PSQW,,,,,,
+405,,,PSQW,,Takes up at 12:25 PSQW,PSQW,,12:25:00,
+405,,,Ashington,122,PSQW,Ashington,,13:10:00,
+405,,,Drimnagh Rd,122,Ashington,Drimnagh Rd,,14:40:00,Duty 405 Finished Duty
+405,,,PSQW,,Drimnagh Rd,PSQW,15:30:00,,
+405,,,,,,,,,Duty 405 Finished Duty
+405,,,Phibsboro,ROUTE 122,PSQW,Phibsboro,,,
+406,08:32,,Reports at 08:32,,,,,,Duty 406 reports at 08:32
+406,,08:40:00,Departs garage,SPL,Reports at 08:32,Departs garage,,08:40:00,
+406,,,Ashington,122,Departs garage,Ashington,,09:00:00,
+406,,,Drimnagh Rd,122,Ashington,Drimnagh Rd,,10:30:00,
+406,,,Ashington,122,Drimnagh Rd,Ashington,,11:50:00,Duty 406 Finished Duty
+406,,,Drimnagh Rd,122,Ashington,Drimnagh Rd,,13:20:00,
+406,,,PSQW,,Drimnagh Rd,PSQW,14:10:00,,
+406,,,,,,,,,Duty 406 Finished Duty
+407,08:42,,Reports at 08:42,,,,,,Duty 407 reports at 08:42
+407,,08:50:00,Departs garage,SPL,Reports at 08:42,Departs garage,,08:50:00,
+407,,,Limekiln,9,Departs garage,Limekiln,,09:30:00,
+407,,,Charlestown,9,Limekiln,Charlestown,,11:00:00,
+407,,,PSQE,,Charlestown,PSQE,11:35:00,,
+407,,,Takes Bus 3 (Route 9) at 12:55 PSQE,,,,,,Takes Bus 3 (Route 9) at 12:55 psqe
+407,,,Takes up at 12:55 PSQE,,,,,,
+407,,,PSQE,,Takes up at 12:55 PSQE,PSQE,,12:55:00,
+407,,,Limekiln,9,PSQE,Limekiln,,14:00:00,
+407,,,PSQW,,Limekiln,PSQW,14:55:00,,
+407,,,,,,,,,Duty 407 Finished Duty
+407,,,,,,,,,Duty 407 Finished Duty
+407,,,Phibsboro,ROUTE 9,PSQW,Phibsboro,,,
+408,08:47,,Reports at 08:47,,,,,,Duty 408 reports at 08:47
+408,,08:55:00,Departs garage,SPL,Reports at 08:47,Departs garage,,08:55:00,
+408,,,Drimnagh Rd,122,Departs garage,Drimnagh Rd,,09:30:00,
+408,,,Ashington,122,Drimnagh Rd,Ashington,,10:50:00,
+408,,,Drimnagh Rd,122,Ashington,Drimnagh Rd,,12:00:00,Takes Bus 2 (Route 9) at 21:00 psqe
+408,,,Ashington,122,Drimnagh Rd,Ashington,,13:30:00,
+408,,,PSQE,,Ashington,PSQE,14:05:00,,
+408,,,,,,,,,Duty 408 Finished Duty
+409,08:47,,Reports at 08:47,,,,,,Duty 409 reports at 08:47
+409,,08:55:00,Departs garage,SPL,Reports at 08:47,Departs garage,,08:55:00,
+409,,,Charlestown,9,Departs garage,Charlestown,,09:25:00,
+409,,,Limekiln,9,Charlestown,Limekiln,,10:45:00,
+409,,,Charlestown,9,Limekiln,Charlestown,,12:15:00,
+409,,,PSQE,,Charlestown,PSQE,12:55:00,,
+409,,,,,,,,,Duty 409 Finished Duty
+410,09:07,,Reports at 09:07,,,,,,Duty 410 reports at 09:07
+410,,09:15:00,Departs garage,SPL,Reports at 09:07,Departs garage,,09:15:00,
+410,,,Limekiln,9,Departs garage,Limekiln,,09:55:00,
+410,,,Charlestown,9,Limekiln,Charlestown,,11:20:00,
+410,,,Limekiln,9,Charlestown,Limekiln,,13:00:00,Duty 410 Finished Duty
+410,,,PSQW,,Limekiln,PSQW,14:00:00,,
+410,,,,,,,,,Duty 410 Finished Duty
+411,09:12,,Reports at 09:12,,,,,,Duty 411 reports at 09:12
+411,,09:20:00,Departs garage,SPL,Reports at 09:12,Departs garage,,09:20:00,
+411,,,Charlestown,9,Departs garage,Charlestown,,09:50:00,
+411,,,Limekiln,9,Charlestown,Limekiln,,11:10:00,
+411,,,Charlestown,9,Limekiln,Charlestown,,12:45:00,Duty 411 Finished Duty
+411,,,PSQE,,Charlestown,PSQE,13:25:00,,
+411,,,,,,,,,Duty 411 Finished Duty
+412,,,Takes up at 11:35 PSQE,,,,,,
+412,,,PSQE,,Takes up at 11:35 PSQE,PSQE,,11:35:00,
+412,,,Limekiln,9,PSQE,Limekiln,,12:30:00,
+412,,,Charlestown,9,Limekiln,Charlestown,,14:00:00,Duty 412 Finished Duty
+412,,,Limekiln,9,Charlestown,Limekiln,,15:45:00,
+412,,,PSQW,,Limekiln,PSQW,,16:35:00,
+412,,,Takes Bus 8 (Route 9) at 17:35 PSQW,,,,,,Takes Bus 8 (Route 9) at 17:35 psqw
+412,,,,,,,,,Duty 412 Finished Duty
+412,,,Phibsboro,ROUTE 9,Takes Bus 8 (Route 9) at 17:35 PSQW,Phibsboro,,,
+412,,,Takes up at 17:35 PSQW,,,,,,Duty 412 takes up at 17:35 psqw
+412,,,PSQW,,Takes up at 17:35 PSQW,PSQW,,17:35:00,
+412,,,Charlestown,9,PSQW,Charlestown,,18:15:00,
+412,,,Limekiln,9,Charlestown,Limekiln,,19:50:00,
+412,,,PSQW,,Limekiln,PSQW,20:35:00,,
+412,,,,,,,,,Duty 412 Finished Duty
+413,,,Takes up at 17:20 PSQE,,,,,,Duty 413 takes up at 17:20 psqe
+413,,,PSQE,,Takes up at 17:20 PSQE,PSQE,,17:20:00,
+413,,,Limekiln,9,PSQE,Limekiln,,18:15:00,
+413,,,Charlestown,9,Limekiln,Charlestown,,19:50:00,
+413,,,PSQE,,Charlestown,PSQE,20:25:00,,
+413,11:32,,Reports at 11:32,,,,,,Duty 413 reports at 11:32
+413,,11:40:00,Departs garage,SPL,Reports at 11:32,Departs garage,,11:40:00,
+413,,,Drimnagh Rd,122,Departs garage,Drimnagh Rd,,12:20:00,
+413,,,Ashington,122,Drimnagh Rd,Ashington,,13:50:00,
+413,,,Drimnagh Rd,122,Ashington,Drimnagh Rd,,15:20:00,
+413,,,PSQW,,Drimnagh Rd,PSQW,16:15:00,,
+413,,,Takes Bus 6 (Route 9) at 17:20 PSQE,,,,,,Takes Bus 6 (Route 9) at 17:20 psqe
+414,,,Takes up at 16:50 PSQW,,,,,,
+414,,,PSQW,,Takes up at 16:50 PSQW,PSQW,,16:50:00,
+414,,,Charlestown,9,PSQW,Charlestown,,17:30:00,
+414,,,Limekiln,9,Charlestown,Limekiln,,19:10:00,
+414,,,Charlestown,9,Limekiln,Charlestown,,20:50:00,
+414,,,PSQE,,Charlestown,PSQE,21:20:00,,
+414,,,,,,,,,Duty 414 Finished Duty
+414,,,Phibsboro,ROUTE 122,PSQE,Phibsboro,,,
+414,11:37,,Reports at 11:37,,,,,,Duty 414 reports at 11:37
+414,,11:45:00,Departs garage,SPL,Reports at 11:37,Departs garage,,11:45:00,
+414,,,Ashington,122,Departs garage,Ashington,,12:10:00,
+414,,,Drimnagh Rd,122,Ashington,Drimnagh Rd,,13:40:00,
+414,,,Ashington,122,Drimnagh Rd,Ashington,,15:10:00,
+414,,,PSQE,,Ashington,PSQE,15:45:00,,
+414,,,Takes Bus 14 (Route 9) at 16:50 PSQW,,,,,,Takes Bus 14 (Route 9) at 16:50 psqw
+415,11:47,,Reports at 11:47,,,,,,Duty 415 reports at 11:47
+415,,11:55:00,Departs garage,SPL,Reports at 11:47,Departs garage,,11:55:00,
+415,,,Charlestown,9,Departs garage,Charlestown,,12:30:00,
+415,,,Limekiln,9,Charlestown,Limekiln,,14:15:00,
+415,,,Charlestown,9,Limekiln,Charlestown,,16:00:00,
+415,,,PSQE,,Charlestown,PSQE,16:35:00,,
+415,,,Takes Bus 4 (Route 122) at 17:40 PSQE,,,,,,Duty 415 Finished Duty
+415,,,Takes up at 17:40 PSQE,,,,,,Duty 415 takes up at 17:40 psqe
+415,,,PSQE,,Takes up at 17:40 PSQE,PSQE,,17:40:00,
+415,,,Drimnagh Rd,122,PSQE,Drimnagh Rd,,18:40:00,
+415,,,Ashington,122,Drimnagh Rd,Ashington,,20:00:00,
+415,,,PSQE,,Ashington,PSQE,20:30:00,,
+416,11:52,,Reports at 11:52,,,,,,Duty 416 reports at 11:52
+416,,12:00:00,Departs garage,SPL,Reports at 11:52,Departs garage,,12:00:00,
+416,,,Limekiln,9,Departs garage,Limekiln,,12:45:00,
+416,,,Charlestown,9,Limekiln,Charlestown,,14:30:00,
+416,,,Limekiln,9,Charlestown,Limekiln,,16:15:00,Duty 416 Finished Duty
+416,,,PSQW,,Limekiln,PSQW,17:05:00,,
+416,,,Takes Bus 5 (Route 122) at 18:20 PSQE,,,,,,Takes Bus 5 (Route 122) at 18:20 psqe
+416,,,Takes up at 18:20 PSQE,,,,,,Duty 416 takes up at 18:20 psqe
+416,,,PSQE,,Takes up at 18:20 PSQE,PSQE,,18:20:00,
+416,,,Drimnagh Rd,122,PSQE,Drimnagh Rd,,19:20:00,
+416,,,Ashington,SPL,Drimnagh Rd,Ashington,20:45:00,,
+416,,,Phibsboro Garage,,Ashington,Phibsboro Garage,21:05:00,,
+416,,,,,,,,,Duty 416 Finished Duty
+416,,,,,,,,,Duty 416 Finished Duty
+417,,,Takes up at 12:25 PSQW,,,,,,
+417,,,PSQW,,Takes up at 12:25 PSQW,PSQW,,12:25:00,
+417,,,Charlestown,9,PSQW,Charlestown,,13:15:00,
+417,,,Limekiln,9,Charlestown,Limekiln,,15:00:00,
+417,,,Charlestown,9,Limekiln,Charlestown,,16:45:00,
+417,,,PSQE,,Charlestown,PSQE,17:20:00,,
+417,,,Takes Bus 2 (Route 122) at 18:25 PSQW,,,,,,Duty 417 Finished Duty
+417,,,Phibsboro,ROUTE 9,Takes Bus 2 (Route 122) at 18:25 PSQW,Phibsboro,,,
+418,,,Takes up at 17:05 PSQW,,,,,,
+418,,,PSQW,,Takes up at 17:05 PSQW,PSQW,,17:05:00,
+418,,,Charlestown,9,PSQW,Charlestown,,17:45:00,
+418,,,Limekiln,9,Charlestown,Limekiln,,19:30:00,
+418,,,Charlestown,9,Limekiln,Charlestown,,21:10:00,
+418,,,PSQE,,Charlestown,PSQE,21:40:00,,
+418,,,,,,,,,Duty 418 Finished Duty
+418,,,Phibsboro,ROUTE 9,PSQE,Phibsboro,,,
+418,12:32,,Reports at 12:32,,,,,,Duty 418 reports at 12:32
+418,,12:40:00,Departs garage,SPL,Reports at 12:32,Departs garage,,12:40:00,
+418,,,Limekiln,9,Departs garage,Limekiln,,13:30:00,
+418,,,Charlestown,9,Limekiln,Charlestown,,15:15:00,
+418,,,PSQE,,Charlestown,PSQE,15:50:00,,
+418,,,Takes Bus 11 (Route 9) at 17:05 PSQW,,,,,,Takes Bus 11 (Route 9) at 17:05 psqw
+419,,,Takes up at 19:35 PSQW,,,,,,Duty 419 takes up at 19:35 psqw
+419,,,PSQW,,Takes up at 19:35 PSQW,PSQW,,19:35:00,
+419,,,Charlestown,9,PSQW,Charlestown,,20:30:00,
+419,,,PSQE,,Charlestown,PSQE,21:00:00,,
+419,,,,,,,,,Duty 419 Finished Duty
+419,,,Takes up at 21:00 PSQE,,PSQE,Takes up at 21:00 PSQE,,,
+419,,,Takes up at 12:55 PSQW,,,,,,
+419,,,PSQW,,Takes up at 12:55 PSQW,PSQW,,12:55:00,
+419,,,Charlestown,9,PSQW,Charlestown,,13:30:00,
+419,,,Limekiln,9,Charlestown,Limekiln,,15:15:00,
+419,,,Charlestown,SPL,Limekiln,Charlestown,17:00:00,,
+419,,,Phibsboro Garage,,Charlestown,Phibsboro Garage,17:25:00,,
+419,,,Takes Bus 2 (Route 9) at 19:35 PSQW,,,,,,Takes Bus 2 (Route 9) at 19:35 psqw
+419,,,Phibsboro,ROUTE 9,Takes Bus 2 (Route 9) at 19:35 PSQW,Phibsboro,,,
+420,,,Takes up at 16:05 PSQE,,,,,,Duty 420 takes up at 16:05 psqe
+420,,,PSQE,,Takes up at 16:05 PSQE,PSQE,,16:05:00,
+420,,,Limekiln,9,PSQE,Limekiln,,17:15:00,
+420,,,Charlestown,9,Limekiln,Charlestown,,18:50:00,
+420,,,Takes up at 13:00 PSQE,,,,,,
+420,,,PSQE,,Takes up at 13:00 PSQE,PSQE,,13:00:00,
+420,,,Drimnagh Rd,122,PSQE,Drimnagh Rd,,14:00:00,
+420,,,PSQW,,Drimnagh Rd,PSQW,14:50:00,,
+420,,,Takes Bus 1 (Route 9) at 16:05 PSQE,,,,,,Takes Bus 1 (Route 9) at 16:05 psqe
+420,,,,,,,,,Duty 420 Finished Duty
+420,,,Phibsboro,ROUTE 122,Takes Bus 1 (Route 9) at 16:05 PSQE,Phibsboro,,,
+421,,,Takes up at 14:00 PSQW,,,,,,
+421,,,PSQW,,Takes up at 14:00 PSQW,PSQW,,14:00:00,
+421,,,Charlestown,9,PSQW,Charlestown,,14:45:00,
+421,,,Limekiln,9,Charlestown,Limekiln,,16:30:00,
+421,,,PSQW,,Limekiln,PSQW,17:20:00,,
+421,,,Takes Bus 1 (Route 122) at 19:00 PSQE,,,,,,Takes Bus 1 (Route 122) at 19:00 psqe
+421,,,Phibsboro,ROUTE 9,Takes Bus 1 (Route 122) at 19:00 PSQE,Phibsboro,,,
+422,,,Takes up at 19:05 PSQE,,,,,,Duty 422 takes up at 19:05 psqe
+422,,,PSQE,,Takes up at 19:05 PSQE,PSQE,,19:05:00,
+422,,,Limekiln,9,PSQE,Limekiln,,20:10:00,
+422,,,Charlestown,9,Limekiln,Charlestown,,21:50:00,
+422,,,Takes up at 14:45 PSQE,,,,,,Duty 422 Finished Duty
+422,,,PSQE,,Takes up at 14:45 PSQE,PSQE,,14:45:00,
+422,,,Drimnagh Rd,122,PSQE,Drimnagh Rd,,15:40:00,
+422,,,Ashington,122,Drimnagh Rd,Ashington,,17:10:00,
+422,,,PSQE,,Ashington,PSQE,17:40:00,,
+422,,,Takes Bus 13 (Route 9) at 19:05 PSQE,,,,,,Takes Bus 13 (Route 9) at 19:05 psqe
+422,,,Phibsboro,ROUTE 122,Takes Bus 13 (Route 9) at 19:05 PSQE,Phibsboro,,,
+423,,,Takes up at 14:50 PSQW,,,,,,Duty 423 takes up at 14:50 psqw
+423,,,PSQW,,Takes up at 14:50 PSQW,PSQW,,14:50:00,
+423,,,Ashington,122,PSQW,Ashington,,15:30:00,
+423,,,Drimnagh Rd,122,Ashington,Drimnagh Rd,,17:00:00,
+423,,,Ashington,122,Drimnagh Rd,Ashington,,18:30:00,
+423,,,PSQE,,Ashington,PSQE,19:00:00,,
+423,,,Takes Bus 6 (Route 122) at 20:00 PSQE,,PSQE,Takes Bus 6 (Route 122) at 20:00 PSQE,,,Takes Bus 6 (Route 122) at 20:00 psqe
+423,,,Takes up at 19:00 PSQE,,Takes Bus 6 (Route 122) at 20:00 PSQE,Takes up at 19:00 PSQE,,,Duty 423 Finished Duty
+424,,,Takes up at at 14:55 PSQW,,,,,,Duty 424 takes up at 14:55 psqw
+424,,,PSQW,,Takes up at at 14:55 PSQW,PSQW,,14:55:00,
+424,,,Charlestown,9,PSQW,Charlestown,,15:45:00,
+424,,,Limekiln,9,Charlestown,Limekiln,,17:30:00,
+424,,,Charlestown,9,Limekiln,Charlestown,,19:10:00,
+424,,,PSQE,,Charlestown,PSQE,19:45:00,,
+424,,,Takes Bus 14 (Route 9) at 21:20 PSQE,,PSQE,Takes Bus 14 (Route 9) at 21:20 PSQE,,,Duty 424 Finished Duty
+424,,,Takes up at 21:20 PSQE,,,,,,Duty 424 takes up at 21:20 psqe
+424,,,PSQE,,Takes up at 21:20 PSQE,PSQE,,21:20:00,
+424,,,Limekiln,9,PSQE,Limekiln,,22:30:00,
+424,,,Charlestown,SPL,Limekiln,Charlestown,23:40:00,,
+424,,,Phibsboro Garage,,Charlestown,Phibsboro Garage,,,
+424,,,,,,,,,Duty 424 Finished Duty
+425,,,Takes up at 15:05 PSQE,,,,,,Duty 425 Finished Duty
+425,,,PSQE,,Takes up at 15:05 PSQE,PSQE,,15:05:00,
+425,,,Drimnagh Rd,122,PSQE,Drimnagh Rd,,16:00:00,
+425,,,Ashington,122,Drimnagh Rd,Ashington,,17:30:00,
+425,,,Drimnagh Rd,122,Ashington,Drimnagh Rd,,19:00:00,
+425,,,PSQW,,Drimnagh Rd,PSQW,19:40:00,,
+425,,,Takes Bus 7 (Route 9) at 20:40 PSQE,,,,,,Takes Bus 7 (Route 9) at 20:40 psqe
+425,,,Phibsboro,ROUTE 122,Takes Bus 7 (Route 9) at 20:40 PSQE,Phibsboro,,,
+426,,,Takes up at 20:25 PSQE,,,,,,Duty 426 takes up at 20:25 psqe
+426,,,PSQE,,Takes up at 20:25 PSQE,PSQE,,20:25:00,
+426,,,Limekiln,9,PSQE,Limekiln,,21:30:00,
+426,,,Charlestown,9,Limekiln,Charlestown,,23:10:00,
+426,,,Limekiln,SPL,Charlestown,Limekiln,,,
+426,,,Phibsboro Garage,,Limekiln,Phibsboro Garage,,,
+426,,,Takes up at 15:10 PSQW,,,,,,Duty 426 takes up at 15:10 psqw
+426,,,PSQW,,Takes up at 15:10 PSQW,PSQW,,15:10:00,
+426,,,Ashington,122,PSQW,Ashington,,15:50:00,
+426,,,Drimnagh Rd,122,Ashington,Drimnagh Rd,,17:20:00,
+426,,,Takes Bus 6 (Route 9) at 20:25 PSQE,,,,,,Takes Bus 6 (Route 9) at 10:30 psqe
+426,,,Takes up at 19:20 PSQE,,Takes Bus 6 (Route 9) at 20:25 PSQE,Takes up at 19:20 PSQE,,,
+427,,,Takes up at 15:25 PSQW,,,,,,
+427,,,PSQW,,Takes up at 15:25 PSQW,PSQW,,15:25:00,
+427,,,Charlestown,9,PSQW,Charlestown,,16:15:00,
+427,,,PSQE,,Charlestown,PSQE,16:50:00,,
+427,,,Takes Bus 3 (Route 122) at 19:20 PSQE,,,,,,Takes Bus 3 (Route 122) at 19:20 psqe
+427,,,Phibsboro,ROUTE 9,Takes Bus 3 (Route 122) at 19:20 PSQE,Phibsboro,,,
+428,,,Takes up at at 19:45 PSQE,,,,,,Duty 428 takes up at 19:45 psqe
+428,,,PSQE,,Takes up at at 19:45 PSQE,PSQE,,19:45:00,
+428,,,Limekiln,9,PSQE,Limekiln,,20:50:00,
+428,,,Charlestown,9,Limekiln,Charlestown,,22:30:00,Duty 428 Finished Duty
+428,,,Limekiln,SPL,Charlestown,Limekiln,23:40:00,,
+428,,,Phibsboro Garage,,Limekiln,Phibsboro Garage,,,
+428,,,,,,,,,Duty 428 Finished Duty
+428,,,BUS 4,,Phibsboro Garage,BUS 4,,,
+428,,,Takes up at 15:30 PSQW,,,,,,Duty 428 takes up at 15:30 psqw
+428,,,PSQW,,Takes up at 15:30 PSQW,PSQW,,15:30:00,
+428,,,Ashington,122,PSQW,Ashington,,16:10:00,
+428,,,Drimnagh Rd,122,Ashington,Drimnagh Rd,,17:40:00,
+428,,,PSQW,,Drimnagh Rd,PSQW,18:25:00,,
+428,,,Takes Bus 3 (Route 9) at 19:45 PSQE,,PSQW,Takes Bus 3 (Route 9) at 19:45 PSQE,,,Takes Bus 3 (Route 9) at 19:45 psqe
+428,,,Takes up at 18:25 PSQW,,Takes Bus 3 (Route 9) at 19:45 PSQE,Takes up at 18:25 PSQW,,,
+429,,,Takes up at 15:35 PSQE,,,,,,
+429,,,PSQE,,Takes up at 15:35 PSQE,PSQE,,15:35:00,
+429,,,Limekiln,9,PSQE,Limekiln,,16:45:00,
+429,,,PSQW,,Limekiln,PSQW,17:35:00,,
+429,,,Takes Bus 7 (Route 122) at 19:40 PSQW,,,,,,Takes Bus 7 (Route 122) at 19:40 psqw
+429,,,,,,,,,Duty 429 Finished Duty
+429,,,Phibsboro,ROUTE 9,Takes Bus 7 (Route 122) at 19:40 PSQW,Phibsboro,,,
+429,,,Takes up at 19:40 PSQW,,,,,,Duty 429 takes up at 19:40 psqw
+429,,,PSQW,,Takes up at 19:40 PSQW,PSQW,,19:40:00,
+429,,,Ashington,122,PSQW,Ashington,,20:30:00,
+429,,,Drimnagh Rd,122,Ashington,Drimnagh Rd,,22:00:00,
+429,,,Ashington,122,Drimnagh Rd,Ashington,,23:00:00,
+429,,,OCS,,Ashington,OCS,,23:30:00,
+430,,,Takes up at 15:40 PSQW,,,,,,
+430,,,PSQW,,Takes up at 15:40 PSQW,PSQW,,15:40:00,
+430,,,Charlestown,9,PSQW,Charlestown,,16:30:00,
+430,,,Limekiln,SPL,Charlestown,Limekiln,18:05:00,,
+430,,,Phibsboro Garage,,Limekiln,Phibsboro Garage,18:40:00,,
+430,,,Takes Bus 4 (Route 122) at 20:30 PSQE,,,,,,Takes Bus 4 (Route 122) at 20:30 psqe
+430,,,Phibsboro,ROUTE 9,Takes Bus 4 (Route 122) at 20:30 PSQE,Phibsboro,,,
+430,,,Takes up at 20:30 PSQE,,,,,,Duty 430 takes up at 20:30 psqe
+430,,,PSQE,,Takes up at 20:30 PSQE,PSQE,,20:30:00,
+430,,,Drimnagh Rd,122,PSQE,Drimnagh Rd,,21:30:00,
+430,,,Ashington,122,Drimnagh Rd,Ashington,,22:30:00,
+430,,,Drimnagh Rd (to City Centre),122,Ashington,Drimnagh Rd (to City Centre),,,
+431,,,Takes up at 20:05 PSQE,,,,,,Duty 431 takes up at 20:05 psqe
+431,,,PSQE,,Takes up at 20:05 PSQE,PSQE,,20:05:00,
+431,,,Limekiln,9,PSQE,Limekiln,,21:10:00,
+431,,,Charlestown,9,Limekiln,Charlestown,,22:50:00,
+431,,,Limekiln,SPL,Charlestown,Limekiln,,,
+431,,,Phibsboro Garage,,Limekiln,Phibsboro Garage,,,
+431,,,Takes up at 15:50 PSQE,,,,,,Duty 431 Finished Duty
+431,,,PSQE,,Takes up at 15:50 PSQE,PSQE,,15:50:00,
+431,,,Limekiln,9,PSQE,Limekiln,,17:00:00,
+431,,,Charlestown,9,Limekiln,Charlestown,,18:30:00,
+431,,,PSQE,,Charlestown,PSQE,19:05:00,,
+431,,,Takes Bus 10 (Route 9) at 20:05 PSQE,,,,,,Takes Bus 10 (Route 9) at 20:05 psqe
+431,,,Phibsboro,ROUTE 9,Takes Bus 10 (Route 9) at 20:05 PSQE,Phibsboro,,,
+432,,,Takes up at 16:20 PSQW,,,,,,Duty 432 takes up at 16:20 psqw
+432,,,PSQW,,Takes up at 16:20 PSQW,PSQW,,16:20:00,
+432,,,Charlestown,9,PSQW,Charlestown,,17:00:00,
+432,,,Limekiln,9,Charlestown,Limekiln,,18:30:00,
+432,,,Takes Bus 11 (Route 9) at 21:40 PSQE,,,,,,Takes Bus 11 (Route 9) at 13:10 psqw
+432,,,Takes up at 20:40 PSQE,,Takes Bus 11 (Route 9) at 21:40 PSQE,Takes up at 20:40 PSQE,,,
+432,,,Takes up at 21:40 PSQE,,,,,,Duty 432 takes up at 21:40 psqe
+432,,,PSQE,,Takes up at 21:40 PSQE,PSQE,,21:40:00,
+432,,,Limekiln,9,PSQE,Limekiln,,22:50:00,
+432,,,Charlestown,SPL,Limekiln,Charlestown,23:55:00,,
+432,,,Phibsboro Garage,,Charlestown,Phibsboro Garage,,,
+432,,,,,,,,,Duty 432 Finished Duty
+433,,,Takes up at 21:15 PSQW,,,,,,Duty 433 takes up at 21:15 psqw
+433,,,PSQW,,Takes up at 21:15 PSQW,PSQW,,21:15:00,
+433,,,Charlestown,9,PSQW,Charlestown,,22:10:00,
+433,,,Limekiln,9,Charlestown,Limekiln,,23:30:00,
+433,,,Takes up at 16:35 PSQE,,,,,,
+433,,,PSQE,,Takes up at 16:35 PSQE,PSQE,,16:35:00,
+433,,,Limekiln,9,PSQE,Limekiln,,17:45:00,
+433,,,Charlestown,9,Limekiln,Charlestown,,19:30:00,
+433,,,PSQE,,Charlestown,PSQE,20:05:00,,
+433,,,Takes Bus 1 (Route 9) at 21:15 PSQW,,,,,,Takes Bus 1 (Route 9) at 21:15 psqw
+433,,,Phibsboro,ROUTE 9,Takes Bus 1 (Route 9) at 21:15 PSQW,Phibsboro,,,
+434,,,Takes up at 16:35 PSQW,,,,,,Duty 434 takes up at 16:35 psqw
+434,,,PSQW,,Takes up at 16:35 PSQW,PSQW,,16:35:00,
+434,,,Charlestown,9,PSQW,Charlestown,,17:15:00,
+434,,,Limekiln,9,Charlestown,Limekiln,,18:50:00,
+434,,,PSQW,,Limekiln,PSQW,19:35:00,,
+434,,,Takes Bus 8 (Route 9) at 20:35 PSQW,,,,,,Takes Bus 3 (Route 9) at 12:55 psqe
+434,,,Takes up at 20:35 PSQW,,,,,,Duty 434 takes up at 20:35 psqw
+434,,,PSQW,,Takes up at 20:35 PSQW,PSQW,,20:35:00,
+435,,,Takes up at 17:00 PSQE,,,,,,Duty 435 takes up at 17:00 psqe
+435,,,PSQE,,Takes up at 17:00 PSQE,PSQE,,17:00:00,
+435,,,Drimnagh Rd,122,PSQE,Drimnagh Rd,,18:00:00,
+435,,,Ashington,122,Drimnagh Rd,Ashington,,19:30:00,
+435,,,PSQE,,Ashington,PSQE,20:00:00,,
+435,,,Takes Bus 2 (Route 9) at 21:00 PSQE,,PSQE,Takes Bus 2 (Route 9) at 21:00 PSQE,,,Takes Bus 2 (Route 9) at 21:00 psqe
+435,,,Takes up at 20:00 PSQE,,Takes Bus 2 (Route 9) at 21:00 PSQE,Takes up at 20:00 PSQE,,,
+451,09:37,,Reports at 09:37,,,,,,Duty 451 reports at 09:37
+451,,09:45:00,Departs garage,SPL,Reports at 09:37,Departs garage,,09:45:00,
+451,,,Charlestown,9,Departs garage,Charlestown,,10:15:00,
+451,,,Limekiln,9,Charlestown,Limekiln,,11:35:00,
+451,,,PSQW,,Limekiln,PSQW,12:25:00,,
+451,,,Takes Bus 14 (Route 9) at 13:37 Garage,,,,,,Duty 451 Finished Duty
+451,13:37,,Reports at 13:37,,,,,,Duty 451 reports at 13:37
+451,,13:40:00,Departs garage,SPL,Reports at 13:37,Departs garage,,13:40:00,
+451,,,Charlestown,9,Departs garage,Charlestown,,14:15:00,
+451,,,Limekiln,9,Charlestown,Limekiln,,16:00:00,
+451,,,PSQW,,Limekiln,PSQW,16:50:00,,
+451,,,,,,,,,Duty 451 Finished Duty
+452,10:02,,Reports at 10:02,,,,,,Duty 452 reports at 10:02
+452,,10:10:00,Departs garage,SPL,Reports at 10:02,Departs garage,,10:10:00,
+452,,,Charlestown,9,Departs garage,Charlestown,,10:40:00,
+452,,,Limekiln,9,Charlestown,Limekiln,,12:15:00,
+452,,,PSQW,,Limekiln,PSQW,13:10:00,,
+452,,,Takes Bus 5 (Route 122) at 14:10 PSQW,,,,,,Takes Bus 5 (Route 122) at 14:10 psqw
+452,,,Takes up at 14:10 PSQW,,,,,,
+452,,,PSQW,,Takes up at 14:10 PSQW,PSQW,,14:10:00,
+452,,,Ashington,122,PSQW,Ashington,,14:50:00,
+452,,,Drimnagh Rd,122,Ashington,Drimnagh Rd,,16:20:00,
+452,,,Ashington,122,Drimnagh Rd,Ashington,,17:50:00,
+452,,,PSQE,,Ashington,PSQE,18:20:00,,
+452,,,,,,,,,Duty 452 Finished Duty
+452,,,Phibsboro,ROUTE 122,PSQE,Phibsboro,,,
+453,,,Takes up at 13:10 PSQW,,,,,,Takes Bus 11 (Route 9) at 13:10 psqw
+453,,,PSQW,,Takes up at 13:10 PSQW,PSQW,,13:10:00,
+453,,,Charlestown,9,PSQW,Charlestown,,13:45:00,
+453,,,Limekiln,9,Charlestown,Limekiln,,15:30:00,
+453,,,PSQW,,Limekiln,PSQW,16:20:00,,
+453,,,,,,,,,Duty 453 Finished Duty
+453,,,,,,,,,Duty 453 Finished Duty
+453,,,Phibsboro,ROUTE 9,PSQW,Phibsboro,,,
+453,,,Takes up at 10:30 PSQE,,,,,,Takes Bus 6 (Route 9) at 10:30 psqe
+453,,,PSQE,,Takes up at 10:30 PSQE,PSQE,,10:30:00,
+453,,,Drimnagh Rd,122,PSQE,Drimnagh Rd,,11:20:00,
+453,,,PSQW,,Drimnagh Rd,PSQW,12:05:00,,
+453,,,Takes Bus 7 (Route 9) at 13:10 PSQW,,,,,,Takes Bus 7 (Route 9) at 13:10 psqw
+454,,,Takes up at 10:40 PSQW,,,,,,
+454,,,PSQW,,Takes up at 10:40 PSQW,PSQW,,10:40:00,
+454,,,Ashington,122,PSQW,Ashington,,11:10:00,
+454,,,Drimnagh Rd,122,Ashington,Drimnagh Rd,,12:40:00,
+454,,,Ashington,122,Drimnagh Rd,Ashington,,14:10:00,
+454,,,PSQE,,Ashington,PSQE,14:45:00,,
+454,,,Takes Bus 9 (Route 122) at 15:45 PSQE,,,,,,Takes Bus 9 (Route 122) at 15:45 psqe
+454,,,Takes up at 15:45 PSQE,,,,,,
+454,,,PSQE,,Takes up at 15:45 PSQE,PSQE,,15:45:00,
+454,,,Drimnagh Rd,122,PSQE,Drimnagh Rd,,16:40:00,
+454,,,Ashington,122,Drimnagh Rd,Ashington,,18:10:00,
+454,,,Drimnagh Rd,SPL,Ashington,Drimnagh Rd,19:30:00,,
+454,,,Phibsboro Garage,,Drimnagh Rd,Phibsboro Garage,20:05:00,,
+454,,,,,,,,,Duty 454 Finished Duty
+455,,,Takes up at 11:10 PSQW,,,,,,
+455,,,PSQW,,Takes up at 11:10 PSQW,PSQW,,11:10:00,Duty 455 Finished Duty
+455,,,Charlestown,9,PSQW,Charlestown,,12:00:00,
+455,,,Limekiln,9,Charlestown,Limekiln,,13:45:00,
+455,,,Charlestown,9,Limekiln,Charlestown,,15:30:00,
+455,,,PSQE,,Charlestown,PSQE,16:05:00,,
+455,,,Takes Bus 4 (Route 9) at 17:20 PSQW,,,,,,Takes Bus 4 (Route 9) at 17:20 psqw
+455,,,,,,,,,Duty 455 Finished Duty
+455,,,Phibsboro,ROUTE 9,Takes Bus 4 (Route 9) at 17:20 PSQW,Phibsboro,,,
+455,,,Takes up at 17:20 PSQW,,,,,,Duty 455 takes up at 17:20 psqw
+455,,,PSQW,,Takes up at 17:20 PSQW,PSQW,,17:20:00,
+455,,,Charlestown,9,PSQW,Charlestown,,18:00:00,
+455,,,Limekiln,SPL,Charlestown,Limekiln,19:35:00,,
+455,,,Phibsboro Garage,,Limekiln,Phibsboro Garage,20:15:00,,
+455,,,,,,,,,Duty 455 Finished Duty
+455,,,,,,,,,Duty 455 Finished Duty
+456,,,Takes Bus 8 (Route 122) at 16:15 PSQW,,,,,,Takes Bus 8 (Route 122) at 16:15 psqw
+456,,,Takes up at 16:15 PSQW,,,,,,
+456,,,PSQW,,Takes up at 16:15 PSQW,PSQW,,16:15:00,
+456,,,Ashington,122,PSQW,Ashington,,16:50:00,
+456,,,Drimnagh Rd,122,Ashington,Drimnagh Rd,,18:20:00,
+456,,,Ashington,SPL,Drimnagh Rd,Ashington,19:40:00,,
+456,,,Phibsboro Garage,,Ashington,Phibsboro Garage,20:05:00,,
+456,,,,,,,,,Duty 456 Finished Duty
+456,,,Phibsboro,ROUTE 122,Phibsboro Garage,Phibsboro,,,
+457,,,Takes up at 16:50 PSQE,,,,,,Duty 457 takes up at 16:50 psqe
+457,,,PSQE,,Takes up at 16:50 PSQE,PSQE,,16:50:00,
+457,,,Limekiln,9,PSQE,Limekiln,,18:00:00,
+457,,,Charlestown,SPL,Limekiln,Charlestown,19:30:00,,
+457,,,Phibsboro Garage,,Charlestown,Phibsboro Garage,20:00:00,,
+457,,,,,,,,,Duty 457 Finished Duty
+457,,,,,,,,,Duty 457 Finished Duty
+457,10:57,,Reports at 10:57,,,,,,Duty 457 reports at 10:57
+457,,11:05:00,Departs garage,SPL,Reports at 10:57,Departs garage,,11:05:00,
+457,,,Charlestown,9,Departs garage,Charlestown,,11:40:00,
+457,,,Limekiln,9,Charlestown,Limekiln,,13:15:00,
+457,,,Charlestown,9,Limekiln,Charlestown,,15:00:00,Duty 457 Finished Duty
+457,,,PSQE,,Charlestown,PSQE,15:35:00,,
+457,,,Takes Bus 5 (Route 9) at 16:50 PSQE,,,,,,Takes Bus 5 (Route 9) at 16:50 psqe
+458,11:07,,Reports at 11:07,,,,,,Duty 458 reports at 11:07
+458,,11:15:00,Departs garage,SPL,Reports at 11:07,Departs garage,,11:15:00,
+458,,,Limekiln,9,Departs garage,Limekiln,,12:00:00,
+458,,,PSQW,,Limekiln,PSQW,12:55:00,,
+458,,,Takes Bus 6 (Route 122) at 14:05 PSQE,,,,,,Takes Bus 6 (Route 122) at 14:05 psqe
+458,,,Takes up at 14:05 PSQE,,,,,,
+458,,,PSQE,,Takes up at 14:05 PSQE,PSQE,,14:05:00,
+458,,,Drimnagh Rd,122,PSQE,Drimnagh Rd,,15:00:00,
+458,,,Ashington,122,Drimnagh Rd,Ashington,,16:30:00,
+458,,,PSQE,,Ashington,PSQE,17:00:00,,
+458,,,,,,,,,Duty 458 Finished Duty
+458,,,Phibsboro,ROUTE 122,PSQE,Phibsboro,,,
+458,,,Reports at 10:57,,Phibsboro,Reports at 10:57,,,
+458,,11:05:00,Departs garage,SPL,Reports at 10:57,Departs garage,,11:05:00,
+458,,,Ashington,122,Departs garage,Ashington,,11:30:00,
+458,,,Drimnagh Rd,122,Ashington,Drimnagh Rd,,13:00:00,
+458,,,Ashington,122,Drimnagh Rd,Ashington,,14:30:00,
+458,,,PSQE,,Ashington,PSQE,15:05:00,,

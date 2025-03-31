@@ -6,6 +6,7 @@ class ViewBoardDialog extends StatelessWidget {
   final String dutyNumber;
   final int weekday;
   final bool isBankHoliday;
+  final String? zone;
 
   const ViewBoardDialog({
     Key? key,
@@ -13,6 +14,7 @@ class ViewBoardDialog extends StatelessWidget {
     required this.dutyNumber,
     required this.weekday,
     required this.isBankHoliday,
+    this.zone,
   }) : super(key: key);
 
   @override
@@ -86,14 +88,17 @@ class ViewBoardDialog extends StatelessWidget {
                     itemCount: entries.length,
                     itemBuilder: (context, index) {
                       final entry = entries[index];
-                      
-                      // If this is a Finish entry, we need to show an SPL to Garage before it
-                      if (entry.route == 'Finish') {
-                        // Skip this entry if it's not the one we want to show
+                      final isLast = index == entries.length - 1;
+
+                      // 1. Handle Zone 3 Finish (Special SPL add + Hide original)
+                      if (entry.route == 'Finish' && zone != 'Zone4') {
+                        // For non-Zone4 (i.e., Zone 3), automatically add SPL to Garage if needed
+                        // and hide the actual Finish entry itself.
                         if (index > 0) {
                           final prevEntry = entries[index - 1];
-                          // Don't show SPL if previous entry is already an SPL
-                          if (prevEntry.route != 'SPL') {
+                          bool shouldShowSPL = prevEntry.route != 'SPL'; // Simplified for Zone 3
+                          
+                          if (shouldShowSPL) {
                             // Create SPL entry based on the day
                             final splEntry = BoardEntry(
                               route: 'SPL',
@@ -101,250 +106,85 @@ class ViewBoardDialog extends StatelessWidget {
                               to: 'Garage',
                               location: prevEntry.location ?? '',
                               duty: dutyNumber,
-                              // For M-F use arrival time from current Finish entry
                               arrival: weekday >= DateTime.monday && weekday <= DateTime.friday && !isBankHoliday
                                 ? entry.arrival 
                                 : null,
-                              // For Sunday and Bank Holidays use departure time from previous entry
                               departure: (weekday == DateTime.sunday || isBankHoliday)
                                 ? prevEntry.departure 
                                 : null,
-                              // For Saturday use arrival time for the time display
                               departs: weekday == DateTime.saturday 
                                 ? prevEntry.arrival 
                                 : null,
                             );
 
                             // Show SPL card...
-                            return IntrinsicHeight(
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  // Timeline line and dot
-                                  SizedBox(
-                                    width: 32,
-                                    child: Column(
-                                      children: [
-                                        Container(
-                                          width: 20,
-                                          height: 20,
-                                          decoration: BoxDecoration(
-                                            color: Theme.of(context).primaryColor,
-                                            shape: BoxShape.circle,
-                                          ),
-                                          child: const Center(
-                                            child: Icon(
-                                              Icons.directions_bus,
-                                              size: 12,
-                                              color: Colors.white,
-                                            ),
-                                          ),
-                                        ),
-                                        Expanded(
-                                          child: Container(
-                                            width: 2,
-                                            color: Theme.of(context).primaryColor.withOpacity(0.3),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  
-                                  // Entry content
-                                  Expanded(
-                                    child: Card(
-                                      margin: const EdgeInsets.only(bottom: 12),
-                                      elevation: 2,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: Padding(
-                                        padding: const EdgeInsets.all(8),
-                                        child: _buildRouteInfo(splEntry, index),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            );
+                            return _buildTimelineCard(context, splEntry, index, isLast, child: _buildRouteInfo(splEntry, index));
                           }
                         }
+                        // Hide the original Finish entry for Zone 3
+                        return const SizedBox.shrink(); 
+                      }
+
+                      // 2. Skip Break entries and hidden SPL entries
+                      if (entry.route == 'Break' || (entry.route == 'SPL' && entry.notes == 'HIDDEN_SPL')) {
                         return const SizedBox.shrink();
                       }
 
-                      // Skip Break entries
-                      if (entry.route == 'Break') {
-                        return const SizedBox.shrink();
+                      // 3. Handle Handover (End of First Half)
+                      else if (entry.route == 'Handover') {
+                        return _buildTimelineCard(
+                          context,
+                          entry,
+                          index,
+                          isLast,
+                          child: _buildSimpleEntryContent(context, entry, showArrival: true),
+                        );
                       }
 
-                      // Show SPL entries and regular route entries
-                      final isLast = index == entries.length - 1;
-                      
-                      return IntrinsicHeight(
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            // Timeline line and dot
-                            SizedBox(
-                              width: 32,
-                              child: Column(
-                                children: [
-                                  Container(
-                                    width: 20,
-                                    height: 20,
-                                    decoration: BoxDecoration(
-                                      color: Theme.of(context).primaryColor,
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: Center(
-                                      child: Icon(
-                                        _getEntryIcon(entry),
-                                        size: 12,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                  ),
-                                  if (!isLast)
-                                    Expanded(
-                                      child: Container(
-                                        width: 2,
-                                        color: Theme.of(context).primaryColor.withOpacity(0.3),
-                                      ),
-                                    ),
-                                ],
-                              ),
-                            ),
-                            
-                            // Entry content
-                            Expanded(
-                              child: Card(
-                                margin: const EdgeInsets.only(bottom: 12),
-                                elevation: 2,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Padding(
-                                  padding: const EdgeInsets.all(8),
-                                  child: entry.route == 'SPL' 
-                                    ? _buildRouteInfo(entry, index)
-                                    : Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          // Time and Location
-                                          Row(
-                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              if (entry.route != 'SPL')
-                                                Text(
-                                                  _getTimeText(entry, index),
-                                                  style: const TextStyle(
-                                                    fontSize: 16,
-                                                    fontWeight: FontWeight.bold,
-                                                  ),
-                                                ),
-                                              if (entry.route != 'SPL' && entry.route != 'Break' && entry.route != 'Finish')
-                                                Container(
-                                                  padding: const EdgeInsets.symmetric(
-                                                    horizontal: 8,
-                                                    vertical: 2,
-                                                  ),
-                                                  decoration: BoxDecoration(
-                                                    color: Theme.of(context).primaryColor.withOpacity(0.1),
-                                                    borderRadius: BorderRadius.circular(12),
-                                                  ),
-                                                  child: Text(
-                                                    entry.location,
-                                                    style: TextStyle(
-                                                      color: Theme.of(context).primaryColor,
-                                                      fontWeight: FontWeight.bold,
-                                                      fontSize: 12,
-                                                    ),
-                                                  ),
-                                                ),
-                                            ],
-                                          ),
-                                          
-                                          const SizedBox(height: 2),
-                                          
-                                          // Route and Direction
-                                          if (entry.route != 'Finish')
-                                            _buildRouteInfo(entry, index),
-                                          
-                                          // Notes
-                                          if (entry.notes != null && entry.notes!.isNotEmpty && !entry.notes!.contains('SPL to Garage')) ...[
-                                            const SizedBox(height: 4),
-                                            Container(
-                                              padding: const EdgeInsets.symmetric(
-                                                horizontal: 8,
-                                                vertical: 4,
-                                              ),
-                                              decoration: BoxDecoration(
-                                                color: Colors.grey[100],
-                                                borderRadius: BorderRadius.circular(6),
-                                              ),
-                                              child: Row(
-                                                children: [
-                                                  Icon(
-                                                    Icons.info_outline,
-                                                    size: 14,
-                                                    color: Colors.grey[600],
-                                                  ),
-                                                  const SizedBox(width: 4),
-                                                  Expanded(
-                                                    child: Text(
-                                                      entry.notes!,
-                                                      style: TextStyle(
-                                                        color: Colors.grey[700],
-                                                        fontStyle: FontStyle.italic,
-                                                        fontSize: 11,
-                                                      ),
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                          ] else if (entry.route == 'Finish' && entry.location == 'Garage' && !entry.notes!.contains('Finished Duty')) ...[
-                                            const SizedBox(height: 4),
-                                            Container(
-                                              padding: const EdgeInsets.symmetric(
-                                                horizontal: 8,
-                                                vertical: 4,
-                                              ),
-                                              decoration: BoxDecoration(
-                                                color: Colors.grey[100],
-                                                borderRadius: BorderRadius.circular(6),
-                                              ),
-                                              child: Row(
-                                                children: [
-                                                  Icon(
-                                                    Icons.info_outline,
-                                                    size: 14,
-                                                    color: Colors.grey[600],
-                                                  ),
-                                                  const SizedBox(width: 4),
-                                                  Expanded(
-                                                    child: Text(
-                                                      'End of First Half',
-                                                      style: TextStyle(
-                                                        color: Colors.grey[700],
-                                                        fontStyle: FontStyle.italic,
-                                                        fontSize: 11,
-                                                      ),
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                          ],
-                                        ],
-                                      ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
+                      // 4. Handle TakeOver (Start of Second Half)
+                      else if (entry.route == 'TakeOver') {
+                        return _buildTimelineCard(
+                          context,
+                          entry,
+                          index,
+                          isLast,
+                          child: _buildSimpleEntryContent(context, entry, showDeparture: true),
+                        );
+                      }
+
+                      // 5. Handle SPL routes
+                      else if (entry.route == 'SPL') {
+                        return _buildTimelineCard(
+                          context,
+                          entry,
+                          index,
+                          isLast,
+                          child: _buildRouteInfo(entry, index), // Uses SPL specific layout
+                        );
+                      }
+
+                      // 6. Handle Zone 4 Finish 
+                      else if (entry.route == 'Finish' && zone == 'Zone4') {
+                         return _buildTimelineCard(
+                          context,
+                          entry,
+                          index,
+                          isLast,
+                           // Show Time, Location, and Notes for Zone 4 Finish at PSQ
+                          child: _buildSimpleEntryContent(context, entry, showArrival: true),
+                        );
+                      }
+
+                      // 7. Handle Regular routes (Default)
+                      else {
+                        return _buildTimelineCard(
+                          context,
+                          entry,
+                          index,
+                          isLast,
+                          child: _buildRegularEntryContent(context, entry, index),
+                        );
+                      }
                     },
                   ),
             ),
@@ -354,10 +194,163 @@ class ViewBoardDialog extends StatelessWidget {
     );
   }
 
+  // Helper to build the outer timeline card structure
+  Widget _buildTimelineCard(BuildContext context, BoardEntry entry, int index, bool isLast, {required Widget child}) {
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Timeline line and dot
+          SizedBox(
+            width: 32,
+            child: Column(
+              children: [
+                Container(
+                  width: 20,
+                  height: 20,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).primaryColor,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: Icon(
+                      _getEntryIcon(entry),
+                      size: 12,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+                if (!isLast)
+                  Expanded(
+                    child: Container(
+                      width: 2,
+                      color: Theme.of(context).primaryColor.withOpacity(0.3),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          // Entry content card
+          Expanded(
+            child: Card(
+              margin: const EdgeInsets.only(bottom: 12),
+              elevation: 2,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(8),
+                child: child,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Builds content for regular route entries
+  Widget _buildRegularEntryContent(BuildContext context, BoardEntry entry, int index) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Row( /* Time and Location Badge */ 
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text( _getTimeText(entry, index, forceDeparture: true), /* Force departure for regular */
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),), 
+            if (entry.location.isNotEmpty) _buildLocationBadge(context, entry.location), 
+          ],
+        ),
+        const SizedBox(height: 2),
+        _buildRouteInfo(entry, index), // Route Badge + From->To
+        _buildNotesSection(context, entry), // Notes if available
+      ],
+    );
+  }
+
+  // Builds simplified content for Handover/Takeover 
+  Widget _buildSimpleEntryContent(BuildContext context, BoardEntry entry, {bool showArrival = false, bool showDeparture = false}) {
+     String timePrefix = '';
+     String timeValue = '';
+
+     if (entry.route == 'Handover') {
+       timePrefix = 'Hand over at ';
+       timeValue = entry.arrival != null ? _formatTime(entry.arrival) : '';
+     } else if (entry.route == 'TakeOver') {
+       timePrefix = 'Take up at ';
+       timeValue = entry.departs != null ? _formatTime(entry.departs) : '';
+     }
+     // Handle Finish or other cases using the flags
+     else if (showArrival) { 
+       timePrefix = 'Arrives: ';
+       timeValue = entry.arrival != null ? _formatTime(entry.arrival) : '';
+     } else if (showDeparture) { 
+       timePrefix = 'Departs: '; // Should not happen for Finish, but safe fallback
+       timeValue = entry.departs != null ? _formatTime(entry.departs) : '';
+     }
+
+     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Row( /* Time and Location Badge */ 
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              timeValue.isNotEmpty ? timePrefix + timeValue : '',
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),), 
+            if (entry.location.isNotEmpty) _buildLocationBadge(context, entry.location), 
+          ],
+        ),
+        _buildNotesSection(context, entry), // Notes only
+      ],
+    );
+  }
+
+  // Builds just the notes section
+  Widget _buildNotesSection(BuildContext context, BoardEntry entry) {
+    if (entry.notes != null && entry.notes!.isNotEmpty && !entry.notes!.contains('SPL to Garage') && entry.notes != 'HIDDEN_SPL') {
+      return Padding(
+        padding: const EdgeInsets.only(top: 4.0), // Add some space if time/route is hidden
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(6)),
+          child: Row(
+            children: [
+              Icon(Icons.info_outline, size: 14, color: Colors.grey[600]),
+              const SizedBox(width: 4),
+              Expanded(child: Text(entry.notes!, style: TextStyle(color: Colors.grey[700], fontStyle: FontStyle.italic, fontSize: 11))),
+            ],
+          ),
+        ),
+      );
+    } else {
+      return const SizedBox.shrink(); // Return empty if no notes
+    }
+  }
+
+  // Helper to build location badge - unchanged
+  Widget _buildLocationBadge(BuildContext context, String location) {
+      return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: Theme.of(context).primaryColor.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(location, style: TextStyle(color: Theme.of(context).primaryColor, fontWeight: FontWeight.bold, fontSize: 12)),
+    );
+  }
+
   IconData _getEntryIcon(BoardEntry entry) {
     if (entry.route == 'SPL') return Icons.directions_bus;
     if (entry.route == 'Break') return Icons.coffee;
     if (entry.route == 'Finish') return Icons.check_circle;
+    if (entry.route == 'Handover') return Icons.swap_horiz;
+    if (entry.route == 'TakeOver') return Icons.play_circle_outline;
     return Icons.location_on;
   }
 
@@ -370,7 +363,7 @@ class ViewBoardDialog extends StatelessWidget {
     return time;
   }
 
-  String _getTimeText(BoardEntry entry, int index) {
+  String _getTimeText(BoardEntry entry, int index, {bool forceDeparture = false}) {
     // For first entry (from garage), show departs time
     if (index == 0) {
       return entry.departs != null ? 'Departs: ${_formatTime(entry.departs)}' : '';
@@ -400,9 +393,25 @@ class ViewBoardDialog extends StatelessWidget {
       return entry.departure != null ? 'Departs: ${_formatTime(entry.departure)}' : '';
     }
 
+    // For Finish entries, show arrival time at Garage
+    if (entry.route == 'Finish') {
+      return entry.arrival != null ? 'Arrives: ${_formatTime(entry.arrival)}' : '';
+    }
+
+    // For Handover entries, show arrival time
+    if (entry.route == 'Handover') {
+      return entry.arrival != null ? 'Arrives: ${_formatTime(entry.arrival)}' : '';
+    }
+
+    // For TakeOver entries, show departure time
+    if (entry.route == 'TakeOver') {
+      return entry.departs != null ? 'Departs: ${_formatTime(entry.departs)}' : '';
+    }
+
     return '';
   }
 
+  // Returns the text for the route direction (e.g., "From -> To")
   String _getRouteText(BoardEntry entry, int index) {
     if (entry.route == 'SPL') {
       // For SPL from Garage, show Garage → next location
@@ -418,12 +427,13 @@ class ViewBoardDialog extends StatelessWidget {
     return '';
   }
 
+  // Builds the widget for route badge and direction text
   Widget _buildRouteInfo(BoardEntry entry, int index) {
     if (entry.route == 'Break') {
       return const SizedBox.shrink();
     }
 
-    if (entry.route == 'SPL' || (entry.route != 'Break' && entry.route != 'Finish')) {
+    if (entry.route == 'SPL' || (entry.route != 'Break' && entry.route != 'Finish' && entry.route != 'Handover' && entry.route != 'TakeOver')) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

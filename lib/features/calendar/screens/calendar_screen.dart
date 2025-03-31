@@ -876,8 +876,8 @@ class CalendarScreenState extends State<CalendarScreen>
                             dutyNumber = '3$dutyNumber';
                           }
                           
-                          // Load board entries
-                          final entries = await BoardService.loadBoardEntries(dutyNumber, event.startDate);
+                          // Load board entries for Zone 3 duties (lines ~880-894)
+                          final entries = await BoardService.loadBoardEntries(dutyNumber, event.startDate, zone: 'Zone3');
                           
                           // Close the edit dialog
                           Navigator.of(context).pop();
@@ -891,6 +891,86 @@ class CalendarScreenState extends State<CalendarScreen>
                                 dutyNumber: dutyNumber,
                                 weekday: event.startDate.weekday,
                                 isBankHoliday: ShiftService.getBankHoliday(event.startDate, ShiftService.bankHolidays) != null,
+                                zone: 'Zone3', // Explicitly set Zone 3
+                              ),
+                            );
+                          }
+                        }
+                      },
+                      child: const Text('View Board'),
+                    ),
+                  // Add View Board button for Zone 4 duties on Saturdays
+                  if ((event.title.contains('PZ4') || event.title.contains('Zone 4')) && 
+                      event.startDate.weekday == DateTime.saturday)
+                    TextButton(
+                      onPressed: () async {
+                        // Extract duty number from the title (for Zone 4)
+                        // Example formats: 
+                        // - PZ4/01 to PZ4/99 (should be converted to 401-499)
+                        // - PZ4/1X, PZ4/2X (bogey duties, should be converted to 451, 452)
+                        
+                        // First check for X duties (bogey duties)
+                        final bogeyMatch = RegExp(r'PZ4/(\d+)X').firstMatch(event.title);
+                        if (bogeyMatch != null) {
+                          String baseNumber = bogeyMatch.group(1)!;
+                          // For X duties, convert to 45X format (e.g., 1X -> 451, 2X -> 452)
+                          String dutyNumber = '45$baseNumber';
+                          
+                          // Load board entries for Zone 4
+                          final entries = await BoardService.loadBoardEntries(
+                            dutyNumber, 
+                            event.startDate,
+                            zone: 'Zone4'
+                          );
+                          
+                          // Close the edit dialog
+                          Navigator.of(context).pop();
+                          
+                          // Show the board dialog
+                          if (context.mounted) {
+                            showDialog(
+                              context: context,
+                              builder: (context) => ViewBoardDialog(
+                                entries: entries,
+                                dutyNumber: dutyNumber,
+                                weekday: event.startDate.weekday,
+                                isBankHoliday: ShiftService.getBankHoliday(event.startDate, ShiftService.bankHolidays) != null,
+                                zone: 'Zone4', // Pass the zone parameter for Zone 4
+                              ),
+                            );
+                          }
+                          return;
+                        }
+                        
+                        // Handle regular duties (non-X duties)
+                        final dutyMatch = RegExp(r'PZ4/(\d+)').firstMatch(event.title);
+                        if (dutyMatch != null) {
+                          String dutyNumber = dutyMatch.group(1)!;
+                          
+                          // Convert duty numbers to their actual numbers
+                          // Always prepend 4 since all Zone 4 duties start with 4
+                          dutyNumber = '4$dutyNumber'.padLeft(3, '0');
+                          
+                          // Load board entries for Zone 4
+                          final entries = await BoardService.loadBoardEntries(
+                            dutyNumber, 
+                            event.startDate,
+                            zone: 'Zone4'
+                          );
+                          
+                          // Close the edit dialog
+                          Navigator.of(context).pop();
+                          
+                          // Show the board dialog
+                          if (context.mounted) {
+                            showDialog(
+                              context: context,
+                              builder: (context) => ViewBoardDialog(
+                                entries: entries,
+                                dutyNumber: dutyNumber,
+                                weekday: event.startDate.weekday,
+                                isBankHoliday: ShiftService.getBankHoliday(event.startDate, ShiftService.bankHolidays) != null,
+                                zone: 'Zone4', // Pass the zone parameter for Zone 4
                               ),
                             );
                           }
