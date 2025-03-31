@@ -12,30 +12,29 @@ import 'package:spdrivercalendar/services/rest_days_service.dart';
 import 'package:spdrivercalendar/core/config/flutter_config.dart';
 import 'package:spdrivercalendar/core/widgets/rebuild_text.dart';
 import 'package:spdrivercalendar/services/notification_service.dart';
+import 'package:spdrivercalendar/core/services/cache_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  // Initialize Notification Service
-  await NotificationService().init();
+  // Initialize cache service first
+  final cacheService = CacheService();
   
-  // Configure Flutter settings
-  await FlutterConfig.configure();
+  // Run independent initializations in parallel
+  await Future.wait([
+    NotificationService().init(),
+    FlutterConfig.configure(),
+    StorageService.init(),
+    RestDaysService.initialize(),
+    GoogleCalendarService.initialize(),
+    ShiftService.initialize(),
+  ]);
 
-  // Initialize storage service
-  await StorageService.init();
-  
-  // Initialize rest days service
-  await RestDaysService.initialize();
-  
-  // Initialize Google Calendar service
-  await GoogleCalendarService.initialize();
-
-  // Initialize bank holidays
-  await ShiftService.initialize();
-
-  // Get initial dark mode setting
+  // Get initial dark mode setting after StorageService is initialized
   final isDarkMode = await StorageService.getBool(AppConstants.isDarkModeKey, defaultValue: false);
+  
+  // Cache the dark mode setting
+  cacheService.set(AppConstants.isDarkModeKey, isDarkMode);
   
   runApp(MyApp(
     isDarkModeInitial: isDarkMode,
