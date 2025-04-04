@@ -72,6 +72,18 @@ class StatisticsScreenState extends State<StatisticsScreen>
   // State variable to hold the future for work time stats
   Future<Map<String, Duration>>? _workTimeStatsFuture;
 
+  // State variables for Sunday Pair Statistics
+  DateTime? _currentBlockLsunDate, _currentBlockEsunDate;
+  DateTime? _previousBlockLsunDate, _previousBlockEsunDate;
+  // Replace duration/title lists with combined lists and totals
+  List<Map<String, dynamic>> _currentBlockSundayShifts = [];
+  List<Map<String, dynamic>> _previousBlockSundayShifts = [];
+  Duration _currentBlockTotalSunHours = Duration.zero;
+  Duration _previousBlockTotalSunHours = Duration.zero;
+  bool _currentBlockLimitExceeded = false;
+  bool _previousBlockLimitExceeded = false;
+  bool _sundayStatsLoading = true; // Loading indicator flag
+  
   // Tab Controller - Make nullable
   TabController? _tabController;
 
@@ -103,6 +115,8 @@ class StatisticsScreenState extends State<StatisticsScreen>
     if (mounted) {
        setState(() {
          _workTimeStatsFuture = _calculateWorkTimeStatistics();
+         // Trigger Sunday pair calculation (no need to await here, UI will update)
+         _calculateSundayPairStatistics(); 
        });
     }
   }
@@ -147,7 +161,7 @@ class StatisticsScreenState extends State<StatisticsScreen>
           // Update tabs
           tabs: const [
             Tab(text: 'Work Time'),
-            Tab(text: 'Summary'),
+            Tab(text: 'Shift Summary'),
             Tab(text: 'Frequency'), // Combined tab
           ],
         ),
@@ -168,38 +182,153 @@ class StatisticsScreenState extends State<StatisticsScreen>
   // --- Helper methods to build tab content --- 
 
   Widget _buildWorkTimeTab() {
-    // Wrap content in SingleChildScrollView and Padding
+    // Format helper for duration
+    String formatDuration(Duration d) {
+      if (d == Duration.zero) return "0h 0m";
+      final hours = d.inHours;
+      final minutes = d.inMinutes.remainder(60);
+      return "${hours}h ${minutes}m";
+    }
+
+    // Max duration: 14.5 hours = 870 minutes
+    const maxSundayMinutes = 870;
+
+    // Date formatter
+    final DateFormat listTitleDateFormatter = DateFormat('MMM d'); // For ListTile title
+    final DateFormat detailDateFormatter = DateFormat('dd/MM/yy'); // For detail lines
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0), // Padding around the card
-      child: Card( // Wrap content in a Card
-        elevation: 2.0, // Add slight elevation
-        child: Padding( // Add internal padding for card content
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-               const Text(
-                'Work Time Statistics',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Break times and Rest Days not included in calculation',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey[600],
-                  fontStyle: FontStyle.italic,
-                ),
-              ),
-              const SizedBox(height: 16),
-              _workTimeStatsFuture == null
-                ? const Center(child: CircularProgressIndicator())
-                : WorkTimeStatisticsCard(
-                    workTimeStatsFuture: _workTimeStatsFuture!,
+      child: Column( // Use Column to allow multiple Cards/Widgets
+        children: [
+          Card( // Card for standard work time stats
+            elevation: 2.0, 
+            child: Padding( 
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                   const Text(
+                    'Work Time Statistics',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
-            ],
+                  const SizedBox(height: 4),
+                  Text(
+                    'Break times and Rest Days not included in calculation',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[600],
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  _workTimeStatsFuture == null
+                    ? const Center(child: CircularProgressIndicator())
+                    : WorkTimeStatisticsCard(
+                        workTimeStatsFuture: _workTimeStatsFuture!,
+                      ),
+                ],
+              ),
+            ),
           ),
-        ),
+          const SizedBox(height: 16), // Spacing between cards
+          // Card for Sunday Pair Statistics
+          Card(
+            elevation: 2.0,
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Rostered Sunday Pair Hours',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Sum of hours worked on specific rostered Late & Early Sundays (Max 14h 30m)',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[600],
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                  const Divider(height: 24),
+                  if (_sundayStatsLoading)
+                    const Center(child: Padding(
+                      padding: EdgeInsets.symmetric(vertical: 16.0),
+                      child: CircularProgressIndicator(),
+                    ))
+                  else ...[
+                    // Current Block Display
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(
+                        'Current Sundays' + 
+                        ((_currentBlockLsunDate != null && _currentBlockEsunDate != null)
+                         ? ' (${listTitleDateFormatter.format(_currentBlockLsunDate!)} + ${listTitleDateFormatter.format(_currentBlockEsunDate!)})'
+                         : ''),
+                        style: const TextStyle(fontWeight: FontWeight.bold)
+                      ),
+                      trailing: Text(
+                        formatDuration(_currentBlockTotalSunHours), // Use total duration
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: _currentBlockLimitExceeded ? Theme.of(context).colorScheme.error : null,
+                        ),
+                      ),
+                      leading: _currentBlockLimitExceeded 
+                        ? Icon(Icons.warning_amber_rounded, color: Theme.of(context).colorScheme.error) 
+                        : Icon(Icons.check_circle_outline, color: Colors.green),
+                      // Remove subtitle here
+                    ),
+                    // Add Column for individual shift details below the ListTile
+                    if (_currentBlockSundayShifts.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(left: 16.0, right: 16.0, top: 8.0, bottom: 8.0), // Remove left indent, adjust vertical padding
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: _buildShiftDetailRows(_currentBlockSundayShifts, detailDateFormatter, formatDuration),
+                        ),
+                      ),
+                    
+                    // Previous Block Display
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(
+                        'Previous Sundays' + 
+                        ((_previousBlockLsunDate != null && _previousBlockEsunDate != null)
+                         ? ' (${listTitleDateFormatter.format(_previousBlockLsunDate!)} + ${listTitleDateFormatter.format(_previousBlockEsunDate!)})'
+                         : ''),
+                        style: const TextStyle(fontWeight: FontWeight.bold)
+                      ),
+                      trailing: Text(
+                        formatDuration(_previousBlockTotalSunHours), // Use total duration
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: _previousBlockLimitExceeded ? Theme.of(context).colorScheme.error : null,
+                        ),
+                      ),
+                      leading: _previousBlockLimitExceeded 
+                        ? Icon(Icons.warning_amber_rounded, color: Theme.of(context).colorScheme.error) 
+                        : Icon(Icons.check_circle_outline, color: Colors.green),
+                      // Remove subtitle here
+                    ),
+                    // Add Column for individual shift details below the ListTile
+                    if (_previousBlockSundayShifts.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(left: 16.0, right: 16.0, top: 8.0, bottom: 8.0), // Remove left indent, adjust vertical padding
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: _buildShiftDetailRows(_previousBlockSundayShifts, detailDateFormatter, formatDuration),
+                        ),
+                      ),
+                  ]
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -813,5 +942,139 @@ class StatisticsScreenState extends State<StatisticsScreen>
       ..sort((a, b) => b.value.compareTo(a.value));
     
     return Map.fromEntries(sortedEntries);
+  }
+
+  // --- Add Calculation Logic --- 
+
+  Future<void> _calculateSundayPairStatistics() async {
+    if (_startDate == null) {
+      if (mounted) setState(() => _sundayStatsLoading = false);
+      return; // Cannot calculate without roster start date
+    }
+
+    if (mounted) setState(() => _sundayStatsLoading = true);
+
+    final now = DateTime.now();
+    const rosterCycleDays = 35; // 5 weeks * 7 days
+    const maxMinutes = 870; // 14.5 hours
+
+    try {
+      // --- Determine current 5-week block --- 
+      // Normalize now and _startDate to midnight UTC for consistent calculations
+      final normalizedNow = DateTime.utc(now.year, now.month, now.day);
+      final normalizedStartDate = DateTime.utc(_startDate!.year, _startDate!.month, _startDate!.day);
+
+      // --- Corrected Logic --- 
+      // 1. Find the actual start date of the cycle block containing the user's _startDate
+      final referenceCycleStartDate = normalizedStartDate.subtract(Duration(days: _startWeek * 7));
+
+      // 2. Calculate cycle shift relative to this reference start date
+      final daysSinceReference = normalizedNow.difference(referenceCycleStartDate).inDays;
+      final cycleShift = (daysSinceReference / rosterCycleDays).floor();
+      
+      // 3. Calculate the start date of the cycle containing 'now'
+      final currentCycleStartDate = referenceCycleStartDate.add(Duration(days: cycleShift * rosterCycleDays));
+      // --- End Corrected Logic --- 
+      
+      // Ensure the currentCycleStartDate corresponds to the start week (_startWeek)
+      // It should be the Sunday of the week that has the roster pattern index matching _startWeek.
+      // Adjust if necessary (this logic assumes _startDate is already the correct Sunday for _startWeek)
+      // No adjustment needed here based on RosterService logic if _startDate is correctly set.
+
+      // The L-Sunday is the start of Week 0 of this cycle
+      // The E-Sunday is the start of Week 2 of this cycle
+      final currentLsun = currentCycleStartDate; // Week 0, Day 0
+      final currentEsun = currentCycleStartDate.add(const Duration(days: 14)); // Week 2, Day 0
+
+      // --- Determine previous 5-week block ---
+      final previousCycleStartDate = currentCycleStartDate.subtract(const Duration(days: rosterCycleDays));
+      final previousLsun = previousCycleStartDate;
+      final previousEsun = previousCycleStartDate.add(const Duration(days: 14));
+
+      // --- Calculate hours for the pair in each block ---
+      // Get Duration and Titles for each target Sunday
+      final currentLsunInfo = await _getWorkHoursForDate(currentLsun);
+      final currentEsunInfo = await _getWorkHoursForDate(currentEsun);
+      final previousLsunInfo = await _getWorkHoursForDate(previousLsun);
+      final previousEsunInfo = await _getWorkHoursForDate(previousEsun);
+
+      // --- Combine and Calculate --- 
+      final List<Map<String, dynamic>> currentShifts = [...currentLsunInfo, ...currentEsunInfo];
+      final List<Map<String, dynamic>> previousShifts = [...previousLsunInfo, ...previousEsunInfo];
+
+      final currentTotalDuration = currentShifts.fold<Duration>(
+        Duration.zero,
+        (sum, shift) => sum + (shift['duration'] as Duration)
+      );
+      final previousTotalDuration = previousShifts.fold<Duration>(
+        Duration.zero,
+        (sum, shift) => sum + (shift['duration'] as Duration)
+      );
+
+      // Update state
+      if (mounted) {
+        setState(() {
+          _currentBlockLsunDate = currentLsun;
+          _currentBlockEsunDate = currentEsun;
+          _currentBlockSundayShifts = currentShifts; // Store combined list
+          _currentBlockTotalSunHours = currentTotalDuration; // Store total
+          _currentBlockLimitExceeded = currentTotalDuration.inMinutes > maxMinutes;
+          
+          _previousBlockLsunDate = previousLsun;
+          _previousBlockEsunDate = previousEsun;
+          _previousBlockSundayShifts = previousShifts; // Store combined list
+          _previousBlockTotalSunHours = previousTotalDuration; // Store total
+          _previousBlockLimitExceeded = previousTotalDuration.inMinutes > maxMinutes;
+
+          _sundayStatsLoading = false;
+        });
+      }
+    } catch (e) {
+      print("Error calculating Sunday pair stats: $e");
+      if (mounted) setState(() => _sundayStatsLoading = false);
+    }
+  }
+
+  // Helper to get list of shift details (date, title, duration) for a specific date
+  Future<List<Map<String, dynamic>>> _getWorkHoursForDate(DateTime targetDate) async {
+    List<Map<String, dynamic>> shiftsDetails = []; // List to hold shift details
+    // Use midnight in the local timezone for the key, matching how events are likely stored
+    final localMidnightTargetDate = DateTime(targetDate.year, targetDate.month, targetDate.day);
+
+    // Check if the date exists in the events map
+    if (widget.events.containsKey(localMidnightTargetDate)) {
+      final eventsOnDate = widget.events[localMidnightTargetDate]!;
+      for (final event in eventsOnDate) {
+        if (event.isWorkShift) {
+          final workTime = await _calculateWorkTime(event); // Use existing calculation
+          shiftsDetails.add({
+            'date': localMidnightTargetDate, // Store the date for display
+            'title': event.title,       // Store the title
+            'duration': workTime,      // Store the duration
+          });
+        }
+      }
+    }
+    return shiftsDetails;
+  }
+
+  // Helper to build the rows for individual shift details
+  List<Widget> _buildShiftDetailRows(
+      List<Map<String, dynamic>> shifts,
+      DateFormat dateFormatter,
+      String Function(Duration) formatDuration
+  ) {
+    return shifts.map((shift) {
+      final date = shift['date'] as DateTime;
+      final title = shift['title'] as String;
+      final duration = shift['duration'] as Duration;
+      return Padding(
+        padding: const EdgeInsets.only(top: 2.0), // Small spacing between lines
+        child: Text(
+          "${dateFormatter.format(date)}: $title (${formatDuration(duration)})",
+          style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+        ),
+      );
+    }).toList();
   }
 }
