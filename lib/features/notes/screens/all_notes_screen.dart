@@ -298,7 +298,8 @@ class _AllNotesScreenState extends State<AllNotesScreen> {
                     dateGroupKey, // e.g., "Today", "Yesterday", "Sunday, 27 October 2024"
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.bold,
-                      color: AppTheme.primaryColor.withOpacity(0.9),
+                      // Use theme's primary color for better dark mode adaptation
+                      color: Theme.of(context).colorScheme.primary, 
                     ),
                   ),
                 ),
@@ -324,7 +325,8 @@ class _AllNotesScreenState extends State<AllNotesScreen> {
                              DateFormat('dd/MM/yyyy').format(event.startDate),
                              style: TextStyle(
                                fontSize: 12, // Smaller date text when grouped
-                               color: Colors.grey[600],
+                               // Use a theme-aware color with opacity for better dark mode visibility
+                               color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
                                decoration: TextDecoration.underline,
                              ),
                            ),

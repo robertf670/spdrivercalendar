@@ -48,14 +48,39 @@ class AppTheme {
         primary: primaryColor,
         secondary: secondaryColor,
         error: errorColor,
+        // Consider adding surface and background if needed for contrast
       ),
       appBarTheme: const AppBarTheme(
-        backgroundColor: Color(0xFF1F1F1F),
+        backgroundColor: Color(0xFF1F1F1F), // Darker AppBar for contrast
         foregroundColor: Colors.white,
       ),
       cardTheme: CardTheme(
+        // Ensure card color provides contrast with background in dark mode
+        color: Colors.grey[850], // Example: Slightly lighter dark grey
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(borderRadius),
+        ),
+      ),
+      // Add DropdownMenuTheme for dark mode styling
+      dropdownMenuTheme: DropdownMenuThemeData(
+        textStyle: TextStyle(color: Colors.white), // Ensure dropdown text is white
+        inputDecorationTheme: InputDecorationTheme( // Style the dropdown button appearance if needed
+          // Example: Add border, change fill color, etc.
+          // filled: true,
+          // fillColor: Colors.grey[800],
+          // border: OutlineInputBorder(
+          //   borderRadius: BorderRadius.circular(borderRadius),
+          //   borderSide: BorderSide.none,
+          // ),
+          labelStyle: TextStyle(color: Colors.white70), // Style label if applicable
+          hintStyle: TextStyle(color: Colors.white70), // Style hint text if applicable
+        ),
+        menuStyle: MenuStyle(
+          backgroundColor: MaterialStateProperty.all(Colors.grey[800]), // Background color of the dropdown menu
+          surfaceTintColor: MaterialStateProperty.all(Colors.grey[800]), // Optional: blend color
+          shape: MaterialStateProperty.all(RoundedRectangleBorder( // Consistent border radius
+             borderRadius: BorderRadius.circular(borderRadius / 2), // Slightly smaller radius for menu
+          )),
         ),
       ),
     );

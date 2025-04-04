@@ -412,10 +412,15 @@ class StatisticsScreenState extends State<StatisticsScreen>
                     ),
                     DropdownButton<int>(
                       value: _numberOfShiftsToShow,
+                      // Add styling for dark mode
+                      style: const TextStyle(color: Colors.white), // Style for selected item text
+                      iconEnabledColor: Colors.white70, // Arrow color
+                      dropdownColor: Colors.grey[800], // Menu background color
                       items: _shiftNumberOptions.map((int value) {
                         return DropdownMenuItem<int>(
                           value: value,
-                          child: Text('Top $value'),
+                          // Ensure item text is readable
+                          child: Text('Top $value', style: const TextStyle(color: Colors.white)),
                         );
                       }).toList(),
                       onChanged: (int? newValue) {
@@ -451,10 +456,15 @@ class StatisticsScreenState extends State<StatisticsScreen>
                     ),
                     DropdownButton<int>(
                       value: _numberOfBusesToShow,
+                      // Add styling for dark mode
+                      style: const TextStyle(color: Colors.white), // Style for selected item text
+                      iconEnabledColor: Colors.white70, // Arrow color
+                      dropdownColor: Colors.grey[800], // Menu background color
                       items: _busNumberOptions.map((int value) {
                         return DropdownMenuItem<int>(
                           value: value,
-                          child: Text('Top $value'),
+                          // Ensure item text is readable
+                          child: Text('Top $value', style: const TextStyle(color: Colors.white)),
                         );
                       }).toList(),
                       onChanged: (int? newValue) {
@@ -490,10 +500,15 @@ class StatisticsScreenState extends State<StatisticsScreen>
                       ),
                     DropdownButton<int>(
                       value: _numberOfStartHoursToShow,
+                      // Add styling for dark mode
+                      style: const TextStyle(color: Colors.white), // Style for selected item text
+                      iconEnabledColor: Colors.white70, // Arrow color
+                      dropdownColor: Colors.grey[800], // Menu background color
                       items: _startHourNumberOptions.map((int value) {
                         return DropdownMenuItem<int>(
                           value: value,
-                          child: Text('Top $value'),
+                          // Ensure item text is readable
+                          child: Text('Top $value', style: const TextStyle(color: Colors.white)),
                         );
                       }).toList(),
                       onChanged: (int? newValue) {
