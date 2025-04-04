@@ -30,13 +30,15 @@ class StatisticsScreen extends StatefulWidget {
   const StatisticsScreen({
     Key? key,
     required this.events,
-  }) : super(key: key);
+  })
+      : super(key: key);
 
   @override
   StatisticsScreenState createState() => StatisticsScreenState();
 }
 
-class StatisticsScreenState extends State<StatisticsScreen> with AutomaticKeepAliveClientMixin {
+class StatisticsScreenState extends State<StatisticsScreen> 
+    with AutomaticKeepAliveClientMixin, SingleTickerProviderStateMixin {
   @override
   bool get wantKeepAlive => true;
   
@@ -48,6 +50,14 @@ class StatisticsScreenState extends State<StatisticsScreen> with AutomaticKeepAl
     'Last Month', 
     'All Time'
   ];
+
+  // State for bus frequency display
+  int _numberOfBusesToShow = 3;
+  final List<int> _busNumberOptions = [3, 5, 10];
+
+  // State for shift frequency display
+  int _numberOfShiftsToShow = 3;
+  final List<int> _shiftNumberOptions = [3, 5, 10]; // Can reuse or define separately
 
   // Cache for parsed CSV data: Key = filename, Value = Map<ShiftCode, Duration>
   final Map<String, Map<String, Duration>> _csvWorkTimeCache = {};
@@ -62,10 +72,30 @@ class StatisticsScreenState extends State<StatisticsScreen> with AutomaticKeepAl
   // State variable to hold the future for work time stats
   Future<Map<String, Duration>>? _workTimeStatsFuture;
 
+  // Tab Controller - Make nullable
+  TabController? _tabController;
+
   @override
   void initState() {
     super.initState();
+    // Ensure TabController length is 3
+    _tabController = TabController(length: 3, vsync: this);
     _initializeStatistics();
+  }
+
+  @override
+  void didUpdateWidget(covariant StatisticsScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.events != oldWidget.events) {
+      _workTimeStatsFuture = _calculateWorkTimeStatistics();
+    }
+  }
+
+  @override
+  void dispose() {
+    // Dispose TabController
+    _tabController?.dispose();
+    super.dispose();
   }
 
   Future<void> _initializeStatistics() async {
@@ -74,14 +104,6 @@ class StatisticsScreenState extends State<StatisticsScreen> with AutomaticKeepAl
        setState(() {
          _workTimeStatsFuture = _calculateWorkTimeStatistics();
        });
-    }
-  }
-
-  @override
-  void didUpdateWidget(covariant StatisticsScreen oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.events != oldWidget.events) {
-      _workTimeStatsFuture = _calculateWorkTimeStatistics();
     }
   }
 
@@ -103,83 +125,224 @@ class StatisticsScreenState extends State<StatisticsScreen> with AutomaticKeepAl
   Widget build(BuildContext context) {
     super.build(context);
     
+    // Check if TabController is initialized
+    if (_tabController == null) {
+      // Return a loading indicator or empty container until initialized
+      return Scaffold(
+        appBar: AppBar(title: Text('Shift Statistics')), // Keep AppBar for consistency
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    // Proceed with the build now that controller is guaranteed to be non-null
     return Scaffold(
       appBar: AppBar(
         title: const Text('Shift Statistics'),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Work Time Statistics',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Break times and Rest Days not included in calculation',
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey[600],
-                fontStyle: FontStyle.italic,
-              ),
-            ),
-            const SizedBox(height: 16),
-            _workTimeStatsFuture == null
-              ? const Center(child: CircularProgressIndicator())
-              : WorkTimeStatisticsCard(
-                  workTimeStatsFuture: _workTimeStatsFuture!,
-                ),
-            const Divider(height: 32),
-            
-            const Text(
-              'Shift Type Statistics',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Rest Days not included in calculation',
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey[600],
-                fontStyle: FontStyle.italic,
-              ),
-            ),
-            const SizedBox(height: 16),
-            TimeRangeSelector(
-              currentRange: _timeRange,
-              availableRanges: _timeRanges,
-              onChanged: (value) {
-                if (value != null) {
-                  setState(() {
-                    _timeRange = value;
-                  });
-                }
-              },
-            ),
-            const SizedBox(height: 16),
-            ShiftTypeSummaryCard(stats: _calculateSummaryStatistics()),
-            const Divider(height: 32),
-            
-            FrequencyChart(
-              title: 'Most Frequent Shifts (Mon-Fri)',
-              frequencyData: _getAllTimeFrequentShifts(),
-              emptyDataMessage: 'No Mon-Fri shift data available',
-            ),
-            const Divider(height: 32),
-            
-            FrequencyChart(
-              title: 'Most Frequent Buses (All Time)',
-              frequencyData: _getMostFrequentBuses(),
-              emptyDataMessage: 'No bus assignment data available',
-            ),
+        // Add TabBar to the bottom of the AppBar
+        bottom: TabBar(
+          controller: _tabController!, // Use null assertion
+          indicatorColor: Colors.white, // Highlight selected tab indicator
+          labelColor: Colors.white, // Color for selected tab label
+          unselectedLabelColor: Colors.white70, // Slightly dimmer for unselected
+          // Update tabs
+          tabs: const [
+            Tab(text: 'Work Time'),
+            Tab(text: 'Summary'),
+            Tab(text: 'Frequency'), // Combined tab
           ],
+        ),
+      ),
+      // Use TabBarView for the body
+      body: TabBarView(
+        controller: _tabController!, // Use null assertion
+        // Update children
+        children: [
+          _buildWorkTimeTab(),
+          _buildSummaryTab(),
+          _buildFrequencyTab(), // Use the new combined tab builder
+        ],
+      ),
+    );
+  }
+
+  // --- Helper methods to build tab content --- 
+
+  Widget _buildWorkTimeTab() {
+    // Wrap content in SingleChildScrollView and Padding
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16.0), // Padding around the card
+      child: Card( // Wrap content in a Card
+        elevation: 2.0, // Add slight elevation
+        child: Padding( // Add internal padding for card content
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+               const Text(
+                'Work Time Statistics',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Break times and Rest Days not included in calculation',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey[600],
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+              const SizedBox(height: 16),
+              _workTimeStatsFuture == null
+                ? const Center(child: CircularProgressIndicator())
+                : WorkTimeStatisticsCard(
+                    workTimeStatsFuture: _workTimeStatsFuture!,
+                  ),
+            ],
+          ),
         ),
       ),
     );
   }
-  
+
+  Widget _buildSummaryTab() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16.0),
+      child: Card( // Wrap content in a Card
+        elevation: 2.0,
+        child: Padding( // Add internal padding
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Shift Type Statistics',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Rest Days not included in calculation',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey[600],
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+              const SizedBox(height: 16),
+              TimeRangeSelector(
+                currentRange: _timeRange,
+                availableRanges: _timeRanges,
+                onChanged: (value) {
+                  if (value != null) {
+                    setState(() {
+                      _timeRange = value;
+                    });
+                  }
+                },
+              ),
+              const SizedBox(height: 16),
+              ShiftTypeSummaryCard(stats: _calculateSummaryStatistics()),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFrequencyTab() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16.0),
+      child: Card( 
+        elevation: 2.0,
+        child: Padding( 
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // --- Shifts Section ---
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Most Frequent Shifts (Mon-Fri)',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                    DropdownButton<int>(
+                      value: _numberOfShiftsToShow,
+                      items: _shiftNumberOptions.map((int value) {
+                        return DropdownMenuItem<int>(
+                          value: value,
+                          child: Text('Top $value'),
+                        );
+                      }).toList(),
+                      onChanged: (int? newValue) {
+                        if (newValue != null) {
+                          setState(() {
+                            _numberOfShiftsToShow = newValue;
+                          });
+                        }
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              FrequencyChart(
+                title: '', 
+                frequencyData: Map.fromEntries(
+                   _getAllTimeFrequentShifts().entries.take(_numberOfShiftsToShow)
+                ),
+                emptyDataMessage: 'No Mon-Fri shift data available',
+              ),
+
+              // Divider between sections
+              const Divider(height: 32, thickness: 1, indent: 16, endIndent: 16),
+
+              // --- Buses Section ---
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8.0, top: 16.0), // Add top padding for separation
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Most Frequent Buses (All Time)',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                    DropdownButton<int>(
+                      value: _numberOfBusesToShow,
+                      items: _busNumberOptions.map((int value) {
+                        return DropdownMenuItem<int>(
+                          value: value,
+                          child: Text('Top $value'),
+                        );
+                      }).toList(),
+                      onChanged: (int? newValue) {
+                        if (newValue != null) {
+                          setState(() {
+                            _numberOfBusesToShow = newValue;
+                          });
+                        }
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              FrequencyChart(
+                title: '',
+                frequencyData: Map.fromEntries(
+                  _getMostFrequentBuses().entries.take(_numberOfBusesToShow)
+                ),
+                emptyDataMessage: 'No bus assignment data available',
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // --- Keep all calculation logic below --- 
+
   Map<String, int> _getAllTimeFrequentShifts() {
     Map<String, int> shiftCounts = {};
     Set<String> countedIds = {};

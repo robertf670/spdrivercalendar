@@ -4,14 +4,12 @@ import 'package:spdrivercalendar/theme/app_theme.dart';
 class FrequencyChart extends StatelessWidget {
   final String title;
   final Map<String, int> frequencyData;
-  final int maxItemsToShow;
   final String emptyDataMessage;
 
   const FrequencyChart({
     Key? key,
     required this.title,
     required this.frequencyData,
-    this.maxItemsToShow = 3,
     this.emptyDataMessage = 'No data available',
   }) : super(key: key);
 
@@ -48,7 +46,6 @@ class FrequencyChart extends StatelessWidget {
         Column(
           children: frequencyData.entries
               .toList()
-              .take(maxItemsToShow)
               .map((entry) {
                 final percentage = entry.value / maxValue;
 
