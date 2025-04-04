@@ -1802,10 +1802,14 @@ class CalendarScreenState extends State<CalendarScreen>
           ),
           calendarBuilders: CalendarBuilders(
             defaultBuilder: (context, date, _) {
-              return _buildCalendarDay(date, isToday: false);
+              return _buildCalendarDay(date, isToday: false, isOutsideDay: false);
             },
             todayBuilder: (context, date, _) {
-              return _buildCalendarDay(date, isToday: true);
+              return _buildCalendarDay(date, isToday: true, isOutsideDay: false);
+            },
+            // Add outsideBuilder to handle days outside the current month
+            outsideBuilder: (context, date, _) {
+              return _buildCalendarDay(date, isToday: false, isOutsideDay: true);
             },
             markerBuilder: (context, date, events) {
               return null;
@@ -1973,7 +1977,7 @@ class CalendarScreenState extends State<CalendarScreen>
     _showMonthYearPicker();
   }
 
-  Widget _buildCalendarDay(DateTime date, {required bool isToday}) {
+  Widget _buildCalendarDay(DateTime date, {required bool isToday, required bool isOutsideDay}) {
     final shift = _startDate != null ? getShiftForDate(date) : '';
     final shiftInfo = _shiftInfoMap[shift];
     final hasEvents = getEventsForDay(date).isNotEmpty;
@@ -1981,69 +1985,73 @@ class CalendarScreenState extends State<CalendarScreen>
     final isBankHoliday = bankHoliday != null;
     final isHoliday = _holidays.any((h) => h.containsDate(date));
 
-    return Container(
-      margin: const EdgeInsets.all(4.0),
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: isHoliday 
-            ? holidayColor.withOpacity(0.3)
-            : shiftInfo?.color.withOpacity(0.3),
-        borderRadius: BorderRadius.circular(8.0),
-        border: isToday
-            ? Border.all(
-                color: isBankHoliday ? Colors.red : Colors.blue,
-                width: 2,
-              )
-            : isBankHoliday
-                ? Border.all(
-                    color: Colors.red,
-                    width: 1.5,
-                  )
-                : null,
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text('${date.day}'),
-          if (shift.isNotEmpty && !isHoliday)
-            Expanded( // Added Expanded to give FittedBox constraints
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Text(
-                  shift,
-                  style: const TextStyle(
-                    fontSize: 11, // Keeping 11 for now
-                    fontWeight: FontWeight.bold,
+    // Wrap the content in Opacity if it's an outside day
+    return Opacity(
+      opacity: isOutsideDay ? 0.4 : 1.0, // Changed from 0.6 to 0.4 for more transparency
+      child: Container(
+        margin: const EdgeInsets.all(4.0),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: isHoliday 
+              ? holidayColor.withOpacity(0.3)
+              : shiftInfo?.color.withOpacity(0.3),
+          borderRadius: BorderRadius.circular(8.0),
+          border: isToday
+              ? Border.all(
+                  color: isBankHoliday ? Colors.red : Colors.blue,
+                  width: 2,
+                )
+              : isBankHoliday
+                  ? Border.all(
+                      color: Colors.red,
+                      width: 1.5,
+                    )
+                  : null,
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text('${date.day}'),
+            if (shift.isNotEmpty && !isHoliday)
+              Expanded( // Added Expanded to give FittedBox constraints
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    shift,
+                    style: const TextStyle(
+                      fontSize: 11, // Keeping 11 for now
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ),
-            ),
-          if (isHoliday)
-            Expanded( // Added Expanded
-              child: FittedBox( // Added FittedBox
-                fit: BoxFit.scaleDown,
-                child: const Text(
-                  'H',
-                  style: TextStyle(
-                    fontSize: 12, // Keep original size, FittedBox will scale if needed
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white, // Consider using theme color here
+            if (isHoliday)
+              Expanded( // Added Expanded
+                child: FittedBox( // Added FittedBox
+                  fit: BoxFit.scaleDown,
+                  child: const Text(
+                    'H',
+                    style: TextStyle(
+                      fontSize: 12, // Keep original size, FittedBox will scale if needed
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white, // Consider using theme color here
+                    ),
                   ),
                 ),
               ),
-            ),
-          if (hasEvents)
-            Container(
-              width: 8,
-              height: 8,
-              decoration: BoxDecoration(
-                color: isHoliday 
-                    ? holidayColor 
-                    : (shiftInfo?.color ?? Theme.of(context).primaryColor),
-                shape: BoxShape.circle,
+            if (hasEvents)
+              Container(
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(
+                  color: isHoliday 
+                      ? holidayColor 
+                      : (shiftInfo?.color ?? Theme.of(context).primaryColor),
+                  shape: BoxShape.circle,
+                ),
               ),
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }

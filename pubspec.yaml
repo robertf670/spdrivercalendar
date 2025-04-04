@@ -60,6 +60,9 @@ flutter:
     - assets/Zone3BoardsMF.csv
     - assets/Zone3BoardsSat.csv
     - assets/Zone3BoardsSun.csv
+    - consolidated_saturday_duties.txt
+    - consolidated_sunday_duties.txt
+    
 
 flutter_launcher_icons:
   android: true
