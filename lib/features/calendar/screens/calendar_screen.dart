@@ -29,7 +29,6 @@ import 'dart:convert';
 import 'package:spdrivercalendar/services/rest_days_service.dart'; // Added import
 import 'package:spdrivercalendar/features/contacts/contacts_page.dart'; // Add this line
 import 'package:spdrivercalendar/core/services/cache_service.dart'; // Added import
-import 'package:spdrivercalendar/settings_page.dart';
 import 'package:spdrivercalendar/features/notes/screens/all_notes_screen.dart'; // Import the new screen
 
 class CalendarScreen extends StatefulWidget {
@@ -2008,49 +2007,48 @@ class CalendarScreenState extends State<CalendarScreen>
                     )
                   : null,
         ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text('${date.day}'),
-            if (shift.isNotEmpty && !isHoliday)
-              Expanded( // Added Expanded to give FittedBox constraints
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Text(
-                    shift,
-                    style: const TextStyle(
-                      fontSize: 11, // Keeping 11 for now
-                      fontWeight: FontWeight.bold,
-                    ),
+        // Wrap the Column with Center
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text('${date.day}'),
+              if (shift.isNotEmpty && !isHoliday)
+                // Replace FittedBox with simple Text
+                Text(
+                  shift,
+                  style: const TextStyle(
+                    fontSize: 11, // Keep the small font size
+                    fontWeight: FontWeight.bold,
+                  ),
+                  maxLines: 1, // Prevent wrapping
+                  overflow: TextOverflow.clip, // Clip if somehow too long
+                ),
+              if (isHoliday)
+                // Replace FittedBox with simple Text
+                Text(
+                  'H',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white, // Consider using theme color here
+                  ),
+                  maxLines: 1, // Prevent wrapping
+                  overflow: TextOverflow.clip, // Clip if somehow too long
+                ),
+              if (hasEvents)
+                Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: isHoliday 
+                        ? holidayColor 
+                        : (shiftInfo?.color ?? Theme.of(context).primaryColor),
+                    shape: BoxShape.circle,
                   ),
                 ),
-              ),
-            if (isHoliday)
-              Expanded( // Added Expanded
-                child: FittedBox( // Added FittedBox
-                  fit: BoxFit.scaleDown,
-                  child: const Text(
-                    'H',
-                    style: TextStyle(
-                      fontSize: 12, // Keep original size, FittedBox will scale if needed
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white, // Consider using theme color here
-                    ),
-                  ),
-                ),
-              ),
-            if (hasEvents)
-              Container(
-                width: 8,
-                height: 8,
-                decoration: BoxDecoration(
-                  color: isHoliday 
-                      ? holidayColor 
-                      : (shiftInfo?.color ?? Theme.of(context).primaryColor),
-                  shape: BoxShape.circle,
-                ),
-              ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -2131,7 +2129,7 @@ class CalendarScreenState extends State<CalendarScreen>
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => SettingsPage(
+        builder: (context) => SettingsScreen( // Ensure this points to SettingsScreen
           resetRestDaysCallback: _resetRestDays,
           isDarkModeNotifier: widget.isDarkModeNotifier, 
         ),

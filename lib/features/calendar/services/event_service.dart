@@ -3,10 +3,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:spdrivercalendar/core/constants/app_constants.dart';
 import 'package:spdrivercalendar/models/event.dart';
 import 'package:spdrivercalendar/services/notification_service.dart';
-import 'package:spdrivercalendar/settings_page.dart' show kNotificationsEnabledKey, kNotificationOffsetHoursKey;
+import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter/foundation.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:spdrivercalendar/features/settings/screens/settings_screen.dart';
 
 class EventService {
   // In-memory events cache

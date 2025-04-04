@@ -167,12 +167,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
           _buildSectionHeader('Schedule'),
           _buildResetRestDaysButton(),
           
-          // --- Add Backup & Restore Section --- 
+          // --- Restore Backup & Restore section to original position ---
           const Divider(height: 32),
           _buildSectionHeader('Backup & Restore'),
           _buildBackupButton(),
           _buildRestoreButton(),
-          // --- End Backup & Restore Section --- 
+          // --- End Restored Section ---
           
           const Divider(height: 32),
           _buildSectionHeader('App'),
@@ -688,7 +688,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  // --- Backup & Restore UI + Logic ---
+  // --- Add back the Backup & Restore UI + Logic methods ---
 
   Widget _buildBackupButton() {
     return Card(

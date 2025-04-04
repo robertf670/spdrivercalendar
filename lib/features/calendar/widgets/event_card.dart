@@ -802,9 +802,7 @@ class _EventCardState extends State<EventCard> {
               if (widget.event.assignedDuties != null && widget.event.assignedDuties!.isNotEmpty) ...[
                 Padding(
                   padding: const EdgeInsets.only(bottom: 2.0),
-                  child: Expanded(
-                    child: _buildAssignedDuties(),
-                  ),
+                  child: _buildAssignedDuties(),
                 ),
                 const SizedBox(height: 6.0),
               ],
