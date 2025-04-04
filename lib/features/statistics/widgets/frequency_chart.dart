@@ -2,13 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:spdrivercalendar/theme/app_theme.dart';
 
 class FrequencyChart extends StatelessWidget {
-  final String title;
   final Map<String, int> frequencyData;
   final String emptyDataMessage;
 
   const FrequencyChart({
     Key? key,
-    required this.title,
     required this.frequencyData,
     this.emptyDataMessage = 'No data available',
   }) : super(key: key);
@@ -38,11 +36,6 @@ class FrequencyChart extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          title,
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 16),
         Column(
           children: frequencyData.entries
               .toList()

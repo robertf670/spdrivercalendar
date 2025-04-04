@@ -59,6 +59,10 @@ class StatisticsScreenState extends State<StatisticsScreen>
   int _numberOfShiftsToShow = 3;
   final List<int> _shiftNumberOptions = [3, 5, 10]; // Can reuse or define separately
 
+  // State for start hour frequency display
+  int _numberOfStartHoursToShow = 3;
+  final List<int> _startHourNumberOptions = [3, 5, 10];
+
   // Cache for parsed CSV data: Key = filename, Value = Map<ShiftCode, Duration>
   final Map<String, Map<String, Duration>> _csvWorkTimeCache = {};
 
@@ -426,7 +430,6 @@ class StatisticsScreenState extends State<StatisticsScreen>
                 ),
               ),
               FrequencyChart(
-                title: '', 
                 frequencyData: Map.fromEntries(
                    _getAllTimeFrequentShifts().entries.take(_numberOfShiftsToShow)
                 ),
@@ -466,12 +469,64 @@ class StatisticsScreenState extends State<StatisticsScreen>
                 ),
               ),
               FrequencyChart(
-                title: '',
                 frequencyData: Map.fromEntries(
                   _getMostFrequentBuses().entries.take(_numberOfBusesToShow)
                 ),
                 emptyDataMessage: 'No bus assignment data available',
               ),
+
+              // --- Add Start Hour Frequency Chart --- 
+              const Divider(height: 32, thickness: 1, indent: 16, endIndent: 16),
+              
+              // Add Row with Title and Dropdown
+              Padding(
+                padding: const EdgeInsets.only(top: 16.0, bottom: 8.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                        'Most Frequent Start Hours',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                    DropdownButton<int>(
+                      value: _numberOfStartHoursToShow,
+                      items: _startHourNumberOptions.map((int value) {
+                        return DropdownMenuItem<int>(
+                          value: value,
+                          child: Text('Top $value'),
+                        );
+                      }).toList(),
+                      onChanged: (int? newValue) {
+                        if (newValue != null) {
+                          setState(() {
+                            _numberOfStartHoursToShow = newValue;
+                          });
+                        }
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              // Move explanatory note here, below title/dropdown row
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8.0), // Add padding below note
+                child: Text(
+                  'Groups logged work shifts by their starting hour (e.g., 06:00-06:59).', // Updated explanation
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey[600],
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ),
+              FrequencyChart(
+                frequencyData: Map.fromEntries(
+                  _getMostFrequentStartHours().entries.take(_numberOfStartHoursToShow)
+                ),
+                emptyDataMessage: 'No shift start time data available',
+              ),
+              // --- End Start Hour Section ---
+
             ],
           ),
         ),
@@ -1080,5 +1135,29 @@ class StatisticsScreenState extends State<StatisticsScreen>
         ),
       );
     }).toList();
+  }
+
+  // --- Add Calculation Logic for Start Hour Frequency --- 
+  Map<String, int> _getMostFrequentStartHours() {
+    Map<int, int> hourCounts = {}; // Use int as key initially
+
+    widget.events.forEach((date, events) {
+      for (final event in events) {
+        if (event.isWorkShift) {
+          final startHour = event.startTime.hour;
+          hourCounts[startHour] = (hourCounts[startHour] ?? 0) + 1;
+        }
+      }
+    });
+
+    // Convert to sorted Map<String, int> with formatted hour string
+    final sortedEntries = hourCounts.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value)); // Sort by count descending
+    
+    // Format hour as "HH:00" for display
+    return Map.fromEntries(sortedEntries.map((entry) {
+      final hourString = entry.key.toString().padLeft(2, '0') + ":00";
+      return MapEntry(hourString, entry.value);
+    }));
   }
 }
