@@ -253,6 +253,15 @@ class StatisticsScreenState extends State<StatisticsScreen>
                       fontStyle: FontStyle.italic,
                     ),
                   ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Entitled to overtime if time is more than 14h 30m. If the second Sunday has not happened yet, and the time is more than 14h 30m, you have the right to finish in the garage',
+                     style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[600],
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
                   const Divider(height: 24),
                   if (_sundayStatsLoading)
                     const Center(child: Padding(
@@ -280,17 +289,17 @@ class StatisticsScreenState extends State<StatisticsScreen>
                       leading: _currentBlockLimitExceeded 
                         ? Icon(Icons.warning_amber_rounded, color: Theme.of(context).colorScheme.error) 
                         : Icon(Icons.check_circle_outline, color: Colors.green),
-                      // Remove subtitle here
+                      // Move shift details into the subtitle
+                      subtitle: _currentBlockSundayShifts.isNotEmpty
+                          ? Padding(
+                              padding: const EdgeInsets.only(top: 4.0), // Add padding above details
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: _buildShiftDetailRows(_currentBlockSundayShifts, detailDateFormatter, formatDuration),
+                              ),
+                            )
+                          : null, // No subtitle if no shifts
                     ),
-                    // Add Column for individual shift details below the ListTile
-                    if (_currentBlockSundayShifts.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(left: 16.0, right: 16.0, top: 8.0, bottom: 8.0), // Remove left indent, adjust vertical padding
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: _buildShiftDetailRows(_currentBlockSundayShifts, detailDateFormatter, formatDuration),
-                        ),
-                      ),
                     
                     // Previous Block Display
                     ListTile(
@@ -312,17 +321,17 @@ class StatisticsScreenState extends State<StatisticsScreen>
                       leading: _previousBlockLimitExceeded 
                         ? Icon(Icons.warning_amber_rounded, color: Theme.of(context).colorScheme.error) 
                         : Icon(Icons.check_circle_outline, color: Colors.green),
-                      // Remove subtitle here
+                      // Move shift details into the subtitle
+                      subtitle: _previousBlockSundayShifts.isNotEmpty
+                          ? Padding(
+                              padding: const EdgeInsets.only(top: 4.0),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: _buildShiftDetailRows(_previousBlockSundayShifts, detailDateFormatter, formatDuration),
+                              ),
+                            )
+                          : null, // No subtitle if no shifts
                     ),
-                    // Add Column for individual shift details below the ListTile
-                    if (_previousBlockSundayShifts.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(left: 16.0, right: 16.0, top: 8.0, bottom: 8.0), // Remove left indent, adjust vertical padding
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: _buildShiftDetailRows(_previousBlockSundayShifts, detailDateFormatter, formatDuration),
-                        ),
-                      ),
                   ]
                 ],
               ),
@@ -546,73 +555,67 @@ class StatisticsScreenState extends State<StatisticsScreen>
     int spareShifts = 0;
     int bogeyShifts = 0;
     int bankHolidayShifts = 0;
+    int restDaysWorked = 0;
     
     // Track processed event IDs to avoid counting duplicates
     final Set<String> processedIds = {};
     
-    // Process events
-    widget.events.forEach((date, events) {
-      // Skip if this is a rest day based on roster
-      final String shiftType = (_startDate != null) 
-          ? RosterService.getShiftForDate(date, _startDate!, _startWeek)
-          : ''; // Default to empty if roster not loaded
-      final bool isRest = shiftType == 'R';
-      
-      if (isRest) return;
-
-      for (final event in events) {
+    // --- Refactored Processing Logic --- 
+    widget.events.forEach((date, events) { // Iterate through all dates in the events map
+      for (final event in events) { // Iterate through events on that date
         // Only consider work shifts
         if (!event.isWorkShift) continue;
         
-        // Skip if already processed
+        // Skip if already processed (handles cases where event might span midnight? Unlikely with current model but safe)
         if (processedIds.contains(event.id ?? '')) continue;
         
         // Check if event falls within the selected date range
+        // Use event.startDate for the check
         if (event.startDate.isAfter(startDate.subtract(const Duration(days: 1))) && 
             event.startDate.isBefore(endDate.add(const Duration(days: 1)))) {
           
-          processedIds.add(event.id ?? '');
-          totalShifts++;
-          
-          final shiftCode = event.title;
-          
-          // First check special shift types
-          // Check if it's a Spare shift (starts with 'SP')
-          if (shiftCode.startsWith('SP')) {
-            spareShifts++;
-            continue; // Skip further categorization
+          processedIds.add(event.id ?? ''); // Mark as processed
+
+          // Determine if this date was a rostered Rest Day
+          final String rosterShiftType = (_startDate != null) 
+              ? RosterService.getShiftForDate(event.startDate, _startDate!, _startWeek)
+              : ''; // Default to empty if roster not loaded
+          final bool isRest = rosterShiftType == 'R';
+
+          if (isRest) {
+            // If it was a rest day, just increment the specific counter
+            restDaysWorked++;
+          } else {
+            // --- If NOT a rest day, proceed with original categorization --- 
+            totalShifts++; // Increment total only for non-rest day shifts
+            
+            final shiftCode = event.title;
+            
+            // First check special shift types
+            if (shiftCode.startsWith('SP')) {
+              spareShifts++;
+            } else if (shiftCode.endsWith('X')) {
+              bogeyShifts++;
+            } else {
+              // Now categorize by time of day if not Spare or Bogey
+              final startHour = event.startTime.hour;
+              if (startHour >= 4 && startHour < 10) {
+                earlyShifts++;
+              } else if (startHour >= 10 && startHour < 14) {
+                reliefShifts++;
+              } else if (startHour >= 14 && startHour < 19) {
+                lateShifts++;
+              } else if (startHour >= 19 || startHour < 4) {
+                nightShifts++;
+              }
+            }
+            // Bank holidays logic would ideally be integrated here too if needed
+            // Currently bankHolidayShifts is not being calculated.
           }
-          
-          // Check if it's a Bogey shift (ends with 'X')
-          if (shiftCode.endsWith('X')) {
-            bogeyShifts++;
-            continue; // Skip further categorization
-          }
-          
-          // Now categorize by time of day if not already categorized
-          final startHour = event.startTime.hour;
-          
-          // Early: 04:00 - 09:59
-          if (startHour >= 4 && startHour < 10) {
-            earlyShifts++;
-          } 
-          // Relief/Middle: 10:00 - 13:59
-          else if (startHour >= 10 && startHour < 14) {
-            reliefShifts++;
-          } 
-          // Late: 14:00 - 18:59
-          else if (startHour >= 14 && startHour < 19) {
-            lateShifts++;
-          }
-          // Night: 19:00 - 03:59
-          else if (startHour >= 19 || startHour < 4) {
-            nightShifts++;
-          }
-          
-          // Bank holidays logic would go here
         }
       }
     });
+    // --- End Refactored Logic --- 
     
     // Format date range for display
     final dateRangeStr = '${DateFormat('dd/MM/yy').format(startDate)} - ${DateFormat('dd/MM/yy').format(endDate)}';
@@ -626,6 +629,7 @@ class StatisticsScreenState extends State<StatisticsScreen>
       'spareShifts': spareShifts,
       'bogeyShifts': bogeyShifts,
       'bankHolidayShifts': bankHolidayShifts,
+      'restDaysWorked': restDaysWorked,
       'dateRange': dateRangeStr,
     };
   }
