@@ -29,6 +29,8 @@ import 'dart:convert';
 import 'package:spdrivercalendar/services/rest_days_service.dart'; // Added import
 import 'package:spdrivercalendar/features/contacts/contacts_page.dart'; // Add this line
 import 'package:spdrivercalendar/core/services/cache_service.dart'; // Added import
+import 'package:spdrivercalendar/settings_page.dart';
+import 'package:spdrivercalendar/features/notes/screens/all_notes_screen.dart'; // Import the new screen
 
 class CalendarScreen extends StatefulWidget {
   final ValueNotifier<bool> isDarkModeNotifier;
@@ -247,6 +249,11 @@ class CalendarScreenState extends State<CalendarScreen>
         );
       },
     );
+  }
+
+  // Define the missing method
+  void _resetRestDays() {
+    _showFirstRunDialog(); // Show the dialog to re-select rest days
   }
 
   @override
@@ -1645,6 +1652,10 @@ class CalendarScreenState extends State<CalendarScreen>
                 child: Text('Contacts'),
               ),
               PopupMenuItem(
+                value: 'notes', // Added notes value
+                child: Text('Notes'), // Added notes label
+              ),
+              PopupMenuItem(
                 value: 'settings',
                 child: Text('Settings'),
               ),
@@ -1658,8 +1669,10 @@ class CalendarScreenState extends State<CalendarScreen>
                 _showSettingsPage();
               } else if (value == 'add_holidays') {
                 _showAddHolidaysDialog();
-              } else if (value == 'contacts') { // Add this condition
+              } else if (value == 'contacts') {
                 _showContactsPage();
+              } else if (value == 'notes') { // Added condition for notes
+                _navigateToAllNotesScreen(); // Call the new navigation method
               }
             },
           ),
@@ -2107,11 +2120,12 @@ class CalendarScreenState extends State<CalendarScreen>
   }
 
   void _showSettingsPage() {
-    Navigator.of(context).push(
+    Navigator.push(
+      context,
       MaterialPageRoute(
-        builder: (context) => SettingsScreen(
-          resetRestDaysCallback: _showFirstRunDialog,
-          isDarkModeNotifier: widget.isDarkModeNotifier,
+        builder: (context) => SettingsPage(
+          resetRestDaysCallback: _resetRestDays,
+          isDarkModeNotifier: widget.isDarkModeNotifier, 
         ),
       ),
     );
@@ -2972,6 +2986,14 @@ class CalendarScreenState extends State<CalendarScreen>
       MaterialPageRoute(
         builder: (context) => const ContactsPage(),
       ),
+    );
+  }
+
+  // New method to navigate to the Notes screen
+  void _navigateToAllNotesScreen() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const AllNotesScreen()),
     );
   }
 }
