@@ -115,14 +115,6 @@ A specialized Flutter application designed for spare drivers to manage their shi
    - Access detailed shift information
    - Plan routes effectively
 
-## Contributing
-
-This is a private repository. Please contact the repository owner for contribution guidelines.
-
-## License
-
-This project is private and proprietary. All rights reserved.
-
 ## Support
 
 For support or questions, please contact the repository owner.
