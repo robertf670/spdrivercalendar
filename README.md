@@ -51,6 +51,21 @@ A specialized Flutter application designed for spare drivers to manage their shi
   - Log buses driven
   - Maintain bus history for reference
 
+## Downloading the Application (APK for Android)
+If you prefer not to build the app yourself, you can download the pre-compiled Android application package (.apk) directly from the project's releases page and install it on your Android device.
+ * Navigate to Releases: Open a web browser on your Android device and go to the Spare Driver Calendar GitHub Releases page:
+   https://github.com/robertf670/spdrivercalendar/releases
+ * Find the Latest Release: Look for the release tagged as "Latest". If there isn't one, choose the topmost release (which is usually the newest).
+ * Locate the APK File: Scroll down to the Assets section for that release. Find the file that ends with .apk (e.g., app-release.apk or spdrivercalendar-vX.Y.Z.apk).
+ * Download the APK: Tap on the .apk file name to download it to your device. Your browser might warn you about downloading APK files; proceed if you trust the source.
+ * Install the APK:
+   * Once downloaded, open your device's Files or Downloads app.
+   * Tap on the downloaded .apk file.
+   * You might be prompted to allow installation from unknown sources. You need to enable this setting (usually in your device's Security settings) to install APKs from outside the Google Play Store. Be aware of the security implications of enabling this setting.
+   * Follow the on-screen prompts to install the application.
+   * After installation, you can find the "Spare Driver Calendar" app in your app drawer.
+Note: Check the GitHub Releases page periodically for updates.
+
 ## Getting Started
 
 ### Prerequisites
@@ -81,21 +96,7 @@ A specialized Flutter application designed for spare drivers to manage their shi
    ```bash
    flutter run
    ```
-## Downloading the Application (APK for Android)
-If you prefer not to build the app yourself, you can download the pre-compiled Android application package (.apk) directly from the project's releases page and install it on your Android device.
- * Navigate to Releases: Open a web browser on your Android device and go to the Spare Driver Calendar GitHub Releases page:
-   https://github.com/robertf670/spdrivercalendar/releases
- * Find the Latest Release: Look for the release tagged as "Latest". If there isn't one, choose the topmost release (which is usually the newest).
- * Locate the APK File: Scroll down to the Assets section for that release. Find the file that ends with .apk (e.g., app-release.apk or spdrivercalendar-vX.Y.Z.apk).
- * Download the APK: Tap on the .apk file name to download it to your device. Your browser might warn you about downloading APK files; proceed if you trust the source.
- * Install the APK:
-   * Once downloaded, open your device's Files or Downloads app.
-   * Tap on the downloaded .apk file.
-   * You might be prompted to allow installation from unknown sources. You need to enable this setting (usually in your device's Security settings) to install APKs from outside the Google Play Store. Be aware of the security implications of enabling this setting.
-   * Follow the on-screen prompts to install the application.
-   * After installation, you can find the "Spare Driver Calendar" app in your app drawer.
-Note: Check the GitHub Releases page periodically for updates.
-
+   
 ## Usage
 
 1. **Initial Setup**
