@@ -65,37 +65,6 @@ If you prefer not to build the app yourself, you can download the pre-compiled A
    * Follow the on-screen prompts to install the application.
    * After installation, you can find the "Spare Driver Calendar" app in your app drawer.
 Note: Check the GitHub Releases page periodically for updates.
-
-## Getting Started
-
-### Prerequisites
-
-- Flutter SDK (latest stable version)
-- Dart SDK
-- Android Studio / VS Code with Flutter extensions
-- Git
-
-### Installation
-
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/robertf670/spdrivercalendar.git
-   ```
-
-2. Navigate to the project directory:
-   ```bash
-   cd spdrivercalendar
-   ```
-
-3. Install dependencies:
-   ```bash
-   flutter pub get
-   ```
-
-4. Run the app:
-   ```bash
-   flutter run
-   ```
    
 ## Usage
 
