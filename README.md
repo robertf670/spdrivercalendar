@@ -101,4 +101,4 @@ Note: Check the GitHub Releases page periodically for updates.
 
 ## Support
 
-For support or questions, please contact the repository owner.
+For support or questions, please contact ixrqq@tuta.io
