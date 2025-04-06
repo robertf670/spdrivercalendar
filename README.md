@@ -1,5 +1,10 @@
 # Spare Driver Calendar
 
+**Known Issues**
+- Notifications are broken
+- Notes seem to not be saving
+- Sunday Early/Late 14hr30m comparison broken
+
 A specialized Flutter application designed for spare drivers to manage their shift patterns, work schedules, and important events. This app helps drivers who work on rotating shift patterns to track their work schedule alongside personal events.
 
 ## Features
