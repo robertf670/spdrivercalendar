@@ -22,6 +22,38 @@ class NotificationService {
       tz.initializeTimeZones();
       print("[Notif Init Debug] Timezones initialized.");
 
+      // --- Create Android Notification Channels ---
+      // Required for Android 8.0+
+      const AndroidNotificationChannel shiftChannel = AndroidNotificationChannel(
+        'shift_channel_id', // id
+        'Shift Notifications', // name
+        description: 'Notifications for upcoming shifts', // description
+        importance: Importance.max, // Set importance to max
+        // Add other channel properties if needed (sound, vibration pattern, etc.)
+      );
+
+      const AndroidNotificationChannel testChannel = AndroidNotificationChannel(
+        'test_channel_id', // id
+        'Test Notifications', // name
+        description: 'Channel for testing notifications', // description
+        importance: Importance.max, // Set importance to max
+      );
+
+      // Register the channels with the system
+      final FlutterLocalNotificationsPlugin flutterLocalNotificationsPluginInstance =
+          flutterLocalNotificationsPlugin; // Avoid direct use in async gap if possible
+      await flutterLocalNotificationsPluginInstance
+          .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin>()
+          ?.createNotificationChannel(shiftChannel);
+      print("[Notif Init Debug] Shift notification channel created (or updated).");
+      await flutterLocalNotificationsPluginInstance
+          .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin>()
+          ?.createNotificationChannel(testChannel);
+      print("[Notif Init Debug] Test notification channel created (or updated).");
+      // --- End Create Android Notification Channels ---
+
       // Android initialization settings
       const AndroidInitializationSettings initializationSettingsAndroid =
           AndroidInitializationSettings('@mipmap/ic_launcher'); // Make sure you have this icon
