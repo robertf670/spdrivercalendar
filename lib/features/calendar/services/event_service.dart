@@ -111,13 +111,84 @@ class EventService {
   // Update an existing event
   static Future<void> updateEvent(Event oldEvent, Event newEvent) async {
     // Ensure new event has an ID, preferably the same as the old one
-    final newEventWithId = newEvent.copyWith(id: oldEvent.id ?? newEvent.id ?? DateTime.now().millisecondsSinceEpoch.toString());
+    final eventId = oldEvent.id ?? newEvent.id ?? DateTime.now().millisecondsSinceEpoch.toString();
+    final newEventWithId = newEvent.copyWith(id: eventId);
 
-    // First delete the old event (this will also cancel its notification)
-    await deleteEvent(oldEvent);
+    // --- Find and Update Logic ---
+    bool eventFoundAndUpdated = false;
+
+    // Normalize dates for searching in the cache
+    final normalizedOldStartDate = DateTime(oldEvent.startDate.year, oldEvent.startDate.month, oldEvent.startDate.day);
+    final normalizedOldEndDate = DateTime(oldEvent.endDate.year, oldEvent.endDate.month, oldEvent.endDate.day);
+    final normalizedNewStartDate = DateTime(newEventWithId.startDate.year, newEventWithId.startDate.month, newEventWithId.startDate.day);
+    final normalizedNewEndDate = DateTime(newEventWithId.endDate.year, newEventWithId.endDate.month, newEventWithId.endDate.day);
+
+    // 1. Remove the old event reference(s) from its original date(s)
+    // Check start date
+    if (_events[normalizedOldStartDate] != null) {
+      final index = _events[normalizedOldStartDate]!.indexWhere((e) => e.id == eventId);
+      if (index != -1) {
+        _events[normalizedOldStartDate]!.removeAt(index);
+        if (_events[normalizedOldStartDate]!.isEmpty) {
+           _events.remove(normalizedOldStartDate);
+        }
+      }
+    }
+    // Check end date (if different from start date)
+    if (oldEvent.startDate != oldEvent.endDate && _events[normalizedOldEndDate] != null) {
+       final index = _events[normalizedOldEndDate]!.indexWhere((e) => e.id == eventId);
+       if (index != -1) {
+         _events[normalizedOldEndDate]!.removeAt(index);
+         if (_events[normalizedOldEndDate]!.isEmpty) {
+           _events.remove(normalizedOldEndDate);
+         }
+       }
+    }
     
-    // Then add the new event (this will schedule its notification)
-    await addEvent(newEventWithId);
+    // 2. Add the updated event reference(s) to its new date(s)
+    // Add to new start date
+    if (_events[normalizedNewStartDate] == null) {
+       _events[normalizedNewStartDate] = [];
+    }
+    // Avoid adding duplicates if date hasn't changed and somehow it wasn't removed
+    if (!_events[normalizedNewStartDate]!.any((e) => e.id == eventId)) {
+       _events[normalizedNewStartDate]!.add(newEventWithId);
+       eventFoundAndUpdated = true; // Mark as found/updated
+    }
+
+    // Add to new end date (if different from start date)
+    if (newEventWithId.startDate != newEventWithId.endDate) {
+       if (_events[normalizedNewEndDate] == null) {
+         _events[normalizedNewEndDate] = [];
+       }
+       // Avoid adding duplicates
+       if (!_events[normalizedNewEndDate]!.any((e) => e.id == eventId)) {
+          _events[normalizedNewEndDate]!.add(newEventWithId);
+          eventFoundAndUpdated = true; // Mark as found/updated
+       }
+    }
+
+    // --- Handle Notifications ---
+    // Only reschedule if the event was actually found and potentially modified
+    if (eventFoundAndUpdated) {
+      // Cancel old notification if applicable
+      if (oldEvent.isWorkShift) {
+        await _cancelWorkShiftNotification(oldEvent);
+      }
+      // Schedule new notification if applicable
+      if (newEventWithId.isWorkShift) {
+        await _scheduleWorkShiftNotification(newEventWithId);
+      }
+    } else {
+        print("Warning: Event with ID $eventId not found in cache during update. Attempting to add as new.");
+        // Fallback: If we couldn't find the event to update (edge case), treat it as adding a new one.
+        // This might happen if the cache wasn't loaded correctly or the oldEvent data was stale.
+        await addEvent(newEventWithId); // Use addEvent logic which includes saving
+        return; // Exit early as addEvent handles saving
+    }
+    
+    // 3. Save the updated cache
+    await _saveEvents();
   }
   
   // Delete an event

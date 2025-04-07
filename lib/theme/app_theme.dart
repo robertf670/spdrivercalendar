@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 class AppTheme {
   // Main color palette
@@ -28,9 +29,15 @@ class AppTheme {
         secondary: secondaryColor,
         error: errorColor,
       ),
-      appBarTheme: const AppBarTheme(
+      appBarTheme: AppBarTheme(
         backgroundColor: primaryColor,
         foregroundColor: Colors.white,
+        systemOverlayStyle: SystemUiOverlayStyle(
+          statusBarColor: Colors.transparent,
+          statusBarIconBrightness: Brightness.dark,
+          systemNavigationBarColor: Colors.white,
+          systemNavigationBarIconBrightness: Brightness.dark,
+        ),
       ),
       cardTheme: CardTheme(
         shape: RoundedRectangleBorder(
@@ -50,9 +57,15 @@ class AppTheme {
         error: errorColor,
         // Consider adding surface and background if needed for contrast
       ),
-      appBarTheme: const AppBarTheme(
+      appBarTheme: AppBarTheme(
         backgroundColor: Color(0xFF1F1F1F), // Darker AppBar for contrast
         foregroundColor: Colors.white,
+        systemOverlayStyle: SystemUiOverlayStyle(
+          statusBarColor: Colors.transparent,
+          statusBarIconBrightness: Brightness.light,
+          systemNavigationBarColor: Color(0xFF121212),
+          systemNavigationBarIconBrightness: Brightness.light,
+        ),
       ),
       cardTheme: CardTheme(
         // Ensure card color provides contrast with background in dark mode

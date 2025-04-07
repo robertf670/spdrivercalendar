@@ -115,6 +115,9 @@ class StatisticsScreenState extends State<StatisticsScreen>
   }
 
   Future<void> _initializeStatistics() async {
+    // Clear the cache on initialization to prevent stale data issues
+    _csvWorkTimeCache.clear(); 
+    
     await _loadRosterSettings();
     if (mounted) {
        setState(() {
@@ -714,7 +717,7 @@ class StatisticsScreenState extends State<StatisticsScreen>
 
     // For all other duties, try to get work time from CSV
     final dayOfWeek = await _getDayOfWeek(event.startDate);
-    final workTime = await _loadWorkTimeFromCSV(event.title, dayOfWeek);
+    final workTime = await _loadWorkTimeFromCSV(event, dayOfWeek);
     
     if (workTime != null) {
       return workTime;
@@ -744,37 +747,42 @@ class StatisticsScreenState extends State<StatisticsScreen>
     return end.difference(start);
   }
 
-  Future<Duration?> _loadWorkTimeFromCSV(String shiftCode, String dayOfWeek) async {
-    String fileName = ''; // Declare fileName outside the try block
+  Future<Duration?> _loadWorkTimeFromCSV(Event event, String dayOfWeek) async {
+    String fileName = '';
     try {
-      // String fileName; // Remove declaration from inside
-
-      // Handle different duty types
-      if (shiftCode.startsWith('PZ1')) {
-        fileName = '${dayOfWeek}_DUTIES_PZ1.csv';
-      } else if (shiftCode.startsWith('PZ4')) {
-        fileName = '${dayOfWeek}_DUTIES_PZ4.csv';
-      } else if (shiftCode.startsWith('807')) {
-        fileName = 'UNI_7DAYs.csv';
-      } else {
-        return null; // Not a known CSV-based duty type
+      // Extract shift code and zone number from the event title
+      final shiftCode = event.title.replaceAll('Shift: ', '').trim();
+      String zoneNumber = '1'; // Default
+      final match = RegExp(r'PZ(\d+)/').firstMatch(shiftCode);
+      if (match != null) {
+        zoneNumber = match.group(1) ?? '1';
       }
 
+      // Use RosterService to get the correct filename, handling bank holidays internally
+      fileName = RosterService.getShiftFilename(zoneNumber, dayOfWeek, event.startDate);
+      
+      // Handle UNI shifts separately (they don't use the zone/day structure)
+      if (RegExp(r'^\d{2,3}/').hasMatch(shiftCode)) {
+        fileName = 'UNI_7DAYs.csv'; // Or potentially UNI_M-F.csv - logic might need refinement if UNI depends on day
+      }
+      
+      // Ensure a filename was determined
+      if (fileName.isEmpty) {
+        print("Could not determine filename for shift: $shiftCode on $dayOfWeek");
+        return null;
+      }
+      
       // 1. Check cache first
       if (_csvWorkTimeCache.containsKey(fileName)) {
         final cachedFile = _csvWorkTimeCache[fileName]!;
         if (cachedFile.containsKey(shiftCode)) {
-          // print('Cache hit for $shiftCode in $fileName'); // Optional: debug logging
           return cachedFile[shiftCode];
         } else {
-          // File is cached, but shift code isn't in it (might be invalid shift code for that file)
-          // print('Shift code $shiftCode not found in cached $fileName'); // Optional: debug logging
           return null;
         }
       }
 
       // 2. If not in cache, load and parse the file
-      // print('Cache miss for $fileName. Loading and parsing...'); // Optional: debug logging
       final csvData = await rootBundle.loadString('assets/$fileName');
       final lines = csvData.split('\n');
       final Map<String, Duration> parsedDurations = {};
@@ -788,8 +796,6 @@ class StatisticsScreenState extends State<StatisticsScreen>
         if (parts.isNotEmpty && parts.length > 14) {
            final currentShiftCode = parts[0].trim();
            final workTimeStr = parts[14].trim();
-           // print('Parsing line: $line'); // Optional: Debug line parsing
-           // print('ShiftCode: $currentShiftCode, WorkTimeStr: $workTimeStr');
 
            final timeParts = workTimeStr.split(':');
            if (timeParts.length >= 2) {
@@ -799,28 +805,20 @@ class StatisticsScreenState extends State<StatisticsScreen>
                 minutes: int.parse(timeParts[1])
               );
               parsedDurations[currentShiftCode] = duration;
-              // print('Parsed duration for $currentShiftCode: $duration');
              } catch (e) {
                print('Error parsing duration for shift $currentShiftCode in $fileName: $e, Line: $line');
              }
-           } else {
-             // print('Skipping line due to incorrect time format: $line');
            }
-        } else {
-           // print('Skipping line due to insufficient parts: $line');
         }
       }
 
       // 3. Store the parsed data in the cache
       _csvWorkTimeCache[fileName] = parsedDurations;
-      // print('Cached data for $fileName. Size: ${parsedDurations.length}'); // Optional: debug logging
 
       // 4. Return the requested duration from the now-cached data
       if (parsedDurations.containsKey(shiftCode)) {
          return parsedDurations[shiftCode];
       } else {
-         // Shift code not found even after parsing the file
-         // print('Shift code $shiftCode not found in newly parsed $fileName'); // Optional: debug logging
          return null;
       }
 

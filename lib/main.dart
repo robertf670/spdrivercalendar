@@ -17,6 +17,9 @@ import 'package:spdrivercalendar/core/services/cache_service.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
+  // Enable edge-to-edge display BEFORE other initializations
+  SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+
   // Initialize cache service first
   final cacheService = CacheService();
   
@@ -69,14 +72,6 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     return ValueListenableBuilder<bool>(
       valueListenable: _isDarkModeNotifier,
       builder: (context, bool isDarkMode, child) {
-        // Apply status bar styling here at the root
-        SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
-          statusBarColor: Colors.transparent, // Make status bar transparent
-          statusBarIconBrightness: isDarkMode ? Brightness.light : Brightness.dark, // Adjust icon brightness
-          systemNavigationBarColor: isDarkMode ? AppTheme.darkTheme().scaffoldBackgroundColor : AppTheme.lightTheme().scaffoldBackgroundColor, 
-          systemNavigationBarIconBrightness: isDarkMode ? Brightness.light : Brightness.dark, // Match nav bar icon brightness
-        ));
-
         return RebuildText(
           child: MaterialApp(
             key: _rebuildKey,

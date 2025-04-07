@@ -136,16 +136,25 @@ class RosterService {
     // Check if it's a bank holiday
     final isBankHoliday = ShiftService.bankHolidays.any((holiday) => holiday.matchesDate(date));
     
+    // Determine the correct PZ filename suffix based on the zone number
+    String pzFileSuffix = 'PZ$zoneNumber';
+    
+    // Basic validation - check if zoneNumber is one of the known zones (1, 3, 4)
+    if (!['1', '3', '4'].contains(zoneNumber)) {
+        print("Warning: Unexpected zone number '$zoneNumber' encountered in getShiftFilename. Filename might be incorrect.");
+        // Keep using the potentially incorrect suffix, assuming the file might exist unexpectedly
+        // or allow the file load to fail naturally later.
+    }
     
     if (isBankHoliday) {
-      // Use Sunday duties for bank holidays
-      return 'SUN_DUTIES_PZ$zoneNumber.csv';
-    } else if (dayOfWeek == 'Saturday') {
-      return 'SAT_DUTIES_PZ$zoneNumber.csv';
-    } else if (dayOfWeek == 'Sunday') {
-      return 'SUN_DUTIES_PZ$zoneNumber.csv';
+      // Use Sunday duties for bank holidays, with the direct PZ suffix
+      return 'SUN_DUTIES_$pzFileSuffix.csv';
+    } else if (dayOfWeek == 'SAT') {
+      return 'SAT_DUTIES_$pzFileSuffix.csv';
+    } else if (dayOfWeek == 'SUN') {
+      return 'SUN_DUTIES_$pzFileSuffix.csv';
     } else {
-      return 'M-F_DUTIES_PZ$zoneNumber.csv';
+      return 'M-F_DUTIES_$pzFileSuffix.csv';
     }
   }
   
