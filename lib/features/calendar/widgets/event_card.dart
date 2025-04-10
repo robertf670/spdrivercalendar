@@ -371,104 +371,382 @@ class _EventCardState extends State<EventCard> {
   }
 
   Future<void> _loadAssignedDutyDetails() async {
+    _allDutyDetails = [];
+    
     if (widget.event.assignedDuties == null || widget.event.assignedDuties!.isEmpty) {
-      setState(() {
-        _assignedDutyStartTime = null;
-        _assignedDutyEndTime = null;
-        _assignedDutyStartLocation = null;
-        _assignedDutyEndLocation = null;
-        _allDutyDetails = [];
-      });
       return;
     }
-
-    // Create a list to store duty details
-    List<Map<String, String?>> dutyDetails = [];
-
+    
+    final dayOfWeek = DateFormat('EEEE').format(widget.event.startDate).toLowerCase();
+    final isWeekday = widget.event.startDate.weekday >= 1 && widget.event.startDate.weekday <= 5;
+    final bankHoliday = ShiftService.getBankHoliday(widget.event.startDate, ShiftService.bankHolidays);
+    
     for (String dutyCode in widget.event.assignedDuties!) {
-      // Check if it's a half duty
-      bool isHalfDuty = dutyCode.endsWith('A') || dutyCode.endsWith('B');
-      String baseDutyCode = isHalfDuty ? dutyCode.substring(0, dutyCode.length - 1) : dutyCode;
-
-      // Determine which CSV file to load based on the duty code
-      String csvFileName;
-      if (baseDutyCode.startsWith('PZ1')) {
-        csvFileName = 'M-F_DUTIES_PZ1.csv';
-      } else if (baseDutyCode.startsWith('PZ3')) {
-        csvFileName = 'M-F_DUTIES_PZ3.csv';
-      } else if (baseDutyCode.startsWith('PZ4')) {
-        csvFileName = 'M-F_DUTIES_PZ4.csv';
-      } else {
-        continue; // Skip if not a recognized zone
+      // Check if it's a UNI/EURO duty
+      bool isUniDuty = false;
+      if (dutyCode.startsWith('UNI:')) {
+        isUniDuty = true;
+        dutyCode = dutyCode.substring(4); // Remove the 'UNI:' prefix
       }
-
-      // Load the CSV file
-      final csvData = await rootBundle.loadString('assets/$csvFileName');
-      final List<List<dynamic>> csvTable = const CsvToListConverter().convert(csvData);
-
-      // Find the matching duty in the CSV
-      final matchingDuty = csvTable.firstWhere(
-        (row) => row[0].toString() == baseDutyCode,
-        orElse: () => [],
-      );
-
-      if (matchingDuty.isNotEmpty) {
-        // Extract times and locations based on duty type
-        String startTime, endTime;
-        String? startLocation, endLocation;
-
-        if (isHalfDuty) {
-          if (dutyCode.endsWith('A')) {
-            // First half
-            startTime = matchingDuty[2]?.toString() ?? '';  // report time
-            endTime = matchingDuty[5]?.toString() ?? '';    // break start time
-            startLocation = matchingDuty[4]?.toString() ?? '';  // location
-            endLocation = matchingDuty[6]?.toString() ?? '';    // break start location
-          } else {
-            // Second half
-            startTime = matchingDuty[8]?.toString() ?? '';  // break end time
-            endTime = matchingDuty[10]?.toString() ?? '';   // finish time
-            startLocation = matchingDuty[9]?.toString() ?? '';  // break end location
-            endLocation = matchingDuty[11]?.toString() ?? '';   // finish location
+      
+      // Check if it's a half duty
+      bool isFirstHalf = false;
+      bool isSecondHalf = false;
+      String codeWithoutHalf = dutyCode;
+      
+      if (dutyCode.endsWith('A')) {
+        isFirstHalf = true;
+        codeWithoutHalf = dutyCode.substring(0, dutyCode.length - 1);
+      } else if (dutyCode.endsWith('B')) {
+        isSecondHalf = true;
+        codeWithoutHalf = dutyCode.substring(0, dutyCode.length - 1);
+      }
+      
+      if (isUniDuty) {
+        // Handle UNI/EURO duties
+        try {
+          bool dutyFound = false;
+          
+          // First check UNI_7DAYs.csv which applies to all days
+          final file7Days = await rootBundle.loadString('assets/UNI_7DAYs.csv');
+          final lines7Days = file7Days.split('\n');
+          
+          for (var line in lines7Days) {
+            if (line.trim().isEmpty) continue;
+            
+            final parts = line.split(',');
+            if (parts.isNotEmpty && parts[0].trim() == codeWithoutHalf) {
+              String startTimeStr = parts[1].trim();
+              String breakStartStr = parts[2].trim();
+              String breakEndStr = parts[3].trim();
+              String endTimeStr = parts[4].trim();
+              
+              // Parse times for start and end
+              final startTime = _parseTimeFromString(startTimeStr);
+              final endTime = _parseTimeFromString(endTimeStr);
+              
+              // For half duties, adjust the times
+              if (isFirstHalf) {
+                // For first half, use original start time but use break start for end time
+                _allDutyDetails.add({
+                  'dutyCode': dutyCode,
+                  'startTime': startTimeStr,
+                  'endTime': breakStartStr.toLowerCase() != 'nan' ? breakStartStr : DateFormat('HH:mm:ss').format(startTime.add(Duration(minutes: (endTime.difference(startTime).inMinutes ~/ 2)))),
+                  'location': 'UNI/EURO',
+                  'isHalfDuty': 'true',
+                  'isFirstHalf': 'true',
+                });
+                dutyFound = true;
+                break;
+              } else if (isSecondHalf) {
+                // For second half, use break end for start time and original end time
+                _allDutyDetails.add({
+                  'dutyCode': dutyCode,
+                  'startTime': breakEndStr.toLowerCase() != 'nan' ? breakEndStr : DateFormat('HH:mm:ss').format(startTime.add(Duration(minutes: (endTime.difference(startTime).inMinutes ~/ 2)))),
+                  'endTime': endTimeStr,
+                  'location': 'UNI/EURO',
+                  'isHalfDuty': 'true',
+                  'isSecondHalf': 'true',
+                });
+                dutyFound = true;
+                break;
+              } else {
+                // Full duty - use original times
+                final Map<String, String?> dutyDetail = {
+                  'dutyCode': dutyCode,
+                  'startTime': startTimeStr,
+                  'endTime': endTimeStr,
+                  'location': 'UNI/EURO',
+                  'isHalfDuty': 'false',
+                };
+                
+                // Add break times only if they're not 'nan'
+                if (breakStartStr.toLowerCase() != 'nan' && 
+                    breakEndStr.toLowerCase() != 'nan') {
+                  dutyDetail['breakStart'] = breakStartStr;
+                  dutyDetail['breakEnd'] = breakEndStr;
+                }
+                
+                _allDutyDetails.add(dutyDetail);
+                dutyFound = true;
+                break;
+              }
+            }
           }
-        } else {
-          // Full duty
-          startTime = matchingDuty[2]?.toString() ?? '';    // report time
-          endTime = matchingDuty[10]?.toString() ?? '';     // finish time
-          startLocation = matchingDuty[4]?.toString() ?? '';  // location
-          endLocation = matchingDuty[11]?.toString() ?? '';   // finish location
-        }
-
-        // Map location names and ensure they're not null
-        startLocation = mapLocationName(startLocation ?? '');
-        endLocation = mapLocationName(endLocation ?? '');
-
-        // Only add the duty if we have valid location data
-        if (startLocation.isNotEmpty && endLocation.isNotEmpty) {
-          dutyDetails.add({
+          
+          // If duty wasn't found and it's a weekday, check UNI_M-F.csv
+          if (!dutyFound && isWeekday && bankHoliday == null) {
+            final fileMF = await rootBundle.loadString('assets/UNI_M-F.csv');
+            final linesMF = fileMF.split('\n');
+            
+            for (var line in linesMF) {
+              if (line.trim().isEmpty) continue;
+              
+              final parts = line.split(',');
+              if (parts.isNotEmpty && parts[0].trim() == codeWithoutHalf) {
+                String startTimeStr = parts[1].trim();
+                String breakStartStr = parts[2].trim();
+                String breakEndStr = parts[3].trim();
+                String endTimeStr = parts[4].trim();
+                
+                // Parse times for start and end
+                final startTime = _parseTimeFromString(startTimeStr);
+                final endTime = _parseTimeFromString(endTimeStr);
+                
+                // For half duties, adjust the times
+                if (isFirstHalf) {
+                  // For first half, use original start time but use break start for end time
+                  _allDutyDetails.add({
+                    'dutyCode': dutyCode,
+                    'startTime': startTimeStr,
+                    'endTime': breakStartStr.toLowerCase() != 'nan' ? breakStartStr : DateFormat('HH:mm:ss').format(startTime.add(Duration(minutes: (endTime.difference(startTime).inMinutes ~/ 2)))),
+                    'location': 'UNI/EURO',
+                    'isHalfDuty': 'true',
+                    'isFirstHalf': 'true',
+                  });
+                  dutyFound = true;
+                  break;
+                } else if (isSecondHalf) {
+                  // For second half, use break end for start time and original end time
+                  _allDutyDetails.add({
+                    'dutyCode': dutyCode,
+                    'startTime': breakEndStr.toLowerCase() != 'nan' ? breakEndStr : DateFormat('HH:mm:ss').format(startTime.add(Duration(minutes: (endTime.difference(startTime).inMinutes ~/ 2)))),
+                    'endTime': endTimeStr,
+                    'location': 'UNI/EURO',
+                    'isHalfDuty': 'true',
+                    'isSecondHalf': 'true',
+                  });
+                  dutyFound = true;
+                  break;
+                } else {
+                  // Full duty - use original times
+                  final Map<String, String?> dutyDetail = {
+                    'dutyCode': dutyCode,
+                    'startTime': startTimeStr,
+                    'endTime': endTimeStr,
+                    'location': 'UNI/EURO',
+                    'isHalfDuty': 'false',
+                  };
+                  
+                  // Add break times only if they're not 'nan'
+                  if (breakStartStr.toLowerCase() != 'nan' && 
+                      breakEndStr.toLowerCase() != 'nan') {
+                    dutyDetail['breakStart'] = breakStartStr;
+                    dutyDetail['breakEnd'] = breakEndStr;
+                  }
+                  
+                  _allDutyDetails.add(dutyDetail);
+                  dutyFound = true;
+                  break;
+                }
+              }
+            }
+          }
+          
+          // If the duty wasn't found in either file
+          if (!dutyFound) {
+            _allDutyDetails.add({
+              'dutyCode': dutyCode,
+              'startTime': '00:00:00',
+              'endTime': '00:00:00',
+              'location': 'UNI/EURO - Not found',
+              'isHalfDuty': (isFirstHalf || isSecondHalf) ? 'true' : 'false',
+              'isFirstHalf': isFirstHalf ? 'true' : 'false',
+              'isSecondHalf': isSecondHalf ? 'true' : 'false',
+            });
+          }
+        } catch (e) {
+          print('Error loading UNI duty details: $e');
+          _allDutyDetails.add({
             'dutyCode': dutyCode,
-            'startTime': startTime,
-            'endTime': endTime,
-            'startLocation': startLocation,
-            'endLocation': endLocation,
+            'startTime': '00:00:00',
+            'endTime': '00:00:00',
+            'location': 'UNI/EURO - Error',
+            'isHalfDuty': (isFirstHalf || isSecondHalf) ? 'true' : 'false',
+          });
+        }
+      } else {
+        // Handle regular zone duties
+        try {
+          // Fix zone duty parsing for duties that include PZ prefix
+          String codeWithoutPrefix = codeWithoutHalf;
+          String zone = '1'; // Default to zone 1
+          
+          // Check for PZx/ format first
+          final pzMatch = RegExp(r'^PZ(\d+)/').firstMatch(codeWithoutHalf);
+          if (pzMatch != null) {
+            zone = pzMatch.group(1) ?? '1';
+            // Extract the part after the PZx/ prefix
+            codeWithoutPrefix = codeWithoutHalf.substring(pzMatch.end);
+          } else {
+            // Otherwise, try to determine zone from the first digit of the numeric part
+            final zoneMatch = RegExp(r'^(\d+)').firstMatch(codeWithoutHalf);
+            final firstDigit = zoneMatch?.group(1)?.substring(0, 1);
+            
+            if (firstDigit != null) {
+              // Determine the zone based on the first digit
+              zone = firstDigit == '1' ? '1' : firstDigit == '3' ? '3' : firstDigit == '4' ? '4' : '1';
+            }
+          }
+          
+          // Determine the filename based on the day of the week and zone
+          final filename = bankHoliday != null ? 'SUN_DUTIES_PZ$zone.csv' :
+                         dayOfWeek == 'saturday' ? 'SAT_DUTIES_PZ$zone.csv' :
+                         dayOfWeek == 'sunday' ? 'SUN_DUTIES_PZ$zone.csv' :
+                         'M-F_DUTIES_PZ$zone.csv';
+          
+          print('Loading zone duty: $dutyCode, zone: $zone, filename: $filename, searching for duty: $codeWithoutHalf');
+                         
+          // Load the duty file
+          final file = await rootBundle.loadString('assets/$filename');
+          final lines = file.split('\n');
+          
+          bool dutyFound = false;
+          
+          // Skip the header line
+          for (var i = 1; i < lines.length; i++) {
+            final line = lines[i].trim();
+            if (line.isEmpty) continue;
+            
+            final parts = line.split(',');
+            if (parts.length < 8) continue; // Need at least columns for code, start, end
+            
+            // Try to match both with and without the PZ prefix
+            final dutyInFile = parts[0].trim();
+            if (dutyInFile == codeWithoutPrefix || dutyInFile == codeWithoutHalf) {
+              // Found the duty
+              final dutyStartTime = parts[2].trim();
+              final dutyEndTime = parts[10].trim();
+              final startLocation = parts[4].trim();
+              final endLocation = parts[11].trim();
+              
+              // For half duties, calculate the appropriate time
+              if (isFirstHalf) {
+                // For first half, use original start time and break start time if available
+                final breakStartCol = 5; // Column index for break start time in CSV files
+                final breakStartTimeStr = parts.length > breakStartCol ? parts[breakStartCol].trim() : "";
+                
+                if (breakStartTimeStr.isNotEmpty && 
+                    breakStartTimeStr.toLowerCase() != "nan" && 
+                    breakStartTimeStr.toLowerCase() != "workout") {
+                  // Use break start time for end time of first half
+                  _allDutyDetails.add({
+                    'dutyCode': dutyCode,
+                    'startTime': dutyStartTime,
+                    'endTime': breakStartTimeStr,
+                    'location': startLocation,
+                    'isHalfDuty': 'true',
+                    'isFirstHalf': 'true',
+                  });
+                } else {
+                  // Fall back to calculating midpoint if no break time
+                  final startTime = _parseTimeFromString(dutyStartTime);
+                  final endTime = _parseTimeFromString(dutyEndTime);
+                  final duration = endTime.difference(startTime);
+                  final halfwayPoint = startTime.add(Duration(minutes: duration.inMinutes ~/ 2));
+                  
+                  _allDutyDetails.add({
+                    'dutyCode': dutyCode,
+                    'startTime': dutyStartTime,
+                    'endTime': DateFormat('HH:mm:ss').format(halfwayPoint),
+                    'location': startLocation,
+                    'isHalfDuty': 'true',
+                    'isFirstHalf': 'true',
+                  });
+                }
+              } else if (isSecondHalf) {
+                // For second half, use break end time and finish time if available
+                final breakEndCol = 8; // Column index for break end time in CSV files
+                final breakEndTimeStr = parts.length > breakEndCol ? parts[breakEndCol].trim() : "";
+                
+                if (breakEndTimeStr.isNotEmpty && 
+                    breakEndTimeStr.toLowerCase() != "nan" && 
+                    breakEndTimeStr.toLowerCase() != "workout") {
+                  // Use break end time for start time of second half
+                  _allDutyDetails.add({
+                    'dutyCode': dutyCode,
+                    'startTime': breakEndTimeStr,
+                    'endTime': dutyEndTime,
+                    'location': endLocation,
+                    'isHalfDuty': 'true',
+                    'isSecondHalf': 'true',
+                  });
+                } else {
+                  // Fall back to calculating midpoint if no break time
+                  final startTime = _parseTimeFromString(dutyStartTime);
+                  final endTime = _parseTimeFromString(dutyEndTime);
+                  final duration = endTime.difference(startTime);
+                  final halfwayPoint = startTime.add(Duration(minutes: duration.inMinutes ~/ 2));
+                  
+                  _allDutyDetails.add({
+                    'dutyCode': dutyCode,
+                    'startTime': DateFormat('HH:mm:ss').format(halfwayPoint),
+                    'endTime': dutyEndTime,
+                    'location': endLocation,
+                    'isHalfDuty': 'true',
+                    'isSecondHalf': 'true',
+                  });
+                }
+              } else {
+                // Full duty
+                _allDutyDetails.add({
+                  'dutyCode': dutyCode,
+                  'startTime': dutyStartTime,
+                  'endTime': dutyEndTime,
+                  'startLocation': startLocation,
+                  'endLocation': endLocation,
+                  'location': '$startLocation - $endLocation',
+                  'isHalfDuty': 'false',
+                });
+              }
+              
+              dutyFound = true;
+              break;
+            }
+          }
+          
+          // If duty wasn't found
+          if (!dutyFound) {
+            _allDutyDetails.add({
+              'dutyCode': dutyCode,
+              'startTime': '00:00:00',
+              'endTime': '00:00:00',
+              'location': 'Zone $zone - Not found',
+              'isHalfDuty': (isFirstHalf || isSecondHalf) ? 'true' : 'false',
+              'isFirstHalf': isFirstHalf ? 'true' : 'false',
+              'isSecondHalf': isSecondHalf ? 'true' : 'false',
+            });
+          }
+        } catch (e) {
+          print('Error loading zone duty details: $e');
+          _allDutyDetails.add({
+            'dutyCode': dutyCode,
+            'startTime': '00:00:00',
+            'endTime': '00:00:00',
+            'location': 'Error loading duty',
+            'isHalfDuty': (isFirstHalf || isSecondHalf) ? 'true' : 'false',
           });
         }
       }
     }
-
-    // Sort duty details by start time
-    dutyDetails.sort((a, b) => (a['startTime'] ?? '').compareTo(b['startTime'] ?? ''));
-
-    // Update state with the first duty's details (for backward compatibility)
-    if (dutyDetails.isNotEmpty) {
-      setState(() {
-        _assignedDutyStartTime = dutyDetails[0]['startTime'];
-        _assignedDutyEndTime = dutyDetails[0]['endTime'];
-        _assignedDutyStartLocation = dutyDetails[0]['startLocation'];
-        _assignedDutyEndLocation = dutyDetails[0]['endLocation'];
-        _allDutyDetails = dutyDetails;
-      });
+  }
+  
+  // Helper method to parse time strings
+  DateTime _parseTimeFromString(String timeStr) {
+    try {
+      final parts = timeStr.split(':');
+      if (parts.length >= 2) {
+        final hour = int.parse(parts[0]);
+        final minute = int.parse(parts[1]);
+        final second = parts.length > 2 ? int.parse(parts[2]) : 0;
+        
+        return DateTime(2000, 1, 1, hour, minute, second);
+      }
+    } catch (e) {
+      print('Error parsing time string: $e');
     }
+    
+    return DateTime(2000, 1, 1, 0, 0, 0);
   }
 
   @override
@@ -911,8 +1189,8 @@ class _EventCardState extends State<EventCard> {
     );
   }
 
-  Future<void> _showDutySelectionDialog(BuildContext context, [String? halfIndicator]) async {
-    String selectedZone = 'Zone 1';
+  Future<void> _showDutySelectionDialog(BuildContext context, [String? halfIndicator, String? preSelectedZone]) async {
+    String selectedZone = preSelectedZone ?? 'Zone 1';
     String selectedDuty = '';
     List<String> duties = [];
     bool isLoading = true;
@@ -948,13 +1226,17 @@ class _EventCardState extends State<EventCard> {
                     final parts = line.split(',');
                     if (parts.length < 5) continue;
                     
-                    // Check if this is a workout duty (nan,nan)
-                    if (parts[2].trim().toLowerCase() == 'nan' && 
-                        parts[3].trim().toLowerCase() == 'nan') {
-                      continue; // Skip workout duties
+                    // For half duties (A or B), only include duties that have break times
+                    // For full duties, include all duties
+                    final dutyCode = parts[0].trim();
+                    final breakStartStr = parts[2].trim().toLowerCase();
+                    final breakEndStr = parts[3].trim().toLowerCase();
+                    
+                    // Skip duties without break times for half duties
+                    if (halfIndicator != null && (breakStartStr == 'nan' || breakEndStr == 'nan')) {
+                      continue; // Skip duties without breaks for half duties
                     }
                     
-                    final dutyCode = parts[0].trim();
                     if (dutyCode.isNotEmpty && !seenDuties.contains(dutyCode)) {
                       seenDuties.add(dutyCode);
                       duties.add(dutyCode);
@@ -977,13 +1259,17 @@ class _EventCardState extends State<EventCard> {
                       final parts = line.split(',');
                       if (parts.length < 5) continue;
                       
-                      // Check if this is a workout duty (nan,nan)
-                      if (parts[2].trim().toLowerCase() == 'nan' && 
-                          parts[3].trim().toLowerCase() == 'nan') {
-                        continue; // Skip workout duties
+                      // For half duties (A or B), only include duties that have break times
+                      // For full duties, include all duties
+                      final dutyCode = parts[0].trim();
+                      final breakStartStr = parts[2].trim().toLowerCase();
+                      final breakEndStr = parts[3].trim().toLowerCase();
+                      
+                      // Skip duties without break times for half duties
+                      if (halfIndicator != null && (breakStartStr == 'nan' || breakEndStr == 'nan')) {
+                        continue; // Skip duties without breaks for half duties
                       }
                       
-                      final dutyCode = parts[0].trim();
                       if (dutyCode.isNotEmpty && !seenDuties.contains(dutyCode)) {
                         seenDuties.add(dutyCode);
                         duties.add(dutyCode);
@@ -1089,6 +1375,7 @@ class _EventCardState extends State<EventCard> {
                   },
                 ),
                 
+                
                 const SizedBox(height: 16),
                 const Text('Duty:', style: TextStyle(fontWeight: FontWeight.bold)),
                 isLoading
@@ -1147,9 +1434,18 @@ class _EventCardState extends State<EventCard> {
                       );
                       
                       // Add the half indicator if this is a half duty
-                      final newDuty = halfIndicator != null 
-                          ? '$selectedDuty$halfIndicator'
-                          : selectedDuty;
+                      String newDuty;
+                      if (selectedZone == 'Uni/Euro') {
+                        // For UNI/EURO duties, add the UNI: prefix
+                        newDuty = halfIndicator != null 
+                            ? 'UNI:$selectedDuty$halfIndicator'
+                            : 'UNI:$selectedDuty';
+                      } else {
+                        // For regular zone duties
+                        newDuty = halfIndicator != null 
+                            ? '$selectedDuty$halfIndicator'
+                            : selectedDuty;
+                      }
                       
                       // Initialize or update the assignedDuties list
                       if (widget.event.assignedDuties == null) {
@@ -1282,7 +1578,7 @@ class _EventCardState extends State<EventCard> {
                     children: [
                       Expanded(
                         child: Text(
-                          'Assigned: ${duty['dutyCode']}',
+                          'Assigned: ${duty['dutyCode']} | ${_formatTimeString(duty['startTime'])} to ${_formatTimeString(duty['endTime'])}',
                           style: TextStyle(
                             color: Theme.of(context).brightness == Brightness.dark
                                 ? Colors.white
@@ -1333,6 +1629,20 @@ class _EventCardState extends State<EventCard> {
                           } else {
                             // Reload duty details for the remaining duty
                             await _loadAssignedDutyDetails();
+                          }
+                          
+                          // Refresh the UI by notifying the parent widget
+                          if (mounted) {
+                            setState(() {}); // Force a rebuild of this widget
+                            // Notify parent to rebuild without showing edit dialog
+                            widget.onEdit(Event(
+                              id: 'refresh_trigger',
+                              title: '',
+                              startDate: widget.event.startDate,
+                              startTime: widget.event.startTime,
+                              endDate: widget.event.endDate,
+                              endTime: widget.event.endTime,
+                            ));
                           }
                         },
                         style: OutlinedButton.styleFrom(
@@ -1428,6 +1738,15 @@ class _EventCardState extends State<EventCard> {
 
     // Use map and separate with SizedBox for consistent spacing
     final dutyWidgets = _allDutyDetails.map((duty) {
+      // Check if this is a UNI duty
+      final dutyCode = duty['dutyCode'] ?? '';
+      final isUniDuty = dutyCode.startsWith('UNI:');
+      
+      // Format the display duty code - remove UNI: prefix if present
+      final displayDutyCode = isUniDuty 
+          ? dutyCode.substring(4) // Remove 'UNI:' prefix
+          : dutyCode;
+      
       // Calculate work duration for this duty
       String workDuration = '';
       if (duty['startTime'] != null && duty['endTime'] != null) {
@@ -1456,55 +1775,89 @@ class _EventCardState extends State<EventCard> {
         }
       }
 
-      return Row(
+      final isHalfDuty = duty['isHalfDuty'] == 'true';
+      final isFirstHalf = duty['isFirstHalf'] == 'true';
+      final isSecondHalf = duty['isSecondHalf'] == 'true';
+
+      final halfDutyText = isHalfDuty 
+          ? (isFirstHalf ? ' (First Half)' : ' (Second Half)')
+          : '';
+      
+      // Determine duty type for display
+      final dutyTypeText = isUniDuty ? 'UNI/EURO' : 'Zone';
+          
+      // Determine if we need to show break times
+      final hasBreakTimes = duty['breakStart'] != null && duty['breakEnd'] != null;
+
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            Icons.work,
-            size: 16,
-            color: Theme.of(context).brightness == Brightness.dark
-                ? Colors.white
-                : Colors.black,
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Text(
-                    'Assigned: ${duty['dutyCode']} | '
-                    '${duty['startLocation'] ?? ""} - '
-                    '${duty['startTime'] ?? ""} '
-                    '${duty['endTime'] ?? ""} - '
-                    '${duty['endLocation'] ?? ""}',
-                    style: TextStyle(
-                      color: Theme.of(context).brightness == Brightness.dark
-                          ? Colors.white
-                          : Colors.black,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                    ),
-                    overflow: TextOverflow.ellipsis, // Prevent overflow
-                    maxLines: 2, // Allow wrapping if needed
-                  ),
-                ),
-                if (workDuration.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(left: 8.0), // Add padding before work duration
-                    child: Text(
-                      'Work: $workDuration',
-                      style: TextStyle(
-                        color: Theme.of(context).brightness == Brightness.dark
-                            ? Colors.white
-                            : Colors.black,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
+          Row(
+            children: [
+              Icon(
+                Icons.work,
+                size: 16,
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.white
+                    : Colors.black,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        isUniDuty
+                          ? 'Assigned: $displayDutyCode | '
+                            '${_formatTimeString(duty['startTime'])} to '
+                            '${_formatTimeString(duty['endTime'])}$halfDutyText'
+                          : 'Assigned: $displayDutyCode | '
+                            '${_formatTimeString(duty['startTime'])} to '
+                            '${_formatTimeString(duty['endTime'])}$halfDutyText',
+                        style: TextStyle(
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.white
+                              : Colors.black,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        overflow: TextOverflow.ellipsis, // Prevent overflow
+                        maxLines: 2, // Allow wrapping if needed
                       ),
                     ),
-                  ),
-              ],
-            ),
+                    if (workDuration.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(left: 8.0), // Add padding before work duration
+                        child: Text(
+                          'Work: $workDuration',
+                          style: TextStyle(
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? Colors.white
+                                : Colors.black,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ],
           ),
+          // Show break times for UNI duties if available
+          if (hasBreakTimes)
+            Padding(
+              padding: const EdgeInsets.only(left: 24.0, top: 4.0),
+              child: Text(
+                'Break: ${_formatTimeString(duty['breakStart'])} - ${_formatTimeString(duty['breakEnd'])}',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: Colors.grey[600],
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ),
         ],
       );
     }).toList();
@@ -1625,5 +1978,19 @@ class _EventCardState extends State<EventCard> {
     }
     // Return original title if not BusCheck or format doesn't match
     return title.isEmpty ? 'Untitled Event' : title;
+  }
+
+  String _formatTimeString(String? timeStr) {
+    if (timeStr == null || timeStr == 'nan') return '--:--';
+    
+    try {
+      final parts = timeStr.split(':');
+      if (parts.length >= 2) {
+        return '${parts[0].padLeft(2, '0')}:${parts[1].padLeft(2, '0')}';
+      }
+    } catch (e) {
+      // Ignore parsing errors
+    }
+    return timeStr;
   }
 }
