@@ -2271,15 +2271,21 @@ class CalendarScreenState extends State<CalendarScreen>
                 ),
               )
             : Column(
-                children: events.map((event) => EventCard(
-                  event: event,
-                  shiftType: getShiftForDate(event.startDate),
-                  shiftInfoMap: _shiftInfoMap,
-                  isBankHoliday: getBankHoliday(event.startDate) != null,
-                  isRestDay: getShiftForDate(event.startDate) == 'R',
-                  onEdit: _editEvent,
-                  onShowNotes: _showNotesDialog, // Pass the function here
-                )).toList(),
+                children: events.map((event) {
+                  // Determine if the shift is spare
+                  final isSpareShift = event.title.startsWith('SP');
+                  
+                  return EventCard(
+                    event: event,
+                    shiftType: getShiftForDate(event.startDate),
+                    shiftInfoMap: _shiftInfoMap,
+                    isBankHoliday: getBankHoliday(event.startDate) != null,
+                    isRestDay: getShiftForDate(event.startDate) == 'R',
+                    // MODIFIED: Use specific delete function for spare shifts
+                    onEdit: isSpareShift ? _deleteSpareEvent : _editEvent,
+                    onShowNotes: _showNotesDialog, // Pass the function here
+                  );
+                }).toList(),
               ),
       ],
     );
@@ -3180,4 +3186,87 @@ class CalendarScreenState extends State<CalendarScreen>
       MaterialPageRoute(builder: (context) => const AllNotesScreen()),
     );
   }
+
+  // --- ADD NEW FUNCTION TO HANDLE SPARE EVENT DELETION ---
+  Future<void> _deleteSpareEvent(Event event) async {
+    final shouldDelete = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Spare Event?'),
+        content: Text('Are you sure you want to delete the spare event "${event.title}" on ${DateFormat('dd/MM/yyyy').format(event.startDate)}?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldDelete == true && mounted) {
+      // Show loading indicator
+      const snackBar = SnackBar(
+        content: Row(
+          children: [
+            SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+              ),
+            ),
+            SizedBox(width: 12),
+            Text('Deleting event...'),
+          ],
+        ),
+        duration: Duration(seconds: 3), // Adjust as needed
+      );
+      ScaffoldMessenger.of(context).showSnackBar(snackBar);
+
+      try {
+        // Delete from local storage
+        await EventService.deleteEvent(event);
+
+        // Optionally delete from Google Calendar if sync enabled
+        final syncEnabled = await StorageService.getBool(AppConstants.syncToGoogleCalendarKey, defaultValue: false);
+        final isSignedIn = await GoogleCalendarService.isSignedIn();
+        if (syncEnabled && isSignedIn) {
+          try {
+            final startDateTime = DateTime(
+              event.startDate.year, event.startDate.month, event.startDate.day,
+              event.startTime.hour, event.startTime.minute,
+            );
+            await CalendarTestHelper.deleteEventFromCalendar(
+              context: context,
+              title: event.title,
+              eventStartTime: startDateTime,
+            );
+          } catch (e) {
+            print('Error deleting spare event from Google Calendar: $e');
+            // Optionally show a less intrusive error if Google sync fails
+          }
+        }
+
+        // Update UI
+        setState(() {});
+        ScaffoldMessenger.of(context).hideCurrentSnackBar(); // Hide loading
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Spare event deleted'), duration: Duration(seconds: 2)),
+        );
+      } catch (e) {
+        print('Error deleting spare event: $e');
+        ScaffoldMessenger.of(context).hideCurrentSnackBar(); // Hide loading
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to delete event: $e'), duration: Duration(seconds: 3)),
+        );
+      }
+    }
+  }
+  // --- END NEW FUNCTION ---
 }

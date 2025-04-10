@@ -852,14 +852,10 @@ class _EventCardState extends State<EventCard> {
       color: cardColor,
       child: InkWell(
         onTap: () {
-          // Use a specialized dialog for spare shifts
-          if (isSpareShift) {
-            _showSpareShiftDialog(context);
-            // FIX: The previous fix for onTap was lost in the reset.
-            // Call onEdit for non-spare shifts.
-          } else { 
-            widget.onEdit(widget.event);
-          }
+          // MODIFIED: Directly call the onEdit callback passed from the parent.
+          // The parent (CalendarScreen) now handles the logic for showing
+          // the appropriate dialog (edit/delete for normal, delete confirm for spare).
+          widget.onEdit(widget.event);
         },
         borderRadius: BorderRadius.circular(AppTheme.borderRadius),
         child: Padding(
