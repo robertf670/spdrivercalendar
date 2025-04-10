@@ -135,26 +135,33 @@ class RosterService {
   static String getShiftFilename(String zoneNumber, String dayOfWeek, DateTime date) {
     // Check if it's a bank holiday
     final isBankHoliday = ShiftService.bankHolidays.any((holiday) => holiday.matchesDate(date));
-    
-    // Determine the correct PZ filename suffix based on the zone number
-    String pzFileSuffix = 'PZ$zoneNumber';
-    
-    // Basic validation - check if zoneNumber is one of the known zones (1, 3, 4)
-    if (!['1', '3', '4'].contains(zoneNumber)) {
-        print("Warning: Unexpected zone number '$zoneNumber' encountered in getShiftFilename. Filename might be incorrect.");
-        // Keep using the potentially incorrect suffix, assuming the file might exist unexpectedly
-        // or allow the file load to fail naturally later.
-    }
-    
-    if (isBankHoliday) {
-      // Use Sunday duties for bank holidays, with the direct PZ suffix
-      return 'SUN_DUTIES_$pzFileSuffix.csv';
-    } else if (dayOfWeek == 'SAT') {
-      return 'SAT_DUTIES_$pzFileSuffix.csv';
-    } else if (dayOfWeek == 'SUN') {
-      return 'SUN_DUTIES_$pzFileSuffix.csv';
+
+    // MODIFIED: Check for Zone 3 first
+    if (zoneNumber == '3') {
+      if (isBankHoliday || dayOfWeek == 'SUN') {
+        return 'NewZone3Sun.csv';
+      } else if (dayOfWeek == 'SAT') {
+        return 'NewZone3Sat.csv';
+      } else {
+        return 'NewZone3M-F.csv';
+      }
     } else {
-      return 'M-F_DUTIES_$pzFileSuffix.csv';
+      // Use old pattern for other zones (1 and 4)
+      String pzFileSuffix = 'PZ$zoneNumber';
+      
+      // Basic validation - check if zoneNumber is one of the known zones (1, 4)
+      if (!['1', '4'].contains(zoneNumber)) {
+          print("Warning: Unexpected zone number '$zoneNumber' encountered in getShiftFilename. Filename might be incorrect.");
+          // Keep using the potentially incorrect suffix
+      }
+      
+      if (isBankHoliday || dayOfWeek == 'SUN') {
+        return 'SUN_DUTIES_$pzFileSuffix.csv';
+      } else if (dayOfWeek == 'SAT') {
+        return 'SAT_DUTIES_$pzFileSuffix.csv';
+      } else {
+        return 'M-F_DUTIES_$pzFileSuffix.csv';
+      }
     }
   }
   

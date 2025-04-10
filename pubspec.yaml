@@ -47,13 +47,10 @@ flutter:
     - assets/
     - assets/bank_holidays.json
     - assets/M-F_DUTIES_PZ1.csv
-    - assets/M-F_DUTIES_PZ3.csv
     - assets/M-F_DUTIES_PZ4.csv
     - assets/SAT_DUTIES_PZ1.csv
-    - assets/SAT_DUTIES_PZ3.csv
     - assets/SAT_DUTIES_PZ4.csv
     - assets/SUN_DUTIES_PZ1.csv
-    - assets/SUN_DUTIES_PZ3.csv
     - assets/SUN_DUTIES_PZ4.csv
     - assets/UNI_7DAYs.csv
     - assets/UNI_M-F.csv
@@ -62,6 +59,9 @@ flutter:
     - assets/Zone3BoardsSun.csv
     - consolidated_saturday_duties.txt
     - consolidated_sunday_duties.txt
+    - assets/NewZone3M-F.csv
+    - assets/NewZone3Sat.csv
+    - assets/NewZone3Sun.csv
     
 
 flutter_launcher_icons:

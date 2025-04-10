@@ -590,10 +590,22 @@ class _EventCardState extends State<EventCard> {
           }
           
           // Determine the filename based on the day of the week and zone
-          final filename = bankHoliday != null ? 'SUN_DUTIES_PZ$zone.csv' :
-                         dayOfWeek == 'saturday' ? 'SAT_DUTIES_PZ$zone.csv' :
-                         dayOfWeek == 'sunday' ? 'SUN_DUTIES_PZ$zone.csv' :
-                         'M-F_DUTIES_PZ$zone.csv';
+          // MODIFIED: Use new filename format for Zone 3
+          final String filename;
+          if (zone == '3') {
+            final dayPrefix = bankHoliday != null ? 'Sun' :
+                              dayOfWeek == 'saturday' ? 'Sat' :
+                              dayOfWeek == 'sunday' ? 'Sun' :
+                              'M-F'; // Default to M-F for weekdays
+            filename = 'NewZone3$dayPrefix.csv';
+          } else {
+            // Use old format for other zones (PZ1, PZ4)
+            final dayPrefix = bankHoliday != null ? 'SUN' :
+                              dayOfWeek == 'saturday' ? 'SAT' :
+                              dayOfWeek == 'sunday' ? 'SUN' :
+                              'M-F';
+            filename = '${dayPrefix}_DUTIES_PZ$zone.csv';
+          }
           
           print('Loading zone duty: $dutyCode, zone: $zone, filename: $filename, searching for duty: $codeWithoutHalf');
                          
@@ -1277,10 +1289,22 @@ class _EventCardState extends State<EventCard> {
                 }
               } else {
                 // Handle regular zone duties
-                final filename = bankHoliday != null ? 'SUN_DUTIES_PZ$zoneNumber.csv' :
-                               dayOfWeek == 'Saturday' ? 'SAT_DUTIES_PZ$zoneNumber.csv' :
-                               dayOfWeek == 'Sunday' ? 'SUN_DUTIES_PZ$zoneNumber.csv' :
-                               'M-F_DUTIES_PZ$zoneNumber.csv';
+                // MODIFIED: Use new filename format for Zone 3
+                final String filename;
+                if (zoneNumber == '3') {
+                  final dayPrefix = bankHoliday != null ? 'Sun' :
+                                    dayOfWeek == 'Saturday' ? 'Sat' :
+                                    dayOfWeek == 'Sunday' ? 'Sun' :
+                                    'M-F'; // Default to M-F for weekdays
+                  filename = 'NewZone3$dayPrefix.csv';
+                } else {
+                  // Use old format for other zones (PZ1, PZ4)
+                  final dayPrefix = bankHoliday != null ? 'SUN' :
+                                    dayOfWeek == 'Saturday' ? 'SAT' :
+                                    dayOfWeek == 'Sunday' ? 'SUN' :
+                                    'M-F';
+                  filename = '${dayPrefix}_DUTIES_PZ$zoneNumber.csv';
+                }
 
                 final file = await rootBundle.loadString('assets/$filename');
                 final lines = file.split('\n');
