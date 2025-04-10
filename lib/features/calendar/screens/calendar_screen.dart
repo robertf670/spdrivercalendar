@@ -382,6 +382,16 @@ class CalendarScreenState extends State<CalendarScreen>
               final dayOfWeek = RosterService.getDayOfWeek(shiftDate);
               final zoneNumber = selectedZone.replaceAll('Zone ', '');
               
+              // Convert full day name to abbreviated format for file loading
+              String dayOfWeekForFilename;
+              if (dayOfWeek == 'Saturday') {
+                dayOfWeekForFilename = 'SAT';
+              } else if (dayOfWeek == 'Sunday') {
+                dayOfWeekForFilename = 'SUN';
+              } else {
+                dayOfWeekForFilename = 'M-F';
+              }
+              
               // Handle Spare and Uni/Euro differently
               if (selectedZone == 'Spare') {
                 // For Spare, create shift options using just the time
@@ -490,7 +500,7 @@ class CalendarScreenState extends State<CalendarScreen>
                 }
               } else {
                 // Regular zone shifts - preserve CSV file order
-                final filename = RosterService.getShiftFilename(zoneNumber, dayOfWeek, shiftDate);
+                final filename = RosterService.getShiftFilename(zoneNumber, dayOfWeekForFilename, shiftDate);
                 
                 try {
                   final csv = await rootBundle.loadString('assets/$filename');
@@ -713,6 +723,16 @@ class CalendarScreenState extends State<CalendarScreen>
     String csvPath;
     String currentDayType = ''; // Day type code used in the specific CSV
 
+    // Convert full day name to abbreviated format for file loading
+    String dayOfWeekForFilename;
+    if (dayOfWeek == 'Saturday') {
+      dayOfWeekForFilename = 'SAT';
+    } else if (dayOfWeek == 'Sunday') {
+      dayOfWeekForFilename = 'SUN';
+    } else {
+      dayOfWeekForFilename = 'M-F';
+    }
+
     // Determine the correct CSV path and day type string based on zone
     if (zone == 'Bus Check') {
       csvPath = 'assets/buscheck.csv';
@@ -731,7 +751,7 @@ class CalendarScreenState extends State<CalendarScreen>
       csvPath = 'assets/UNI_7DAYs.csv'; 
     } else {
       // Regular Zones (1, 3, 4)
-      csvPath = 'assets/${RosterService.getShiftFilename(zoneNumber, dayOfWeek, shiftDate)}';
+      csvPath = 'assets/${RosterService.getShiftFilename(zoneNumber, dayOfWeekForFilename, shiftDate)}';
       // For PZ shifts, we don't need currentDayType as we match shift code directly
     }
 

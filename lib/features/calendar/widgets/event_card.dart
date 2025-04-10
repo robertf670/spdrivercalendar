@@ -131,6 +131,16 @@ class _EventCardState extends State<EventCard> {
       final dayOfWeek = RosterService.getDayOfWeek(widget.event.startDate);
       final bankHoliday = ShiftService.getBankHoliday(widget.event.startDate, ShiftService.bankHolidays);
       
+      // Convert full day name to abbreviated format for file loading
+      String dayOfWeekForFilename;
+      if (dayOfWeek == 'Saturday') {
+        dayOfWeekForFilename = 'SAT';
+      } else if (dayOfWeek == 'Sunday') {
+        dayOfWeekForFilename = 'SUN';
+      } else {
+        dayOfWeekForFilename = 'M-F';
+      }
+      
       // Find zone number from the shift code
       String zoneNumber = '1'; // Default to zone 1
       final match = RegExp(r'PZ(\d+)/').firstMatch(shiftCode);
@@ -139,7 +149,7 @@ class _EventCardState extends State<EventCard> {
       }
       
       // Get the appropriate filename based on day of week and bank holiday status
-      final filename = RosterService.getShiftFilename(zoneNumber, dayOfWeek, widget.event.startDate);
+      final filename = RosterService.getShiftFilename(zoneNumber, dayOfWeekForFilename, widget.event.startDate);
       
       // Load the CSV file
       final file = await rootBundle.loadString('assets/$filename');

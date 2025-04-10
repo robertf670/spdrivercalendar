@@ -165,7 +165,17 @@ class ShiftService {
       if (isBankHoliday) {
       }
     
-      final filename = RosterService.getShiftFilename(zoneNumber, dayOfWeek, date);
+      // Convert full day name to abbreviated format for file loading
+      String dayOfWeekForFilename;
+      if (dayOfWeek == 'Saturday') {
+        dayOfWeekForFilename = 'SAT';
+      } else if (dayOfWeek == 'Sunday') {
+        dayOfWeekForFilename = 'SUN';
+      } else {
+        dayOfWeekForFilename = 'M-F';
+      }
+      
+      final filename = RosterService.getShiftFilename(zoneNumber, dayOfWeekForFilename, date);
       
       try {
         final file = await rootBundle.loadString('assets/$filename');
