@@ -15,7 +15,11 @@ class AppTheme {
     'L': Color(0xFFFF9800), // Late - Orange
     'M': Color(0xFF9575CD), // Middle - Purple
     'R': Color(0xFF42A5F5), // Rest - Blue
+    // 'BC': Color(0xFF4DB6AC), // Bus Check - Teal <-- Commented out as BC shifts use standard roster colors
   };
+
+  // Add holiday color constant
+  static const Color holidayColor = Color(0xFF00BCD4); // Teal color for holidays
 
   // Border radius
   static const double borderRadius = 12.0;

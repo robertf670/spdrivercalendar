@@ -470,6 +470,8 @@ class _EventCardState extends State<EventCard> {
     
     // Check if it's a Spare shift
     final isSpareShift = isWorkShift && widget.event.title.startsWith('SP');
+    // ADD: Check if it's a BusCheck shift
+    final bool isBusCheckShift = widget.event.title.startsWith('BusCheck');
     
     // Special styling for holiday events
     if (widget.event.isHoliday) {
@@ -565,7 +567,9 @@ class _EventCardState extends State<EventCard> {
           // Use a specialized dialog for spare shifts
           if (isSpareShift) {
             _showSpareShiftDialog(context);
-          } else if (!widget.event.title.contains('A') && !widget.event.title.contains('B')) {
+            // FIX: The previous fix for onTap was lost in the reset.
+            // Call onEdit for non-spare shifts.
+          } else { 
             widget.onEdit(widget.event);
           }
         },
@@ -581,7 +585,8 @@ class _EventCardState extends State<EventCard> {
                 children: [
                   Expanded(
                     child: Text(
-                      widget.event.title.isEmpty ? 'Untitled Event' : widget.event.title,
+                      // Format title: Add space for BusCheck, otherwise use original title
+                      _formatDisplayTitle(widget.event.title),
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
@@ -767,8 +772,8 @@ class _EventCardState extends State<EventCard> {
                 ],
               ),
               const SizedBox(height: 6.0),
-              // Break times row (if available)
-              if (breakTime != null) ...[
+              // MODIFIED: Break times row (if available AND NOT BusCheck)
+              if (breakTime != null && !isBusCheckShift) ...[
                 Row(
                   children: [
                     Icon(
@@ -845,8 +850,12 @@ class _EventCardState extends State<EventCard> {
                   ],
                 ],
               ),
-              // Bus assignment row
-              if (widget.event.firstHalfBus != null || widget.event.secondHalfBus != null) ...[
+              // --- Debug Print --- 
+              // print('Event: ${widget.event.title}, isBusCheck: $isBusCheckShift, bus1: ${widget.event.firstHalfBus}, bus2: ${widget.event.secondHalfBus}');
+              // --- End Debug Print --- 
+
+              // MODIFIED: Bus assignment row (Only show if NOT BusCheck AND bus data exists)
+              if (!isBusCheckShift && (widget.event.firstHalfBus != null || widget.event.secondHalfBus != null)) ...[
                 Row(
                   children: [
                     Icon(
@@ -1590,5 +1599,21 @@ class _EventCardState extends State<EventCard> {
         ],
       ),
     );
+  }
+
+  // Add helper function to format the title
+  String _formatDisplayTitle(String title) {
+    if (title.startsWith('BusCheck')) {
+      // Use RegExp to find the number part and insert a space
+      final match = RegExp(r'^BusCheck(\d+)$').firstMatch(title);
+      if (match != null && match.groupCount >= 1) {
+        final numberPart = match.group(1);
+        if (numberPart != null) {
+            return 'Bus Check $numberPart';
+        }
+      }
+    }
+    // Return original title if not BusCheck or format doesn't match
+    return title.isEmpty ? 'Untitled Event' : title;
   }
 }

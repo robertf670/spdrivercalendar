@@ -169,6 +169,7 @@ class Event {
   bool get isWorkShift => title.startsWith('Shift:') || 
                          title.startsWith('SP') || 
                          title.startsWith('PZ') || 
+                         title.startsWith('BusCheck') ||
                          RegExp(r'^\d+/').hasMatch(title);
   
   // Get shift code - properly handle shift codes

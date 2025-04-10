@@ -449,6 +449,45 @@ class CalendarScreenState extends State<CalendarScreen>
                     shiftNumbers.add(shift);
                   }
                 }
+              } else if (selectedZone == 'Bus Check') { // ADDED: Handle Bus Check zone
+                try {
+                  final csv = await rootBundle.loadString('assets/buscheck.csv');
+                  final lines = csv.split('\n');
+                  shiftNumbers = [];
+                  final seenShifts = <String>{};
+                  String currentDayType = ''; // Map RosterService output to CSV values
+
+                  // Determine day type string for CSV matching
+                  // RosterService treats Bank Holidays as Sunday
+                  if (dayOfWeek == 'Saturday') {
+                    currentDayType = 'SAT';
+                  } else if (dayOfWeek == 'Sunday') {
+                    currentDayType = 'SUN';
+                  } else { // Monday - Friday
+                    currentDayType = 'MF'; 
+                  }
+
+                  // Skip the header line (first line)
+                  for (int i = 1; i < lines.length; i++) {
+                    final line = lines[i].trim().replaceAll('\r', '');
+                    if (line.isEmpty) continue;
+                    final parts = line.split(',');
+                    // Expecting format: duty,day,start,finish
+                    if (parts.length >= 2) {
+                      final shiftName = parts[0].trim();
+                      final shiftDayType = parts[1].trim();
+
+                      // Add shift if day type matches and it's not already added
+                      if (shiftDayType == currentDayType && shiftName.isNotEmpty && !seenShifts.contains(shiftName)) {
+                        seenShifts.add(shiftName);
+                        shiftNumbers.add(shiftName);
+                      }
+                    }
+                  }
+                } catch (e) {
+                  shiftNumbers = [];
+                  print('Error loading shifts for Bus Check: $e');
+                }
               } else {
                 // Regular zone shifts - preserve CSV file order
                 final filename = RosterService.getShiftFilename(zoneNumber, dayOfWeek, shiftDate);
@@ -504,7 +543,7 @@ class CalendarScreenState extends State<CalendarScreen>
                 DropdownButton<String>(
                   value: selectedZone,
                   isExpanded: true,
-                  items: ['Zone 1', 'Zone 3', 'Zone 4', 'Spare', 'Uni/Euro'].map((zone) {
+                  items: ['Zone 1', 'Zone 3', 'Zone 4', 'Spare', 'Uni/Euro', 'Bus Check'].map((zone) {
                     return DropdownMenuItem(
                       value: zone,
                       child: Text(zone),
@@ -570,8 +609,11 @@ class CalendarScreenState extends State<CalendarScreen>
                         title = 'SP$timeWithoutColon';
                       } else if (selectedZone == 'Uni/Euro') {
                         title = selectedShiftNumber;
+                      } else if (selectedZone == 'Bus Check') { // ADDED: Set title for Bus Check
+                        title = selectedShiftNumber; // Use the selected duty name (e.g., BusCheck1)
                       } else {
-                        title = selectedShiftNumber;
+                        // Regular PZ shifts
+                        title = selectedShiftNumber; // Title is the shift code (e.g., PZ1/01)
                       }
                       
                       // Load shift times based on zone
@@ -615,6 +657,15 @@ class CalendarScreenState extends State<CalendarScreen>
                         shiftTimes = await _getShiftTimes(selectedZone, selectedShiftNumber, shiftDate);
                       }
                       
+                      // Handle potential null shiftTimes (error loading CSV etc.)
+                      if (shiftTimes == null) {
+                         print('Error: Could not retrieve shift times for $selectedZone - $selectedShiftNumber');
+                          ScaffoldMessenger.of(dialogContext).showSnackBar(
+                            const SnackBar(content: Text('Error retrieving shift times. Please try again.')),
+                          );
+                         return; // Stop execution if times are null
+                      }
+                      
                       // Create the event with non-null assurances
                       final event = Event(
                         id: DateTime.now().millisecondsSinceEpoch.toString(),
@@ -653,90 +704,180 @@ class CalendarScreenState extends State<CalendarScreen>
   }
 
   // Get shift times from CSV file
-  Future<Map<String, dynamic>> _getShiftTimes(String zone, String shiftNumber, DateTime shiftDate) async {
+  Future<Map<String, dynamic>?> _getShiftTimes(String zone, String shiftNumber, DateTime shiftDate) async { // Return type changed to nullable
     print('Getting shift times for zone: $zone, shift: $shiftNumber, date: $shiftDate');
-    
-    // Get the appropriate CSV file using RosterService
+
+    // RosterService handles Bank Holidays internally by returning 'Sunday'
     final dayOfWeek = RosterService.getDayOfWeek(shiftDate);
     final zoneNumber = zone.replaceAll("Zone ", "");
-    final csvPath = 'assets/${RosterService.getShiftFilename(zoneNumber, dayOfWeek, shiftDate)}';
-    print('Loading CSV file: $csvPath');
+    String csvPath;
+    String currentDayType = ''; // Day type code used in the specific CSV
+
+    // Determine the correct CSV path and day type string based on zone
+    if (zone == 'Bus Check') {
+      csvPath = 'assets/buscheck.csv';
+      // Map RosterService output to BusCheck CSV day codes
+      if (dayOfWeek == 'Saturday') {
+        currentDayType = 'SAT';
+      } else if (dayOfWeek == 'Sunday') {
+        currentDayType = 'SUN';
+      } else { // Monday - Friday
+        currentDayType = 'MF'; 
+      }
+    } else if (zone == 'Uni/Euro') {
+      // Uni/Euro logic requires checking multiple files based on day type.
+      // We'll handle this directly within the loop for Uni/Euro below.
+      // Setting a dummy path here, won't be used directly.
+      csvPath = 'assets/UNI_7DAYs.csv'; 
+    } else {
+      // Regular Zones (1, 3, 4)
+      csvPath = 'assets/${RosterService.getShiftFilename(zoneNumber, dayOfWeek, shiftDate)}';
+      // For PZ shifts, we don't need currentDayType as we match shift code directly
+    }
+
+    print('Loading CSV(s) for $zone: $csvPath (and potentially others for Uni/Euro)');
 
     try {
+       // --- Handle Uni/Euro Separately (Needs multiple file checks) --- 
+       if (zone == 'Uni/Euro') {
+         bool isWeekend = dayOfWeek == 'Saturday' || dayOfWeek == 'Sunday';
+         List<String> filesToTry = ['assets/UNI_7DAYs.csv'];
+         if (!isWeekend) {
+             filesToTry.add('assets/UNI_M-F.csv');
+         }
+
+         for (final filePath in filesToTry) {
+            try {
+                final csv = await rootBundle.loadString(filePath);
+                final lines = csv.split('\n');
+                for (final line in lines) {
+                    if (line.trim().isEmpty) continue;
+                    final parts = line.split(',');
+                    if (parts.length >= 5 && parts[0].trim() == shiftNumber) {
+                        print('Found Uni/Euro shift in $filePath');
+                        final startTimeRaw = parts[1].trim();
+                        final endTimeRaw = parts[4].trim();
+                        
+                        if (startTimeRaw.isNotEmpty && endTimeRaw.isNotEmpty) {
+                          final startTime = _parseTimeOfDay(startTimeRaw);
+                          final endTime = _parseTimeOfDay(endTimeRaw);
+                          
+                          if (startTime != null && endTime != null) {
+                              final isNextDay = endTime.hour < startTime.hour || 
+                                                (endTime.hour == startTime.hour && endTime.minute < startTime.minute);
+                              return {
+                                  'startTime': startTime,
+                                  'endTime': endTime,
+                                  'isNextDay': isNextDay,
+                              };
+                          } else {
+                             print('Error parsing Uni/Euro times: $startTimeRaw, $endTimeRaw');
+                          }
+                        } else {
+                           print('Empty Uni/Euro times found for $shiftNumber in $filePath');
+                        }
+                    }
+                }
+            } catch (e) {
+                print("Error reading or parsing $filePath: $e");
+                // Continue to next file if one fails
+            }
+         }
+         print('Uni/Euro shift $shiftNumber not found in applicable files.');
+         return null; // Not found after checking relevant files
+       }
+
+       // --- Handle BusCheck and Regular Zones (Single file check) --- 
       final csv = await rootBundle.loadString(csvPath);
       final lines = csv.split('\n');
-      
+
       // Skip header row
       for (int i = 1; i < lines.length; i++) {
-        final line = lines[i].trim();
+        final line = lines[i].trim().replaceAll('\r', '');
         if (line.isEmpty) continue;
-        
+
         final parts = line.split(',');
-        if (parts.length < 15) continue;
-        
-        // Get the shift code from the CSV (format: PZ1/01)
-        final csvShiftCode = parts[0].trim();
-        print('Comparing CSV shift code: $csvShiftCode with event shift: $shiftNumber');
-        
-        // Normalize both codes for comparison
-        final normalizedCsvCode = csvShiftCode.replaceAll('PZ', '').replaceAll('/', '');
-        final normalizedEventCode = shiftNumber.replaceAll('PZ', '').replaceAll('/', '');
-        print('Normalized codes - CSV: $normalizedCsvCode, Event: $normalizedEventCode');
-        
-        if (normalizedCsvCode == normalizedEventCode) {
-          print('Found matching shift code');
-          final shiftData = ShiftData(
-            shift: parts[0],
-            duty: parts[1],
-            report: parts[2],
-            depart: parts[3],
-            location: parts[4],
-            startBreak: parts[5],
-            startBreakLocation: parts[6],
-            breakReport: parts[7],
-            finishBreak: parts[8],
-            finishBreakLocation: parts[9],
-            finish: parts[10],
-            finishLocation: parts[11],
-            signOff: parts[12],
-            spread: parts[13],
-            work: parts[14],
-            relief: parts.length > 15 ? parts[15] : '',
-          );
-          
-          // Parse report and sign-off times
-          final reportTime = shiftData.report.split(':');
-          final signOffTime = shiftData.signOff.split(':');
-          
-          // Use null-safe parsing with default values
-          final startHour = int.tryParse(reportTime[0]) ?? 9;
-          final startMinute = int.tryParse(reportTime[1]) ?? 0;
-          final endHour = int.tryParse(signOffTime[0]) ?? 17;
-          final endMinute = int.tryParse(signOffTime[1]) ?? 0;
-          
-          // Check if end time is on next day
-          final isNextDay = endHour < startHour || (endHour == startHour && endMinute < startMinute);
-          
-          print('Parsed times - Start: $startHour:$startMinute, End: $endHour:$endMinute, Next Day: $isNextDay');
-          
-          return {
-            'startTime': TimeOfDay(hour: startHour, minute: startMinute),
-            'endTime': TimeOfDay(hour: endHour, minute: endMinute),
-            'isNextDay': isNextDay,
-          };
+
+        // === Handle Bus Check CSV format ===
+        if (zone == 'Bus Check') {
+           // Expecting format: duty,day,start,finish
+          if (parts.length >= 4) {
+            final csvShiftCode = parts[0].trim();
+            final csvDayType = parts[1].trim();
+            
+            if (csvShiftCode == shiftNumber && csvDayType == currentDayType) {
+              print('Found matching Bus Check shift');
+              final startTime = _parseTimeOfDay(parts[2].trim());
+              final endTime = _parseTimeOfDay(parts[3].trim());
+
+              if (startTime != null && endTime != null) {
+                 final isNextDay = endTime.hour < startTime.hour || 
+                                   (endTime.hour == startTime.hour && endTime.minute < startTime.minute);
+                 print('Parsed Bus Check times - Start: ${startTime.hour}:${startTime.minute}, End: ${endTime.hour}:${endTime.minute}, Next Day: $isNextDay');
+                 return {
+                   'startTime': startTime,
+                   'endTime': endTime,
+                   'isNextDay': isNextDay,
+                 };
+              } else {
+                 print('Error parsing Bus Check times for $shiftNumber: ${parts[2]}, ${parts[3]}');
+              }
+            }
+          }
+        }
+        // === Handle Regular Zone CSV format ===
+        else {
+          // Expecting PZ format (index 0 is shift, 2 is report, 12 is signOff)
+          if (parts.length >= 13) { 
+             final csvShiftCode = parts[0].trim();
+             // No need to normalize PZ codes if shiftNumber is passed correctly (e.g. PZ1/01)
+             if (csvShiftCode == shiftNumber) {
+                print('Found matching PZ shift code');
+                final startTime = _parseTimeOfDay(parts[2].trim()); // Report time
+                final endTime = _parseTimeOfDay(parts[12].trim()); // SignOff time
+
+                if (startTime != null && endTime != null) {
+                    final isNextDay = endTime.hour < startTime.hour || 
+                                      (endTime.hour == startTime.hour && endTime.minute < startTime.minute);
+                    print('Parsed PZ times - Start: ${startTime.hour}:${startTime.minute}, End: ${endTime.hour}:${endTime.minute}, Next Day: $isNextDay');
+                    return {
+                      'startTime': startTime,
+                      'endTime': endTime,
+                      'isNextDay': isNextDay,
+                    };
+                } else {
+                   print('Error parsing PZ times for $shiftNumber: ${parts[2]}, ${parts[12]}');
+                }
+             }
+          }
         }
       }
     } catch (e) {
-      print('Error loading CSV file: $e');
+      print('Error loading or parsing CSV file ($csvPath): $e');
+       return null; // Return null on error
     }
-    
-    // Default times if no match found
-    print('No matching shift found, using default times');
-    return {
-      'startTime': const TimeOfDay(hour: 9, minute: 0),
-      'endTime': const TimeOfDay(hour: 17, minute: 0),
-      'isNextDay': false,
-    };
+
+    // No match found or error occurred
+    print('No matching shift found or error occurred for $zone / $shiftNumber, returning null');
+    return null; // Return null if no match found
+  }
+  
+  // Helper function to parse HH:MM strings into TimeOfDay
+  TimeOfDay? _parseTimeOfDay(String? timeString) {
+    if (timeString == null || timeString.isEmpty) return null;
+    try {
+      final parts = timeString.split(':');
+      if (parts.length >= 2) {
+        final hour = int.tryParse(parts[0]);
+        final minute = int.tryParse(parts[1]);
+        if (hour != null && minute != null) {
+          return TimeOfDay(hour: hour, minute: minute);
+        }
+      }
+    } catch (e) {
+      print("Error parsing time string '$timeString': $e");
+    }
+    return null;
   }
 
   // Helper to check settings and sync to Google Calendar if enabled
@@ -838,6 +979,20 @@ class CalendarScreenState extends State<CalendarScreen>
       return;
     }
 
+    // --- Format Title for Dialog ---
+    String displayTitle = event.title;
+    if (event.title.startsWith('BusCheck')) {
+      final match = RegExp(r'^BusCheck(\d+)$').firstMatch(event.title);
+      if (match != null && match.groupCount >= 1) {
+        final numberPart = match.group(1);
+        if (numberPart != null) {
+           displayTitle = 'Bus Check $numberPart';
+        }
+      }
+    }
+    if (displayTitle.isEmpty) displayTitle = 'Untitled Event';
+    // --- End Format Title ---
+
     // Show a dialog to edit or delete the event
     showDialog(
       context: context,
@@ -849,7 +1004,7 @@ class CalendarScreenState extends State<CalendarScreen>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                event.title,
+                displayTitle, // Use formatted title
                 style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
               ),
               const SizedBox(height: 4),
@@ -993,7 +1148,7 @@ class CalendarScreenState extends State<CalendarScreen>
               ),
               const SizedBox(height: 8),
               // Add a divider before the bus selection section
-              if (event.isWorkShift) ...[
+              if (event.isWorkShift && !event.title.startsWith('BusCheck')) ...[
                 const Divider(),
                 const SizedBox(height: 8),
                 Container(
@@ -1501,6 +1656,9 @@ class CalendarScreenState extends State<CalendarScreen>
                 const SizedBox(height: 8),
               ],
               const SizedBox(height: 8),
+              // Add Divider before Cancel
+              const Divider(height: 1, thickness: 1),
+              const SizedBox(height: 8), 
               // Cancel button at the bottom
               Center(
                 child: TextButton(
