@@ -13,6 +13,7 @@ import 'package:spdrivercalendar/core/config/flutter_config.dart';
 import 'package:spdrivercalendar/core/widgets/rebuild_text.dart';
 import 'package:spdrivercalendar/services/notification_service.dart';
 import 'package:spdrivercalendar/core/services/cache_service.dart';
+import 'package:spdrivercalendar/services/token_manager.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -114,6 +115,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   void dispose() {
     _isDarkModeNotifier.dispose();
     WidgetsBinding.instance.removeObserver(this);
+    TokenManager.dispose();
     super.dispose();
   }
 

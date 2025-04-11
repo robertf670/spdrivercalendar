@@ -3,6 +3,9 @@ import 'package:googleapis/calendar/v3.dart' as calendar;
 import 'package:extension_google_sign_in_as_googleapis_auth/extension_google_sign_in_as_googleapis_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
+import 'package:spdrivercalendar/services/token_manager.dart';
+import 'dart:convert';
+import 'dart:convert' show jsonDecode;
 
 class GoogleCalendarService {
   // Static GoogleSignIn instance to be used across the app
@@ -27,7 +30,13 @@ class GoogleCalendarService {
       if (isSignedIn) {
         try {
           // Try silent sign in to refresh tokens
-          await _googleSignIn.signInSilently();
+          final account = await _googleSignIn.signInSilently();
+          if (account != null) {
+            final auth = await account.authentication;
+            if (auth.accessToken != null) {
+              _updateTokenExpiration(auth.accessToken!);
+            }
+          }
           print('Silent sign-in executed successfully');
         } catch (e) {
           print('Silent sign-in failed: $e');
@@ -127,6 +136,10 @@ class GoogleCalendarService {
         final currentUser = _googleSignIn.currentUser;
         if (currentUser != null) {
           print('User is already signed in: ${currentUser.email}');
+          final auth = await currentUser.authentication;
+          if (auth.accessToken != null) {
+            _updateTokenExpiration(auth.accessToken!);
+          }
           await saveLoginStatus(true);
           return currentUser;
         }
@@ -136,6 +149,10 @@ class GoogleCalendarService {
       final silentUser = await _googleSignIn.signInSilently();
       if (silentUser != null) {
         print('Silent sign-in successful: ${silentUser.email}');
+        final auth = await silentUser.authentication;
+        if (auth.accessToken != null) {
+          _updateTokenExpiration(auth.accessToken!);
+        }
         await saveLoginStatus(true);
         return silentUser;
       }
@@ -155,6 +172,7 @@ class GoogleCalendarService {
           return null;
         }
         
+        _updateTokenExpiration(auth.accessToken!);
         print('Access token received successfully');
         await saveLoginStatus(true);
         return account;
@@ -166,7 +184,7 @@ class GoogleCalendarService {
     } catch (error) {
       print('Error during sign in: $error');
       await saveLoginStatus(false);
-      return null; // Return null instead of rethrowing to make calling code simpler
+      return null;
     }
   }
   
@@ -190,6 +208,18 @@ class GoogleCalendarService {
         if (silentUser == null) {
           print('Silent sign in failed');
           return null;
+        }
+      }
+
+      // Check if token needs refresh
+      if (TokenManager.needsRefresh()) {
+        print('Token needs refresh, attempting silent sign-in...');
+        final account = await _googleSignIn.signInSilently();
+        if (account != null) {
+          final auth = await account.authentication;
+          if (auth.accessToken != null) {
+            _updateTokenExpiration(auth.accessToken!);
+          }
         }
       }
 
@@ -320,6 +350,28 @@ class GoogleCalendarService {
     } catch (e) {
       print('Error getting authenticated client: $e');
       return null;
+    }
+  }
+
+  // Helper method to update token expiration
+  static void _updateTokenExpiration(String accessToken) {
+    try {
+      // Parse JWT to get expiration time
+      final parts = accessToken.split('.');
+      if (parts.length != 3) return;
+      
+      final payload = parts[1];
+      final normalized = base64Url.normalize(payload);
+      final decoded = utf8.decode(base64Url.decode(normalized));
+      final json = jsonDecode(decoded);
+      
+      if (json['exp'] != null) {
+        final expiration = DateTime.fromMillisecondsSinceEpoch(json['exp'] * 1000);
+        TokenManager.setTokenExpiration(expiration);
+        print('Token expiration set to: $expiration');
+      }
+    } catch (e) {
+      print('Error parsing token expiration: $e');
     }
   }
 }
