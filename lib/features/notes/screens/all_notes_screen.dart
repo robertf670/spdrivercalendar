@@ -19,6 +19,9 @@ class _AllNotesScreenState extends State<AllNotesScreen> {
   bool _isLoading = true;
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = ''; // Store search query state
+  DateTime? _selectedMonth; // Add selected month state
+  int _selectedYear = DateTime.now().year;
+  final List<int> _years = List.generate(6, (index) => DateTime.now().year - index);
 
   @override
   void initState() {
@@ -97,12 +100,20 @@ class _AllNotesScreenState extends State<AllNotesScreen> {
   // --- Combined Filter and Group Logic ---
   void _filterAndGroupNotes() {
     final query = _searchQuery.toLowerCase();
-    List<Event> filtered;
+    List<Event> filtered = _allNotes;
 
-    if (query.isEmpty) {
-      filtered = _allNotes;
-    } else {
-      filtered = _allNotes.where((event) {
+    // Apply month filter if selected
+    if (_selectedMonth != null) {
+      filtered = filtered.where((event) {
+        final eventDate = event.startDate;
+        return eventDate.year == _selectedMonth!.year && 
+               eventDate.month == _selectedMonth!.month;
+      }).toList();
+    }
+
+    // Apply search filter
+    if (query.isNotEmpty) {
+      filtered = filtered.where((event) {
         final titleMatch = event.title.toLowerCase().contains(query);
         final noteMatch = event.notes?.toLowerCase().contains(query) ?? false;
         return titleMatch || noteMatch;
@@ -111,7 +122,7 @@ class _AllNotesScreenState extends State<AllNotesScreen> {
 
     // Group the filtered notes by date key
     setState(() {
-       _groupedNotes = groupBy(filtered, (Event event) => _getGroupKey(event.startDate));
+      _groupedNotes = groupBy(filtered, (Event event) => _getGroupKey(event.startDate));
     });
   }
 
@@ -207,43 +218,258 @@ class _AllNotesScreenState extends State<AllNotesScreen> {
       appBar: AppBar(
         title: const Text('All Notes'),
         elevation: 0,
-      ),
-      body: Column( // Use Column to place Search bar above the list
-        children: [
-          // --- Search Bar --- 
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                hintText: 'Search notes...',
-                prefixIcon: const Icon(Icons.search),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppTheme.borderRadius),
-                  borderSide: BorderSide.none,
-                ),
-                filled: true,
-                fillColor: Theme.of(context).scaffoldBackgroundColor.withAlpha(200),
-                contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
-                 // Add clear button
-                 suffixIcon: _searchQuery.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear),
-                        onPressed: () {
-                          _searchController.clear(); // Clears text, listener calls _filterAndGroupNotes
-                        },
-                      )
-                    : null,
-              ),
+        actions: [
+          // Month picker button
+          TextButton.icon(
+            icon: const Icon(Icons.calendar_month),
+            label: Text(_selectedMonth == null 
+              ? 'All Months' 
+              : DateFormat('MMMM yyyy').format(_selectedMonth!)),
+            onPressed: _showMonthPicker,
+            style: TextButton.styleFrom(
+              foregroundColor: Theme.of(context).appBarTheme.foregroundColor,
             ),
           ),
-          // --- Notes List --- 
-          Expanded( // Make the list take remaining space
-            child: _buildGroupedNotesList(), // Use the new grouped list builder
+        ],
+      ),
+      body: Column(
+        children: [
+          // Search bar with month filter chip
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Row(
+              children: [
+                // Search bar (expanded to take remaining space)
+                Expanded(
+                  child: TextField(
+                    controller: _searchController,
+                    decoration: InputDecoration(
+                      hintText: 'Search notes...',
+                      prefixIcon: const Icon(Icons.search),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(AppTheme.borderRadius),
+                        borderSide: BorderSide.none,
+                      ),
+                      filled: true,
+                      fillColor: Theme.of(context).scaffoldBackgroundColor.withAlpha(200),
+                      contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
+                      suffixIcon: _searchQuery.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear),
+                            onPressed: () {
+                              _searchController.clear();
+                            },
+                          )
+                        : null,
+                    ),
+                  ),
+                ),
+                // Month filter chip (if month is selected)
+                if (_selectedMonth != null)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 8.0),
+                    child: FilterChip(
+                      label: Text(DateFormat('MMM yyyy').format(_selectedMonth!)),
+                      onSelected: (_) {
+                        setState(() {
+                          _selectedMonth = null;
+                          _filterAndGroupNotes();
+                        });
+                      },
+                      selected: true,
+                      showCheckmark: false,
+                      deleteIcon: const Icon(Icons.close, size: 18),
+                      onDeleted: () {
+                        setState(() {
+                          _selectedMonth = null;
+                          _filterAndGroupNotes();
+                        });
+                      },
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: _buildGroupedNotesList(),
           ),
         ],
       ),
     );
+  }
+
+  Future<void> _showMonthPicker() async {
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setModalState) {
+            return Container(
+              decoration: BoxDecoration(
+                color: Theme.of(context).scaffoldBackgroundColor,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Drag handle
+                  Container(
+                    margin: const EdgeInsets.only(top: 8),
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).dividerColor,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  // Header
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Select Month',
+                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: () {
+                            Navigator.pop(context, null);
+                          },
+                          child: const Text('ALL'),
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Year selector
+                  Container(
+                    height: 32,
+                    margin: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.chevron_left),
+                          iconSize: 20,
+                          onPressed: () {
+                            setModalState(() {
+                              _selectedYear = _selectedYear - 1;
+                            });
+                          },
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.surface,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: Theme.of(context).dividerColor,
+                            ),
+                          ),
+                          child: Text(
+                            '$_selectedYear',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.chevron_right),
+                          iconSize: 20,
+                          onPressed: () {
+                            setModalState(() {
+                              _selectedYear = _selectedYear + 1;
+                            });
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Month grid
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: GridView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 6,
+                        childAspectRatio: 1.5,
+                        mainAxisSpacing: 8,
+                        crossAxisSpacing: 8,
+                      ),
+                      itemCount: 12,
+                      itemBuilder: (context, index) {
+                        final month = index + 1;
+                        final date = DateTime(_selectedYear, month);
+                        final isSelected = _selectedMonth != null &&
+                            _selectedMonth!.year == _selectedYear &&
+                            _selectedMonth!.month == month;
+                        final isCurrentMonth = date.year == DateTime.now().year &&
+                            date.month == DateTime.now().month;
+                        
+                        return Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: () {
+                              Navigator.pop(context, date);
+                            },
+                            borderRadius: BorderRadius.circular(8),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: isSelected
+                                    ? Theme.of(context).colorScheme.primary
+                                    : isCurrentMonth
+                                        ? Theme.of(context).colorScheme.primaryContainer.withOpacity(0.2)
+                                        : null,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: isCurrentMonth && !isSelected
+                                      ? Theme.of(context).colorScheme.primary
+                                      : Colors.transparent,
+                                  width: 1,
+                                ),
+                              ),
+                              child: Center(
+                                child: Text(
+                                  DateFormat('MMM').format(date),
+                                  style: TextStyle(
+                                    color: isSelected
+                                        ? Theme.of(context).colorScheme.onPrimary
+                                        : isCurrentMonth
+                                            ? Theme.of(context).colorScheme.primary
+                                            : null,
+                                    fontSize: 12,
+                                    fontWeight: isSelected || isCurrentMonth ? FontWeight.bold : null,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  // Bottom padding for safe area
+                  const SizedBox(height: 16),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    ).then((picked) {
+      if (mounted) {
+        setState(() {
+          _selectedMonth = picked as DateTime?;
+          _filterAndGroupNotes();
+        });
+      }
+    });
   }
 
   // --- New Grouped List Builder ---

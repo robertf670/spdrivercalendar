@@ -72,21 +72,31 @@ class CalendarScreenState extends State<CalendarScreen>
     _animationController.forward();
     WidgetsBinding.instance.addObserver(this);
     
-    // Initialize with current month's events
-    _initializeCurrentMonth();
+    // Initialize with current month's events with error handling
+    _initializeCurrentMonth().catchError((error) {
+      print('Error initializing current month: $error');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Error loading calendar data. Please try again.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    });
   }
 
   Future<void> _initializeCurrentMonth() async {
     try {
       final cacheService = CacheService();
       
-      // Run independent data loading in parallel
+      // Run independent data loading in parallel with error handling
       final results = await Future.wait([
         RestDaysService.initialize(),
         _loadBankHolidays(cacheService),
         _loadHolidaysWithCache(cacheService),
         _loadSettings(),
-      ]);
+      ], eagerError: true);
 
       if (mounted) {
         setState(() {
@@ -3235,10 +3245,24 @@ class CalendarScreenState extends State<CalendarScreen>
 
   // Add this method to handle calendar page changes
   void _onPageChanged(DateTime focusedDay) {
-    _focusedDay = focusedDay;
-    // Preload the new month's events
-    EventService.preloadMonth(focusedDay);
-    // Clear old cache entries periodically
-    EventService.clearOldCache();
+    if (!mounted) return; // Prevent setState after dispose
+    
+    setState(() {
+      _focusedDay = focusedDay;
+    });
+    
+    // Preload the new month's events with error handling
+    try {
+      EventService.preloadMonth(focusedDay);
+    } catch (e) {
+      print('Error preloading month: $e');
+    }
+    
+    // Clear old cache entries periodically with error handling
+    try {
+      EventService.clearOldCache();
+    } catch (e) {
+      print('Error clearing cache: $e');
+    }
   }
 }
