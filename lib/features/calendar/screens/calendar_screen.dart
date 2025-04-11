@@ -63,10 +63,7 @@ class CalendarScreenState extends State<CalendarScreen>
 
   @override
   void initState() {
-    // print("*** initState: Entered ***"); // Basic Debug 1 -- Removed
     super.initState();
-    // print("*** initState: After super.initState() ***"); // Basic Debug 2 -- Removed
-    _initializeData(); // Call the async initialization method
     _selectedDay = DateTime.now();
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 300),
@@ -75,40 +72,31 @@ class CalendarScreenState extends State<CalendarScreen>
     _animationController.forward();
     WidgetsBinding.instance.addObserver(this);
     
-    // Add this line to update all events when the app starts
-    // _updateAllEvents(); // Temporarily comment out if suspected to interfere
-    // print("*** initState: Exiting ***"); // Basic Debug 3 -- Removed
+    // Initialize with current month's events
+    _initializeCurrentMonth();
   }
 
-  Future<void> _initializeData() async {
+  Future<void> _initializeCurrentMonth() async {
     try {
       final cacheService = CacheService();
       
       // Run independent data loading in parallel
       final results = await Future.wait([
-        // Only initialize RestDaysService if not already initialized
         RestDaysService.initialize(),
-        
-        // Try to get bank holidays from cache first
         _loadBankHolidays(cacheService),
-        
-        // Try to get holidays from cache first
         _loadHolidaysWithCache(cacheService),
-        
-        // Load settings
         _loadSettings(),
-        
-        // Try to get events from cache first
-        _loadEvents(cacheService),
       ]);
 
       if (mounted) {
         setState(() {
           _bankHolidays = results[1] as List<BankHoliday>;
           _holidays = results[2] as List<Holiday>;
-          _events = results[4] as Map<DateTime, List<Event>>;
         });
       }
+
+      // Preload current month's events
+      await EventService.preloadMonth(DateTime.now());
     } catch (e) {
       // Handle error appropriately
     }
@@ -144,22 +132,6 @@ class CalendarScreenState extends State<CalendarScreen>
     cacheService.set(cacheKey, holidays, expiration: const Duration(hours: 24));
     
     return holidays;
-  }
-
-  Future<Map<DateTime, List<Event>>> _loadEvents(CacheService cacheService) async {
-    const cacheKey = 'events';
-    
-    // Try to get from cache first
-    final cached = cacheService.get<Map<DateTime, List<Event>>>(cacheKey);
-    if (cached != null) return cached;
-    
-    // If not in cache, load from service
-    final events = await EventService.loadEvents();
-    
-    // Cache the results for 1 hour (events might change more frequently)
-    cacheService.set(cacheKey, events, expiration: const Duration(hours: 1));
-    
-    return events;
   }
 
   Future<void> _loadSettings() async {
@@ -697,8 +669,8 @@ class CalendarScreenState extends State<CalendarScreen>
                       
                       // Force UI refresh immediately after adding an event
                       if (mounted) {
-                        // Reload events directly to ensure we have the latest data
-                        _events = await EventService.loadEvents();
+                        // Preload the current month's events to ensure we have the latest data
+                        await EventService.preloadMonth(_focusedDay);
                         
                         // Update state to show the new event immediately
                         this.setState(() {});
@@ -1966,11 +1938,7 @@ class CalendarScreenState extends State<CalendarScreen>
               _focusedDay = focusedDay;
             });
           },
-          onPageChanged: (focusedDay) {
-            setState(() {
-              _focusedDay = focusedDay;
-            });
-          },
+          onPageChanged: _onPageChanged,
           eventLoader: getEventsForDay,
           calendarStyle: const CalendarStyle(
             outsideDaysVisible: true,
@@ -2962,14 +2930,9 @@ class CalendarScreenState extends State<CalendarScreen>
 
   // Add this new function to update all events
   Future<void> _updateAllEvents() async {
-    try {
-      // Load existing events
-      _events = await EventService.loadEvents();
-      
-      setState(() {});
-    } catch (e) {
-      print('Error updating events: $e');
-    }
+    // Instead of loading all events at once, we'll just preload the current month
+    await EventService.preloadMonth(_focusedDay);
+    setState(() {});
   }
 
   void _showHolidayDialog() {
@@ -3269,4 +3232,13 @@ class CalendarScreenState extends State<CalendarScreen>
     }
   }
   // --- END NEW FUNCTION ---
+
+  // Add this method to handle calendar page changes
+  void _onPageChanged(DateTime focusedDay) {
+    _focusedDay = focusedDay;
+    // Preload the new month's events
+    EventService.preloadMonth(focusedDay);
+    // Clear old cache entries periodically
+    EventService.clearOldCache();
+  }
 }

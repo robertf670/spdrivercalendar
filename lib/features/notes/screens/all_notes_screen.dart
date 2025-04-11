@@ -62,9 +62,8 @@ class _AllNotesScreenState extends State<AllNotesScreen> {
       _isLoading = true;
     });
     try {
-      final eventsMap = await EventService.getEvents(); 
-      final allEvents = eventsMap.values.expand((list) => list).toList();
-      final eventsWithNotes = allEvents.where((event) => event.notes != null && event.notes!.trim().isNotEmpty).toList();
+      // Get all events with notes using the new method
+      final eventsWithNotes = await EventService.getAllEventsWithNotes();
       final uniqueEventsWithNotes = <String, Event>{};
       for (var event in eventsWithNotes) {
          final eventId = event.id;

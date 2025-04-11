@@ -10,59 +10,98 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:spdrivercalendar/features/settings/screens/settings_screen.dart';
 
 class EventService {
-  // In-memory events cache
+  // In-memory events cache with month-based loading
   static Map<DateTime, List<Event>> _events = {};
+  static Map<String, List<Event>> _monthlyCache = {};
+  static DateTime? _lastLoadedMonth;
   
-  // Load events from storage
-  static Future<Map<DateTime, List<Event>>> loadEvents() async {
+  // Load events for a specific month
+  static Future<List<Event>> _loadEventsForMonth(DateTime month) async {
+    final monthKey = '${month.year}-${month.month}';
+    
+    // Check if we already have this month in cache
+    if (_monthlyCache.containsKey(monthKey)) {
+      return _monthlyCache[monthKey]!;
+    }
+    
     final prefs = await SharedPreferences.getInstance();
     final eventsJson = prefs.getString(AppConstants.eventsStorageKey);
     
     if (eventsJson == null || eventsJson.isEmpty) {
-      _events = {};
-      return _events;
+      _monthlyCache[monthKey] = [];
+      return [];
     }
     
     try {
       final Map<String, dynamic> decodedData = jsonDecode(eventsJson);
-      
-      Map<DateTime, List<Event>> loadedEvents = {};
+      List<Event> monthEvents = [];
       
       decodedData.forEach((dateStr, eventsList) {
         final date = DateTime.parse(dateStr);
-        final List<dynamic> eventsData = eventsList;
-        
-        loadedEvents[date] = eventsData
-            .map((eventData) => Event.fromMap(eventData))
-            .toList();
+        if (date.year == month.year && date.month == month.month) {
+          final List<dynamic> eventsData = eventsList;
+          monthEvents.addAll(eventsData.map((eventData) => Event.fromMap(eventData)));
+        }
       });
       
-      _events = loadedEvents;
-      return _events;
+      _monthlyCache[monthKey] = monthEvents;
+      return monthEvents;
     } catch (e) {
-      print('Error loading events: $e');
-      _events = {};
-      return _events;
+      print('Error loading events for month: $e');
+      _monthlyCache[monthKey] = [];
+      return [];
     }
   }
   
-  // Get events (from cache or storage)
-  static Future<Map<DateTime, List<Event>>> getEvents() async {
-    if (_events.isEmpty) {
-      return await loadEvents();
-    }
-    return _events;
-  }
-  
-  // Get events for a specific date
+  // Get events for a specific date (maintains same interface)
   static List<Event> getEventsForDay(DateTime day) {
     // Normalize date to remove time component for lookup
     final normalizedDate = DateTime(day.year, day.month, day.day);
     
+    // If we don't have this date's events, load the month
+    if (!_events.containsKey(normalizedDate)) {
+      _loadEventsForMonth(normalizedDate).then((monthEvents) {
+        // Update the events map with the loaded month's events
+        for (var event in monthEvents) {
+          final eventDate = DateTime(event.startDate.year, event.startDate.month, event.startDate.day);
+          if (!_events.containsKey(eventDate)) {
+            _events[eventDate] = [];
+          }
+          if (!_events[eventDate]!.any((e) => e.id == event.id)) {
+            _events[eventDate]!.add(event);
+          }
+        }
+      });
+    }
+    
     return _events[normalizedDate] ?? [];
   }
   
-  // Add a new event
+  // Preload events for a month (to be called when calendar page changes)
+  static Future<void> preloadMonth(DateTime month) async {
+    if (_lastLoadedMonth != null && 
+        _lastLoadedMonth!.year == month.year && 
+        _lastLoadedMonth!.month == month.month) {
+      return; // Already loaded
+    }
+    
+    await _loadEventsForMonth(month);
+    _lastLoadedMonth = month;
+  }
+  
+  // Clear old cache entries to manage memory
+  static void clearOldCache() {
+    final now = DateTime.now();
+    final threeMonthsAgo = DateTime(now.year, now.month - 3, 1);
+    
+    _monthlyCache.removeWhere((key, _) {
+      final parts = key.split('-');
+      final monthDate = DateTime(int.parse(parts[0]), int.parse(parts[1]), 1);
+      return monthDate.isBefore(threeMonthsAgo);
+    });
+  }
+  
+  // Add a new event (maintains same interface)
   static Future<void> addEvent(Event event) async {
     // Ensure event has an ID
     final eventWithId = event.id == null ? event.copyWith(id: DateTime.now().millisecondsSinceEpoch.toString()) : event;
@@ -91,24 +130,28 @@ class EventService {
       }
 
       if (!_events[normalizedEndDate]!.any((e) => e.id == eventWithId.id)) {
-        // Store the same event instance
         _events[normalizedEndDate]!.add(eventWithId);
       }
     }
 
-    // --- Schedule Notification --- 
+    // Update monthly cache
+    final monthKey = '${normalizedStartDate.year}-${normalizedStartDate.month}';
+    if (!_monthlyCache.containsKey(monthKey)) {
+      _monthlyCache[monthKey] = [];
+    }
+    if (!_monthlyCache[monthKey]!.any((e) => e.id == eventWithId.id)) {
+      _monthlyCache[monthKey]!.add(eventWithId);
+    }
+
+    // Schedule notification if needed
     if (eventWithId.isWorkShift) {
       await _scheduleWorkShiftNotification(eventWithId);
     }
-    // --- End Schedule Notification ---
 
     await _saveEvents();
-    
-    // Return
-    return;
   }
   
-  // Update an existing event
+  // Update an existing event (maintains same interface)
   static Future<void> updateEvent(Event oldEvent, Event newEvent) async {
     // Ensure new event has an ID, preferably the same as the old one
     final eventId = oldEvent.id ?? newEvent.id ?? DateTime.now().millisecondsSinceEpoch.toString();
@@ -191,7 +234,7 @@ class EventService {
     await _saveEvents();
   }
   
-  // Delete an event
+  // Delete an event (maintains same interface)
   static Future<void> deleteEvent(Event event) async {
     // --- Cancel Notification --- 
     if (event.isWorkShift) {
@@ -227,7 +270,7 @@ class EventService {
     await _saveEvents();
   }
   
-  // Save events to storage
+  // Save events to storage (maintains same interface)
   static Future<void> _saveEvents() async {
     final prefs = await SharedPreferences.getInstance();
     
@@ -356,4 +399,34 @@ class EventService {
         print("Error cancelling notification for event ID: ${event.id}: $e");
      }
   }
+
+  // Get all events with notes (for the notes screen)
+  static Future<List<Event>> getAllEventsWithNotes() async {
+    final prefs = await SharedPreferences.getInstance();
+    final eventsJson = prefs.getString(AppConstants.eventsStorageKey);
+    
+    if (eventsJson == null || eventsJson.isEmpty) {
+      return [];
+    }
+    
+    try {
+      final Map<String, dynamic> decodedData = jsonDecode(eventsJson);
+      List<Event> allEvents = [];
+      
+      decodedData.forEach((dateStr, eventsList) {
+        final List<dynamic> eventsData = eventsList;
+        allEvents.addAll(eventsData.map((eventData) => Event.fromMap(eventData)));
+      });
+      
+      // Filter for events with notes and sort by date
+      return allEvents
+        .where((event) => event.notes != null && event.notes!.trim().isNotEmpty)
+        .toList()
+        ..sort((a, b) => b.startDate.compareTo(a.startDate));
+    } catch (e) {
+      print('Error loading all events with notes: $e');
+      return [];
+    }
+  }
 }
+
