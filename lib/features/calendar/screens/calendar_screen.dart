@@ -46,6 +46,7 @@ class CalendarScreenState extends State<CalendarScreen>
   DateTime? _selectedDay;
   DateTime? _startDate;
   int _startWeek = 0;
+  int _selectedYear = DateTime.now().year; // Add this line
   Map<DateTime, List<Event>> _events = {};
   List<BankHoliday>? _bankHolidays;
   List<Holiday> _holidays = [];
@@ -1977,159 +1978,177 @@ class CalendarScreenState extends State<CalendarScreen>
 
   // Add this new method to show month/year picker
   void _showMonthYearPicker() {
-    showDialog(
+    showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
       builder: (BuildContext context) {
-        return Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'Select Month',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setModalState) {
+            return Container(
+              decoration: BoxDecoration(
+                color: Theme.of(context).scaffoldBackgroundColor,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Drag handle
+                  Container(
+                    margin: const EdgeInsets.only(top: 8),
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).dividerColor,
+                      borderRadius: BorderRadius.circular(2),
                     ),
-                    IconButton(
-                      icon: const Icon(Icons.close, size: 20),
-                      onPressed: () => Navigator.of(context).pop(),
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                // Year selector with better styling
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade200,
-                    borderRadius: BorderRadius.circular(12),
                   ),
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.chevron_left),
-                        onPressed: () {
-                          Navigator.of(context).pop();
-                          _showMonthYearPickerForYear(_focusedDay.year - 1);
-                        },
-                        tooltip: 'Previous Year',
-                        splashRadius: 24,
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: AppTheme.primaryColor,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          _focusedDay.year.toString(),
-                          style: const TextStyle(
-                            fontSize: 16, 
+                  // Header
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Select Month',
+                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
                             fontWeight: FontWeight.bold,
-                            color: Colors.white,
                           ),
                         ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.chevron_right),
-                        onPressed: () {
-                          Navigator.of(context).pop();
-                          _showMonthYearPickerForYear(_focusedDay.year + 1);
-                        },
-                        tooltip: 'Next Year',
-                        splashRadius: 24,
-                      ),
-                    ],
+                        TextButton(
+                          onPressed: () {
+                            setState(() {
+                              _focusedDay = DateTime.now();
+                              _selectedDay = DateTime.now();
+                            });
+                            Navigator.pop(context);
+                          },
+                          child: const Text('Current Month'),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                const SizedBox(height: 16),
-                // Months grid with improved styling - more compact and tidier
-                GridView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 4,  // Changed from 3 to 4 columns
-                    childAspectRatio: 2.0,  // Wider than tall for a better look
-                    crossAxisSpacing: 8,  // Reduced spacing
-                    mainAxisSpacing: 8,   // Reduced spacing
-                  ),
-                  itemCount: 12,
-                  itemBuilder: (context, index) {
-                    final month = index + 1;
-                    final isSelected = month == _focusedDay.month;
-                    final monthName = DateFormat('MMM').format(DateTime(2022, month));
-                    
-                    return Material( // Added Material for better ink effect
-                      color: Colors.transparent,
-                      child: InkWell(
-                        onTap: () {
-                          setState(() {
-                            _focusedDay = DateTime(
-                              _focusedDay.year,
-                              month,
-                              1,
-                            );
-                          });
-                          Navigator.of(context).pop();
-                        },
-                        borderRadius: BorderRadius.circular(8),
-                        child: Ink(
+                  // Year selector
+                  Container(
+                    height: 32,
+                    margin: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.chevron_left),
+                          iconSize: 20,
+                          onPressed: () {
+                            setModalState(() {
+                              _selectedYear = _selectedYear - 1;
+                            });
+                          },
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                           decoration: BoxDecoration(
-                            color: isSelected ? AppTheme.primaryColor : Colors.grey.shade100,
-                            borderRadius: BorderRadius.circular(8),
-                            boxShadow: isSelected ? [
-                              BoxShadow(
-                                color: AppTheme.primaryColor.withOpacity(0.3),
-                                blurRadius: 3,
-                                offset: const Offset(0, 1),
-                              )
-                            ] : null,
+                            color: Theme.of(context).colorScheme.surface,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: Theme.of(context).dividerColor,
+                            ),
                           ),
-                          child: Center(
-                            child: Text(
-                              monthName,
-                              style: TextStyle(
-                                fontSize: 14,  // Slightly reduced font size
-                                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                                color: isSelected ? Colors.white : Colors.black87,
-                              ),
+                          child: Text(
+                            '$_selectedYear',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
                             ),
                           ),
                         ),
+                        IconButton(
+                          icon: const Icon(Icons.chevron_right),
+                          iconSize: 20,
+                          onPressed: () {
+                            setModalState(() {
+                              _selectedYear = _selectedYear + 1;
+                            });
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Month grid
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: GridView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 6,
+                        childAspectRatio: 1.5,
+                        mainAxisSpacing: 8,
+                        crossAxisSpacing: 8,
                       ),
-                    );
-                  },
-                ),
-                const SizedBox(height: 8), // Added a bit of bottom padding
-              ],
-            ),
-          ),
+                      itemCount: 12,
+                      itemBuilder: (context, index) {
+                        final month = index + 1;
+                        final date = DateTime(_selectedYear, month);
+                        final isSelected = _focusedDay.year == _selectedYear && 
+                                         _focusedDay.month == month;
+                        final isCurrentMonth = date.year == DateTime.now().year &&
+                                             date.month == DateTime.now().month;
+                        
+                        return Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: () {
+                              setState(() {
+                                _focusedDay = date;
+                                _selectedDay = date;
+                              });
+                              Navigator.pop(context);
+                            },
+                            borderRadius: BorderRadius.circular(8),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: isSelected
+                                    ? Theme.of(context).colorScheme.primary
+                                    : isCurrentMonth
+                                        ? Theme.of(context).colorScheme.primaryContainer.withOpacity(0.2)
+                                        : null,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: isCurrentMonth && !isSelected
+                                      ? Theme.of(context).colorScheme.primary
+                                      : Colors.transparent,
+                                  width: 1,
+                                ),
+                              ),
+                              child: Center(
+                                child: Text(
+                                  DateFormat('MMM').format(date),
+                                  style: TextStyle(
+                                    color: isSelected
+                                        ? Theme.of(context).colorScheme.onPrimary
+                                        : isCurrentMonth
+                                            ? Theme.of(context).colorScheme.primary
+                                            : null,
+                                    fontSize: 12,
+                                    fontWeight: isSelected || isCurrentMonth ? FontWeight.bold : null,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  // Bottom padding for safe area
+                  const SizedBox(height: 16),
+                ],
+              ),
+            );
+          },
         );
       },
     );
-  }
-  
-  // Helper method for showing picker with specific year
-  void _showMonthYearPickerForYear(int year) {
-    setState(() {
-      _focusedDay = DateTime(year, _focusedDay.month, 1);
-    });
-    _showMonthYearPicker();
   }
 
   Widget _buildCalendarDay(DateTime date, {required bool isToday, required bool isOutsideDay}) {
