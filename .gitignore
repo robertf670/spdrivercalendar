@@ -10,6 +10,11 @@
 .svn/
 migrate_working_dir/
 
+# Testing strategy and internal test documentation
+testing_strategy.md
+test_notes.md
+test_planning.md
+
 # IntelliJ related
 *.iml
 *.ipr
