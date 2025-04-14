@@ -154,13 +154,15 @@ class _AboutScreenState extends State<AboutScreen> with TextRenderingMixin {
         _buildFeatureItem('Holiday Tracking',
             'Add and track your given holidays, and any personal holidays alongside your shifts. Keep your holiday schedule organized in one place.'),
         _buildFeatureItem('Boards',
-            'Access Zone 3 boards (for now, will roll out to all zones soon). View detailed shift information and plan your routes effectively.'),
+            'Access Zone 3 boards. (Note: This feature is currently disabled). View detailed shift information and plan your routes effectively.'),
         _buildFeatureItem('Bus Tracking',
             'Add the bus you drove, keep track of buses driven in case you need to note them.'),
         _buildFeatureItem('Event Notes',
             'Add specific notes or reminders to any shift or event directly via the event card.'),
         _buildFeatureItem('Contacts Page',
             'Store and quickly access important phone numbers and contact details.'),
+        _buildFeatureItem('Feedback',
+            'Share your suggestions, report bugs, or provide general feedback directly through the app menu to help improve the application.'),
       ],
     );
   }
@@ -210,13 +212,15 @@ class _AboutScreenState extends State<AboutScreen> with TextRenderingMixin {
         _buildHowToItem('6. Add Holidays',
             'Add your given holidays, and any personal holidays through the Holidays menu to keep track of your time off.'),
         _buildHowToItem('7. View Boards',
-            'Access Zone 3 boards (for now, will roll out to all zones soon) by clicking on a Zone 3 duty in your event list.'),
+            'Access Zone 3 boards by clicking on a Zone 3 duty in your event list. (Note: This feature is currently disabled).'),
         _buildHowToItem('8. Customize',
             'Adjust app settings including dark mode in the Settings screen.'),
         _buildHowToItem('9. Add Notes',
             'Tap an event card and use the "Notes" button to view or edit notes for that specific event.'),
         _buildHowToItem('10. Use Contacts',
             'Access the Contacts page from the side menu to manage your important numbers.'),
+        _buildHowToItem('11. Submit Feedback',
+            'Use the "Feedback" option in the top-right menu to send your thoughts or report issues directly to the developer.'),
       ],
     );
   }

@@ -15,7 +15,7 @@ A specialized Flutter application designed for spare drivers to manage their shi
 - **Zone Types Support**
   - Supports different Zones (Spare, Uni/Euros)
   - Zone-specific duty tracking
-  - Zone 3 boards integration (with more zones coming soon)
+  - Zone 3 boards integration (Currently disabled, with more zones coming soon)
 
 - **Work Shift Tracking**
   - Log work shifts with specific details
@@ -48,6 +48,9 @@ A specialized Flutter application designed for spare drivers to manage their shi
 - **Bus Tracking**
   - Log buses driven
   - Maintain bus history for reference
+
+- **Feedback**
+  - Submit suggestions, bug reports, or general feedback directly via the app menu.
 
 ## Downloading the Application (APK for Android)
 If you prefer not to build the app yourself, you can download the pre-compiled Android application package (.apk) directly from the project's releases page and install it on your Android device.
@@ -93,9 +96,12 @@ Note: Check the GitHub Releases page periodically for updates.
    - View your complete holiday schedule
 
 7. **Board Access**
-   - View Zone 3 boards (more zones coming soon)
+   - View Zone 3 boards (Note: This feature is currently disabled).
    - Access detailed shift information
    - Plan routes effectively
+
+8. **Submit Feedback**
+   - Use the "Feedback" option in the app menu to send feedback to the developer.
 
 ## Support
 

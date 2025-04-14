@@ -58,6 +58,11 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
       'description': 'Quickly access important phone numbers and contact information.',
       'icon': Icons.contacts,
     },
+    {
+      'title': 'Provide Feedback',
+      'description': 'Your feedback is valuable! Use the feedback option in the menu to share your thoughts or report issues.',
+      'icon': Icons.feedback,
+    },
   ];
   
   @override
