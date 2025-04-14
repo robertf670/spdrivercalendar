@@ -54,15 +54,19 @@ class RosterService {
   
   // Get shift for a specific date
   static String getShiftForDate(DateTime date, DateTime startDate, int startWeek) {
-    // Get the day of week (0 = Sunday, 6 = Saturday)
-    final dayOfWeek = date.weekday % 7; // Sunday will be 0, Monday 1, etc.
-    
-    // Calculate how many days have passed since the start date
-    final daysSinceStart = date.difference(startDate).inDays;
-    
+    // Normalize both dates to midnight UTC for consistent comparison
+    final normalizedDate = DateTime.utc(date.year, date.month, date.day);
+    final normalizedStartDate = DateTime.utc(startDate.year, startDate.month, startDate.day);
+
+    // Get the day of week (0 = Sunday, 6 = Saturday) - Use normalized date
+    final dayOfWeek = normalizedDate.weekday % 7; // Sunday will be 0, Monday 1, etc.
+
+    // Calculate how many days have passed since the start date - Use normalized dates
+    final daysSinceStart = normalizedDate.difference(normalizedStartDate).inDays;
+
     // Calculate the week number in the 5-week pattern
     int weekNumber;
-    
+
     // Handle dates in the future or present relative to start date
     if (daysSinceStart >= 0) {
       // Calculate weeks since start date
@@ -71,37 +75,36 @@ class RosterService {
     } 
     // Handle dates before the start date
     else {
-      // First, determine if we're in the same week as the start date
-      // by checking if the date's Sunday is the same as the start date's Sunday
-      final dateSunday = date.subtract(Duration(days: dayOfWeek));
-      final startDateSunday = startDate.subtract(Duration(days: startDate.weekday % 7));
-      
+      // Calculate Sundays using normalized dates
+      final dateSunday = normalizedDate.subtract(Duration(days: dayOfWeek));
+      final startDateSunday = normalizedStartDate.subtract(Duration(days: normalizedStartDate.weekday % 7));
+
       if (dateSunday == startDateSunday) {
         // We're in the same week as the start date, use the same week number
         weekNumber = startWeek;
       } else {
         // We're in a previous week
-        // Calculate how many complete weeks we're going back
+        // Calculate how many complete weeks we're going back - Use normalized Sundays
         final sundayDiff = startDateSunday.difference(dateSunday).inDays ~/ 7;
         weekNumber = (startWeek - sundayDiff + 5) % 5;
       }
     }
-    
+
     // Get the shift pattern for this week
     final pattern = getShiftPattern(weekNumber, '1'); // Using Zone 1 as default
-    
+
     // Get the shift for this day
     final shift = pattern[dayOfWeek];
-    
-    // Debug info
-    // print('Date: ${date.toString()}, Day: ${getDayOfWeek(date)}, dayOfWeek: $dayOfWeek');
-    // print('startDate: ${startDate.toString()}, startWeek: $startWeek');
+
+    // Debug info (using normalized dates)
+    // print('Normalized Date: ${normalizedDate.toString()}, Day: ${getDayOfWeek(normalizedDate)}, dayOfWeek: $dayOfWeek');
+    // print('Normalized startDate: ${normalizedStartDate.toString()}, startWeek: $startWeek');
     // print('daysSinceStart: $daysSinceStart');
     // if (daysSinceStart >= 0) {
     //   print('weeksSinceStart: ${daysSinceStart ~/ 7}');
     // } else {
-    //   final dateSunday = date.subtract(Duration(days: dayOfWeek));
-    //   final startDateSunday = startDate.subtract(Duration(days: startDate.weekday % 7));
+    //   final dateSunday = normalizedDate.subtract(Duration(days: dayOfWeek));
+    //   final startDateSunday = normalizedStartDate.subtract(Duration(days: normalizedStartDate.weekday % 7));
     //   if (dateSunday == startDateSunday) {
     //     print('In same week as start date');
     //   } else {
@@ -110,7 +113,7 @@ class RosterService {
     //   }
     // }
     // print('weekNumber: $weekNumber, pattern: ${pattern.join('')}, shift: $shift');
-    
+
     return shift;
   }
   
