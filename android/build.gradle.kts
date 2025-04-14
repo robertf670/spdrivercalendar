@@ -1,3 +1,15 @@
+// Remove the plugins block we added previously
+/*
+plugins { 
+    id(\"com.android.application\") version \"8.2.0\" apply false
+    id(\"com.android.library\") version \"8.2.0\" apply false
+    id(\"org.jetbrains.kotlin.android\") version \"1.8.22\" apply false 
+    id(\"dev.flutter.flutter-gradle-plugin\") version \"1.0.0\" apply false
+}
+*/
+
+// Top-level build file where configuration options are common to all sub-projects/modules.
+
 allprojects {
     repositories {
         google()
@@ -5,6 +17,7 @@ allprojects {
     }
 }
 
+// Configure build directory (keep existing)
 val newBuildDir: Directory = rootProject.layout.buildDirectory.dir("../../build").get()
 rootProject.layout.buildDirectory.value(newBuildDir)
 

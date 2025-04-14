@@ -19,8 +19,9 @@ class NotificationSettingsGroup extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color? enabledColor = notificationsEnabled ? Theme.of(context).textTheme.bodyLarge?.color : Colors.grey;
-    final Color? enabledIconColor = notificationsEnabled ? Theme.of(context).iconTheme.color : Colors.grey;
+    final Color? disabledColor = Colors.grey;
+    final Color? disabledIconColor = Colors.grey;
+    const bool isGloballyDisabled = true;
 
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 4.0),
@@ -29,57 +30,77 @@ class NotificationSettingsGroup extends StatelessWidget {
       ),
       child: Column(
         children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16.0, 12.0, 16.0, 8.0),
+            child: Text(
+              'Shift notifications are temporarily disabled due to technical issues. We are working on a fix.',
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.error,
+                fontSize: Theme.of(context).textTheme.bodySmall?.fontSize,
+              ),
+            ),
+          ),
+          const Divider(height: 1, indent: 16, endIndent: 16),
           SwitchListTile(
             title: const Text('Enable Shift Notifications'),
             subtitle: const Text('Get notified before your shift starts'),
             secondary: Icon(
-              notificationsEnabled ? Icons.notifications_active : Icons.notifications_off,
-              color: notificationsEnabled ? AppTheme.primaryColor : Colors.grey,
+              Icons.notifications_off,
+              color: disabledIconColor,
             ),
-            value: notificationsEnabled,
-            onChanged: onEnabledChanged,
+            value: false,
+            onChanged: null,
           ),
           const Divider(height: 1, indent: 16, endIndent: 16),
           ListTile(
-            enabled: notificationsEnabled,
+            enabled: !isGloballyDisabled,
             leading: Icon(
               Icons.timer_outlined,
-              color: enabledIconColor,
+              color: disabledIconColor,
             ),
             title: Text(
               'Notify Before Shift',
-              style: TextStyle(color: enabledColor),
+              style: TextStyle(color: disabledColor),
             ),
             trailing: DropdownButton<int>(
               value: notificationOffsetHours,
-              // Disable dropdown if notifications are off
-              onChanged: notificationsEnabled ? onOffsetChanged : null,
-              items: <int>[1, 2, 4] // Allowed hour offsets
+              onChanged: null,
+              items: <int>[1, 2, 4]
                   .map<DropdownMenuItem<int>>((int value) {
                 return DropdownMenuItem<int>(
                   value: value,
-                  child: Text('$value hour${value > 1 ? 's' : ''}'),
+                  child: Text(
+                    '$value hour${value > 1 ? 's' : ''}',
+                    style: TextStyle(color: disabledColor),
+                  ),
                 );
               }).toList(),
+              disabledHint: Text(
+                '$notificationOffsetHours hour${notificationOffsetHours > 1 ? 's' : ''}',
+                style: TextStyle(color: disabledColor),
+              ),
             ),
           ),
           const Divider(height: 1, indent: 16, endIndent: 16),
-           ListTile(
-             enabled: notificationsEnabled,
-             leading: Icon(
-               Icons.notification_important_outlined,
-               color: enabledIconColor,
-             ),
-             title: Text(
-               'Test Notification',
-               style: TextStyle(color: enabledColor),
-             ),
-             trailing: ElevatedButton(
-               // Disable button if notifications are off
-               onPressed: notificationsEnabled ? onTestNotification : null,
-               child: const Text('Send Test'),
-             ),
-           ),
+          ListTile(
+            enabled: !isGloballyDisabled,
+            leading: Icon(
+              Icons.notification_important_outlined,
+              color: disabledIconColor,
+            ),
+            title: Text(
+              'Test Notification',
+              style: TextStyle(color: disabledColor),
+            ),
+            trailing: ElevatedButton(
+              onPressed: null,
+              child: const Text('Send Test'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.grey[300],
+                foregroundColor: Colors.grey[600],
+              ),
+            ),
+          ),
         ],
       ),
     );

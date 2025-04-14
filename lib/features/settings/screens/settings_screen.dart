@@ -154,13 +154,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
           _buildGoogleSyncOption(),
           _buildManualSyncOption(),
           
-          // --- Add Notifications Section --- 
+          // --- Modify Notifications Section --- 
           const Divider(height: 32),
           _buildSectionHeader('Notifications'),
-          _buildNotificationsEnabledSwitch(),
-          _buildNotificationOffsetDropdown(),
-          _buildTestNotificationButton(),
-          _buildViewPendingNotificationsButton(),
+          // Add the warning message here
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
+            child: Text(
+              'Shift notifications are temporarily disabled due to technical issues. We are working on a fix.',
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.error, // Use error color for warning
+                //fontSize: Theme.of(context).textTheme.bodySmall?.fontSize,
+              ),
+            ),
+          ),
+          _buildNotificationsEnabledSwitch(), // This method will be modified below
+          _buildNotificationOffsetDropdown(), // This method will be modified below
+          _buildTestNotificationButton(), // This method will be modified below
+          _buildViewPendingNotificationsButton(), // This method will be modified below
           // --- End Notifications Section --- 
           
           const Divider(height: 32),
@@ -339,12 +350,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
       child: SwitchListTile(
         title: const Text('Enable Shift Notifications'),
         subtitle: const Text('Get notified before your shift starts'),
-        secondary: Icon(
-          _notificationsEnabled ? Icons.notifications_active : Icons.notifications_off,
-          color: _notificationsEnabled ? AppTheme.primaryColor : Colors.grey,
+        secondary: const Icon(
+          Icons.notifications_off, // Force off icon
+          color: Colors.grey, // Force grey
         ),
-        value: _notificationsEnabled,
-        onChanged: _toggleNotificationsEnabled, // Calls the method we added earlier
+        value: false, // Force off value
+        onChanged: null, // *** Disable the switch ***
       ),
     );
   }
@@ -356,33 +367,32 @@ class _SettingsScreenState extends State<SettingsScreen> {
         borderRadius: BorderRadius.circular(AppTheme.borderRadius),
       ),
       child: ListTile(
-        leading: Icon(
+        enabled: false, // Disable the ListTile visually
+        leading: const Icon(
           Icons.timer_outlined,
-          color: _notificationsEnabled ? Theme.of(context).iconTheme.color : Colors.grey,
-          ),
-        title: Text(
+          color: Colors.grey, // Force grey
+        ),
+        title: const Text(
           'Notify Before Shift',
-          style: TextStyle(
-            color: _notificationsEnabled ? Theme.of(context).textTheme.bodyLarge?.color : Colors.grey,
-          )
+          style: TextStyle(color: Colors.grey), // Force grey text
         ),
         trailing: DropdownButton<int>(
           value: _notificationOffsetHours,
-          // Disable dropdown if notifications are off
-          onChanged: _notificationsEnabled 
-            ? (int? newValue) {
-                if (newValue != null) {
-                  _saveNotificationOffset(newValue);
-                }
-              }
-            : null, 
-          items: <int>[1, 2, 4] // Allowed hour offsets
+          onChanged: null, // *** Disable the dropdown ***
+          items: <int>[1, 2, 4]
               .map<DropdownMenuItem<int>>((int value) {
             return DropdownMenuItem<int>(
               value: value,
-              child: Text('$value hour${value > 1 ? 's' : ''}'),
+              child: Text(
+                 '$value hour${value > 1 ? 's' : ''}',
+                 style: const TextStyle(color: Colors.grey), // Force grey item text
+              ),
             );
           }).toList(),
+          disabledHint: Text( // Show hint when disabled
+             '$_notificationOffsetHours hour${_notificationOffsetHours > 1 ? 's' : ''}',
+             style: const TextStyle(color: Colors.grey), 
+          ),
         ),
       ),
     );
@@ -395,29 +405,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
         borderRadius: BorderRadius.circular(AppTheme.borderRadius),
       ),
       child: ListTile(
-        leading: Icon(
+        enabled: false, // Disable the ListTile visually
+        leading: const Icon(
           Icons.notification_important_outlined,
-           color: _notificationsEnabled ? Theme.of(context).iconTheme.color : Colors.grey,
+          color: Colors.grey, // Force grey
         ),
-        title: Text(
-            'Test Notification',
-            style: TextStyle(
-              color: _notificationsEnabled ? Theme.of(context).textTheme.bodyLarge?.color : Colors.grey,
-            )
-          ),
+        title: const Text(
+          'Test Notification',
+          style: TextStyle(color: Colors.grey), // Force grey text
+        ),
         trailing: ElevatedButton(
-          // Disable button if notifications are off
-          onPressed: _notificationsEnabled
-            ? () async {
-                await NotificationService().showTestNotification();
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Test notification sent!')),
-                  );
-                }
-              }
-            : null, 
+          onPressed: null, // *** Disable the button ***
           child: const Text('Send Test'),
+          style: ElevatedButton.styleFrom(
+             backgroundColor: Colors.grey[300],
+             foregroundColor: Colors.grey[600],
+          ),
         ),
       ),
     );
@@ -430,13 +433,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
         borderRadius: BorderRadius.circular(AppTheme.borderRadius),
       ),
       child: ListTile(
-        leading: Icon(
-          Icons.list_alt,
-          color: Theme.of(context).iconTheme.color, // Always enabled visually
+        enabled: false, // Disable the ListTile visually
+        leading: const Icon(
+          Icons.pending_actions_outlined,
+          color: Colors.grey, // Force grey
         ),
-        title: const Text('View Pending Notifications'),
-        trailing: const Icon(Icons.chevron_right),
-        onTap: _showPendingNotifications, // Call the dialog function
+        title: const Text(
+          'View Pending Notifications',
+          style: TextStyle(color: Colors.grey), // Force grey text
+        ),
+        trailing: IconButton(
+          icon: const Icon(Icons.arrow_forward_ios, color: Colors.grey),
+          onPressed: null, // *** Disable the button ***
+        ),
       ),
     );
   }
@@ -615,76 +624,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           SnackBar(content: Text('Error syncing events: $e')),
         );
       }
-    }
-  }
-
-  // --- Dialog Function --- 
-  Future<void> _showPendingNotifications() async {
-    // Show loading indicator while fetching
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => const AlertDialog(
-        content: Row(
-          children: [
-            CircularProgressIndicator(),
-            SizedBox(width: 16), 
-            Text("Fetching..."),
-          ],
-        ),
-      ),
-    );
-
-    try {
-      final List<PendingNotificationRequest> pendingRequests = 
-          await NotificationService().getPendingNotifications();
-      
-      // Close loading dialog
-      Navigator.of(context, rootNavigator: true).pop(); 
-
-      // Show results dialog
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Pending Notifications'),
-          content: SizedBox(
-            width: double.maxFinite,
-            child: pendingRequests.isEmpty
-              ? const Center(child: Text('No pending notifications found.'))
-              : ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: pendingRequests.length,
-                  itemBuilder: (context, index) {
-                    final request = pendingRequests[index];
-                    return Card(
-                      margin: const EdgeInsets.symmetric(vertical: 4.0),
-                      child: ListTile(
-                        title: Text(request.title ?? 'No Title'),
-                        subtitle: Text(
-                          'ID: ${request.id}\nBody: ${request.body ?? 'No Body'}\nPayload: ${request.payload ?? 'None'}',
-                          style: const TextStyle(fontSize: 12.0)
-                        ),
-                        isThreeLine: true,
-                      ),
-                    );
-                  },
-                ),
-          ),
-          actions: [
-            TextButton(
-              child: const Text('Close'),
-              onPressed: () => Navigator.of(context).pop(),
-            ),
-          ],
-        ),
-      );
-    } catch (e) {
-      // Close loading dialog in case of error
-      Navigator.of(context, rootNavigator: true).pop();
-      // Show error message
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error fetching pending notifications: $e')),
-      );
     }
   }
 

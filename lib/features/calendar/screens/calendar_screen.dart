@@ -1023,6 +1023,8 @@ class CalendarScreenState extends State<CalendarScreen>
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
                   // Add View Board button for Zone 3 duties
+                  // Temporarily disabled:
+                  /*
                   if (event.title.contains('PZ3') || event.title.contains('Zone 3'))
                     TextButton(
                       onPressed: () async {
@@ -1065,6 +1067,7 @@ class CalendarScreenState extends State<CalendarScreen>
                       },
                       child: const Text('View Board'),
                     ),
+                  */
                   TextButton(
                     onPressed: () {
                       // Close the current dialog first

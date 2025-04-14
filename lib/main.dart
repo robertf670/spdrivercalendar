@@ -25,6 +25,7 @@ Future<void> main() async {
   final cacheService = CacheService();
   
   // Run independent initializations in parallel
+  // Keep NotificationService().init() here for foreground init
   await Future.wait([
     NotificationService().init(),
     FlutterConfig.configure(),

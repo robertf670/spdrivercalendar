@@ -8,6 +8,7 @@ import android.view.WindowManager
 import android.graphics.Rect
 import android.view.ViewTreeObserver
 import io.flutter.plugin.common.MethodChannel
+import io.flutter.plugins.GeneratedPluginRegistrant
 
 class MainActivity: FlutterActivity() {
     private val CHANNEL = "app.channel/text_rendering"
@@ -45,6 +46,10 @@ class MainActivity: FlutterActivity() {
     }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
+        // Add the registrant call back BEFORE super
+        GeneratedPluginRegistrant.registerWith(flutterEngine)
+
+        // Call super
         super.configureFlutterEngine(flutterEngine)
         
         // Set up method channel
