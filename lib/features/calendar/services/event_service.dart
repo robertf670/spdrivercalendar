@@ -267,6 +267,25 @@ class EventService {
       }
     }
 
+    // --- Update Monthly Cache ---
+    final monthKey = '${normalizedStartDate.year}-${normalizedStartDate.month}';
+    if (_monthlyCache.containsKey(monthKey)) {
+      _monthlyCache[monthKey]!.removeWhere((e) => e.id == event.id);
+      // Optional: Remove month key if list becomes empty
+      // if (_monthlyCache[monthKey]!.isEmpty) {
+      //   _monthlyCache.remove(monthKey);
+      // }
+    }
+    // Also check end date month if different
+    if (event.startDate != event.endDate) {
+      final endMonthKey = '${event.endDate.year}-${event.endDate.month}';
+      if (monthKey != endMonthKey && _monthlyCache.containsKey(endMonthKey)) {
+         _monthlyCache[endMonthKey]!.removeWhere((e) => e.id == event.id);
+         // Optional: Remove key if list becomes empty
+      }
+    }
+    // --- End Update Monthly Cache ---
+
     await _saveEvents();
   }
   

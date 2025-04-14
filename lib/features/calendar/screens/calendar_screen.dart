@@ -1078,6 +1078,9 @@ class CalendarScreenState extends State<CalendarScreen>
                     onPressed: () async {
                       // First close the dialog to make the UI responsive
                       Navigator.of(context).pop();
+
+                      // Capture ScaffoldMessenger BEFORE the async gap
+                      final scaffoldMessenger = ScaffoldMessenger.of(context);
                       
                       // Show a loading indicator that can be dismissed
                       const snackBar = SnackBar(
@@ -1098,8 +1101,8 @@ class CalendarScreenState extends State<CalendarScreen>
                         duration: Duration(seconds: 3),
                       );
                       
-                      // Show the loading snackbar
-                      ScaffoldMessenger.of(context).showSnackBar(snackBar);
+                      // Show the loading snackbar using the captured messenger
+                      scaffoldMessenger.showSnackBar(snackBar);
                       
                       // Delete the event from local storage
                       await EventService.deleteEvent(event);
@@ -1120,8 +1123,11 @@ class CalendarScreenState extends State<CalendarScreen>
                           );
                           
                           // Delete from Google Calendar
+                          // Pass the captured context IF NEEDED by the helper, otherwise remove it.
+                          // Assuming CalendarTestHelper might need context, but check its implementation.
+                          // If it doesn't, remove context argument below.
                           await CalendarTestHelper.deleteEventFromCalendar(
-                            context: context,
+                            context: context, // CHECK IF NEEDED
                             title: event.title,
                             eventStartTime: startDateTime,
                           );
@@ -1131,19 +1137,27 @@ class CalendarScreenState extends State<CalendarScreen>
                         }
                       }
                       
-                      // Update the UI state immediately after local deletion
-                      setState(() {});
-                      
-                      // Hide the loading indicator immediately after local deletion is complete
-                      ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                      
-                      // Show confirmation of successful local deletion
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Event deleted'),
-                          duration: Duration(seconds: 2),
-                        ),
-                      );
+                      // PRELOAD month data after deletion
+                      if (_selectedDay != null) {
+                        await EventService.preloadMonth(_selectedDay!);
+                      }
+
+                      // Check if widget is still mounted AFTER async operations
+                      if (mounted) {
+                        // Update the UI state immediately after local deletion
+                        setState(() {});
+                        
+                        // Hide the loading indicator using the captured messenger
+                        scaffoldMessenger.hideCurrentSnackBar();
+                        
+                        // Show confirmation of successful local deletion using the captured messenger
+                        scaffoldMessenger.showSnackBar(
+                          const SnackBar(
+                            content: Text('Event deleted'),
+                            duration: Duration(seconds: 2),
+                          ),
+                        );
+                      }
                     },
                     child: const Text('Delete'),
                   ),
@@ -3201,6 +3215,9 @@ class CalendarScreenState extends State<CalendarScreen>
     );
 
     if (shouldDelete == true && mounted) {
+      // Capture ScaffoldMessenger BEFORE the async gap
+      final scaffoldMessenger = ScaffoldMessenger.of(context);
+      
       // Show loading indicator
       const snackBar = SnackBar(
         content: Row(
@@ -3219,7 +3236,7 @@ class CalendarScreenState extends State<CalendarScreen>
         ),
         duration: Duration(seconds: 3), // Adjust as needed
       );
-      ScaffoldMessenger.of(context).showSnackBar(snackBar);
+      scaffoldMessenger.showSnackBar(snackBar);
 
       try {
         // Delete from local storage
@@ -3234,8 +3251,10 @@ class CalendarScreenState extends State<CalendarScreen>
               event.startDate.year, event.startDate.month, event.startDate.day,
               event.startTime.hour, event.startTime.minute,
             );
+            // Assuming CalendarTestHelper might need context, but check its implementation.
+            // If it doesn't, remove context argument below.
             await CalendarTestHelper.deleteEventFromCalendar(
-              context: context,
+              context: context, // CHECK IF NEEDED
               title: event.title,
               eventStartTime: startDateTime,
             );
@@ -3244,19 +3263,30 @@ class CalendarScreenState extends State<CalendarScreen>
             // Optionally show a less intrusive error if Google sync fails
           }
         }
+        
+        // PRELOAD month data after deletion
+        if (_selectedDay != null) {
+          await EventService.preloadMonth(_selectedDay!);
+        }
 
-        // Update UI
-        setState(() {});
-        ScaffoldMessenger.of(context).hideCurrentSnackBar(); // Hide loading
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Spare event deleted'), duration: Duration(seconds: 2)),
-        );
+        // Check if widget is still mounted AFTER async operations
+        if (mounted) {
+          // Update UI
+          setState(() {});
+          scaffoldMessenger.hideCurrentSnackBar(); // Hide loading
+          scaffoldMessenger.showSnackBar(
+            const SnackBar(content: Text('Spare event deleted'), duration: Duration(seconds: 2)),
+          );
+        }
       } catch (e) {
         print('Error deleting spare event: $e');
-        ScaffoldMessenger.of(context).hideCurrentSnackBar(); // Hide loading
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to delete event: $e'), duration: Duration(seconds: 3)),
-        );
+        // Check if mounted before showing error snackbar
+        if (mounted) {
+          scaffoldMessenger.hideCurrentSnackBar(); // Hide loading
+          scaffoldMessenger.showSnackBar(
+            SnackBar(content: Text('Failed to delete event: $e'), duration: Duration(seconds: 3)),
+          );
+        }
       }
     }
   }
