@@ -30,6 +30,9 @@ import 'package:spdrivercalendar/services/rest_days_service.dart'; // Added impo
 import 'package:spdrivercalendar/features/contacts/contacts_page.dart'; // Add this line
 import 'package:spdrivercalendar/core/services/cache_service.dart'; // Added import
 import 'package:spdrivercalendar/features/notes/screens/all_notes_screen.dart'; // Import the new screen
+// Add import for feedback screen (will be created later)
+// ignore: unused_import
+import 'package:spdrivercalendar/features/feedback/screens/feedback_screen.dart';
 
 class CalendarScreen extends StatefulWidget {
   final ValueNotifier<bool> isDarkModeNotifier;
@@ -1829,6 +1832,11 @@ class CalendarScreenState extends State<CalendarScreen>
                 value: 'notes', // Added notes value
                 child: Text('Notes'), // Added notes label
               ),
+              // Add Feedback Item
+              PopupMenuItem(
+                value: 'feedback',
+                child: Text('Feedback'),
+              ),
               PopupMenuItem(
                 value: 'settings',
                 child: Text('Settings'),
@@ -1847,6 +1855,9 @@ class CalendarScreenState extends State<CalendarScreen>
                 _showContactsPage();
               } else if (value == 'notes') { // Added condition for notes
                 _navigateToAllNotesScreen(); // Call the new navigation method
+              } else if (value == 'feedback') {
+                // Navigate to Feedback Screen
+                _showFeedbackPage();
               }
             },
           ),
@@ -3193,7 +3204,23 @@ class CalendarScreenState extends State<CalendarScreen>
     Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => const AllNotesScreen()),
+    ); // Removed the erroneous .then block
+  }
+
+  // Placeholder for Feedback navigation
+  void _showFeedbackPage() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const FeedbackScreen()), // Navigate to FeedbackScreen
     );
+    // print('Feedback selected - Navigation pending'); // Removed placeholder print
+    // // Show a temporary snackbar to indicate it's not implemented yet // Removed placeholder snackbar
+    // ScaffoldMessenger.of(context).showSnackBar(
+    //   const SnackBar(
+    //     content: Text('Feedback page not yet implemented.'),
+    //     duration: Duration(seconds: 2),
+    //   ),
+    // );
   }
 
   // --- ADD NEW FUNCTION TO HANDLE SPARE EVENT DELETION ---
