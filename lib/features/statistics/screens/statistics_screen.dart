@@ -631,7 +631,7 @@ class StatisticsScreenState extends State<StatisticsScreen>
         
         // Check if event falls within the selected date range
         // Use event.startDate for the check
-        if (event.startDate.isAfter(startDate.subtract(const Duration(days: 1))) && 
+        if (!event.startDate.isBefore(startDate) && 
             event.startDate.isBefore(endDate.add(const Duration(days: 1)))) {
           
           processedIds.add(event.id ?? ''); // Mark as processed
