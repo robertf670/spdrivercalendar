@@ -2303,10 +2303,13 @@ class CalendarScreenState extends State<CalendarScreen>
   }
 
   void _showStatisticsPage() {
+    // Fetch all loaded events directly from the service
+    final allEvents = EventService.allLoadedEvents;
+
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => StatisticsScreen(
-          events: _events,
+          events: allEvents, // Pass the fetched events
         ),
       ),
     );

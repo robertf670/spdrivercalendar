@@ -15,6 +15,9 @@ class EventService {
   static Map<String, List<Event>> _monthlyCache = {};
   static DateTime? _lastLoadedMonth;
   
+  // ADD STATIC GETTER for all loaded events
+  static Map<DateTime, List<Event>> get allLoadedEvents => Map.unmodifiable(_events);
+  
   // Load events for a specific month
   static Future<List<Event>> _loadEventsForMonth(DateTime month) async {
     final monthKey = '${month.year}-${month.month}';
