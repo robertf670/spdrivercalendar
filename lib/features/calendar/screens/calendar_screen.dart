@@ -1238,6 +1238,7 @@ class CalendarScreenState extends State<CalendarScreen>
                                           assignedDuties: event.assignedDuties,
                                           firstHalfBus: event.firstHalfBus,
                                           secondHalfBus: event.secondHalfBus,
+                                          notes: event.notes,
                                         );
                                         
                                         // Create a new event with the updated bus
@@ -1254,6 +1255,7 @@ class CalendarScreenState extends State<CalendarScreen>
                                           assignedDuties: event.assignedDuties,
                                           firstHalfBus: null, // Remove first half bus
                                           secondHalfBus: event.secondHalfBus,
+                                          notes: event.notes,
                                         );
                                         
                                         // Save the updated event
@@ -1315,6 +1317,7 @@ class CalendarScreenState extends State<CalendarScreen>
                                           assignedDuties: event.assignedDuties,
                                           firstHalfBus: event.firstHalfBus,
                                           secondHalfBus: event.secondHalfBus,
+                                          notes: event.notes,
                                         );
                                         
                                         // Create a new event with the updated bus
@@ -1331,6 +1334,7 @@ class CalendarScreenState extends State<CalendarScreen>
                                           assignedDuties: event.assignedDuties,
                                           firstHalfBus: event.firstHalfBus,
                                           secondHalfBus: null, // Remove second half bus
+                                          notes: event.notes, // Add this line
                                         );
                                         
                                         // Save the updated event
@@ -1522,6 +1526,7 @@ class CalendarScreenState extends State<CalendarScreen>
                                             assignedDuties: event.assignedDuties,
                                             firstHalfBus: result,
                                             secondHalfBus: event.secondHalfBus,
+                                            notes: event.notes, // Add this line
                                           );
                                           
                                           // Save the updated event
@@ -1630,6 +1635,7 @@ class CalendarScreenState extends State<CalendarScreen>
                                             assignedDuties: event.assignedDuties,
                                             firstHalfBus: event.firstHalfBus,
                                             secondHalfBus: result,
+                                            notes: event.notes, // Add this line
                                           );
                                           
                                           // Save the updated event
