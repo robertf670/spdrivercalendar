@@ -2312,8 +2312,7 @@ class CalendarScreenState extends State<CalendarScreen>
                     shiftInfoMap: _shiftInfoMap,
                     isBankHoliday: getBankHoliday(event.startDate) != null,
                     isRestDay: getShiftForDate(event.startDate) == 'R',
-                    // MODIFIED: Use specific delete function for spare shifts
-                    onEdit: isSpareShift ? _deleteSpareEvent : _editEvent,
+                    onEdit: _editEvent, // Use _editEvent for all types, EventCard handles spare logic
                     onShowNotes: _showNotesDialog, // Pass the function here
                   );
                 }).toList(),

@@ -852,10 +852,13 @@ class _EventCardState extends State<EventCard> {
       color: cardColor,
       child: InkWell(
         onTap: () {
-          // MODIFIED: Directly call the onEdit callback passed from the parent.
-          // The parent (CalendarScreen) now handles the logic for showing
-          // the appropriate dialog (edit/delete for normal, delete confirm for spare).
-          widget.onEdit(widget.event);
+          // Check if it's a Spare shift
+          final isSpareShift = widget.event.isWorkShift && widget.event.title.startsWith('SP');
+          if (isSpareShift) {
+            _showSpareShiftDialog(context); // Call the internal dialog for spare shifts
+          } else {
+            widget.onEdit(widget.event); // Call the parent's onEdit for other shifts
+          }
         },
         borderRadius: BorderRadius.circular(AppTheme.borderRadius),
         child: Padding(
