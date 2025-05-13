@@ -32,9 +32,9 @@ mixin TextRenderingMixin<T extends StatefulWidget> on State<T> {
     await SystemChannels.platform.invokeMethod<void>('SystemChrome.setSystemUIOverlayStyle', {
       'systemNavigationBarColor': '#000000',
       'systemNavigationBarIconBrightness': 'dark',
-      'statusBarColor': '#000000',
-      'statusBarIconBrightness': 'dark',
-      'statusBarBrightness': Brightness.dark,
+      // 'statusBarColor': '#000000', // Removed to allow theme to control
+      // 'statusBarIconBrightness': 'dark', // Removed to allow theme to control
+      'statusBarBrightness': Brightness.dark, // This is for iOS, might be okay or also themable
       'systemNavigationBarDividerColor': '#000000',
       'systemNavigationBarContrastEnforced': true,
       'systemOverlays': SystemUiOverlay.values,

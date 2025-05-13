@@ -17,9 +17,9 @@ class TextRendererService {
       await SystemChannels.platform.invokeMethod<void>('SystemChrome.setSystemUIOverlayStyle', {
         'systemNavigationBarColor': '#000000',
         'systemNavigationBarIconBrightness': 'dark',
-        'statusBarColor': '#000000',
-        'statusBarIconBrightness': 'dark',
-        'statusBarBrightness': Brightness.dark,
+        // 'statusBarColor': '#000000', // Removed to allow theme to control
+        // 'statusBarIconBrightness': 'dark', // Removed to allow theme to control
+        'statusBarBrightness': Brightness.dark, // This is for iOS, might be okay or also themable
       });
       
       // Force text rendering mode
@@ -31,36 +31,36 @@ class TextRendererService {
       });
       
       // Force text rendering mode
-      await SystemChannels.platform.invokeMethod<void>('SystemChrome.setSystemUIOverlayStyle', {
-        'systemNavigationBarColor': '#000000',
-        'systemNavigationBarIconBrightness': 'dark',
-        'statusBarColor': '#000000',
-        'statusBarIconBrightness': 'dark',
-        'statusBarBrightness': Brightness.dark,
-      });
-      
-      // Force text rendering mode
-      await SystemChannels.platform.invokeMethod<void>('SystemChrome.setSystemUIOverlayStyle', {
-        'systemNavigationBarColor': '#000000',
-        'systemNavigationBarIconBrightness': 'dark',
-        'statusBarColor': '#000000',
-        'statusBarIconBrightness': 'dark',
-        'statusBarBrightness': Brightness.dark,
-        'systemNavigationBarDividerColor': '#000000',
-        'systemNavigationBarContrastEnforced': true,
-      });
-      
-      // Force text rendering mode
-      await SystemChannels.platform.invokeMethod<void>('SystemChrome.setSystemUIOverlayStyle', {
-        'systemNavigationBarColor': '#000000',
-        'systemNavigationBarIconBrightness': 'dark',
-        'statusBarColor': '#000000',
-        'statusBarIconBrightness': 'dark',
-        'statusBarBrightness': Brightness.dark,
-        'systemNavigationBarDividerColor': '#000000',
-        'systemNavigationBarContrastEnforced': true,
-        'systemOverlays': SystemUiOverlay.values,
-      });
+      // REMOVING these redundant calls as they override the theme and previous settings without clear benefit for text rendering.
+      // It's better to manage SystemUiOverlayStyle via the AppTheme.
+      // await SystemChannels.platform.invokeMethod<void>('SystemChrome.setSystemUIOverlayStyle', {
+      //   'systemNavigationBarColor': '#000000',
+      //   'systemNavigationBarIconBrightness': 'dark',
+      //   'statusBarColor': '#000000',
+      //   'statusBarIconBrightness': 'dark',
+      //   'statusBarBrightness': Brightness.dark,
+      // });
+      //
+      // await SystemChannels.platform.invokeMethod<void>('SystemChrome.setSystemUIOverlayStyle', {
+      //   'systemNavigationBarColor': '#000000',
+      //   'systemNavigationBarIconBrightness': 'dark',
+      //   'statusBarColor': '#000000',
+      //   'statusBarIconBrightness': 'dark',
+      //   'statusBarBrightness': Brightness.dark,
+      //   'systemNavigationBarDividerColor': '#000000',
+      //   'systemNavigationBarContrastEnforced': true,
+      // });
+      //
+      // await SystemChannels.platform.invokeMethod<void>('SystemChrome.setSystemUIOverlayStyle', {
+      //   'systemNavigationBarColor': '#000000',
+      //   'systemNavigationBarIconBrightness': 'dark',
+      //   'statusBarColor': '#000000',
+      //   'statusBarIconBrightness': 'dark',
+      //   'statusBarBrightness': Brightness.dark,
+      //   'systemNavigationBarDividerColor': '#000000',
+      //   'systemNavigationBarContrastEnforced': true,
+      //   'systemOverlays': SystemUiOverlay.values,
+      // });
     }
   }
 } 
