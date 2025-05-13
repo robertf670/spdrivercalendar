@@ -99,3 +99,5 @@ consolidated_sunday_duties.txt
 consolidated_saturday_duties.txt
 
 testfiles/
+
+.cursor/

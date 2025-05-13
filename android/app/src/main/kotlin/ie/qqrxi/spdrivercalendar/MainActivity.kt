@@ -24,25 +24,25 @@ class MainActivity: FlutterActivity() {
         )
         
         // Add global layout listener
-        window.decorView.viewTreeObserver.addOnGlobalLayoutListener(object : ViewTreeObserver.OnGlobalLayoutListener {
-            override fun onGlobalLayout() {
-                if (!initialLayoutComplete) {
-                    initialLayoutComplete = true
-                    // Get the window visible display frame
-                    val rect = Rect()
-                    window.decorView.getWindowVisibleDisplayFrame(rect)
-                    
-                    // Set the window layout parameters
-                    val params = window.attributes
-                    params.width = rect.width()
-                    params.height = rect.height()
-                    window.attributes = params
-                    
-                    // Remove the listener
-                    window.decorView.viewTreeObserver.removeOnGlobalLayoutListener(this)
-                }
-            }
-        })
+        // window.decorView.viewTreeObserver.addOnGlobalLayoutListener(object : ViewTreeObserver.OnGlobalLayoutListener {
+        //     override fun onGlobalLayout() {
+        //         if (!initialLayoutComplete) {
+        //             initialLayoutComplete = true
+        //             // Get the window visible display frame
+        //             val rect = Rect()
+        //             window.decorView.getWindowVisibleDisplayFrame(rect)
+        //             
+        //             // Set the window layout parameters
+        //             val params = window.attributes
+        //             params.width = rect.width()
+        //             params.height = rect.height()
+        //             window.attributes = params
+        //             
+        //             // Remove the listener
+        //             window.decorView.viewTreeObserver.removeOnGlobalLayoutListener(this)
+        //         }
+        //     }
+        // })
     }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
@@ -69,19 +69,19 @@ class MainActivity: FlutterActivity() {
         super.onResume()
         
         // Reset layout flag
-        initialLayoutComplete = false
+        // initialLayoutComplete = false // Commenting this out as its primary use was with the removed GlobalLayoutListener
         
         // Force a new layout pass
-        window.decorView.requestLayout()
+        // window.decorView.requestLayout() // This might still be useful or could be removed if Flutter handles all redraws
         
         // Get the window visible display frame
-        val rect = Rect()
-        window.decorView.getWindowVisibleDisplayFrame(rect)
+        // val rect = Rect()
+        // window.decorView.getWindowVisibleDisplayFrame(rect)
         
         // Update window layout parameters
-        val params = window.attributes
-        params.width = rect.width()
-        params.height = rect.height()
-        window.attributes = params
+        // val params = window.attributes
+        // params.width = rect.width()
+        // params.height = rect.height()
+        // window.attributes = params
     }
 }
