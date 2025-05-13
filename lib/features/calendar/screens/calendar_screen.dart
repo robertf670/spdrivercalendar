@@ -3346,10 +3346,10 @@ class CalendarScreenState extends State<CalendarScreen>
     }
     
     // Clear old cache entries periodically with error handling
-    try {
-      EventService.clearOldCache();
-    } catch (e) {
-      print('Error clearing cache: $e');
-    }
+    // try {
+    //   EventService.clearOldCache(); // REMOVED: This was causing issues with loading old months
+    // } catch (e) {
+    //   print('Error clearing cache: $e');
+    // }
   }
 }

@@ -6,10 +6,11 @@ import 'package:http/http.dart' as http;
 import 'package:spdrivercalendar/services/token_manager.dart';
 import 'dart:convert';
 import 'dart:convert' show jsonDecode;
+import 'package:flutter/foundation.dart';
 
 class GoogleCalendarService {
   // Static GoogleSignIn instance to be used across the app
-  static final GoogleSignIn _googleSignIn = GoogleSignIn(
+  static GoogleSignIn _googleSignIn = GoogleSignIn(
     scopes: [
       'email',
       'https://www.googleapis.com/auth/calendar',
@@ -18,6 +19,11 @@ class GoogleCalendarService {
     // Don't force code for refresh token every time as it causes extra auth prompts
     forceCodeForRefreshToken: false,
   );
+
+  @visibleForTesting
+  static void setGoogleSignInForTesting(GoogleSignIn mockSignIn) {
+    _googleSignIn = mockSignIn;
+  }
 
   /// Initialize the Google Calendar service
   static Future<void> initialize() async {

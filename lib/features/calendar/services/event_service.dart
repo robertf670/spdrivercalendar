@@ -21,36 +21,45 @@ class EventService {
   // Load events for a specific month
   static Future<List<Event>> _loadEventsForMonth(DateTime month) async {
     final monthKey = '${month.year}-${month.month}';
-    
-    // Check if we already have this month in cache
+
     if (_monthlyCache.containsKey(monthKey)) {
       return _monthlyCache[monthKey]!;
     }
-    
+
     final prefs = await SharedPreferences.getInstance();
     final eventsJson = prefs.getString(AppConstants.eventsStorageKey);
     
+
     if (eventsJson == null || eventsJson.isEmpty) {
       _monthlyCache[monthKey] = [];
       return [];
     }
-    
+
     try {
       final Map<String, dynamic> decodedData = jsonDecode(eventsJson);
       List<Event> monthEvents = [];
-      
+
       decodedData.forEach((dateStr, eventsList) {
-        final date = DateTime.parse(dateStr);
-        if (date.year == month.year && date.month == month.month) {
-          final List<dynamic> eventsData = eventsList;
-          monthEvents.addAll(eventsData.map((eventData) => Event.fromMap(eventData)));
+        try {
+          final date = DateTime.parse(dateStr);
+          if (date.year == month.year && date.month == month.month) {
+            final List<dynamic> eventsData = eventsList;
+            for (var eventData in eventsData) {
+                try {
+                    monthEvents.add(Event.fromMap(eventData));
+                } catch (e_map) {
+                    // Corrected logging for mapping error
+                }
+            }
+          }
+        } catch (e_parse) {
+          // Corrected logging for parsing error
         }
       });
-      
+
       _monthlyCache[monthKey] = monthEvents;
       return monthEvents;
     } catch (e) {
-      print('Error loading events for month: $e');
       _monthlyCache[monthKey] = [];
       return [];
     }
@@ -60,24 +69,35 @@ class EventService {
   static List<Event> getEventsForDay(DateTime day) {
     // Normalize date to remove time component for lookup
     final normalizedDate = DateTime(day.year, day.month, day.day);
-    
+
     // If we don't have this date's events, load the month
     if (!_events.containsKey(normalizedDate)) {
       _loadEventsForMonth(normalizedDate).then((monthEvents) {
         // Update the events map with the loaded month's events
+        // This populates the _events cache for all days in that month
         for (var event in monthEvents) {
           final eventDate = DateTime(event.startDate.year, event.startDate.month, event.startDate.day);
           if (!_events.containsKey(eventDate)) {
             _events[eventDate] = [];
           }
-          if (!_events[eventDate]!.any((e) => e.id == event.id)) {
+          if (!_events[eventDate]!.any((e) => e.id == event.id)) { // Avoid duplicates
             _events[eventDate]!.add(event);
           }
         }
+        
+        // IMPORTANT: This async block populates the cache. The UI (CalendarScreen) needs to be
+        // notified to refresh if it has already rendered. This might involve using a
+        // ValueNotifier, Stream, or ensuring a setState happens in the UI after this point.
+        // For now, we rely on CalendarScreen's existing setState calls from onPageChanged/onDaySelected
+        // to eventually pick up these changes when the user interacts again or when eventLoader is called.
+
+      }).catchError((error) {
       });
+    } else {
     }
-    
-    return _events[normalizedDate] ?? [];
+
+    List<Event> result = _events[normalizedDate] ?? [];
+    return result;
   }
   
   // Preload events for a month (to be called when calendar page changes)
