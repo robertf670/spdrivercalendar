@@ -758,8 +758,11 @@ class _EventCardState extends State<EventCard> {
     
     // Check if it's a Spare shift
     final isSpareShift = isWorkShift && widget.event.title.startsWith('SP');
-    // ADD: Check if it's a BusCheck shift
+    // Check if it's a BusCheck shift
     final bool isBusCheckShift = widget.event.title.startsWith('BusCheck');
+    
+    // Define if this is a workout shift based on break time
+    final isWorkout = breakTime?.toLowerCase().contains('workout') ?? false;
     
     // Special styling for holiday events
     if (widget.event.isHoliday) {
@@ -853,7 +856,6 @@ class _EventCardState extends State<EventCard> {
       child: InkWell(
         onTap: () {
           // Check if it's a Spare shift
-          final isSpareShift = widget.event.isWorkShift && widget.event.title.startsWith('SP');
           if (isSpareShift) {
             _showSpareShiftDialog(context); // Call the internal dialog for spare shifts
           } else {
@@ -872,7 +874,6 @@ class _EventCardState extends State<EventCard> {
                 children: [
                   Expanded(
                     child: Text(
-                      // Format title: Add space for BusCheck, otherwise use original title
                       _formatDisplayTitle(widget.event.title),
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.bold,
@@ -1137,9 +1138,6 @@ class _EventCardState extends State<EventCard> {
                   ],
                 ],
               ),
-              // --- Debug Print --- 
-              // print('Event: ${widget.event.title}, isBusCheck: $isBusCheckShift, bus1: ${widget.event.firstHalfBus}, bus2: ${widget.event.secondHalfBus}');
-              // --- End Debug Print --- 
 
               // MODIFIED: Bus assignment row (Only show if NOT BusCheck AND bus data exists)
               if (!isBusCheckShift && (widget.event.firstHalfBus != null || widget.event.secondHalfBus != null)) ...[
@@ -1176,6 +1174,38 @@ class _EventCardState extends State<EventCard> {
                             ),
                           );
                         },
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+
+              // Late Break Status Section
+              if (widget.event.hasLateBreak) ...[
+                Row(
+                  children: [
+                    Icon(
+                      widget.event.tookFullBreak
+                          ? Icons.free_breakfast
+                          : Icons.monetization_on,
+                      size: 16,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white
+                          : Colors.black,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        widget.event.tookFullBreak
+                            ? 'Late Break: Full Break Taken'
+                            : 'Late Break: Overtime (${widget.event.overtimeDuration} mins)',
+                        style: TextStyle(
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.white
+                              : Colors.black,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                     ),
                   ],

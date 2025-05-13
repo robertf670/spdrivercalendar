@@ -16,6 +16,10 @@ class Event {
   bool isHoliday;  // Whether this event represents a holiday
   String? holidayType;  // The type of holiday ('winter' or 'summer')
   String? notes; // Add notes field
+  // Add new fields for overtime tracking
+  bool hasLateBreak;
+  bool tookFullBreak; 
+  int? overtimeDuration; // In minutes
 
   Event({
     required this.id,
@@ -32,7 +36,10 @@ class Event {
     this.secondHalfBus,
     this.isHoliday = false,
     this.holidayType,
-    this.notes, // Add notes to constructor
+    this.notes,
+    this.hasLateBreak = false,
+    this.tookFullBreak = false,
+    this.overtimeDuration,
   });
 
   // Add copyWith method
@@ -52,6 +59,9 @@ class Event {
     bool? isHoliday,
     String? holidayType,
     String? notes,
+    bool? hasLateBreak,
+    bool? tookFullBreak,
+    int? overtimeDuration,
   }) {
     return Event(
       id: id ?? this.id,
@@ -69,6 +79,9 @@ class Event {
       isHoliday: isHoliday ?? this.isHoliday,
       holidayType: holidayType ?? this.holidayType,
       notes: notes ?? this.notes,
+      hasLateBreak: hasLateBreak ?? this.hasLateBreak,
+      tookFullBreak: tookFullBreak ?? this.tookFullBreak,
+      overtimeDuration: overtimeDuration ?? this.overtimeDuration,
     );
   }
 
@@ -93,7 +106,10 @@ class Event {
       'secondHalfBus': secondHalfBus,
       'isHoliday': isHoliday,
       'holidayType': holidayType,
-      'notes': notes, // Add notes to map
+      'notes': notes,
+      'hasLateBreak': hasLateBreak,
+      'tookFullBreak': tookFullBreak,
+      'overtimeDuration': overtimeDuration,
     };
   }
 
@@ -134,7 +150,10 @@ class Event {
       secondHalfBus: map['secondHalfBus'],
       isHoliday: map['isHoliday'] ?? false,
       holidayType: map['holidayType'],
-      notes: map['notes'], // Add notes from map
+      notes: map['notes'],
+      hasLateBreak: map['hasLateBreak'] ?? false,
+      tookFullBreak: map['tookFullBreak'] ?? false,
+      overtimeDuration: map['overtimeDuration'],
     );
   }
 
@@ -171,6 +190,26 @@ class Event {
                          title.startsWith('PZ') || 
                          title.startsWith('BusCheck') ||
                          RegExp(r'^\d+/').hasMatch(title);
+  
+  // Check if this duty is eligible for overtime tracking
+  bool get isEligibleForOvertimeTracking {
+    // First check if it's a work shift
+    if (!isWorkShift) return false;
+    
+    // Check if it's a Zone 1, 3, or 4 duty
+    final isZoneDuty = title.startsWith('PZ1') || 
+                      title.startsWith('PZ3') || 
+                      title.startsWith('PZ4') ||
+                      // Handle case when PZ is not in the title
+                      title.startsWith('1/') || 
+                      title.startsWith('3/') || 
+                      title.startsWith('4/');
+    
+    // Exclude workout shifts - look for 'workout' in the title
+    final isWorkout = title.toLowerCase().contains('workout');
+    
+    return isZoneDuty && !isWorkout;
+  }
   
   // Get shift code - properly handle shift codes
   String get shiftCode {

@@ -1077,6 +1077,19 @@ class CalendarScreenState extends State<CalendarScreen>
                     },
                     child: const Text('Notes'),
                   ),
+                  // Add Break Status button for eligible duties
+                  if (event.isEligibleForOvertimeTracking) 
+                    TextButton(
+                      onPressed: () {
+                        // Close the current dialog first
+                        Navigator.of(context).pop();
+                        // Show break status dialog
+                        _showBreakStatusDialog(event);
+                      },
+                      child: Text(
+                        event.hasLateBreak ? 'Edit Break Status' : 'Break Status',
+                      ),
+                    ),
                   TextButton(
                     style: TextButton.styleFrom(
                       foregroundColor: Colors.red,
@@ -1804,6 +1817,386 @@ class CalendarScreenState extends State<CalendarScreen>
             child: const Text('Save'),
           ),
         ],
+      ),
+    );
+  }
+
+  // --- Add the new _showBreakStatusDialog function below ---
+  void _showBreakStatusDialog(Event event) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.access_time, color: AppTheme.primaryColor),
+            const SizedBox(width: 8),
+            const Text('Break Status'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (event.hasLateBreak) ...[
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Current Status:', 
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Icon(
+                          event.tookFullBreak 
+                              ? Icons.free_breakfast
+                              : Icons.monetization_on,
+                          size: 16,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          event.tookFullBreak 
+                              ? 'Full Break Taken'
+                              : 'Overtime (${event.overtimeDuration} mins)', 
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Divider(height: 1),
+              const SizedBox(height: 16),
+            ],
+            const Text(
+              'Select an option for late break:',
+              style: TextStyle(
+                fontSize: 14,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+            },
+            child: const Text('Cancel'),
+          ),
+          // Add Remove button if break status exists
+          if (event.hasLateBreak)
+            TextButton(
+              onPressed: () async {
+                // Save the old event for update
+                final oldEvent = Event(
+                  id: event.id,
+                  title: event.title,
+                  startDate: event.startDate,
+                  startTime: event.startTime,
+                  endDate: event.endDate,
+                  endTime: event.endTime,
+                  workTime: event.workTime,
+                  breakStartTime: event.breakStartTime,
+                  breakEndTime: event.breakEndTime,
+                  assignedDuties: event.assignedDuties,
+                  firstHalfBus: event.firstHalfBus,
+                  secondHalfBus: event.secondHalfBus,
+                  notes: event.notes,
+                  hasLateBreak: event.hasLateBreak,
+                  tookFullBreak: event.tookFullBreak,
+                  overtimeDuration: event.overtimeDuration,
+                );
+                
+                // Reset break status
+                event.hasLateBreak = false;
+                event.tookFullBreak = false;
+                event.overtimeDuration = null;
+                
+                // Save the updated event
+                await EventService.updateEvent(oldEvent, event);
+                
+                // Close the dialog
+                Navigator.of(context).pop();
+                
+                // Update the UI
+                setState(() {});
+                
+                // Show confirmation
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Break status removed'),
+                    duration: Duration(seconds: 2),
+                  ),
+                );
+                
+                // Force refresh of the event cards
+                _editEvent(Event(
+                  id: 'refresh_trigger',
+                  title: '',
+                  startDate: DateTime.now(),
+                  startTime: const TimeOfDay(hour: 0, minute: 0),
+                  endDate: DateTime.now(),
+                  endTime: const TimeOfDay(hour: 0, minute: 0),
+                ));
+              },
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.red,
+              ),
+              child: const Text('Remove'),
+            ),
+          TextButton(
+            onPressed: () async {
+              // Save the old event for update
+              final oldEvent = Event(
+                id: event.id,
+                title: event.title,
+                startDate: event.startDate,
+                startTime: event.startTime,
+                endDate: event.endDate,
+                endTime: event.endTime,
+                workTime: event.workTime,
+                breakStartTime: event.breakStartTime,
+                breakEndTime: event.breakEndTime,
+                assignedDuties: event.assignedDuties,
+                firstHalfBus: event.firstHalfBus,
+                secondHalfBus: event.secondHalfBus,
+                notes: event.notes,
+                hasLateBreak: event.hasLateBreak,
+                tookFullBreak: event.tookFullBreak,
+                overtimeDuration: event.overtimeDuration,
+              );
+              
+              // Update event with Full Break option
+              event.hasLateBreak = true;
+              event.tookFullBreak = true;
+              event.overtimeDuration = null;
+              
+              // Save the updated event
+              await EventService.updateEvent(oldEvent, event);
+              
+              // Close the dialog
+              Navigator.of(context).pop();
+              
+              // Update the UI
+              setState(() {});
+              
+              // Show confirmation
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Full Break status saved'),
+                  duration: Duration(seconds: 2),
+                ),
+              );
+              
+              // Force refresh of the event cards
+              _editEvent(Event(
+                id: 'refresh_trigger',
+                title: '',
+                startDate: DateTime.now(),
+                startTime: const TimeOfDay(hour: 0, minute: 0),
+                endDate: DateTime.now(),
+                endTime: const TimeOfDay(hour: 0, minute: 0),
+              ));
+            },
+            child: const Text('Full Break'),
+          ),
+          TextButton(
+            onPressed: () {
+              // Close current dialog and show overtime selection dialog
+              Navigator.of(context).pop();
+              _showOvertimeSelectionDialog(event);
+            },
+            child: const Text('Overtime'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Show dialog for overtime duration selection
+  void _showOvertimeSelectionDialog(Event event) {
+    int selectedDuration = event.overtimeDuration ?? 60; // Default to 60 mins
+    
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: Row(
+            children: [
+              Icon(Icons.monetization_on, color: Colors.orange),
+              const SizedBox(width: 8),
+              const Text('Select Overtime'),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Select overtime duration:',
+                style: TextStyle(
+                  fontSize: 14,
+                ),
+              ),
+              const SizedBox(height: 16),
+              // Dropdown for overtime duration
+              DropdownButtonFormField<int>(
+                value: selectedDuration,
+                decoration: const InputDecoration(
+                  labelText: 'Duration',
+                  border: OutlineInputBorder(),
+                ),
+                items: [10, 20, 30, 40, 50, 60].map((int value) {
+                  return DropdownMenuItem<int>(
+                    value: value,
+                    child: Text('${value} mins'),
+                  );
+                }).toList(),
+                onChanged: (int? newValue) {
+                  if (newValue != null) {
+                    setState(() {
+                      selectedDuration = newValue;
+                    });
+                  }
+                },
+              ),
+              const SizedBox(height: 16),
+              // Quick 1 Hour button
+              Center(
+                child: TextButton(
+                  onPressed: () async {
+                    // Save the old event for update
+                    final oldEvent = Event(
+                      id: event.id,
+                      title: event.title,
+                      startDate: event.startDate,
+                      startTime: event.startTime,
+                      endDate: event.endDate,
+                      endTime: event.endTime,
+                      workTime: event.workTime,
+                      breakStartTime: event.breakStartTime,
+                      breakEndTime: event.breakEndTime,
+                      assignedDuties: event.assignedDuties,
+                      firstHalfBus: event.firstHalfBus,
+                      secondHalfBus: event.secondHalfBus,
+                      notes: event.notes,
+                      hasLateBreak: event.hasLateBreak,
+                      tookFullBreak: event.tookFullBreak,
+                      overtimeDuration: event.overtimeDuration,
+                    );
+                    
+                    // Set to 1 hour overtime
+                    event.hasLateBreak = true;
+                    event.tookFullBreak = false;
+                    event.overtimeDuration = 60; // Always 1 hour (60 mins)
+                    
+                    // Save the updated event
+                    await EventService.updateEvent(oldEvent, event);
+                    
+                    // Close the dialog
+                    Navigator.of(context).pop();
+                    
+                    // Update the UI
+                    this.setState(() {});
+                    
+                    // Show confirmation
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Overtime (1 hour) saved'),
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                    
+                    // Force refresh of the event cards
+                    _editEvent(Event(
+                      id: 'refresh_trigger',
+                      title: '',
+                      startDate: DateTime.now(),
+                      startTime: const TimeOfDay(hour: 0, minute: 0),
+                      endDate: DateTime.now(),
+                      endTime: const TimeOfDay(hour: 0, minute: 0),
+                    ));
+                  },
+                  child: const Text('1 Hour (Common)'),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () async {
+                // Save the old event for update
+                final oldEvent = Event(
+                  id: event.id,
+                  title: event.title,
+                  startDate: event.startDate,
+                  startTime: event.startTime,
+                  endDate: event.endDate,
+                  endTime: event.endTime,
+                  workTime: event.workTime,
+                  breakStartTime: event.breakStartTime,
+                  breakEndTime: event.breakEndTime,
+                  assignedDuties: event.assignedDuties,
+                  firstHalfBus: event.firstHalfBus,
+                  secondHalfBus: event.secondHalfBus,
+                  notes: event.notes,
+                  hasLateBreak: event.hasLateBreak,
+                  tookFullBreak: event.tookFullBreak,
+                  overtimeDuration: event.overtimeDuration,
+                );
+                
+                // Update event with Overtime option
+                event.hasLateBreak = true;
+                event.tookFullBreak = false;
+                event.overtimeDuration = selectedDuration;
+                
+                // Save the updated event
+                await EventService.updateEvent(oldEvent, event);
+                
+                // Close the dialog
+                Navigator.of(context).pop();
+                
+                // Update the UI
+                setState(() {});
+                
+                // Show confirmation
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Overtime (${selectedDuration} mins) saved'),
+                    duration: const Duration(seconds: 2),
+                  ),
+                );
+                
+                // Force refresh of the event cards
+                _editEvent(Event(
+                  id: 'refresh_trigger',
+                  title: '',
+                  startDate: DateTime.now(),
+                  startTime: const TimeOfDay(hour: 0, minute: 0),
+                  endDate: DateTime.now(),
+                  endTime: const TimeOfDay(hour: 0, minute: 0),
+                ));
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        ),
       ),
     );
   }
