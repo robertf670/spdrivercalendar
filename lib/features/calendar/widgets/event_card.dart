@@ -884,6 +884,18 @@ class _EventCardState extends State<EventCard> {
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
+                      if (workTime != null) ...[
+                        Text(
+                          'Work: $workTime',
+                          style: TextStyle(
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? Colors.white
+                                : Colors.black,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
                       if (widget.event.notes != null && widget.event.notes!.isNotEmpty)
                         Padding(
                           padding: const EdgeInsets.only(left: 8.0),
@@ -895,51 +907,42 @@ class _EventCardState extends State<EventCard> {
                                 : Colors.black54,
                           ),
                         ),
-                      Padding(
-                        padding: EdgeInsets.only(
-                          left: (widget.event.notes != null && widget.event.notes!.isNotEmpty) ? 8.0 : 0,
+                      // Rest day badge
+                      if (widget.isRestDay && widget.event.isWorkShift)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 3.0),
+                          margin: const EdgeInsets.only(left: 4),
+                          decoration: BoxDecoration(
+                            color: widget.shiftInfoMap['R']?.color ?? Colors.blue,
+                            borderRadius: BorderRadius.circular(12.0),
+                          ),
+                          child: const Text(
+                            'Rest Day',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 12.0,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ),
-                        child: Row(
-                          children: [
-                            // Rest day badge
-                            if (widget.isRestDay && widget.event.isWorkShift)
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 3.0),
-                                margin: const EdgeInsets.only(left: 4),
-                                decoration: BoxDecoration(
-                                  color: widget.shiftInfoMap['R']?.color ?? Colors.blue,
-                                  borderRadius: BorderRadius.circular(12.0),
-                                ),
-                                child: const Text(
-                                  'Rest Day',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 12.0,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            // Bank holiday badge
-                            if (widget.isBankHoliday && widget.event.isWorkShift)
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 3.0),
-                                margin: const EdgeInsets.only(left: 4),
-                                decoration: BoxDecoration(
-                                  color: Colors.red,
-                                  borderRadius: BorderRadius.circular(12.0),
-                                ),
-                                child: const Text(
-                                  'Bank Holiday',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 12.0,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                          ],
+                      // Bank holiday badge
+                      if (widget.isBankHoliday && widget.event.isWorkShift)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 3.0),
+                          margin: const EdgeInsets.only(left: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.red,
+                            borderRadius: BorderRadius.circular(12.0),
+                          ),
+                          child: const Text(
+                            'Bank Holiday',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 12.0,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ),
-                      ),
                     ],
                   ),
                 ],
@@ -1122,20 +1125,7 @@ class _EventCardState extends State<EventCard> {
                       ),
                     ),
                   ),
-                  // Add a Spacer to push work time to the right
-                  const Spacer(), 
-                  if (workTime != null) ...[
-                    Text(
-                      'Work: $workTime',
-                      style: TextStyle(
-                        color: Theme.of(context).brightness == Brightness.dark
-                            ? Colors.white
-                            : Colors.black,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
+                  // Work time has been moved to the top right
                 ],
               ),
 
