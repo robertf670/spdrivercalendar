@@ -33,6 +33,7 @@ import 'package:spdrivercalendar/features/notes/screens/all_notes_screen.dart'; 
 // Add import for feedback screen (will be created later)
 // ignore: unused_import
 import 'package:spdrivercalendar/features/feedback/screens/feedback_screen.dart';
+import 'package:spdrivercalendar/features/bills/screens/bills_screen.dart'; // Import the Bills screen
 
 class CalendarScreen extends StatefulWidget {
   final ValueNotifier<bool> isDarkModeNotifier;
@@ -2219,6 +2220,10 @@ class CalendarScreenState extends State<CalendarScreen>
                 child: Text('About'),
               ),
               PopupMenuItem(
+                value: 'bills',
+                child: Text('Bills'),
+              ),
+              PopupMenuItem(
                 value: 'statistics',
                 child: Text('Statistics'),
               ),
@@ -2249,6 +2254,8 @@ class CalendarScreenState extends State<CalendarScreen>
                 _showStatisticsPage();
               } else if (value == 'about') {
                 _showAboutPage();
+              } else if (value == 'bills') {
+                _showBillsPage();
               } else if (value == 'settings') {
                 _showSettingsPage();
               } else if (value == 'add_holidays') {
@@ -3622,6 +3629,14 @@ class CalendarScreenState extends State<CalendarScreen>
     //     duration: Duration(seconds: 2),
     //   ),
     // );
+  }
+
+  // Method to navigate to Bills page
+  void _showBillsPage() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const BillsScreen()), // Navigate to BillsScreen
+    );
   }
 
   // --- ADD NEW FUNCTION TO HANDLE SPARE EVENT DELETION ---
