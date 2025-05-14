@@ -1,10 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:spdrivercalendar/theme/app_theme.dart';
+import 'time_range_selector.dart';
 
 class ShiftTypeSummaryCard extends StatelessWidget {
   final Map<String, dynamic> stats;
+  final String currentRange;
+  final List<String> availableRanges;
+  final ValueChanged<String?> onChanged;
 
-  const ShiftTypeSummaryCard({Key? key, required this.stats}) : super(key: key);
+  const ShiftTypeSummaryCard({
+    Key? key, 
+    required this.stats,
+    required this.currentRange,
+    required this.availableRanges,
+    required this.onChanged,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -20,10 +30,25 @@ class ShiftTypeSummaryCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Summary',
+              'Shift Type Statistics',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 4),
+            Text(
+              'Rest Days not included in calculation',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey[600],
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+            const SizedBox(height: 16),
+            TimeRangeSelector(
+              currentRange: currentRange,
+              availableRanges: availableRanges,
+              onChanged: onChanged,
+            ),
+            const SizedBox(height: 16),
             _buildStatRow('Total Shifts', '${stats['totalShifts']}'),
             _buildStatRow('Early Shifts', '${stats['earlyShifts']}'),
             _buildStatRow('Relief Shifts', '${stats['reliefShifts']}'),

@@ -13,6 +13,7 @@ import '../widgets/frequency_chart.dart';
 import '../widgets/shift_type_summary_card.dart';
 import '../widgets/time_range_selector.dart';
 import '../widgets/work_time_stats_card.dart';
+import '../widgets/break_statistics_card.dart';
 
 enum ShiftType {
   Early,   // 04:00 - 09:59
@@ -43,6 +44,7 @@ class StatisticsScreenState extends State<StatisticsScreen>
   bool get wantKeepAlive => true;
   
   String _timeRange = 'This Week';
+  String _breakTimeRange = 'This Week';
   final List<String> _timeRanges = [
     'This Week', 
     'Last Week', 
@@ -339,43 +341,40 @@ class StatisticsScreenState extends State<StatisticsScreen>
   Widget _buildSummaryTab() {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
-      child: Card( // Wrap content in a Card
-        elevation: 2.0,
-        child: Padding( // Add internal padding
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Shift Type Statistics',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Rest Days not included in calculation',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey[600],
-                  fontStyle: FontStyle.italic,
-                ),
-              ),
-              const SizedBox(height: 16),
-              TimeRangeSelector(
-                currentRange: _timeRange,
-                availableRanges: _timeRanges,
-                onChanged: (value) {
-                  if (value != null) {
-                    setState(() {
-                      _timeRange = value;
-                    });
-                  }
-                },
-              ),
-              const SizedBox(height: 16),
-              ShiftTypeSummaryCard(stats: _calculateSummaryStatistics()),
-            ],
+      child: Column(
+        children: [
+          // Shift Type Summary Card
+          ShiftTypeSummaryCard(
+            stats: _calculateSummaryStatistics(),
+            currentRange: _timeRange,
+            availableRanges: _timeRanges,
+            onChanged: (newRange) {
+              if (newRange != null) {
+                setState(() {
+                  _timeRange = newRange;
+                });
+              }
+            },
           ),
-        ),
+          
+          // Break Statistics Card
+          BreakStatisticsCard(
+            breakStats: _calculateBreakStatistics(),
+            currentRange: _breakTimeRange,
+            availableRanges: _timeRanges,
+            onChanged: (newRange) {
+              if (newRange != null) {
+                setState(() {
+                  _breakTimeRange = newRange;
+                });
+                print('Break stats time range changed to: $newRange'); // Debug
+              }
+            },
+          ),
+          
+          // Work Time Stats Card
+          // ... existing code ...
+        ],
       ),
     );
   }
@@ -1389,5 +1388,88 @@ class StatisticsScreenState extends State<StatisticsScreen>
         _startWeek = startWeek;
       });
     }
+  }
+
+  // Add new method to calculate break statistics
+  Map<String, dynamic> _calculateBreakStatistics() {
+    print('Calculating break statistics...'); // Debug print
+    
+    final DateTime now = DateTime.now();
+    
+    // This week (Sunday to Saturday)
+    final thisWeekStart = DateTime(now.year, now.month, now.day).subtract(Duration(days: now.weekday % 7));
+    final thisWeekEnd = thisWeekStart.add(const Duration(days: 6));
+    
+    // Last week (previous Sunday to Saturday)
+    final lastWeekEnd = thisWeekStart.subtract(const Duration(days: 1));
+    final lastWeekStart = lastWeekEnd.subtract(const Duration(days: 6));
+    
+    // This month
+    final thisMonthStart = DateTime(now.year, now.month, 1);
+    final thisMonthEnd = (now.month < 12)
+        ? DateTime(now.year, now.month + 1, 1).subtract(const Duration(days: 1))
+        : DateTime(now.year + 1, 1, 1).subtract(const Duration(days: 1));
+        
+    // Last month
+    final lastMonthEnd = thisMonthStart.subtract(const Duration(days: 1));
+    final lastMonthStart = DateTime(lastMonthEnd.year, lastMonthEnd.month, 1);
+    
+    // Get all events with late break status from the map of events
+    final List<Event> eventsWithBreakStatus = [];
+    widget.events.forEach((date, dayEvents) {
+      for (final event in dayEvents) {
+        if (event.hasLateBreak == true) {
+          eventsWithBreakStatus.add(event);
+        }
+      }
+    });
+    
+    // Final result map
+    Map<String, dynamic> result = {
+      'thisweek': _calculateBreakStatsForPeriod(eventsWithBreakStatus, thisWeekStart, thisWeekEnd),
+      'lastweek': _calculateBreakStatsForPeriod(eventsWithBreakStatus, lastWeekStart, lastWeekEnd),
+      'thismonth': _calculateBreakStatsForPeriod(eventsWithBreakStatus, thisMonthStart, thisMonthEnd),
+      'lastmonth': _calculateBreakStatsForPeriod(eventsWithBreakStatus, lastMonthStart, lastMonthEnd),
+      'alltime': _calculateBreakStatsForPeriod(eventsWithBreakStatus, null, null),
+    };
+    
+    print('Break statistics calculated: ${result.length} periods'); // Debug print
+    print('Found ${eventsWithBreakStatus.length} events with late break status'); // Debug
+    return result;
+  }
+  
+  Map<String, dynamic> _calculateBreakStatsForPeriod(
+    List<Event> events, DateTime? startDate, DateTime? endDate) {
+    
+    // Filter by date range if specified
+    List<Event> filteredEvents = events;
+    if (startDate != null && endDate != null) {
+      filteredEvents = events.where((event) {
+        final eventDate = DateTime(event.startDate.year, event.startDate.month, event.startDate.day);
+        return eventDate.isAtSameMomentAs(startDate) || 
+               eventDate.isAtSameMomentAs(endDate) || 
+               (eventDate.isAfter(startDate) && eventDate.isBefore(endDate));
+      }).toList();
+    }
+    
+    // Count statistics
+    int total = filteredEvents.length;
+    int fullBreak = filteredEvents.where((e) => e.tookFullBreak == true).length;
+    int overtime = filteredEvents.where((e) => e.tookFullBreak == false).length;
+    
+    // Calculate total overtime minutes
+    int totalOvertimeMinutes = 0;
+    for (final event in filteredEvents) {
+      if (event.tookFullBreak == false && event.overtimeDuration != null) {
+        totalOvertimeMinutes += event.overtimeDuration!;
+      }
+    }
+    
+    return {
+      'total': total,
+      'fullBreak': fullBreak,
+      'overtime': overtime,
+      'totalOvertimeMinutes': totalOvertimeMinutes,
+    };
   }
 }
