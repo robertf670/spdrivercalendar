@@ -3,6 +3,7 @@ import 'package:spdrivercalendar/core/constants/app_constants.dart';
 import 'package:spdrivercalendar/core/services/storage_service.dart';
 import 'package:spdrivercalendar/google_calendar_service.dart';
 import 'package:spdrivercalendar/features/settings/screens/google_calendar_settings_screen.dart';
+import 'package:spdrivercalendar/features/payscale/screens/payscale_screen.dart';
 import 'package:spdrivercalendar/theme/app_theme.dart';
 import 'package:spdrivercalendar/calendar_test_helper.dart';
 import 'package:spdrivercalendar/services/notification_service.dart';
@@ -184,6 +185,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
           _buildBackupButton(),
           _buildRestoreButton(),
           // --- End Restored Section ---
+          
+          // --- Add Payscale Section Here ---
+          const Divider(height: 32),
+          _buildSectionHeader('Driver Resources'),
+          _buildPayscaleButton(),
           
           const Divider(height: 32),
           _buildSectionHeader('App'),
@@ -747,6 +753,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Text(message),
           ],
         ),
+      ),
+    );
+  }
+
+  // Add the payscale button widget
+  Widget _buildPayscaleButton() {
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 4.0),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppTheme.borderRadius),
+      ),
+      child: ListTile(
+        leading: Icon(Icons.euro_outlined, color: Theme.of(context).iconTheme.color),
+        title: const Text('Pay Scales'),
+        subtitle: const Text('View Dublin Bus pay scales and rates'),
+        trailing: Icon(Icons.arrow_forward_ios, color: Theme.of(context).iconTheme.color),
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const PayscaleScreen()),
+          );
+        },
       ),
     );
   }

@@ -103,3 +103,16 @@ testfiles/
 .cursor/
 
 jamestownunitest/
+
+# Dublin Bus timetable processing scripts and outputs
+duties_by_number.py
+duties_clean.py
+duties_final.py
+enhanced_excel_to_text.py
+excel_to_text.py
+excel_to_vertical.py
+excel_to_vertical_sequential.py
+extract_duty_data.py
+simple_excel_to_text.py
+boards/
+pay/

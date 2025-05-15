@@ -50,6 +50,7 @@ flutter:
   assets:
     - assets/
     - assets/bank_holidays.json
+    - pay/
     
     
 
