@@ -17,6 +17,7 @@ class AppConstants {
   static const String googleCalendarIdKey = 'googleCalendarId';
   static const String lastGoogleSyncTimeKey = 'lastGoogleSyncTime';
   static const String syncToGoogleCalendarKey = 'syncToGoogleCalendar';
+  static const String lastSeenVersionKey = 'lastSeenVersion';
   
   // Routes
   static const String splashRoute = '/splash';
@@ -26,6 +27,7 @@ class AppConstants {
   static const String settingsRoute = '/settings';
   static const String statisticsRoute = '/statistics';
   static const String aboutRoute = '/about';
+  static const String whatsNewRoute = '/whats-new';
 
   // Colors (example)
   static const Color primaryColor = Colors.blue; // Example primary color

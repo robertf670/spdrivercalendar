@@ -6,6 +6,7 @@ import 'package:spdrivercalendar/features/calendar/services/shift_service.dart';
 import 'package:spdrivercalendar/features/welcome/screens/welcome_screen.dart';
 import 'package:spdrivercalendar/features/google/screens/google_login_screen.dart';
 import 'package:spdrivercalendar/features/calendar/screens/calendar_screen.dart';
+import 'package:spdrivercalendar/features/whatsnew/screens/whats_new_screen.dart';
 import 'package:spdrivercalendar/theme/app_theme.dart';
 import 'package:spdrivercalendar/google_calendar_service.dart';
 import 'package:spdrivercalendar/services/rest_days_service.dart';
@@ -14,6 +15,7 @@ import 'package:spdrivercalendar/core/widgets/rebuild_text.dart';
 import 'package:spdrivercalendar/services/notification_service.dart';
 import 'package:spdrivercalendar/core/services/cache_service.dart';
 import 'package:spdrivercalendar/services/token_manager.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -86,6 +88,20 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
               // New Splash Route
               AppConstants.splashRoute: (context) => const SplashScreen(),
 
+              // What's New Route
+              AppConstants.whatsNewRoute: (context) => WhatsNewScreen(
+                onContinue: () {
+                  // After viewing what's new, check onboarding status
+                  final state = context.findAncestorStateOfType<_SplashScreenState>();
+                  if (state != null) {
+                    state._checkOnboardingStatus();
+                  } else {
+                    // Fallback if somehow we can't find the splash screen state
+                    Navigator.pushReplacementNamed(context, AppConstants.homeRoute);
+                  }
+                },
+              ),
+
               // Existing Routes (adjusted callbacks)
               AppConstants.welcomeRoute: (context) => WelcomeScreen(
                 onGetStarted: () async {
@@ -141,13 +157,50 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    _checkOnboardingStatus();
+    _checkAppState();
   }
 
-  Future<void> _checkOnboardingStatus() async {
+  Future<void> _checkAppState() async {
     // Wait a frame to ensure context is available
     await Future.delayed(Duration.zero);
 
+    // Check app version first
+    final shouldShowWhatsNew = await _checkVersionUpdate();
+
+    if (shouldShowWhatsNew && mounted) {
+      // Show What's New screen first
+      Navigator.pushReplacementNamed(context, AppConstants.whatsNewRoute);
+      return;
+    }
+
+    // Otherwise, proceed with normal flow
+    await _checkOnboardingStatus();
+  }
+
+  Future<bool> _checkVersionUpdate() async {
+    try {
+      // Get current app version
+      final packageInfo = await PackageInfo.fromPlatform();
+      final currentVersion = packageInfo.version;
+      
+      // Get last seen version
+      final lastSeenVersion = await StorageService.getString(AppConstants.lastSeenVersionKey);
+      
+      // If lastSeenVersion is null (first install), save current version and don't show What's New
+      if (lastSeenVersion == null) {
+        await StorageService.saveString(AppConstants.lastSeenVersionKey, currentVersion);
+        return false;
+      }
+      
+      // If versions are different, show What's New screen
+      return lastSeenVersion != currentVersion;
+    } catch (e) {
+      // In case of error, don't show What's New screen
+      return false;
+    }
+  }
+
+  Future<void> _checkOnboardingStatus() async {
     final hasSeenWelcome = await StorageService.getBool(AppConstants.hasSeenWelcomeKey, defaultValue: false);
     final hasCompletedGoogleLogin = await StorageService.getBool(AppConstants.hasCompletedGoogleLoginKey, defaultValue: false);
 
