@@ -23,6 +23,28 @@ class _WhatsNewScreenState extends State<WhatsNewScreen> {
   // This map contains the changelog for each version
   // The key is the version number, and the value is a map of feature title and description
   final Map<String, List<Map<String, String>>> _changelogData = {
+    '2.5.1': [
+      {
+        'title': 'Payscale UI Enhancements',
+        'description': 'Improved the layout and styling of the Payscale screen, including a fixed header column and alternating row colors for better readability.',
+      },
+    ],
+    '2.5.0': [
+      {
+        'title': 'Pay Scale Menu Item',
+        'description': 'Added a "Pay Scale" item to the settings menu for quick access to pay scale information.',
+      },
+    ],
+    '2.4.0': [
+      {
+        'title': 'Pay Scales Feature',
+        'description': 'Added Dublin Bus pay scales with rates for different years of service and payment types',
+      },
+      {
+        'title': 'UI Improvements',
+        'description': 'Added Driver Resources section to Settings menu for accessing driver-related information',
+      },
+    ],
     '2.3.1': [
       {
         'title': 'Bug Fixes',

@@ -186,10 +186,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           _buildRestoreButton(),
           // --- End Restored Section ---
           
-          // --- Add Payscale Section Here ---
-          const Divider(height: 32),
-          _buildSectionHeader('Driver Resources'),
-          _buildPayscaleButton(),
+                    // Driver Resources section removed and moved to dropdown menu
           
           const Divider(height: 32),
           _buildSectionHeader('App'),
@@ -757,25 +754,5 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  // Add the payscale button widget
-  Widget _buildPayscaleButton() {
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 4.0),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppTheme.borderRadius),
-      ),
-      child: ListTile(
-        leading: Icon(Icons.euro_outlined, color: Theme.of(context).iconTheme.color),
-        title: const Text('Pay Scales'),
-        subtitle: const Text('View Dublin Bus pay scales and rates'),
-        trailing: Icon(Icons.arrow_forward_ios, color: Theme.of(context).iconTheme.color),
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const PayscaleScreen()),
-          );
-        },
-      ),
-    );
-  }
+    // Payscale button removed from settings and moved to dropdown menu
 }

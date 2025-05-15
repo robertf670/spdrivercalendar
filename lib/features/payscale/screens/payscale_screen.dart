@@ -15,10 +15,21 @@ class _PayscaleScreenState extends State<PayscaleScreen> {
   bool _isLoading = true;
   String? _errorMessage;
 
+  // Scroll controllers for synchronized scrolling
+  final ScrollController _verticalScrollController = ScrollController();
+  final ScrollController _horizontalScrollController = ScrollController();
+
   @override
   void initState() {
     super.initState();
     _loadPayscaleData();
+  }
+
+  @override
+  void dispose() {
+    _verticalScrollController.dispose();
+    _horizontalScrollController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadPayscaleData() async {
@@ -106,10 +117,10 @@ class _PayscaleScreenState extends State<PayscaleScreen> {
       return const Center(child: Text('No pay scale data available'));
     }
 
-    // Extract column headers
-    List<String> headers = _payscaleData![0].keys.toList();
-    
-    // Make the type column header more readable
+    List<String> allHeaders = _payscaleData![0].keys.toList();
+    String fixedColumnKey = 'type';
+    List<String> scrollableColumnHeaders = allHeaders.where((h) => h != fixedColumnKey).toList();
+
     final labelMap = {
       'type': 'Payment Type',
       'year1+2': 'Year 1-2',
@@ -117,8 +128,7 @@ class _PayscaleScreenState extends State<PayscaleScreen> {
       'year5': 'Year 5',
       'year6': 'Year 6+',
     };
-    
-    // Format payment types to be more readable
+
     final paymentTypeFormatMap = {
       'basicdaily': 'Basic Daily Rate',
       'shiftdaily': 'Shift Premium (Daily)',
@@ -136,6 +146,28 @@ class _PayscaleScreenState extends State<PayscaleScreen> {
       'spreadover(hourly)': 'Spreadover Rate (Hourly)',
     };
 
+    final cellPadding = const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0);
+    final headerTextStyle = TextStyle(
+      fontWeight: FontWeight.bold,
+      color: Theme.of(context).colorScheme.onSurface,
+      fontSize: 14,
+    );
+    final cellTextStyle = TextStyle(
+      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.87),
+      fontSize: 14,
+    );
+    final headerBackgroundColor = Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.2);
+
+    // Define colors for alternating rows
+    final cardBackgroundColor = Theme.of(context).cardColor;
+    final oddRowOverlayColor = (Theme.of(context).brightness == Brightness.dark 
+        ? Colors.white.withOpacity(0.05) 
+        : Colors.black.withOpacity(0.03));
+
+    final oddRowColor = MaterialStateProperty.resolveWith<Color?>((states) => oddRowOverlayColor);
+    // Even rows will use the default DataTable row color (which should be transparent over the Card background)
+    final evenRowColor = MaterialStateProperty.resolveWith<Color?>((states) => Colors.transparent);
+
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: Column(
@@ -151,70 +183,134 @@ class _PayscaleScreenState extends State<PayscaleScreen> {
           const SizedBox(height: 8),
           Text(
             'The following rates apply based on length of service:',
-            style: Theme.of(context).textTheme.bodyMedium,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
           Expanded(
-            child: SingleChildScrollView(
-              scrollDirection: Axis.vertical,
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: DataTable(
-                  headingTextStyle: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                  headingRowColor: MaterialStateProperty.resolveWith<Color>(
-                    (Set<MaterialState> states) {
-                      return Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.3);
-                    },
-                  ),
-                  border: TableBorder.all(
-                    color: Theme.of(context).dividerColor.withOpacity(0.5),
-                    width: 1,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  columns: headers.map((header) {
-                    final label = labelMap[header] ?? header;
-                    return DataColumn(
-                      label: Text(label),
-                    );
-                  }).toList(),
-                  rows: _payscaleData!.map((row) {
-                    return DataRow(
-                      cells: headers.map((header) {
-                        String cellValue = row[header] ?? '';
-                        
-                        // Format the payment type name
-                        if (header == 'type') {
+            child: Card(
+              elevation: 2,
+              clipBehavior: Clip.antiAlias,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppTheme.borderRadius), // This radius affects corner clipping
+              ),
+              color: cardBackgroundColor, // Explicitly set card background
+              margin: EdgeInsets.zero, // Card is already in Expanded with outer Padding
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Fixed Column (Payment Type)
+                  SizedBox(
+                    width: 190,
+                    child: SingleChildScrollView(
+                      controller: _verticalScrollController,
+                      scrollDirection: Axis.vertical,
+                      physics: const NeverScrollableScrollPhysics(),
+                      child: DataTable(
+                        headingRowHeight: 48,
+                        dataRowMinHeight: 50,
+                        dataRowMaxHeight: 55,
+                        columnSpacing: 0,
+                        horizontalMargin: 0,
+                        decoration: BoxDecoration(
+                          border: Border(
+                            right: BorderSide(color: Theme.of(context).dividerColor.withOpacity(0.5), width: 1),
+                          ),
+                        ),
+                        headingTextStyle: headerTextStyle,
+                        headingRowColor: MaterialStateProperty.resolveWith<Color>(
+                          (Set<MaterialState> states) => headerBackgroundColor,
+                        ),
+                        columns: [
+                          DataColumn(
+                            label: Padding(
+                              padding: cellPadding,
+                              child: Text(labelMap[fixedColumnKey] ?? fixedColumnKey, overflow: TextOverflow.ellipsis),
+                            ),
+                          ),
+                        ],
+                        rows: _payscaleData!.asMap().entries.map((entry) {
+                          int rowIndex = entry.key;
+                          Map<String, dynamic> row = entry.value;
+                          String cellValue = row[fixedColumnKey] ?? '';
                           cellValue = paymentTypeFormatMap[cellValue.toLowerCase()] ?? cellValue;
-                        }
-                        // Format currency values
-                        else if (headers.indexOf(header) > 0) {
-                          // Try to parse as double to format as currency
-                          try {
-                            final value = double.parse(cellValue);
-                            cellValue = '€${value.toStringAsFixed(2)}';
-                          } catch (e) {
-                            // Keep original if not a valid number
-                          }
-                        }
-                        
-                        return DataCell(Text(cellValue));
-                      }).toList(),
-                    );
-                  }).toList(),
-                ),
+                          return DataRow(
+                            color: rowIndex.isOdd ? oddRowColor : evenRowColor, // Apply alternating colors
+                            cells: [
+                              DataCell(
+                                Padding(
+                                  padding: cellPadding,
+                                  child: Text(cellValue, style: cellTextStyle, overflow: TextOverflow.visible),
+                                ),
+                              ),
+                            ],
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                  ),
+                  // Scrollable Columns
+                  Expanded(
+                    child: SingleChildScrollView(
+                      controller: _horizontalScrollController,
+                      scrollDirection: Axis.horizontal,
+                      physics: const ClampingScrollPhysics(),
+                      child: SizedBox(
+                        width: scrollableColumnHeaders.length * 120.0,
+                        child: SingleChildScrollView(
+                          controller: _verticalScrollController,
+                          scrollDirection: Axis.vertical,
+                          physics: const ClampingScrollPhysics(),
+                          child: DataTable(
+                            headingRowHeight: 48,
+                            dataRowMinHeight: 50,
+                            dataRowMaxHeight: 55,
+                            columnSpacing: 0,
+                            horizontalMargin: 0,
+                            headingTextStyle: headerTextStyle,
+                            headingRowColor: MaterialStateProperty.resolveWith<Color>(
+                              (Set<MaterialState> states) => headerBackgroundColor,
+                            ),
+                            columns: scrollableColumnHeaders.map((header) {
+                              final label = labelMap[header] ?? header;
+                              return DataColumn(
+                                label: Padding(
+                                  padding: cellPadding,
+                                  child: Text(label, textAlign: TextAlign.center),
+                                ),
+                              );
+                            }).toList(),
+                            rows: _payscaleData!.asMap().entries.map((entry) {
+                              int rowIndex = entry.key;
+                              Map<String, dynamic> row = entry.value;
+                              return DataRow(
+                                color: rowIndex.isOdd ? oddRowColor : evenRowColor, // Apply alternating colors
+                                cells: scrollableColumnHeaders.map((header) {
+                                  String cellValue = row[header] ?? '';
+                                  if (scrollableColumnHeaders.indexOf(header) >= 0) {
+                                    try {
+                                      final value = double.parse(cellValue);
+                                      cellValue = '€${value.toStringAsFixed(2)}';
+                                    } catch (e) {
+                                      // Keep original
+                                    }
+                                  }
+                                  return DataCell(
+                                    Padding(
+                                      padding: cellPadding,
+                                      child: Text(cellValue, style: cellTextStyle, textAlign: TextAlign.right),
+                                    ),
+                                  );
+                                }).toList(),
+                              );
+                            }).toList(),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'Note: All rates are in Euro (€)',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.6),
-                  fontStyle: FontStyle.italic,
-                ),
           ),
         ],
       ),

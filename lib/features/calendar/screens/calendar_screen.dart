@@ -34,6 +34,7 @@ import 'package:spdrivercalendar/features/notes/screens/all_notes_screen.dart'; 
 // ignore: unused_import
 import 'package:spdrivercalendar/features/feedback/screens/feedback_screen.dart';
 import 'package:spdrivercalendar/features/bills/screens/bills_screen.dart'; // Import the Bills screen
+import 'package:spdrivercalendar/features/payscale/screens/payscale_screen.dart'; // Import the Payscale screen
 
 class CalendarScreen extends StatefulWidget {
   final ValueNotifier<bool> isDarkModeNotifier;
@@ -2239,6 +2240,10 @@ class CalendarScreenState extends State<CalendarScreen>
                 value: 'notes', // Added notes value
                 child: Text('Notes'), // Added notes label
               ),
+              PopupMenuItem(
+                value: 'payscale', // Added payscale value
+                child: Text('Pay Scale'), // Added payscale label
+              ),
               // Add Feedback Item
               PopupMenuItem(
                 value: 'feedback',
@@ -2267,6 +2272,8 @@ class CalendarScreenState extends State<CalendarScreen>
               } else if (value == 'feedback') {
                 // Navigate to Feedback Screen
                 _showFeedbackPage();
+              } else if (value == 'payscale') { // Added condition for payscale
+                _showPayscalePage(); // Call the new navigation method
               }
             },
           ),
@@ -3638,6 +3645,15 @@ class CalendarScreenState extends State<CalendarScreen>
       MaterialPageRoute(builder: (context) => const BillsScreen()), // Navigate to BillsScreen
     );
   }
+
+  // --- ADD NEW FUNCTION TO NAVIGATE TO PAYSCALE SCREEN ---
+  void _showPayscalePage() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const PayscaleScreen()),
+    );
+  }
+  // --- END NEW PAYSCALE FUNCTION ---
 
   // --- ADD NEW FUNCTION TO HANDLE SPARE EVENT DELETION ---
   Future<void> _deleteSpareEvent(Event event) async {
