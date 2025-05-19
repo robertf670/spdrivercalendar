@@ -1,0 +1,141 @@
+# Plan for Implementing In-App Auto-Update Feature (Non-Store Distribution)
+
+This plan outlines the steps to implement an in-app update mechanism for your Flutter application, allowing users to be notified of and download new versions directly without relying on an official app store.
+
+## Phase 1: Server-Side Setup
+
+1.  **Create `version.json` File:**
+    *   This JSON file will be hosted on your server and act as the source of truth for the latest app version.
+    *   **Location:** Host this at a stable, publicly accessible URL (e.g., `https://yourwebsite.com/app/version.json` or `https://your-vercel-project.vercel.app/version.json`).
+    *   **Structure:**
+        ```json
+        {
+          "latest_version": "2.7.0", // Required: The latest version string (semantic versioning recommended, e.g., X.Y.Z)
+          "download_url_android": "https://yourwebsite.com/downloads/app-2.7.0.apk", // Required for Android: Direct download link for the APK
+          "download_url_ios": "https://yourwebsite.com/downloads/app-2.7.0.ipa", // Required for iOS (if applicable): Direct download link for the IPA
+          "release_notes": "New features include X and Y. Bug fixes for Z.", // Optional: Brief release notes
+          "release_notes_url": "https://yourwebsite.com/app/changelog_2.7.0.html", // Optional: Link to detailed changelog
+          "force_update_below_version": "2.5.0", // Optional: Versions below this will trigger a non-dismissible update prompt
+          "min_os_android": "8.0", // Optional: Minimum Android OS version (e.g., API level or version name)
+          "min_os_ios": "13.0" // Optional: Minimum iOS version
+        }
+        ```
+    *   **Update Process:** When you release a new app version, update this `version.json` file with the new version details and download links.
+
+2.  **Host Application Update Files (APK/IPA):**
+    *   Upload the compiled application package (e.g., `app-2.7.0.apk`, `app-2.7.0.ipa`) to a downloadable location on your server.
+    *   Ensure the `download_url_android` and `download_url_ios` in `version.json` point to these files correctly.
+    *   **Using Vercel for Hosting APK/IPA:**
+        *   Vercel can serve these static binary files. You can place them in a public/static directory in your Vercel project (e.g., a `public` folder).
+        *   Be mindful of Vercel's file size limits (especially on the Hobby tier, check current limits) if your APK/IPA files are very large.
+        *   Also, consider bandwidth limits (e.g., Hobby tier: 100GB/month). If you anticipate a high volume of downloads, this could become a concern.
+        *   For very large files or high download volumes, you might consider dedicated storage services (e.g., AWS S3, Google Cloud Storage, Backblaze B2, DigitalOcean Spaces) for hosting the APK/IPA, while still using Vercel for `version.json`. The `download_url` in `version.json` can then point to these external storage locations.
+
+3.  **Ensure HTTPS:**
+    *   Serve both the `version.json` file and the application update files over HTTPS to ensure secure communication and download. Vercel provides HTTPS by default.
+
+## Phase 2: Client-Side (Flutter App) Implementation
+
+1.  **Add Dependencies (`pubspec.yaml`):**
+    *   `http`: For making HTTP requests to fetch `version.json`.
+        ```yaml
+        dependencies:
+          http: ^1.2.1 # Or latest version
+        ```
+    *   `package_info_plus`: To get the currently installed app version.
+        ```yaml
+        dependencies:
+          package_info_plus: ^4.1.0 # Or latest version
+        ```
+    *   `url_launcher`: To open the download URL in the device's browser.
+        ```yaml
+        dependencies:
+          url_launcher: ^6.3.0 # Or latest version
+        ```
+    *   `pub_semver` (Recommended): For robust semantic version comparison.
+        ```yaml
+        dependencies:
+          pub_semver: ^2.1.4 # Or latest version
+        ```
+    *   **(Optional) Consider `upgrader` package:** This package can handle much of the boilerplate for checking, prompting, and can be configured for custom sources (like your `version.json`). Evaluate if it fits your needs to simplify development.
+
+2.  **Create a Version Checking Service (e.g., `app_update_service.dart`):**
+    *   **Fetch Version Info Function:**
+        *   Input: URL of your `version.json`.
+        *   Action: Uses `http.get()` to fetch the JSON data.
+        *   Output: A data class/map representing the parsed JSON content.
+        *   Error Handling: Handle network errors, timeouts, and invalid JSON.
+    *   **Compare Versions Function:**
+        *   Input: Current installed version string, latest version string from server.
+        *   Action: Uses `pub_semver` (or manual parsing if not using the package) to compare if the server version is newer.
+        *   Output: Boolean (true if update available, false otherwise).
+    *   **Get Current Installed Version Function:**
+        *   Uses `PackageInfo.fromPlatform()` to get `packageInfo.version`.
+
+3.  **Implement Update Notification UI:**
+    *   **Dialog Prompt:**
+        *   Create a reusable `AlertDialog` widget.
+        *   Display: "Update Available", latest version number, release notes (from `version.json` or a summary).
+        *   Buttons: "Update Now", "Later".
+    *   **(Optional) Non-Intrusive Notification:**
+        *   A `SnackBar` or a banner that can be shown if an update is available but not critical.
+
+4.  **Trigger Version Check:**
+    *   **On App Launch:** A good place is in the `initState` of your main app widget (e.g., `_MyAppState` in `main.dart`) or after the splash screen.
+    *   Call your version checking service.
+    *   If an update is available:
+        *   Check `force_update_below_version`: If current version is below this, show a non-dismissible dialog.
+        *   Otherwise, show a standard update dialog or notification.
+
+5.  **Handle User Actions:**
+    *   **"Update Now":**
+        *   Get the appropriate `download_url` from the fetched server info based on the platform (Android/iOS).
+        *   Use `url_launcher`'s `launchUrl` function to open the download link in the device's browser.
+        *   The user will then proceed to download and install the update manually.
+    *   **"Later":**
+        *   Dismiss the dialog.
+        *   Optionally, save a timestamp to avoid prompting too frequently (e.g., don't prompt again for 24 hours unless it's a forced update).
+
+6.  **Platform-Specific Considerations:**
+    *   **Android:**
+        *   Users will need to have "Install from unknown sources" enabled for the browser they use to download the APK.
+        *   You might want to provide a brief in-app instruction or link to a guide if the user is unfamiliar with this.
+    *   **iOS (Ad-Hoc/Enterprise):**
+        *   The process involves downloading and installing the IPA. Device UDIDs might need to be registered for ad-hoc builds. Enterprise distribution has its own requirements.
+
+7.  **(Optional) Force Update Logic:**
+    *   If `version.json` specifies a `force_update_below_version` and the installed version is older:
+        *   Show an update dialog that is not dismissible (e.g., `barrierDismissible: false` and no "Later" button, or a "Later" button that closes the app).
+        *   This ensures users install critical updates. Use sparingly.
+
+## Phase 3: Security Reminders
+
+*   **HTTPS:** Re-iterate that all communications (fetching `version.json`, downloading app files) MUST be over HTTPS.
+*   **(Advanced) Checksums:** For enhanced security, consider including SHA256 checksums of your APK/IPA files in `version.json`. The app could then (platform limitations apply) attempt to verify the checksum of the downloaded file before the user attempts installation. This is more complex to implement.
+
+## Phase 4: Testing Strategy
+
+1.  **Server Setup Test:**
+    *   Verify `version.json` is accessible via its URL and parses correctly.
+    *   Verify download links for APK/IPA work.
+2.  **New Version Scenario:**
+    *   Install an older version of the app.
+    *   Update `version.json` on the server to a newer version.
+    *   Launch the app and verify the update prompt appears.
+    *   Test the "Update Now" flow (download and manual install).
+    *   Test the "Later" button.
+3.  **No Update Scenario:**
+    *   Ensure `version.json` reflects the currently installed version or an older one.
+    *   Launch the app and verify no update prompt appears.
+4.  **Force Update Scenario:**
+    *   Install an older version.
+    *   Set `force_update_below_version` in `version.json` to a version higher than the installed one.
+    *   Verify a non-dismissible/strongly-worded prompt appears.
+5.  **Network Error Handling:**
+    *   Test what happens if the app cannot reach `version.json` (e.g., turn off internet). The app should handle this gracefully (e.g., log an error, proceed without checking).
+6.  **Platform-Specific Installation:**
+    *   Test the APK installation flow on Android, including the "Install from unknown sources" permission if needed.
+    *   Test IPA installation on iOS (if applicable to your distribution method).
+
+---
+This plan provides a comprehensive guide. Remember to adapt it to your specific server capabilities and application structure. The `upgrader` package might simplify many of the client-side steps if you choose to use it. 

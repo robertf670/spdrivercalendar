@@ -74,14 +74,25 @@ class EventService {
     if (!_events.containsKey(normalizedDate)) {
       _loadEventsForMonth(normalizedDate).then((monthEvents) {
         // Update the events map with the loaded month's events
-        // This populates the _events cache for all days in that month
         for (var event in monthEvents) {
-          final eventDate = DateTime(event.startDate.year, event.startDate.month, event.startDate.day);
-          if (!_events.containsKey(eventDate)) {
-            _events[eventDate] = [];
+          // Add to start date
+          final normalizedEventStartDate = DateTime(event.startDate.year, event.startDate.month, event.startDate.day);
+          if (!_events.containsKey(normalizedEventStartDate)) {
+            _events[normalizedEventStartDate] = [];
           }
-          if (!_events[eventDate]!.any((e) => e.id == event.id)) { // Avoid duplicates
-            _events[eventDate]!.add(event);
+          if (!_events[normalizedEventStartDate]!.any((e) => e.id == event.id)) {
+            _events[normalizedEventStartDate]!.add(event);
+          }
+
+          // If event spans multiple days, add reference to end date as well
+          final normalizedEventEndDate = DateTime(event.endDate.year, event.endDate.month, event.endDate.day);
+          if (normalizedEventStartDate != normalizedEventEndDate) { // Check if startDate and endDate are different days
+            if (!_events.containsKey(normalizedEventEndDate)) {
+              _events[normalizedEventEndDate] = [];
+            }
+            if (!_events[normalizedEventEndDate]!.any((e) => e.id == event.id)) {
+              _events[normalizedEventEndDate]!.add(event);
+            }
           }
         }
         
@@ -468,6 +479,66 @@ class EventService {
     } catch (e) {
       print('Error loading all events with notes: $e');
       return [];
+    }
+  }
+
+  static Future<void> initializeService() async {
+    _events = {}; // Clear existing in-memory events for a fresh load
+    _monthlyCache = {}; // Clear monthly cache as well
+    _lastLoadedMonth = null;
+
+    final prefs = await SharedPreferences.getInstance();
+    final eventsJson = prefs.getString(AppConstants.eventsStorageKey);
+
+    if (eventsJson == null || eventsJson.isEmpty) {
+      print("EventService: No events found in SharedPreferences to initialize.");
+      return; // No events to load
+    }
+
+    try {
+      final Map<String, dynamic> decodedJson = jsonDecode(eventsJson);
+      // decodedJson is Map<String_dateAsISO_for_event_START_DATE, List_of_eventMaps>
+
+      decodedJson.forEach((dateKeyString, eventsListDynamic) {
+        if (eventsListDynamic is List) {
+          for (var eventDataMap in eventsListDynamic) {
+            if (eventDataMap is Map<String, dynamic>) {
+              try {
+                Event event = Event.fromMap(eventDataMap);
+
+                // Add to _events based on actual event.startDate
+                final normalizedEventStartDate = DateTime(event.startDate.year, event.startDate.month, event.startDate.day);
+                _events[normalizedEventStartDate] ??= [];
+                if (!_events[normalizedEventStartDate]!.any((e) => e.id == event.id)) {
+                  _events[normalizedEventStartDate]!.add(event);
+                }
+
+                // If event spans multiple days, add reference to _events for endDate as well
+                final normalizedEventEndDate = DateTime(event.endDate.year, event.endDate.month, event.endDate.day);
+                if (normalizedEventStartDate != normalizedEventEndDate) {
+                  _events[normalizedEventEndDate] ??= [];
+                  if (!_events[normalizedEventEndDate]!.any((e) => e.id == event.id)) {
+                    _events[normalizedEventEndDate]!.add(event);
+                  }
+                }
+              } catch (e) {
+                print("EventService Initialize: Error parsing individual event from stored JSON for key '$dateKeyString': $e");
+              }
+            }
+          }
+        }
+      });
+      // Optional: Count and log number of events loaded for verification
+      int totalEventsInMap = 0;
+      _events.values.forEach((list) => totalEventsInMap += list.length);
+      // To avoid counting same event twice if it spans days & is in two lists, count unique IDs
+      Set<String> uniqueEventIds = {};
+      _events.values.forEach((list) => list.forEach((event) => uniqueEventIds.add(event.id)));
+      print("EventService initialized. Loaded ${uniqueEventIds.length} unique events into the _events map across various date entries.");
+
+    } catch (e) {
+      print("EventService Initialize: Error decoding events JSON from SharedPreferences: $e");
+      _events = {}; // Ensure events map is empty on error to avoid partial inconsistent state
     }
   }
 }

@@ -23,10 +23,29 @@ class _WhatsNewScreenState extends State<WhatsNewScreen> {
   // This map contains the changelog for each version
   // The key is the version number, and the value is a map of feature title and description
   final Map<String, List<Map<String, String>>> _changelogData = {
+    '2.6.1': [
+      {
+        'title': 'Restore Fix',
+        'description': 'Fixed an issue where events spanning midnight might not display correctly on all relevant days after restoring from a backup.',
+      },
+    ],
+    '2.6.0': [
+      {
+        'title': 'Automatic Backups Implemented',
+        'description': 'The app now automatically backs up your data when it is backgrounded. This feature is enabled by default.',
+      },
+      {
+        'title': 'Auto-Backup Management',
+        'description': 'You can toggle auto-backups in Settings and restore from the last 5 internal backups. Timestamps in the restore list are now more user-friendly.',
+      },
+    ],
     '2.5.1': [
       {
         'title': 'Payscale UI Enhancements',
         'description': 'Improved the layout and styling of the Payscale screen, including a fixed header column and alternating row colors for better readability.',
+      },
+      {
+        'title': 'Fix: Resolved issue where bank holidays were not consistently highlighted on the calendar after initial load.',
       },
     ],
     '2.5.0': [

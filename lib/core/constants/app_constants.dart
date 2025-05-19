@@ -18,7 +18,10 @@ class AppConstants {
   static const String lastGoogleSyncTimeKey = 'lastGoogleSyncTime';
   static const String syncToGoogleCalendarKey = 'syncToGoogleCalendar';
   static const String lastSeenVersionKey = 'lastSeenVersion';
-  
+
+  // Auto-Backup Setting
+  static const String autoBackupEnabledKey = 'autoBackupEnabled';
+
   // Routes
   static const String splashRoute = '/splash';
   static const String welcomeRoute = '/welcome';

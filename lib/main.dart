@@ -16,6 +16,9 @@ import 'package:spdrivercalendar/services/notification_service.dart';
 import 'package:spdrivercalendar/core/services/cache_service.dart';
 import 'package:spdrivercalendar/services/token_manager.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:spdrivercalendar/services/backup_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:spdrivercalendar/features/calendar/services/event_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -27,7 +30,6 @@ Future<void> main() async {
   final cacheService = CacheService();
   
   // Run independent initializations in parallel
-  // Keep NotificationService().init() here for foreground init
   await Future.wait([
     NotificationService().init(),
     FlutterConfig.configure(),
@@ -36,6 +38,9 @@ Future<void> main() async {
     GoogleCalendarService.initialize(),
     ShiftService.initialize(),
   ]);
+
+  // Initialize EventService AFTER StorageService is ready (as it reads from SharedPreferences)
+  await EventService.initializeService();
 
   // Get initial dark mode setting after StorageService is initialized
   final isDarkMode = await StorageService.getBool(AppConstants.isDarkModeKey, defaultValue: false);
@@ -72,37 +77,65 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   }
 
   @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _isDarkModeNotifier.dispose();
+    TokenManager.dispose();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) async {
+    super.didChangeAppLifecycleState(state);
+    if (state == AppLifecycleState.paused) {
+      print("App paused, checking for auto-backup.");
+      final prefs = await SharedPreferences.getInstance();
+      final bool autoBackupEnabled = prefs.getBool(AppConstants.autoBackupEnabledKey) ?? true;
+
+      if (autoBackupEnabled) {
+        print("Auto-backup enabled, creating backup...");
+        bool success = await BackupService.createAutoBackup();
+        if (success) {
+          print("Auto-backup successful on app pause.");
+        } else {
+          print("Auto-backup failed on app pause.");
+        }
+      }
+    } else if (state == AppLifecycleState.resumed) {
+      setState(() {});
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return ValueListenableBuilder<bool>(
       valueListenable: _isDarkModeNotifier,
       builder: (context, bool isDarkMode, child) {
         return RebuildText(
+          key: _rebuildKey,
           child: MaterialApp(
-            key: _rebuildKey,
             title: AppConstants.appName,
-            theme: AppTheme.lightTheme(), // Provide light theme
-            darkTheme: AppTheme.darkTheme(), // Provide dark theme
-            themeMode: isDarkMode ? ThemeMode.dark : ThemeMode.light, // Control theme mode
-            initialRoute: AppConstants.splashRoute, // Start with the splash screen
+            theme: AppTheme.lightTheme(),
+            darkTheme: AppTheme.darkTheme(),
+            themeMode: isDarkMode ? ThemeMode.dark : ThemeMode.light,
+            initialRoute: AppConstants.splashRoute,
             routes: {
-              // New Splash Route
-              AppConstants.splashRoute: (context) => const SplashScreen(),
-
-              // What's New Route
+              AppConstants.splashRoute: (context) => SplashScreen(
+                isDarkModeNotifier: _isDarkModeNotifier,
+                onInitializationComplete: (String initialRoute) {
+                  Navigator.of(context).pushReplacementNamed(initialRoute);
+                },
+              ),
               AppConstants.whatsNewRoute: (context) => WhatsNewScreen(
                 onContinue: () {
-                  // After viewing what's new, check onboarding status
                   final state = context.findAncestorStateOfType<_SplashScreenState>();
                   if (state != null) {
                     state._checkOnboardingStatus();
                   } else {
-                    // Fallback if somehow we can't find the splash screen state
                     Navigator.pushReplacementNamed(context, AppConstants.homeRoute);
                   }
                 },
               ),
-
-              // Existing Routes (adjusted callbacks)
               AppConstants.welcomeRoute: (context) => WelcomeScreen(
                 onGetStarted: () async {
                   await StorageService.saveBool(AppConstants.hasSeenWelcomeKey, true);
@@ -116,7 +149,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
               ),
               AppConstants.googleLoginRoute: (context) => GoogleLoginScreen(
                 onLoginComplete: () async {
-                  await GoogleCalendarService.saveLoginStatus(true); // Save status directly
+                  await GoogleCalendarService.saveLoginStatus(true);
                   Navigator.pushReplacementNamed(context, AppConstants.homeRoute);
                 },
               ),
@@ -127,27 +160,17 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       },
     );
   }
-
-  @override
-  void dispose() {
-    _isDarkModeNotifier.dispose();
-    WidgetsBinding.instance.removeObserver(this);
-    TokenManager.dispose();
-    super.dispose();
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
-      // Existing logic to force rebuild on resume
-      setState(() {});
-    }
-  }
 }
 
-// New SplashScreen Widget
 class SplashScreen extends StatefulWidget {
-  const SplashScreen({Key? key}) : super(key: key);
+  final ValueNotifier<bool> isDarkModeNotifier;
+  final Function(String) onInitializationComplete;
+
+  const SplashScreen({
+    Key? key,
+    required this.isDarkModeNotifier,
+    required this.onInitializationComplete,
+  }) : super(key: key);
 
   @override
   _SplashScreenState createState() => _SplashScreenState();
@@ -161,41 +184,32 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   Future<void> _checkAppState() async {
-    // Wait a frame to ensure context is available
     await Future.delayed(Duration.zero);
 
-    // Check app version first
     final shouldShowWhatsNew = await _checkVersionUpdate();
 
     if (shouldShowWhatsNew && mounted) {
-      // Show What's New screen first
       Navigator.pushReplacementNamed(context, AppConstants.whatsNewRoute);
       return;
     }
 
-    // Otherwise, proceed with normal flow
     await _checkOnboardingStatus();
   }
 
   Future<bool> _checkVersionUpdate() async {
     try {
-      // Get current app version
       final packageInfo = await PackageInfo.fromPlatform();
       final currentVersion = packageInfo.version;
       
-      // Get last seen version
       final lastSeenVersion = await StorageService.getString(AppConstants.lastSeenVersionKey);
       
-      // If lastSeenVersion is null (first install), save current version and don't show What's New
       if (lastSeenVersion == null) {
         await StorageService.saveString(AppConstants.lastSeenVersionKey, currentVersion);
         return false;
       }
       
-      // If versions are different, show What's New screen
       return lastSeenVersion != currentVersion;
     } catch (e) {
-      // In case of error, don't show What's New screen
       return false;
     }
   }
@@ -204,25 +218,22 @@ class _SplashScreenState extends State<SplashScreen> {
     final hasSeenWelcome = await StorageService.getBool(AppConstants.hasSeenWelcomeKey, defaultValue: false);
     final hasCompletedGoogleLogin = await StorageService.getBool(AppConstants.hasCompletedGoogleLoginKey, defaultValue: false);
 
-    // Determine the correct route based on onboarding status
     String nextRoute;
     if (hasSeenWelcome && hasCompletedGoogleLogin) {
       nextRoute = AppConstants.homeRoute;
-    } else if (hasSeenWelcome) { // Welcome seen, but Google Login not complete
+    } else if (hasSeenWelcome) {
       nextRoute = AppConstants.googleLoginRoute;
-    } else { // Welcome not seen
+    } else {
       nextRoute = AppConstants.welcomeRoute;
     }
 
-    // Navigate and replace the splash screen
-    if (mounted) { // Ensure the widget is still in the tree
+    if (mounted) {
       Navigator.pushReplacementNamed(context, nextRoute);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // Simple loading indicator while checking status
     return const Scaffold(
       body: Center(
         child: CircularProgressIndicator(),

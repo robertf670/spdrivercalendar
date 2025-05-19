@@ -6,8 +6,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:spdrivercalendar/core/constants/app_constants.dart';
 // Import keys for settings that might not be in AppConstants
 import 'package:spdrivercalendar/features/settings/screens/settings_screen.dart' show kNotificationsEnabledKey, kNotificationOffsetHoursKey;
+import 'package:path_provider/path_provider.dart'; // Added for auto-backup
 
 class BackupService {
+  // --- Auto-Backup Configuration ---
+  static const String _autoBackupDirName = 'autobackups';
+  static const int _maxAutoBackups = 5; // Keep the last 5 auto-backups
+  // --- End Auto-Backup Configuration ---
 
   // List all SharedPreferences keys to back up
   static final List<String> _backupKeys = [
@@ -64,21 +69,110 @@ class BackupService {
     }
   }
 
-  static Future<bool> restoreBackup() async {
-    try {
-      // Ask user to pick the backup file
-      FilePickerResult? result = await FilePicker.platform.pickFiles(
-        dialogTitle: 'Select Backup File',
-        type: FileType.custom,
-        allowedExtensions: ['json'],
-      );
+  static Future<Directory> _getAutoBackupDirectory() async {
+    final appSupportDir = await getApplicationSupportDirectory();
+    final autoBackupPath = '${appSupportDir.path}/$_autoBackupDirName';
+    final autoBackupDir = Directory(autoBackupPath);
+    if (!await autoBackupDir.exists()) {
+      await autoBackupDir.create(recursive: true);
+    }
+    return autoBackupDir;
+  }
 
-      if (result == null || result.files.single.path == null) {
-        print("Restore cancelled by user.");
-        return false; // User cancelled the picker
+  static Future<bool> createAutoBackup() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final Map<String, dynamic> backupData = {};
+
+      for (String key in _backupKeys) {
+        final value = prefs.get(key);
+        // Ensure we don't try to backup null if a key was added but not yet set.
+        // JSON encoding null is fine, but good to be aware.
+        if (value != null) {
+          backupData[key] = value;
+        } else {
+          // Optionally log or handle missing keys if necessary
+          print("AutoBackup: Key '$key' not found in SharedPreferences, skipping.");
+        }
       }
 
-      final String filePath = result.files.single.path!;
+      final String backupJson = jsonEncode(backupData);
+      final Uint8List backupBytes = utf8.encode(backupJson);
+
+      final autoBackupDir = await _getAutoBackupDirectory();
+      final timestamp = DateTime.now().toIso8601String().replaceAll(':', '-').replaceAll('.', '-');
+      final fileName = 'autobackup_$timestamp.json';
+      final filePath = '${autoBackupDir.path}/$fileName';
+      final file = File(filePath);
+      await file.writeAsBytes(backupBytes);
+
+      // Manage retention policy
+      final files = autoBackupDir.listSync()
+          .where((item) => item is File && item.path.endsWith('.json'))
+          .map((item) => item as File)
+          .toList();
+          
+      files.sort((a, b) => b.statSync().modified.compareTo(a.statSync().modified)); // Sort by newest first
+
+      if (files.length > _maxAutoBackups) {
+        for (int i = _maxAutoBackups; i < files.length; i++) {
+          await files[i].delete();
+          print("AutoBackup: Deleted old backup ${files[i].path}");
+        }
+      }
+      print("AutoBackup: Created successfully at $filePath");
+      return true;
+    } catch (e) {
+      print("Error creating auto backup: $e");
+      return false;
+    }
+  }
+
+  static Future<List<File>> listAutoBackups() async {
+    try {
+      final autoBackupDir = await _getAutoBackupDirectory();
+      final files = autoBackupDir.listSync()
+          .where((item) => item is File && item.path.endsWith('.json') && item.path.contains('autobackup_'))
+          .map((item) => item as File)
+          .toList();
+      // Sort by newest first
+      files.sort((a, b) => b.statSync().modified.compareTo(a.statSync().modified));
+      return files;
+    } catch (e) {
+      print("Error listing auto backups: $e");
+      return [];
+    }
+  }
+
+  static Future<bool> restoreBackup({String? filePathToRestore}) async {
+    try {
+      String? filePath;
+
+      if (filePathToRestore != null) {
+        filePath = filePathToRestore;
+      } else {
+        // Ask user to pick the backup file (original manual restore behavior)
+        FilePickerResult? result = await FilePicker.platform.pickFiles(
+          dialogTitle: 'Select Backup File',
+          type: FileType.any, // Keep FileType.any
+        );
+
+        if (result == null || result.files.single.path == null) {
+          print("Restore cancelled by user.");
+          return false; // User cancelled the picker
+        }
+
+        // Validate if the picked file is a .json file
+        final pickedFile = result.files.single;
+        if (pickedFile.name == null || !pickedFile.name!.toLowerCase().endsWith('.json')) {
+          print("Invalid file type picked. Expected .json, got: ${pickedFile.name}");
+          // We can't show a SnackBar here, so we rely on returning false
+          // and letting SettingsScreen handle the user notification.
+          return false; // Indicate failure due to wrong file type
+        }
+        filePath = pickedFile.path!;
+      }
+      
       final file = File(filePath);
 
       if (!await file.exists()) {

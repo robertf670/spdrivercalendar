@@ -116,3 +116,6 @@ extract_duty_data.py
 simple_excel_to_text.py
 boards/
 pay/
+
+# Overtime feature plan file
+overtimeplan.txt

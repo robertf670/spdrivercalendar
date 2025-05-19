@@ -10,6 +10,8 @@ import 'package:spdrivercalendar/services/notification_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:spdrivercalendar/services/backup_service.dart';
+import 'dart:io'; // For File type in auto-backup list
+import 'package:intl/intl.dart'; // For DateFormat
 
 // Define Preference Keys for Notifications (Consider moving to AppConstants if not already there)
 const String kNotificationsEnabledKey = 'notificationsEnabled';
@@ -40,6 +42,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _notificationsEnabled = false;
   int _notificationOffsetHours = 1; // Default offset
 
+  // Auto-Backup state variable
+  bool _autoBackupEnabled = false;
+
   @override
   void initState() {
     super.initState();
@@ -49,15 +54,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _loadSettings() async {
-    final prefs = await SharedPreferences.getInstance(); // Use SharedPreferences directly here
-    final syncToGoogle = prefs.getBool(AppConstants.syncToGoogleCalendarKey) ?? false;
-    final notificationsEnabled = prefs.getBool(kNotificationsEnabledKey) ?? false;
-    final notificationOffset = prefs.getInt(kNotificationOffsetHoursKey) ?? 1;
-    
     setState(() {
-      _syncToGoogleCalendar = syncToGoogle;
-      _notificationsEnabled = notificationsEnabled;
-      _notificationOffsetHours = notificationOffset;
+      _isLoading = true;
+    });
+    final prefs = await SharedPreferences.getInstance();
+    _isDarkMode = prefs.getBool(AppConstants.isDarkModeKey) ?? widget.isDarkModeNotifier.value;
+    _syncToGoogleCalendar = prefs.getBool(AppConstants.syncToGoogleCalendarKey) ?? false;
+    
+    // Load notification settings
+    _notificationsEnabled = prefs.getBool(kNotificationsEnabledKey) ?? false;
+    _notificationOffsetHours = prefs.getInt(kNotificationOffsetHoursKey) ?? 1;
+
+    // Load auto-backup setting - default to true
+    _autoBackupEnabled = prefs.getBool(AppConstants.autoBackupEnabledKey) ?? true;
+
+    setState(() {
+      _isLoading = false;
     });
   }
 
@@ -143,7 +155,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
         title: const Text('Settings'),
         elevation: 0,
       ),
-      body: ListView(
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : ListView(
         padding: const EdgeInsets.all(16.0),
         children: [
           _buildSectionHeader('Appearance'),
@@ -184,6 +198,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
           _buildSectionHeader('Backup & Restore'),
           _buildBackupButton(),
           _buildRestoreButton(),
+          _buildAutoBackupToggle(),
+          _buildRestoreFromAutoBackupButton(),
           // --- End Restored Section ---
           
                     // Driver Resources section removed and moved to dropdown menu
@@ -662,6 +678,138 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  Widget _buildAutoBackupToggle() {
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 4.0),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppTheme.borderRadius),
+      ),
+      child: SwitchListTile(
+        title: const Text('Enable Automatic Backups'),
+        subtitle: const Text('Backs up data when app is backgrounded'),
+        value: _autoBackupEnabled,
+        onChanged: (bool value) async {
+          setState(() {
+            _autoBackupEnabled = value;
+          });
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setBool(AppConstants.autoBackupEnabledKey, value);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(value ? 'Automatic backups enabled' : 'Automatic backups disabled')),
+          );
+          // Optionally trigger an initial backup if enabling for the first time
+          if (value) {
+             _showLoadingDialog("Creating initial auto-backup...");
+            bool success = await BackupService.createAutoBackup();
+            Navigator.of(context, rootNavigator: true).pop(); // Close loading dialog
+            if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(success ? 'Initial auto-backup created.' : 'Initial auto-backup failed.')),
+                );
+            }
+          }
+        },
+        secondary: Icon(Icons.autorenew, color: Theme.of(context).iconTheme.color),
+      ),
+    );
+  }
+
+  Widget _buildRestoreFromAutoBackupButton() {
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 4.0),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppTheme.borderRadius),
+      ),
+      child: ListTile(
+        leading: Icon(Icons.settings_backup_restore, color: Theme.of(context).iconTheme.color),
+        title: const Text('Restore from Auto-Backup'),
+        subtitle: const Text('Restore data from an internal backup'),
+        onTap: _showAutoBackupSelectionDialog,
+      ),
+    );
+  }
+
+  Future<void> _showAutoBackupSelectionDialog() async {
+    _showLoadingDialog("Loading auto-backups...");
+    List<File> autoBackups = await BackupService.listAutoBackups();
+    Navigator.of(context, rootNavigator: true).pop(); // Close loading dialog
+
+    if (!mounted) return;
+
+    if (autoBackups.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No automatic backups found.')),
+      );
+      return;
+    }
+
+    showDialog<File>(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: const Text('Select an Auto-Backup'),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: ListView.builder(
+              shrinkWrap: true,
+              itemCount: autoBackups.length,
+              itemBuilder: (BuildContext context, int index) {
+                final backupFile = autoBackups[index];
+                // Use the file's last modified timestamp for display
+                final DateTime lastModified = backupFile.statSync().modified.toLocal();
+                // Format for better readability (e.g., "Wed, Jul 10, 2024  3:45 PM")
+                final String formattedDateTime = DateFormat('EEE, MMM d, yyyy  h:mm a').format(lastModified);
+
+                return ListTile(
+                  title: Text('Backup - $formattedDateTime'), // Updated title
+                  subtitle: Text('Size: ${(backupFile.lengthSync() / 1024).toStringAsFixed(2)} KB'), // Added "Size:" and improved clarity
+                  onTap: () {
+                    Navigator.of(dialogContext).pop(backupFile);
+                  },
+                );
+              },
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Cancel'),
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+              },
+            ),
+          ],
+        );
+      },
+    ).then((selectedBackupFile) {
+      if (selectedBackupFile != null) {
+        _confirmRestoreFromAutoBackup(selectedBackupFile.path);
+      }
+    });
+  }
+
+  Future<void> _confirmRestoreFromAutoBackup(String filePath) async {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Confirm Restore'),
+        content: const Text('Restoring data from this auto-backup will overwrite current events and settings. Are you sure?'),
+        actions: [
+          TextButton(
+            child: const Text('Cancel'),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+          TextButton(
+            child: const Text('Restore', style: TextStyle(color: Colors.red)),
+            onPressed: () {
+              Navigator.of(context).pop(); // Close confirmation
+              _performRestore(filePathToRestore: filePath);
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _performBackup() async {
     // Show loading indicator
      _showLoadingDialog("Creating backup...");
@@ -693,7 +841,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: const Text('Restore', style: TextStyle(color: Colors.red)),
             onPressed: () {
               Navigator.of(context).pop(); // Close confirmation
-              _performRestore(); // Start restore process
+              _performRestore(); // Start manual restore process (no path given)
             },
           ),
         ],
@@ -701,14 +849,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Future<void> _performRestore() async {
+  Future<void> _performRestore({String? filePathToRestore}) async {
      // Show loading indicator
-    _showLoadingDialog("Restoring backup...");
+    _showLoadingDialog(filePathToRestore == null ? "Restoring backup..." : "Restoring auto-backup...");
 
-    final bool success = await BackupService.restoreBackup();
+    final bool success = await BackupService.restoreBackup(filePathToRestore: filePathToRestore);
 
     // Close loading dialog
-    Navigator.of(context, rootNavigator: true).pop();
+    // Use a local variable for context that might be used in an async gap.
+    final navContext = Navigator.of(context, rootNavigator: true);
+    navContext.pop();
 
     if (success) {
       // Show success message and prompt for restart
