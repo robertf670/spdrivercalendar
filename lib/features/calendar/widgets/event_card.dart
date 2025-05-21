@@ -130,7 +130,26 @@ class _EventCardState extends State<EventCard> {
   Future<void> _loadLocationData() async {
     try {
       // Extract the shift code
-      final shiftCode = widget.event.title.replaceAll('Shift: ', '').trim();
+      String shiftCode;
+      
+      // Handle overtime shifts
+      if (widget.event.title.contains('(OT)')) {
+        // Extract the shift code from overtime title (e.g., "101A (OT)" becomes "101")
+        // Remove the half indicator (A/B) and the (OT) suffix
+        final otPattern = RegExp(r'^(.*?)[AB]? \(OT\)$');
+        final match = otPattern.firstMatch(widget.event.title);
+        if (match != null && match.groupCount >= 1) {
+          shiftCode = match.group(1) ?? '';
+        } else {
+          shiftCode = widget.event.title.replaceAll(' (OT)', '');
+          // Remove A or B if it exists at the end
+          if (shiftCode.endsWith('A') || shiftCode.endsWith('B')) {
+            shiftCode = shiftCode.substring(0, shiftCode.length - 1);
+          }
+        }
+      } else {
+        shiftCode = widget.event.title.replaceAll('Shift: ', '').trim();
+      }
       
       // Skip for spare shifts
       if (shiftCode.startsWith('SP')) {
@@ -1010,6 +1029,35 @@ class _EventCardState extends State<EventCard> {
                                   fontWeight: widget.event.title.contains('(OT)') ? FontWeight.bold : FontWeight.normal,
                                 ),
                               ),
+                              // Add location for overtime shifts if available - with correct locations based on shift type
+                              if (widget.event.title.contains('A (OT)') && startLocation != null && startLocation!.isNotEmpty) ...[
+                                // First half (A) overtime: show start location
+                                TextSpan(
+                                  text: ' $startLocation',
+                                  style: TextStyle(
+                                    color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.9),
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ] else if (widget.event.title.contains('B (OT)') && finishBreakLocation != null && finishBreakLocation!.isNotEmpty) ...[
+                                // Second half (B) overtime: show finish break location as start location
+                                TextSpan(
+                                  text: ' $finishBreakLocation',
+                                  style: TextStyle(
+                                    color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.9),
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ] else if (widget.event.title.contains('(OT)') && startLocation != null && startLocation!.isNotEmpty) ...[
+                                // Generic overtime: show start location
+                                TextSpan(
+                                  text: ' $startLocation',
+                                  style: TextStyle(
+                                    color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.9),
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
                               TextSpan(
                                 text: widget.event.title.contains('(OT)') ? ' - Finish: ' : ' - Sign Off: ',
                               ),
@@ -1020,6 +1068,35 @@ class _EventCardState extends State<EventCard> {
                                   fontWeight: widget.event.title.contains('(OT)') ? FontWeight.bold : FontWeight.normal,
                                 ),
                               ),
+                              // Add appropriate finish location for overtime shifts based on half type
+                              if (widget.event.title.contains('A (OT)') && startBreakLocation != null && startBreakLocation!.isNotEmpty) ...[
+                                // First half (A) overtime: show break start location as finish location
+                                TextSpan(
+                                  text: ' $startBreakLocation',
+                                  style: TextStyle(
+                                    color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.9),
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ] else if (widget.event.title.contains('B (OT)') && finishLocation != null && finishLocation!.isNotEmpty) ...[
+                                // Second half (B) overtime: show finish location
+                                TextSpan(
+                                  text: ' $finishLocation',
+                                  style: TextStyle(
+                                    color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.9),
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ] else if (widget.event.title.contains('(OT)') && finishLocation != null && finishLocation!.isNotEmpty) ...[
+                                // Generic overtime: show finish location
+                                TextSpan(
+                                  text: ' $finishLocation',
+                                  style: TextStyle(
+                                    color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.9),
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
                             ],
                           ),
                         ),
