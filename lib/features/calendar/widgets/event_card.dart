@@ -60,6 +60,30 @@ class _EventCardState extends State<EventCard> {
     }
   }
 
+  // Calculate work time for overtime shifts
+  String? _calculateOvertimeWorkTime() {
+    if (widget.event.title.contains('(OT)')) {
+      // Convert TimeOfDay to minutes from midnight
+      int startMinutes = widget.event.startTime.hour * 60 + widget.event.startTime.minute;
+      int endMinutes = widget.event.endTime.hour * 60 + widget.event.endTime.minute;
+      
+      // Handle overnight shifts (end time is earlier than start time)
+      if (endMinutes < startMinutes) {
+        endMinutes += 24 * 60; // Add 24 hours
+      }
+      
+      // Calculate the duration in minutes
+      int durationMinutes = endMinutes - startMinutes;
+      
+      // Format as hours and minutes
+      int hours = durationMinutes ~/ 60;
+      int minutes = durationMinutes % 60;
+      
+      return '${hours}h ${minutes}m';
+    }
+    return null;
+  }
+
   @override
   void didUpdateWidget(EventCard oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -973,21 +997,27 @@ class _EventCardState extends State<EventCard> {
                             style: TextStyle( // Removed const and hardcoded black color
                               color: Theme.of(context).textTheme.bodyMedium?.color, // Use theme color
                               fontSize: 14,
-                              // fontWeight: FontWeight.w600, // REMOVE overall bold
+                              fontWeight: widget.event.title.contains('(OT)') ? FontWeight.bold : FontWeight.normal,
                             ),
                             children: <TextSpan>[
-                              const TextSpan(text: 'Report: '),
+                              TextSpan(
+                                text: widget.event.title.contains('(OT)') ? 'Start: ' : 'Report: ',
+                              ),
                               TextSpan(
                                 text: widget.event.formattedStartTime,
                                 style: TextStyle( // Removed const and hardcoded black color
                                   color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.9), // Use theme color, slightly less emphasis
+                                  fontWeight: widget.event.title.contains('(OT)') ? FontWeight.bold : FontWeight.normal,
                                 ),
                               ),
-                              const TextSpan(text: ' - Sign Off: '),
+                              TextSpan(
+                                text: widget.event.title.contains('(OT)') ? ' - Finish: ' : ' - Sign Off: ',
+                              ),
                               TextSpan(
                                 text: widget.event.formattedEndTime,
                                 style: TextStyle( // Removed const and hardcoded black color
                                   color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.9), // Use theme color, slightly less emphasis
+                                  fontWeight: widget.event.title.contains('(OT)') ? FontWeight.bold : FontWeight.normal,
                                 ),
                               ),
                             ],
@@ -998,36 +1028,78 @@ class _EventCardState extends State<EventCard> {
                   ),
                 ),
               
-              // MODIFIED: Depart - Finish time with locations (PZ) or Start-End time (others)
-              Row(
-                children: [
-                  Icon(
-                    Icons.route,
-                    size: 16,
-                    color: Theme.of(context).brightness == Brightness.dark
-                        ? Colors.white
-                        : Colors.black,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: RichText(
-                      overflow: TextOverflow.ellipsis,
-                      text: TextSpan(
-                        style: TextStyle(
-                          color: Theme.of(context).brightness == Brightness.dark
-                              ? Colors.white
-                              : Colors.black,
-                          fontSize: 14,
+              // Add work time display for overtime shifts
+              if (widget.event.title.contains('(OT)')) ...[
+                Padding(
+                  padding: const EdgeInsets.only(top: 4.0, bottom: 6.0),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.access_time,
+                        size: 16,
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.white
+                            : Colors.black,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: RichText(
+                          overflow: TextOverflow.ellipsis,
+                          text: TextSpan(
+                            style: TextStyle(
+                              color: Theme.of(context).textTheme.bodyMedium?.color,
+                              fontSize: 14,
+                            ),
+                            children: <TextSpan>[
+                              const TextSpan(text: 'Work Time: '),
+                              TextSpan(
+                                text: _calculateOvertimeWorkTime() ?? '',
+                                style: TextStyle(
+                                  color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.9),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                        children: _buildTimeDisplay(),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+              
+              // MODIFIED: Depart - Finish time with locations (PZ) or Start-End time (others)
+              // Don't show this row for overtime shifts
+              if (!widget.event.title.contains('(OT)')) ...[
+                Row(
+                  children: [
+                    Icon(
+                      Icons.route,
+                      size: 16,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white
+                          : Colors.black,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: RichText(
+                        overflow: TextOverflow.ellipsis,
+                        text: TextSpan(
+                          style: TextStyle(
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? Colors.white
+                                : Colors.black,
+                            fontSize: 14,
+                          ),
+                          children: _buildTimeDisplay(),
+                        ),
                       ),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 6.0),
+                  ],
+                ),
+                const SizedBox(height: 6.0),
+              ],
               // MODIFIED: Break times row (if available AND NOT BusCheck)
-              if (breakTime != null && !isBusCheckShift) ...[
+              if (breakTime != null && !isBusCheckShift && !widget.event.title.contains('(OT)')) ...[
                 Row(
                   children: [
                     Icon(
