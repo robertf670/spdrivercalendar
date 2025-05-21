@@ -1129,8 +1129,8 @@ class _EventCardState extends State<EventCard> {
               ),
               const SizedBox(height: 6.0),
               
-              // NEW: Report - Sign Off line (only for PZ shifts)
-              if (widget.event.title.startsWith('PZ'))
+              // NEW: Report - Sign Off line (for PZ shifts and UNI overtime shifts)
+              if (widget.event.title.startsWith('PZ') || (widget.event.title.contains('(OT)') && RegExp(r'^\d{2,3}/').hasMatch(widget.event.title.replaceAll(RegExp(r'[AB]? \(OT\)$'), ''))))
                 Padding(
                   padding: const EdgeInsets.only(bottom: 4.0), // Keep space below
                   // Add Row for Icon
