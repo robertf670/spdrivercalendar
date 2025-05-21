@@ -63,6 +63,14 @@ class _EventCardState extends State<EventCard> {
   // Calculate work time for overtime shifts
   String? _calculateOvertimeWorkTime() {
     if (widget.event.title.contains('(OT)')) {
+      // For UNI/Euro overtime shifts, use the work time already calculated in _loadUniShiftData
+      if (RegExp(r'^\d{2,3}/').hasMatch(widget.event.title.replaceAll(RegExp(r'[AB]? \(OT\)$'), ''))) {
+        if (workTime != null) {
+          return workTime;
+        }
+      }
+      
+      // Handle regular overtime shifts
       // Convert TimeOfDay to minutes from midnight
       int startMinutes = widget.event.startTime.hour * 60 + widget.event.startTime.minute;
       int endMinutes = widget.event.endTime.hour * 60 + widget.event.endTime.minute;
@@ -286,10 +294,17 @@ class _EventCardState extends State<EventCard> {
       final bankHoliday = ShiftService.getBankHoliday(widget.event.startDate, ShiftService.bankHolidays);
       final isBankHoliday = bankHoliday != null;
       
+      // Check if this is a half overtime shift
+      final bool isOvertimeShift = widget.event.title.contains('(OT)');
+      final bool isFirstHalf = widget.event.title.contains('A (OT)');
+      final bool isSecondHalf = widget.event.title.contains('B (OT)');
+      
       // First check UNI_7DAYs.csv for all days
       String? startTime;
       String? endTime;
       String? workTimeStr;
+      String? breakStartTime;
+      String? breakEndTime;
       
       // Try 7DAYs file first
       final file7Days = await rootBundle.loadString('assets/UNI_7DAYs.csv');
@@ -305,32 +320,93 @@ class _EventCardState extends State<EventCard> {
           // For UNI files, columns are: ShiftCode,StartTime,BreakStart,BreakEnd,FinishTime
           startTime = parts[1].trim();
           endTime = parts[4].trim();
+          breakStartTime = parts[2].trim();
+          breakEndTime = parts[3].trim();
           
           // Format times by removing seconds
           startTime = _formatTimeWithoutSeconds(startTime);
           endTime = _formatTimeWithoutSeconds(endTime);
+          breakStartTime = _formatTimeWithoutSeconds(breakStartTime);
+          breakEndTime = _formatTimeWithoutSeconds(breakEndTime);
           
-          // Calculate work time
-          final start = DateFormat('HH:mm').parse(startTime);
-          final end = DateFormat('HH:mm').parse(endTime);
-          final totalSpread = end.difference(start);
-          
-          // If there's a break, subtract it
-          if (parts[2] != 'nan' && parts[3] != 'nan') {
-            final breakStart = DateFormat('HH:mm').parse(parts[2]);
-            final breakEnd = DateFormat('HH:mm').parse(parts[3]);
-            final breakDuration = breakEnd.difference(breakStart);
-            final workTime = totalSpread - breakDuration;
-            
-            // Format work time as HH:mm
-            final hours = workTime.inHours;
-            final minutes = workTime.inMinutes % 60;
-            workTimeStr = '${hours}h ${minutes}m';
+          // For overtime half shifts, adjust times and calculate work time accordingly
+          if (isOvertimeShift) {
+            if (isFirstHalf && breakStartTime != null && breakStartTime.toLowerCase() != "nan") {
+              // For first half, use start time to break start time
+              final start = DateFormat('HH:mm').parse(startTime!);
+              final end = DateFormat('HH:mm').parse(breakStartTime);
+              final halfShiftDuration = end.difference(start);
+              
+              // Format work time
+              final hours = halfShiftDuration.inHours;
+              final minutes = halfShiftDuration.inMinutes % 60;
+              workTimeStr = '${hours}h ${minutes}m';
+              
+              // Update end time for display
+              endTime = breakStartTime;
+            } else if (isSecondHalf && breakEndTime != null && breakEndTime.toLowerCase() != "nan") {
+              // For second half, use break end time to finish time
+              final start = DateFormat('HH:mm').parse(breakEndTime);
+              final end = DateFormat('HH:mm').parse(endTime!);
+              final halfShiftDuration = end.difference(start);
+              
+              // Format work time
+              final hours = halfShiftDuration.inHours;
+              final minutes = halfShiftDuration.inMinutes % 60;
+              workTimeStr = '${hours}h ${minutes}m';
+              
+              // Update start time for display
+              startTime = breakEndTime;
+            } else {
+              // Calculate full work time
+              final start = DateFormat('HH:mm').parse(startTime!);
+              final end = DateFormat('HH:mm').parse(endTime!);
+              final totalSpread = end.difference(start);
+              
+              // If there's a break, subtract it
+              if (breakStartTime != null && breakEndTime != null && 
+                  breakStartTime.toLowerCase() != 'nan' && breakEndTime.toLowerCase() != 'nan') {
+                final breakStart = DateFormat('HH:mm').parse(breakStartTime);
+                final breakEnd = DateFormat('HH:mm').parse(breakEndTime);
+                final breakDuration = breakEnd.difference(breakStart);
+                final workTime = totalSpread - breakDuration;
+                
+                // Format work time as HH:mm
+                final hours = workTime.inHours;
+                final minutes = workTime.inMinutes % 60;
+                workTimeStr = '${hours}h ${minutes}m';
+              } else {
+                // No break, use total spread
+                final hours = totalSpread.inHours;
+                final minutes = totalSpread.inMinutes % 60;
+                workTimeStr = '${hours}h ${minutes}m';
+              }
+            }
           } else {
-            // No break, use total spread
-            final hours = totalSpread.inHours;
-            final minutes = totalSpread.inMinutes % 60;
-            workTimeStr = '${hours}h ${minutes}m';
+            // Original code for non-overtime shifts
+            // Calculate work time
+            final start = DateFormat('HH:mm').parse(startTime!);
+            final end = DateFormat('HH:mm').parse(endTime!);
+            final totalSpread = end.difference(start);
+            
+            // If there's a break, subtract it
+            if (breakStartTime != null && breakEndTime != null && 
+                breakStartTime.toLowerCase() != 'nan' && breakEndTime.toLowerCase() != 'nan') {
+              final breakStart = DateFormat('HH:mm').parse(breakStartTime);
+              final breakEnd = DateFormat('HH:mm').parse(breakEndTime);
+              final breakDuration = breakEnd.difference(breakStart);
+              final workTime = totalSpread - breakDuration;
+              
+              // Format work time as HH:mm
+              final hours = workTime.inHours;
+              final minutes = workTime.inMinutes % 60;
+              workTimeStr = '${hours}h ${minutes}m';
+            } else {
+              // No break, use total spread
+              final hours = totalSpread.inHours;
+              final minutes = totalSpread.inMinutes % 60;
+              workTimeStr = '${hours}h ${minutes}m';
+            }
           }
           
           print('Found UNI shift in 7DAYs file: $shiftCode, start: $startTime, end: $endTime, work: $workTimeStr');
@@ -353,32 +429,93 @@ class _EventCardState extends State<EventCard> {
             // For UNI files, columns are: ShiftCode,StartTime,BreakStart,BreakEnd,FinishTime
             startTime = parts[1].trim();
             endTime = parts[4].trim();
+            breakStartTime = parts[2].trim();
+            breakEndTime = parts[3].trim();
             
             // Format times by removing seconds
             startTime = _formatTimeWithoutSeconds(startTime);
             endTime = _formatTimeWithoutSeconds(endTime);
+            breakStartTime = _formatTimeWithoutSeconds(breakStartTime);
+            breakEndTime = _formatTimeWithoutSeconds(breakEndTime);
             
-            // Calculate work time
-            final start = DateFormat('HH:mm').parse(startTime);
-            final end = DateFormat('HH:mm').parse(endTime);
-            final totalSpread = end.difference(start);
-            
-            // If there's a break, subtract it
-            if (parts[2] != 'nan' && parts[3] != 'nan') {
-              final breakStart = DateFormat('HH:mm').parse(parts[2]);
-              final breakEnd = DateFormat('HH:mm').parse(parts[3]);
-              final breakDuration = breakEnd.difference(breakStart);
-              final workTime = totalSpread - breakDuration;
-              
-              // Format work time as HH:mm
-              final hours = workTime.inHours;
-              final minutes = workTime.inMinutes % 60;
-              workTimeStr = '${hours}h ${minutes}m';
+            // For overtime half shifts, adjust times and calculate work time accordingly
+            if (isOvertimeShift) {
+              if (isFirstHalf && breakStartTime != null && breakStartTime.toLowerCase() != "nan") {
+                // For first half, use start time to break start time
+                final start = DateFormat('HH:mm').parse(startTime!);
+                final end = DateFormat('HH:mm').parse(breakStartTime);
+                final halfShiftDuration = end.difference(start);
+                
+                // Format work time
+                final hours = halfShiftDuration.inHours;
+                final minutes = halfShiftDuration.inMinutes % 60;
+                workTimeStr = '${hours}h ${minutes}m';
+                
+                // Update end time for display
+                endTime = breakStartTime;
+              } else if (isSecondHalf && breakEndTime != null && breakEndTime.toLowerCase() != "nan") {
+                // For second half, use break end time to finish time
+                final start = DateFormat('HH:mm').parse(breakEndTime);
+                final end = DateFormat('HH:mm').parse(endTime!);
+                final halfShiftDuration = end.difference(start);
+                
+                // Format work time
+                final hours = halfShiftDuration.inHours;
+                final minutes = halfShiftDuration.inMinutes % 60;
+                workTimeStr = '${hours}h ${minutes}m';
+                
+                // Update start time for display
+                startTime = breakEndTime;
+              } else {
+                // Calculate full work time
+                final start = DateFormat('HH:mm').parse(startTime!);
+                final end = DateFormat('HH:mm').parse(endTime!);
+                final totalSpread = end.difference(start);
+                
+                // If there's a break, subtract it
+                if (breakStartTime != null && breakEndTime != null && 
+                    breakStartTime.toLowerCase() != 'nan' && breakEndTime.toLowerCase() != 'nan') {
+                  final breakStart = DateFormat('HH:mm').parse(breakStartTime);
+                  final breakEnd = DateFormat('HH:mm').parse(breakEndTime);
+                  final breakDuration = breakEnd.difference(breakStart);
+                  final workTime = totalSpread - breakDuration;
+                  
+                  // Format work time as HH:mm
+                  final hours = workTime.inHours;
+                  final minutes = workTime.inMinutes % 60;
+                  workTimeStr = '${hours}h ${minutes}m';
+                } else {
+                  // No break, use total spread
+                  final hours = totalSpread.inHours;
+                  final minutes = totalSpread.inMinutes % 60;
+                  workTimeStr = '${hours}h ${minutes}m';
+                }
+              }
             } else {
-              // No break, use total spread
-              final hours = totalSpread.inHours;
-              final minutes = totalSpread.inMinutes % 60;
-              workTimeStr = '${hours}h ${minutes}m';
+              // Original code for non-overtime shifts
+              // Calculate work time
+              final start = DateFormat('HH:mm').parse(startTime!);
+              final end = DateFormat('HH:mm').parse(endTime!);
+              final totalSpread = end.difference(start);
+              
+              // If there's a break, subtract it
+              if (breakStartTime != null && breakEndTime != null && 
+                  breakStartTime.toLowerCase() != 'nan' && breakEndTime.toLowerCase() != 'nan') {
+                final breakStart = DateFormat('HH:mm').parse(breakStartTime);
+                final breakEnd = DateFormat('HH:mm').parse(breakEndTime);
+                final breakDuration = breakEnd.difference(breakStart);
+                final workTime = totalSpread - breakDuration;
+                
+                // Format work time as HH:mm
+                final hours = workTime.inHours;
+                final minutes = workTime.inMinutes % 60;
+                workTimeStr = '${hours}h ${minutes}m';
+              } else {
+                // No break, use total spread
+                final hours = totalSpread.inHours;
+                final minutes = totalSpread.inMinutes % 60;
+                workTimeStr = '${hours}h ${minutes}m';
+              }
             }
             
             print('Found UNI shift in M-F file: $shiftCode, start: $startTime, end: $endTime, work: $workTimeStr');
