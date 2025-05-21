@@ -23,6 +23,20 @@ class _WhatsNewScreenState extends State<WhatsNewScreen> {
   // This map contains the changelog for each version
   // The key is the version number, and the value is a map of feature title and description
   final Map<String, List<Map<String, String>>> _changelogData = {
+    '2.7.0': [
+      {
+        'title': 'Overtime Shifts Support',
+        'description': 'Added full support for overtime shifts, including special formatting for first and second half duties.',
+      },
+      {
+        'title': 'Improved Overtime Display',
+        'description': 'Overtime shifts now show accurate work time calculation, proper locations, and bold formatting for better visibility.',
+      },
+      {
+        'title': 'UNI/Euro Overtime Support',
+        'description': 'Added support for UNI/Euro overtime shifts with correct time and location display for both first and second half shifts.',
+      },
+    ],
     '2.6.1': [
       {
         'title': 'Restore Fix',
