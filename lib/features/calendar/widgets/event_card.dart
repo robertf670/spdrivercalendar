@@ -1011,52 +1011,15 @@ class _EventCardState extends State<EventCard> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: RichText(
-                      overflow: TextOverflow.ellipsis, // Prevent overflow
+                      overflow: TextOverflow.ellipsis,
                       text: TextSpan(
-                        // Default style for the row
                         style: TextStyle(
                           color: Theme.of(context).brightness == Brightness.dark
                               ? Colors.white
                               : Colors.black,
                           fontSize: 14,
                         ),
-                        children: widget.event.title.startsWith('PZ')
-                          // PZ Shift: Location + Depart - Finish + Location
-                          ? <TextSpan>[
-                              if (startLocation != null && startLocation!.isNotEmpty) ...[
-                                TextSpan(
-                                  text: '$startLocation ',
-                                  style: const TextStyle(fontWeight: FontWeight.w500),
-                                ),
-                              ],
-                              TextSpan(
-                                text: _departTimeStr ?? '',
-                                style: const TextStyle(fontWeight: FontWeight.w600),
-                              ),
-                              const TextSpan(text: ' - '),
-                              TextSpan(
-                                text: _finishTimeStr ?? '',
-                                style: const TextStyle(fontWeight: FontWeight.w600),
-                              ),
-                              if (finishLocation != null && finishLocation!.isNotEmpty) ...[
-                                TextSpan(
-                                  text: ' $finishLocation',
-                                  style: const TextStyle(fontWeight: FontWeight.w500),
-                                ),
-                              ],
-                            ]
-                          // Non-PZ Shift: Start - End Time (Original Logic)
-                          : <TextSpan>[
-                              TextSpan(
-                                text: widget.event.formattedStartTime,
-                                style: const TextStyle(fontWeight: FontWeight.w600),
-                              ),
-                              const TextSpan(text: ' - '),
-                              TextSpan(
-                                text: widget.event.formattedEndTime,
-                                style: const TextStyle(fontWeight: FontWeight.w600),
-                              ),
-                            ],
+                        children: _buildTimeDisplay(),
                       ),
                     ),
                   ),
@@ -2011,5 +1974,126 @@ class _EventCardState extends State<EventCard> {
       // Ignore parsing errors
     }
     return timeStr;
+  }
+
+  // Method to build the appropriate time display based on shift type
+  List<TextSpan> _buildTimeDisplay() {
+    // Check if this is an overtime shift by looking for (OT) in title and A/B indicator
+    final bool isOvertimeShift = widget.event.title.contains('(OT)');
+    final bool isFirstHalf = isOvertimeShift && widget.event.title.contains('A (OT)');
+    final bool isSecondHalf = isOvertimeShift && widget.event.title.contains('B (OT)');
+    
+    // For PZ shifts, use the specialized display format
+    if (widget.event.title.startsWith('PZ')) {
+      return <TextSpan>[
+        if (startLocation != null && startLocation!.isNotEmpty) ...[
+          TextSpan(
+            text: '$startLocation ',
+            style: const TextStyle(fontWeight: FontWeight.w500),
+          ),
+        ],
+        TextSpan(
+          text: _departTimeStr ?? '',
+          style: const TextStyle(fontWeight: FontWeight.w600),
+        ),
+        const TextSpan(text: ' - '),
+        TextSpan(
+          text: _finishTimeStr ?? '',
+          style: const TextStyle(fontWeight: FontWeight.w600),
+        ),
+        if (finishLocation != null && finishLocation!.isNotEmpty) ...[
+          TextSpan(
+            text: ' $finishLocation',
+            style: const TextStyle(fontWeight: FontWeight.w500),
+          ),
+        ],
+      ];
+    }
+    
+    // For overtime shifts, show special time displays
+    else if (isOvertimeShift) {
+      // Extract the break time from the string format "10:00 - 10:40"
+      String? breakStartStr;
+      String? breakEndStr;
+      
+      if (breakTime != null && breakTime!.contains('-')) {
+        final parts = breakTime!.split('-');
+        if (parts.length == 2) {
+          breakStartStr = parts[0].trim();
+          breakEndStr = parts[1].trim();
+        }
+      }
+      
+      if (isFirstHalf) {
+        // First half overtime: Show start time to break start time
+        return <TextSpan>[
+          const TextSpan(
+            text: 'First Half: ',
+            style: TextStyle(color: Colors.orange, fontWeight: FontWeight.bold),
+          ),
+          TextSpan(
+            text: widget.event.formattedStartTime,
+            style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
+          const TextSpan(text: ' - '),
+          TextSpan(
+            text: breakStartStr ?? widget.event.formattedEndTime, // Use break start time if available
+            style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
+        ];
+      } else if (isSecondHalf) {
+        // Second half overtime: Show break end time to finish time
+        return <TextSpan>[
+          const TextSpan(
+            text: 'Second Half: ',
+            style: TextStyle(color: Colors.orange, fontWeight: FontWeight.bold),
+          ),
+          TextSpan(
+            text: breakEndStr ?? widget.event.formattedStartTime, // Use break end time if available
+            style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
+          const TextSpan(text: ' - '),
+          TextSpan(
+            text: widget.event.formattedEndTime,
+            style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
+        ];
+      } else {
+        // Generic overtime display with OT indicator
+        return <TextSpan>[
+          TextSpan(
+            text: widget.event.formattedStartTime,
+            style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
+          const TextSpan(text: ' - '),
+          TextSpan(
+            text: widget.event.formattedEndTime,
+            style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
+          const TextSpan(text: ' (OT)', style: TextStyle(color: Colors.orange)),
+        ];
+      }
+    }
+    
+    // For regular (non-PZ, non-overtime) shifts: Standard time display
+    else {
+      return <TextSpan>[
+        TextSpan(
+          text: widget.event.formattedStartTime,
+          style: const TextStyle(fontWeight: FontWeight.w600),
+        ),
+        const TextSpan(text: ' - '),
+        TextSpan(
+          text: widget.event.formattedEndTime,
+          style: const TextStyle(fontWeight: FontWeight.w600),
+        ),
+      ];
+    }
+  }
+
+  String _formatTimeOfDay(TimeOfDay time) {
+    final hour = time.hour.toString().padLeft(2, '0');
+    final minute = time.minute.toString().padLeft(2, '0');
+    return '$hour:$minute';
   }
 }

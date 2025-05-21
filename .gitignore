@@ -119,3 +119,7 @@ pay/
 
 # Overtime feature plan file
 overtimeplan.txt
+overtime_plan.md
+
+# Generated files
+repomix.xml

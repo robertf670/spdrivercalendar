@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:intl/intl.dart';
+import 'dart:math' show min;
 import 'package:spdrivercalendar/core/constants/app_constants.dart';
 import 'package:spdrivercalendar/core/services/storage_service.dart';
 import 'package:spdrivercalendar/features/calendar/services/roster_service.dart';
@@ -388,7 +389,7 @@ class CalendarScreenState extends State<CalendarScreen>
                 dayOfWeekForFilename = 'M-F';
               }
               
-              // Handle Spare and Uni/Euro differently
+              // Handle different zones differently
               if (selectedZone == 'Spare') {
                 // For Spare, create shift options using just the time
                 shiftNumbers = [];
@@ -402,7 +403,6 @@ class CalendarScreenState extends State<CalendarScreen>
                     final hourStr = hour.toString().padLeft(2, '0');
                     final minuteStr = minute.toString().padLeft(2, '0');
                     final timeStr = '$hourStr:$minuteStr';
-                    // Store both the visible time and the SP code for later use
                     shiftNumbers.add(timeStr);
                   }
                 }
@@ -420,7 +420,16 @@ class CalendarScreenState extends State<CalendarScreen>
                     if (line.trim().isEmpty) continue;
                     final parts = line.split(',');
                     if (parts.isNotEmpty) {
+                      // Identify workout duties (duties with missing middle columns)
+                      bool isWorkout = false;
+                      if (parts.length > 5) {
+                        isWorkout = parts.sublist(5, min(10, parts.length)).any((value) => 
+                          value.trim().toLowerCase() == 'nan' || value.trim().isEmpty);
+                      }
+                      
+                      if (!isWorkout) {
                       combinedShifts.add(parts[0]);
+                      }
                     }
                   }
                 } catch (e) {
@@ -438,7 +447,16 @@ class CalendarScreenState extends State<CalendarScreen>
                       if (line.trim().isEmpty) continue;
                       final parts = line.split(',');
                       if (parts.isNotEmpty) {
+                        // Identify workout duties (duties with missing middle columns)
+                        bool isWorkout = false;
+                        if (parts.length > 5) {
+                          isWorkout = parts.sublist(5, min(10, parts.length)).any((value) => 
+                            value.trim().toLowerCase() == 'nan' || value.trim().isEmpty);
+                        }
+                        
+                        if (!isWorkout) {
                         combinedShifts.add(parts[0]);
+                        }
                       }
                     }
                   } catch (e) {
@@ -455,16 +473,15 @@ class CalendarScreenState extends State<CalendarScreen>
                     shiftNumbers.add(shift);
                   }
                 }
-              } else if (selectedZone == 'Bus Check') { // ADDED: Handle Bus Check zone
+              } else if (selectedZone == 'Bus Check') { 
                 try {
                   final csv = await rootBundle.loadString('assets/buscheck.csv');
                   final lines = csv.split('\n');
                   shiftNumbers = [];
                   final seenShifts = <String>{};
-                  String currentDayType = ''; // Map RosterService output to CSV values
+                  String currentDayType = ''; 
 
                   // Determine day type string for CSV matching
-                  // RosterService treats Bank Holidays as Sunday
                   if (dayOfWeek == 'Saturday') {
                     currentDayType = 'SAT';
                   } else if (dayOfWeek == 'Sunday') {
@@ -473,7 +490,7 @@ class CalendarScreenState extends State<CalendarScreen>
                     currentDayType = 'MF'; 
                   }
 
-                  // Skip the header line (first line)
+                  // Skip the header line
                   for (int i = 1; i < lines.length; i++) {
                     final line = lines[i].trim().replaceAll('\r', '');
                     if (line.isEmpty) continue;
@@ -483,8 +500,11 @@ class CalendarScreenState extends State<CalendarScreen>
                       final shiftName = parts[0].trim();
                       final shiftDayType = parts[1].trim();
 
-                      // Add shift if day type matches and it's not already added
-                      if (shiftDayType == currentDayType && shiftName.isNotEmpty && !seenShifts.contains(shiftName)) {
+                      // Check if this is a workout duty
+                      final isWorkout = parts.length > 3 && parts[3].toLowerCase().contains("workout");
+
+                      // Add shift if day type matches, it's not already added, and it's not a workout duty
+                      if (shiftDayType == currentDayType && shiftName.isNotEmpty && !seenShifts.contains(shiftName) && !isWorkout) {
                         seenShifts.add(shiftName);
                         shiftNumbers.add(shiftName);
                       }
@@ -495,7 +515,7 @@ class CalendarScreenState extends State<CalendarScreen>
                   print('Error loading shifts for Bus Check: $e');
                 }
               } else {
-                // Regular zone shifts - preserve CSV file order
+                // Regular zone shifts
                 final filename = RosterService.getShiftFilename(zoneNumber, dayOfWeekForFilename, shiftDate);
                 
                 try {
@@ -504,14 +524,47 @@ class CalendarScreenState extends State<CalendarScreen>
                   shiftNumbers = [];
                   final seenShifts = <String>{};
                   
-                  // Skip the header line (first line)
+                  // Skip the header line
                   for (int i = 1; i < lines.length; i++) {
-                    final line = lines[i];
-                    if (line.trim().isEmpty) continue;
+                    final line = lines[i].trim();
+                    if (line.isEmpty) continue;
                     final parts = line.split(',');
                     if (parts.isNotEmpty && parts[0].trim().isNotEmpty) {
                       final shift = parts[0].trim();
-                      if (!seenShifts.contains(shift) && shift != "shift") {
+                      
+                      // Improved workout duty detection using the same approach as ShiftService._parseBreakTime
+                      bool isWorkout = false;
+                      if (parts.length > 5) {
+                        final breakStart = parts.length > 5 ? parts[5].trim().toLowerCase() : '';
+                        final breakEnd = parts.length > 8 ? parts[8].trim().toLowerCase() : '';
+                        
+                        // Check all conditions for workout shifts as in ShiftService._parseBreakTime
+                        isWorkout = breakStart == 'nan' || breakStart == 'workout' || breakStart.isEmpty || 
+                                  breakEnd == 'nan' || breakEnd == 'workout' || breakEnd.isEmpty ||
+                                  breakStart == 'n/a' || breakEnd == 'n/a';
+                        
+                        // Additional check: if break times are invalid or equal, it's likely a workout
+                        if (!isWorkout && breakStart.isNotEmpty && breakEnd.isNotEmpty) {
+                          final startParts = breakStart.split(':');
+                          final endParts = breakEnd.split(':');
+                          
+                          if (startParts.length < 2 || endParts.length < 2) {
+                            isWorkout = true;
+                          } else {
+                            final startHour = int.tryParse(startParts[0]);
+                            final startMinute = int.tryParse(startParts[1]);
+                            final endHour = int.tryParse(endParts[0]);
+                            final endMinute = int.tryParse(endParts[1]);
+                            
+                            // If times can't be parsed or are equal, it's likely a workout
+                            isWorkout = startHour == null || startMinute == null || 
+                                       endHour == null || endMinute == null ||
+                                       (startHour == endHour && startMinute == endMinute);
+                          }
+                        }
+                      }
+                      
+                      if (!seenShifts.contains(shift) && shift != "shift" && !isWorkout) {
                         seenShifts.add(shift);
                         shiftNumbers.add(shift);
                       }
@@ -522,19 +575,22 @@ class CalendarScreenState extends State<CalendarScreen>
                   print('Error loading shifts for $filename: $e');
                 }
               }
+              
+              // If no selected shift number yet but shifts are available, select the first one
+              if (selectedShiftNumber.isEmpty && shiftNumbers.isNotEmpty) {
+                selectedShiftNumber = shiftNumbers[0];
+              }
             } catch (e) {
               print('Error loading shift numbers: $e');
               shiftNumbers = [];
-            }
-            
-            selectedShiftNumber = shiftNumbers.isNotEmpty ? shiftNumbers[0] : '';
-            
+            } finally {
             setState(() {
               isLoading = false;
             });
+            }
           }
           
-          // Load shift numbers when zone changes or dialog opens
+          // Load shift numbers initially
           if (isLoading) {
             loadShiftNumbers();
           }
@@ -549,7 +605,14 @@ class CalendarScreenState extends State<CalendarScreen>
                 DropdownButton<String>(
                   value: selectedZone,
                   isExpanded: true,
-                  items: ['Zone 1', 'Zone 3', 'Zone 4', 'Spare', 'Uni/Euro', 'Bus Check'].map((zone) {
+                  items: [
+                    'Zone 1',
+                    'Zone 3',
+                    'Zone 4',
+                    'Spare',
+                    'Uni/Euro',
+                    'Bus Check',
+                  ].map((zone) {
                     return DropdownMenuItem(
                       value: zone,
                       child: Text(zone),
@@ -771,6 +834,14 @@ class CalendarScreenState extends State<CalendarScreen>
                     final parts = line.split(',');
                     if (parts.length >= 5 && parts[0].trim() == shiftNumber) {
                         print('Found Uni/Euro shift in $filePath');
+                        
+                        // Check if this is a workout duty and skip it
+                        final isWorkout = parts.length > 3 && parts[3].toLowerCase().contains("workout");
+                        if (isWorkout) {
+                            print('Skipping workout duty: $shiftNumber');
+                            continue;
+                        }
+                        
                         final startTimeRaw = parts[1].trim();
                         final endTimeRaw = parts[4].trim();
                         
@@ -808,15 +879,14 @@ class CalendarScreenState extends State<CalendarScreen>
       final lines = csv.split('\n');
 
       // Skip header row
-      for (int i = 1; i < lines.length; i++) {
-        final line = lines[i].trim().replaceAll('\r', '');
-        if (line.isEmpty) continue;
-
-        final parts = line.split(',');
+                  for (int i = 1; i < lines.length; i++) {
+                    final line = lines[i].trim().replaceAll('\r', '');
+                    if (line.isEmpty) continue;
+                    final parts = line.split(',');
 
         // === Handle Bus Check CSV format ===
         if (zone == 'Bus Check') {
-           // Expecting format: duty,day,start,finish
+                    // Expecting format: duty,day,start,finish
           if (parts.length >= 4) {
             final csvShiftCode = parts[0].trim();
             final csvDayType = parts[1].trim();
@@ -849,6 +919,14 @@ class CalendarScreenState extends State<CalendarScreen>
              // No need to normalize PZ codes if shiftNumber is passed correctly (e.g. PZ1/01)
              if (csvShiftCode == shiftNumber) {
                 print('Found matching PZ shift code');
+                
+                // Check if this is a workout duty and skip it
+                final isWorkout = parts.length > 3 && parts[3].toLowerCase().contains("workout");
+                if (isWorkout) {
+                   print('Skipping workout duty: $shiftNumber');
+                   continue;
+                }
+                
                 final startTime = _parseTimeOfDay(parts[2].trim()); // Report time
                 final endTime = _parseTimeOfDay(parts[12].trim()); // SignOff time
 
@@ -861,7 +939,7 @@ class CalendarScreenState extends State<CalendarScreen>
                       'endTime': endTime,
                       'isNextDay': isNextDay,
                     };
-                } else {
+                      } else {
                    print('Error parsing PZ times for $shiftNumber: ${parts[2]}, ${parts[12]}');
                 }
              }
@@ -3822,7 +3900,7 @@ class CalendarScreenState extends State<CalendarScreen>
     String selectedShiftNumber = '';
     List<String> shiftNumbers = [];
     bool isLoading = true;
-    
+
     // Show dialog with loading state initially
     showDialog(
       context: context,
@@ -3833,7 +3911,7 @@ class CalendarScreenState extends State<CalendarScreen>
             setState(() {
               isLoading = true;
             });
-            
+
             try {
               final dayOfWeek = RosterService.getDayOfWeek(shiftDate);
               final zoneNumber = selectedZone.replaceAll('Zone ', '');
@@ -3879,7 +3957,38 @@ class CalendarScreenState extends State<CalendarScreen>
                     if (line.trim().isEmpty) continue;
                     final parts = line.split(',');
                     if (parts.isNotEmpty) {
-                      combinedShifts.add(parts[0]);
+                      // Enhanced detection for Uni/Euro workout duties
+                      bool isWorkout = false;
+                      
+                      // Some known workout duty codes for Uni/Euro
+                      final String dutyCode = parts[0].trim();
+                      final List<String> knownWorkoutDuties = [
+                        '807/06', '807/07', '807/90', 
+                        // Add any other known workout duties here
+                      ];
+                      
+                      // First check if it's in our known workout list
+                      if (knownWorkoutDuties.contains(dutyCode)) {
+                        isWorkout = true;
+                      }
+                      
+                      // Then perform our standard detection logic
+                      if (!isWorkout && parts.length > 5) {
+                        isWorkout = parts.sublist(5, min(10, parts.length)).any((value) => 
+                          value.trim().toLowerCase() == 'nan' || value.trim().isEmpty);
+                        
+                        // Additional check for any "workout" text
+                        for (int i = 1; i < parts.length; i++) {
+                          if (parts[i].trim().toLowerCase().contains('workout')) {
+                            isWorkout = true;
+                            break;
+                          }
+                        }
+                      }
+                      
+                      if (!isWorkout) {
+                        combinedShifts.add(dutyCode);
+                      }
                     }
                   }
                 } catch (e) {
@@ -3897,7 +4006,38 @@ class CalendarScreenState extends State<CalendarScreen>
                       if (line.trim().isEmpty) continue;
                       final parts = line.split(',');
                       if (parts.isNotEmpty) {
-                        combinedShifts.add(parts[0]);
+                        // Enhanced detection for Uni/Euro workout duties
+                        bool isWorkout = false;
+                        
+                        // Some known workout duty codes for Uni/Euro
+                        final String dutyCode = parts[0].trim();
+                        final List<String> knownWorkoutDuties = [
+                          '807/06', '807/07', '807/90', 
+                          // Add any other known workout duties here
+                        ];
+                        
+                        // First check if it's in our known workout list
+                        if (knownWorkoutDuties.contains(dutyCode)) {
+                          isWorkout = true;
+                        }
+                        
+                        // Then perform our standard detection logic
+                        if (!isWorkout && parts.length > 5) {
+                          isWorkout = parts.sublist(5, min(10, parts.length)).any((value) => 
+                            value.trim().toLowerCase() == 'nan' || value.trim().isEmpty);
+                          
+                          // Additional check for any "workout" text
+                          for (int i = 1; i < parts.length; i++) {
+                            if (parts[i].trim().toLowerCase().contains('workout')) {
+                              isWorkout = true;
+                              break;
+                            }
+                          }
+                        }
+                        
+                        if (!isWorkout) {
+                          combinedShifts.add(dutyCode);
+                        }
                       }
                     }
                   } catch (e) {
@@ -3914,7 +4054,7 @@ class CalendarScreenState extends State<CalendarScreen>
                     shiftNumbers.add(shift);
                   }
                 }
-              } else if (selectedZone == 'Bus Check') { 
+              } else if (selectedZone == 'Bus Check') {
                 try {
                   final csv = await rootBundle.loadString('assets/buscheck.csv');
                   final lines = csv.split('\n');
@@ -3941,8 +4081,26 @@ class CalendarScreenState extends State<CalendarScreen>
                       final shiftName = parts[0].trim();
                       final shiftDayType = parts[1].trim();
 
-                      // Add shift if day type matches and it's not already added
-                      if (shiftDayType == currentDayType && shiftName.isNotEmpty && !seenShifts.contains(shiftName)) {
+                      // Improved workout duty detection (can have different format in bus check file)
+                      bool isWorkout = false;
+                      if (parts.length > 3) {
+                        // First check for explicit "workout" mention
+                        isWorkout = parts[3].toLowerCase().contains("workout");
+                        
+                        // Additional checks if data format allows
+                        if (!isWorkout && parts.length > 5) {
+                          final startTime = parts[2].trim().toLowerCase();
+                          final endTime = parts[3].trim().toLowerCase();
+                          
+                          // Check for nan values or empty fields
+                          isWorkout = startTime == 'nan' || startTime.isEmpty ||
+                                     endTime == 'nan' || endTime.isEmpty ||
+                                     startTime == 'n/a' || endTime == 'n/a';
+                        }
+                      }
+
+                      // Add shift if day type matches, it's not already added, and it's not a workout duty
+                      if (shiftDayType == currentDayType && shiftName.isNotEmpty && !seenShifts.contains(shiftName) && !isWorkout) {
                         seenShifts.add(shiftName);
                         shiftNumbers.add(shiftName);
                       }
@@ -3953,7 +4111,7 @@ class CalendarScreenState extends State<CalendarScreen>
                   print('Error loading shifts for Bus Check: $e');
                 }
               } else {
-                // Regular zone shifts
+                // Regular zone shifts (Zone 1, Zone 3, Zone 4)
                 final filename = RosterService.getShiftFilename(zoneNumber, dayOfWeekForFilename, shiftDate);
                 
                 try {
@@ -3967,9 +4125,42 @@ class CalendarScreenState extends State<CalendarScreen>
                     final line = lines[i].trim();
                     if (line.isEmpty) continue;
                     final parts = line.split(',');
-                    if (parts.isNotEmpty) {
+                    if (parts.isNotEmpty && parts[0].trim().isNotEmpty) {
                       final shift = parts[0].trim();
-                      if (!seenShifts.contains(shift)) {
+                      
+                      // Improved workout duty detection using the same approach as ShiftService._parseBreakTime
+                      bool isWorkout = false;
+                      if (parts.length > 5) {
+                        final breakStart = parts.length > 5 ? parts[5].trim().toLowerCase() : '';
+                        final breakEnd = parts.length > 8 ? parts[8].trim().toLowerCase() : '';
+                        
+                        // Check all conditions for workout shifts as in ShiftService._parseBreakTime
+                        isWorkout = breakStart == 'nan' || breakStart == 'workout' || breakStart.isEmpty || 
+                                  breakEnd == 'nan' || breakEnd == 'workout' || breakEnd.isEmpty ||
+                                  breakStart == 'n/a' || breakEnd == 'n/a';
+                        
+                        // Additional check: if break times are invalid or equal, it's likely a workout
+                        if (!isWorkout && breakStart.isNotEmpty && breakEnd.isNotEmpty) {
+                          final startParts = breakStart.split(':');
+                          final endParts = breakEnd.split(':');
+                          
+                          if (startParts.length < 2 || endParts.length < 2) {
+                            isWorkout = true;
+                          } else {
+                            final startHour = int.tryParse(startParts[0]);
+                            final startMinute = int.tryParse(startParts[1]);
+                            final endHour = int.tryParse(endParts[0]);
+                            final endMinute = int.tryParse(endParts[1]);
+                            
+                            // If times can't be parsed or are equal, it's likely a workout
+                            isWorkout = startHour == null || startMinute == null || 
+                                      endHour == null || endMinute == null ||
+                                      (startHour == endHour && startMinute == endMinute);
+                          }
+                        }
+                      }
+                      
+                      if (!seenShifts.contains(shift) && shift != "shift" && !isWorkout) {
                         seenShifts.add(shift);
                         shiftNumbers.add(shift);
                       }
@@ -3977,7 +4168,7 @@ class CalendarScreenState extends State<CalendarScreen>
                   }
                 } catch (e) {
                   shiftNumbers = [];
-                  print('Error loading shifts: $e');
+                  print('Error loading shifts for $filename: $e');
                 }
               }
               
@@ -3989,38 +4180,34 @@ class CalendarScreenState extends State<CalendarScreen>
               print('Error loading shift numbers: $e');
               shiftNumbers = [];
             } finally {
-              setState(() {
-                isLoading = false;
-              });
+            setState(() {
+              isLoading = false;
+            });
             }
           }
-          
+
           // Load shift numbers initially
           if (isLoading) {
             loadShiftNumbers();
           }
-          
+
           return AlertDialog(
             title: Text('Add Overtime Duty for ${DateFormat('dd/MM/yyyy').format(shiftDate)}'),
-            content: SingleChildScrollView(
+            content: SingleChildScrollView( 
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text('Zone:'),
-                  const SizedBox(height: 8),
+                    const SizedBox(height: 8),
                   DropdownButton<String>(
                     value: selectedZone,
                     isExpanded: true,
                     items: [
                       'Zone 1',
-                      'Zone 2',
                       'Zone 3',
-                      'Zone 4', 
-                      'Zone 5',
+                      'Zone 4',
                       'Uni/Euro',
-                      'Spare',
-                      'Bus Check',
                     ].map((zone) {
                       return DropdownMenuItem(
                         value: zone,
@@ -4097,7 +4284,7 @@ class CalendarScreenState extends State<CalendarScreen>
                             'startTime': startTime,
                             'endTime': endTime,
                           };
-                        } else {
+    } else {
                           // For regular shifts, look up times from CSV
                           shiftTimes = await _getShiftTimes(
                             selectedZone.replaceAll('Zone ', ''),
@@ -4117,21 +4304,120 @@ class CalendarScreenState extends State<CalendarScreen>
                           TimeOfDay adjustedStartTime;
                           TimeOfDay adjustedEndTime;
                           
+                          // Get the day of the week
+                          final dayOfWeek = RosterService.getDayOfWeek(shiftDate);
+
+                          // Try to get break times from CSV
+                          final csvFilename = selectedZone == 'Uni/Euro' 
+                              ? 'UNI_7DAYs.csv'  // UNI shifts - first try 7DAYs
+                              : RosterService.getShiftFilename(selectedZone.replaceAll('Zone ', ''), 
+                                  dayOfWeek == 'Saturday' ? 'SAT' : 
+                                  dayOfWeek == 'Sunday' ? 'SUN' : 'M-F', 
+                                  shiftDate);
+                          
+                          // Variables to hold break times if found
+                          TimeOfDay? breakStartTime;
+                          TimeOfDay? breakEndTime;
+                          
+                          try {
+                            final csv = await rootBundle.loadString('assets/$csvFilename');
+                            final lines = csv.split('\n');
+                            
+                            // Find the shift in the CSV file
+                            for (final line in lines) {
+                              if (line.trim().isEmpty) continue;
+                              final parts = line.split(',');
+                              
+                              // Standard PZ files have shift code at index 0
+                              // UNI files also have shift code at index 0
+                              if (parts.isNotEmpty && parts[0].trim() == selectedShiftNumber) {
+                                
+                                // Different CSV structures for PZ vs UNI files
+                                if (selectedZone == 'Uni/Euro') {
+                                  // UNI files: ShiftCode,StartTime,BreakStart,BreakEnd,FinishTime
+                                  if (parts.length >= 5) {
+                                    final breakStartStr = parts[2].trim();
+                                    final breakEndStr = parts[3].trim();
+                                    
+                                    if (breakStartStr.toLowerCase() != 'nan' && breakEndStr.toLowerCase() != 'nan') {
+                                      breakStartTime = _parseTimeOfDay(breakStartStr);
+                                      breakEndTime = _parseTimeOfDay(breakEndStr);
+                                    }
+                                  }
+                                } else {
+                                  // PZ files: Column 5 is breakStart, column 8 is breakEnd
+                                  if (parts.length >= 9) {
+                                    final breakStartStr = parts[5].trim();
+                                    final breakEndStr = parts[8].trim();
+                                    
+                                    if (breakStartStr.toLowerCase() != 'nan' && 
+                                        breakStartStr.toLowerCase() != 'workout' &&
+                                        breakEndStr.toLowerCase() != 'nan' && 
+                                        breakEndStr.toLowerCase() != 'workout') {
+                                      breakStartTime = _parseTimeOfDay(breakStartStr);
+                                      breakEndTime = _parseTimeOfDay(breakEndStr);
+                                    }
+                                  }
+                                }
+                                break;
+                              }
+                            }
+                            
+                            // For UNI/EURO, if not found in 7DAYs.csv and it's a weekday, check M-F.csv
+                            if (selectedZone == 'Uni/Euro' && breakStartTime == null && 
+                                dayOfWeek != 'Saturday' && dayOfWeek != 'Sunday') {
+                              final csvMF = await rootBundle.loadString('assets/UNI_M-F.csv');
+                              final linesMF = csvMF.split('\n');
+                              
+                              for (final line in linesMF) {
+                                if (line.trim().isEmpty) continue;
+                                final parts = line.split(',');
+                                
+                                if (parts.isNotEmpty && parts[0].trim() == selectedShiftNumber) {
+                                  if (parts.length >= 5) {
+                                    final breakStartStr = parts[2].trim();
+                                    final breakEndStr = parts[3].trim();
+                                    
+                                    if (breakStartStr.toLowerCase() != 'nan' && breakEndStr.toLowerCase() != 'nan') {
+                                      breakStartTime = _parseTimeOfDay(breakStartStr);
+                                      breakEndTime = _parseTimeOfDay(breakEndStr);
+                                    }
+                                  }
+                                  break;
+                                }
+                              }
+                            }
+                          } catch (e) {
+                            print('Error loading break times: $e');
+                          }
+                          
                           // Adjust times based on first half (A) or second half (B)
-                          if (overtimeHalfType == 'A') {
-                            // First half - use start time and calculate midpoint
+                          if (overtimeHalfType == 'A') { 
+                            // First half - use start time and end at break start time if available
                             adjustedStartTime = startTime;
                             
-                            final halfDurationMinutes = shiftDuration ~/ 2;
-                            final endHour = (startTime.hour + (halfDurationMinutes ~/ 60)) % 24;
-                            final endMinute = (startTime.minute + (halfDurationMinutes % 60)) % 60;
-                            adjustedEndTime = TimeOfDay(hour: endHour, minute: endMinute);
+                            if (breakStartTime != null) {
+                              // Use actual break start time
+                              adjustedEndTime = breakStartTime;
+                            } else {
+                              // Fall back to midpoint calculation
+                              final halfDurationMinutes = shiftDuration ~/ 2;
+                              final endHour = (startTime.hour + (halfDurationMinutes ~/ 60)) % 24;
+                              final endMinute = (startTime.minute + (halfDurationMinutes % 60)) % 60;
+                              adjustedEndTime = TimeOfDay(hour: endHour, minute: endMinute);
+                            }
                           } else {
-                            // Second half - calculate midpoint and use end time
-                            final halfDurationMinutes = shiftDuration ~/ 2;
-                            final startHour = (startTime.hour + (halfDurationMinutes ~/ 60)) % 24;
-                            final startMinute = (startTime.minute + (halfDurationMinutes % 60)) % 60;
-                            adjustedStartTime = TimeOfDay(hour: startHour, minute: startMinute);
+                            // Second half - start at break end time if available and use end time
+                            if (breakEndTime != null) {
+                              // Use actual break end time
+                              adjustedStartTime = breakEndTime;
+                            } else {
+                              // Fall back to midpoint calculation
+                              final halfDurationMinutes = shiftDuration ~/ 2;
+                              final startHour = (startTime.hour + (halfDurationMinutes ~/ 60)) % 24;
+                              final startMinute = (startTime.minute + (halfDurationMinutes % 60)) % 60;
+                              adjustedStartTime = TimeOfDay(hour: startHour, minute: startMinute);
+                            }
                             adjustedEndTime = endTime;
                           }
                           
@@ -4149,14 +4435,71 @@ class CalendarScreenState extends State<CalendarScreen>
                             ),
                           );
                           
-                          // Add the event
-                          await EventService.addEvent(event);
-                          
-                          // Check if the widget is still mounted
-                          if (mounted) {
-                            // Close the dialog and update state
-                            Navigator.of(context).pop();
-                            setState(() {});
+                          try {
+                            // Add the event
+                            await EventService.addEvent(event);
+                            
+                            // Check if the widget is still mounted
+                            if (mounted) {
+                              // Close the dialog first
+                              Navigator.of(context).pop();
+                              
+                              // Show a loading indicator while we refresh
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Adding overtime duty...'),
+                                  duration: Duration(seconds: 1),
+                                ),
+                              );
+                              
+                              // Force reload events for current month
+                              await EventService.preloadMonth(_focusedDay);
+                              
+                              // Force rebuild
+                              setState(() {
+                                // Trigger a rebuild with explicit re-selection of day
+                                _selectedDay = null;
+                              });
+                              
+                              // Small delay
+                              await Future.delayed(const Duration(milliseconds: 100));
+                              
+                              // Set selected day back to event date and rebuild again
+                              setState(() {
+                                _selectedDay = event.startDate;
+                              });
+                              
+                              // Show confirmation after everything is done
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Overtime duty $title added'),
+                                  backgroundColor: Colors.green,
+                                  duration: const Duration(seconds: 2),
+                                ),
+                              );
+                              
+                              // The trick: Manually call _editEvent with a special refresh event
+                              // This will trigger the event list to rebuild again
+                              _editEvent(Event(
+                                id: 'refresh_trigger',
+                                title: '',
+                                startDate: DateTime.now(),
+                                startTime: const TimeOfDay(hour: 0, minute: 0),
+                                endDate: DateTime.now(),
+                                endTime: const TimeOfDay(hour: 0, minute: 0),
+                              ));
+                            }
+                          } catch (e) {
+                            print('Error adding overtime event: $e');
+                            if (mounted) {
+                              Navigator.of(context).pop();
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Error adding overtime: $e'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                            }
                           }
                         }
                       },
