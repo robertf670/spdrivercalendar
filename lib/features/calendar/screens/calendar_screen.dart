@@ -35,6 +35,7 @@ import 'package:spdrivercalendar/features/notes/screens/all_notes_screen.dart'; 
 import 'package:spdrivercalendar/features/feedback/screens/feedback_screen.dart';
 import 'package:spdrivercalendar/features/bills/screens/bills_screen.dart'; // Import the Bills screen
 import 'package:spdrivercalendar/features/payscale/screens/payscale_screen.dart'; // Import the Payscale screen
+import 'package:uuid/uuid.dart';
 
 class CalendarScreen extends StatefulWidget {
   final ValueNotifier<bool> isDarkModeNotifier;
@@ -324,6 +325,13 @@ class CalendarScreenState extends State<CalendarScreen>
               onPressed: () {
                 Navigator.of(context).pop();
                 _showWorkShiftDialog();
+              },
+            ),
+            TextButton( // Added Overtime button
+              child: const Text('Overtime'),
+              onPressed: () {
+                Navigator.of(context).pop();
+                _promptForOvertimeHalfType(); // Call the function to show overtime options
               },
             ),
           ],
@@ -3775,5 +3783,388 @@ class CalendarScreenState extends State<CalendarScreen>
     // } catch (e) {
     //   print('Error clearing cache: $e');
     // }
+  }
+
+  // Method to prompt user for overtime half type (A or B)
+  void _promptForOvertimeHalfType() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Select Overtime Half'),
+          content: const Text('Is this for the first or second half of a shift?'),
+          actions: [
+            TextButton(
+              child: const Text('First Half'),
+              onPressed: () {
+                Navigator.of(context).pop();
+                _showOvertimeDutyDetailsDialogInternal('A');
+              },
+            ),
+            TextButton(
+              child: const Text('Second Half'),
+              onPressed: () {
+                Navigator.of(context).pop();
+                _showOvertimeDutyDetailsDialogInternal('B');
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // Method to show overtime duty selection dialog with filtered duties by half type
+  void _showOvertimeDutyDetailsDialogInternal(String overtimeHalfType) {
+    final now = DateTime.now();
+    final shiftDate = _selectedDay ?? now;
+    String selectedZone = 'Zone 1';
+    String selectedShiftNumber = '';
+    List<String> shiftNumbers = [];
+    bool isLoading = true;
+    
+    // Show dialog with loading state initially
+    showDialog(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setState) {
+          // Function to load shift numbers for selected zone
+          void loadShiftNumbers() async {
+            setState(() {
+              isLoading = true;
+            });
+            
+            try {
+              final dayOfWeek = RosterService.getDayOfWeek(shiftDate);
+              final zoneNumber = selectedZone.replaceAll('Zone ', '');
+              
+              // Convert full day name to abbreviated format for file loading
+              String dayOfWeekForFilename;
+              if (dayOfWeek == 'Saturday') {
+                dayOfWeekForFilename = 'SAT';
+              } else if (dayOfWeek == 'Sunday') {
+                dayOfWeekForFilename = 'SUN';
+              } else {
+                dayOfWeekForFilename = 'M-F';
+              }
+              
+              // Handle different zones differently
+              if (selectedZone == 'Spare') {
+                // For Spare, create shift options using just the time
+                shiftNumbers = [];
+                
+                // Generate time options for spare shifts (04:00 to 16:00 in 15 min increments)
+                for (int hour = 4; hour <= 16; hour++) {
+                  for (int minute = 0; minute < 60; minute += 15) {
+                    // Stop at 16:00 exactly (don't include 16:15, 16:30, etc.)
+                    if (hour == 16 && minute > 0) continue;
+                    
+                    final hourStr = hour.toString().padLeft(2, '0');
+                    final minuteStr = minute.toString().padLeft(2, '0');
+                    final timeStr = '$hourStr:$minuteStr';
+                    shiftNumbers.add(timeStr);
+                  }
+                }
+              } else if (selectedZone == 'Uni/Euro') {
+                // Uni/Euro shifts - use both files on weekdays, only 7DAYs on weekends
+                List<String> combinedShifts = [];
+                
+                // Always load from UNI_7DAYs.csv first
+                try {
+                  final csv = await rootBundle.loadString('assets/UNI_7DAYs.csv');
+                  final lines = csv.split('\n');
+                  
+                  // Don't skip any lines for UNI files
+                  for (final line in lines) {
+                    if (line.trim().isEmpty) continue;
+                    final parts = line.split(',');
+                    if (parts.isNotEmpty) {
+                      combinedShifts.add(parts[0]);
+                    }
+                  }
+                } catch (e) {
+                  print('Error loading UNI_7DAYs.csv: $e');
+                }
+                
+                // On weekdays, also load from UNI_M-F.csv
+                if (dayOfWeek != 'Saturday' && dayOfWeek != 'Sunday') {
+                  try {
+                    final csv = await rootBundle.loadString('assets/UNI_M-F.csv');
+                    final lines = csv.split('\n');
+                    
+                    // Don't skip any lines for UNI files
+                    for (final line in lines) {
+                      if (line.trim().isEmpty) continue;
+                      final parts = line.split(',');
+                      if (parts.isNotEmpty) {
+                        combinedShifts.add(parts[0]);
+                      }
+                    }
+                  } catch (e) {
+                    print('Error loading UNI_M-F.csv: $e');
+                  }
+                }
+                
+                // Keep only unique shifts while preserving order (first occurrence wins)
+                shiftNumbers = [];
+                final seenShifts = <String>{};
+                for (final shift in combinedShifts) {
+                  if (!seenShifts.contains(shift)) {
+                    seenShifts.add(shift);
+                    shiftNumbers.add(shift);
+                  }
+                }
+              } else if (selectedZone == 'Bus Check') { 
+                try {
+                  final csv = await rootBundle.loadString('assets/buscheck.csv');
+                  final lines = csv.split('\n');
+                  shiftNumbers = [];
+                  final seenShifts = <String>{};
+                  String currentDayType = ''; 
+
+                  // Determine day type string for CSV matching
+                  if (dayOfWeek == 'Saturday') {
+                    currentDayType = 'SAT';
+                  } else if (dayOfWeek == 'Sunday') {
+                    currentDayType = 'SUN';
+                  } else { // Monday - Friday
+                    currentDayType = 'MF'; 
+                  }
+
+                  // Skip the header line
+                  for (int i = 1; i < lines.length; i++) {
+                    final line = lines[i].trim().replaceAll('\r', '');
+                    if (line.isEmpty) continue;
+                    final parts = line.split(',');
+                    // Expecting format: duty,day,start,finish
+                    if (parts.length >= 2) {
+                      final shiftName = parts[0].trim();
+                      final shiftDayType = parts[1].trim();
+
+                      // Add shift if day type matches and it's not already added
+                      if (shiftDayType == currentDayType && shiftName.isNotEmpty && !seenShifts.contains(shiftName)) {
+                        seenShifts.add(shiftName);
+                        shiftNumbers.add(shiftName);
+                      }
+                    }
+                  }
+                } catch (e) {
+                  shiftNumbers = [];
+                  print('Error loading shifts for Bus Check: $e');
+                }
+              } else {
+                // Regular zone shifts
+                final filename = RosterService.getShiftFilename(zoneNumber, dayOfWeekForFilename, shiftDate);
+                
+                try {
+                  final csv = await rootBundle.loadString('assets/$filename');
+                  final lines = csv.split('\n');
+                  shiftNumbers = [];
+                  final seenShifts = <String>{};
+                  
+                  // Skip the header line
+                  for (int i = 1; i < lines.length; i++) {
+                    final line = lines[i].trim();
+                    if (line.isEmpty) continue;
+                    final parts = line.split(',');
+                    if (parts.isNotEmpty) {
+                      final shift = parts[0].trim();
+                      if (!seenShifts.contains(shift)) {
+                        seenShifts.add(shift);
+                        shiftNumbers.add(shift);
+                      }
+                    }
+                  }
+                } catch (e) {
+                  shiftNumbers = [];
+                  print('Error loading shifts: $e');
+                }
+              }
+              
+              // If no selected shift number yet but shifts are available, select the first one
+              if (selectedShiftNumber.isEmpty && shiftNumbers.isNotEmpty) {
+                selectedShiftNumber = shiftNumbers[0];
+              }
+            } catch (e) {
+              print('Error loading shift numbers: $e');
+              shiftNumbers = [];
+            } finally {
+              setState(() {
+                isLoading = false;
+              });
+            }
+          }
+          
+          // Load shift numbers initially
+          if (isLoading) {
+            loadShiftNumbers();
+          }
+          
+          return AlertDialog(
+            title: Text('Add Overtime Duty for ${DateFormat('dd/MM/yyyy').format(shiftDate)}'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Zone:'),
+                  const SizedBox(height: 8),
+                  DropdownButton<String>(
+                    value: selectedZone,
+                    isExpanded: true,
+                    items: [
+                      'Zone 1',
+                      'Zone 2',
+                      'Zone 3',
+                      'Zone 4', 
+                      'Zone 5',
+                      'Uni/Euro',
+                      'Spare',
+                      'Bus Check',
+                    ].map((zone) {
+                      return DropdownMenuItem(
+                        value: zone,
+                        child: Text(zone),
+                      );
+                    }).toList(),
+                    onChanged: (value) {
+                      if (value != null) {
+                        setState(() {
+                          selectedZone = value;
+                          selectedShiftNumber = '';
+                        });
+                        loadShiftNumbers();
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  const Text('Shift Number:'),
+                  const SizedBox(height: 8),
+                  isLoading
+                      ? const Center(child: CircularProgressIndicator())
+                      : shiftNumbers.isEmpty
+                          ? const Text('No shifts available for selected zone and date.')
+                          : DropdownButton<String>(
+                              value: selectedShiftNumber.isEmpty && shiftNumbers.isNotEmpty ? shiftNumbers[0] : selectedShiftNumber,
+                              isExpanded: true,
+                              items: shiftNumbers.map((shift) {
+                                return DropdownMenuItem(
+                                  value: shift,
+                                  child: Text(overtimeHalfType.isNotEmpty 
+                                      ? '$shift$overtimeHalfType' // Add A/B suffix for display
+                                      : shift),
+                                );
+                              }).toList(),
+                              onChanged: (value) {
+                                if (value != null) {
+                                  setState(() {
+                                    selectedShiftNumber = value;
+                                  });
+                                }
+                              },
+                            ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                child: const Text('Cancel'),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+              ),
+              TextButton(
+                child: const Text('Add Overtime Shift'),
+                onPressed: shiftNumbers.isEmpty || isLoading
+                    ? null
+                    : () async {
+                        final title = '$selectedShiftNumber$overtimeHalfType (OT)';
+                        
+                        // Get the shift times
+                        Map<String, dynamic>? shiftTimes;
+                        if (selectedZone == 'Spare') {
+                          // For Spare shifts, parse time from the selectedShiftNumber which is in format "HH:MM"
+                          final parts = selectedShiftNumber.split(':');
+                          final hour = int.parse(parts[0]);
+                          final minute = int.parse(parts[1]);
+                          
+                          // Default spare shift to 4 hours
+                          final startTime = TimeOfDay(hour: hour, minute: minute);
+                          final endHour = (hour + 4) % 24; // Wrap around at 24 hours
+                          final endTime = TimeOfDay(hour: endHour, minute: minute);
+                          
+                          shiftTimes = {
+                            'startTime': startTime,
+                            'endTime': endTime,
+                          };
+                        } else {
+                          // For regular shifts, look up times from CSV
+                          shiftTimes = await _getShiftTimes(
+                            selectedZone.replaceAll('Zone ', ''),
+                            selectedShiftNumber,
+                            shiftDate,
+                          );
+                        }
+                        
+                        if (shiftTimes != null && mounted) {
+                          final startTime = shiftTimes['startTime'] as TimeOfDay;
+                          TimeOfDay endTime = shiftTimes['endTime'] as TimeOfDay;
+                          
+                          // Calculate actual start and end times based on overtime half type
+                          final shiftDuration = (endTime.hour * 60 + endTime.minute) - 
+                                              (startTime.hour * 60 + startTime.minute);
+                          
+                          TimeOfDay adjustedStartTime;
+                          TimeOfDay adjustedEndTime;
+                          
+                          // Adjust times based on first half (A) or second half (B)
+                          if (overtimeHalfType == 'A') {
+                            // First half - use start time and calculate midpoint
+                            adjustedStartTime = startTime;
+                            
+                            final halfDurationMinutes = shiftDuration ~/ 2;
+                            final endHour = (startTime.hour + (halfDurationMinutes ~/ 60)) % 24;
+                            final endMinute = (startTime.minute + (halfDurationMinutes % 60)) % 60;
+                            adjustedEndTime = TimeOfDay(hour: endHour, minute: endMinute);
+                          } else {
+                            // Second half - calculate midpoint and use end time
+                            final halfDurationMinutes = shiftDuration ~/ 2;
+                            final startHour = (startTime.hour + (halfDurationMinutes ~/ 60)) % 24;
+                            final startMinute = (startTime.minute + (halfDurationMinutes % 60)) % 60;
+                            adjustedStartTime = TimeOfDay(hour: startHour, minute: startMinute);
+                            adjustedEndTime = endTime;
+                          }
+                          
+                          // Create the overtime event
+                          final event = Event(
+                            id: const Uuid().v4(),
+                            title: title,
+                            startDate: shiftDate,
+                            startTime: adjustedStartTime,
+                            endDate: shiftDate,
+                            endTime: adjustedEndTime,
+                            workTime: Duration(
+                              hours: (adjustedEndTime.hour - adjustedStartTime.hour) % 24,
+                              minutes: (adjustedEndTime.minute - adjustedStartTime.minute) % 60,
+                            ),
+                          );
+                          
+                          // Add the event
+                          await EventService.addEvent(event);
+                          
+                          // Check if the widget is still mounted
+                          if (mounted) {
+                            // Close the dialog and update state
+                            Navigator.of(context).pop();
+                            setState(() {});
+                          }
+                        }
+                      },
+              ),
+            ],
+          );
+        },
+      ),
+    );
   }
 }
