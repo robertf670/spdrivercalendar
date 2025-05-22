@@ -23,6 +23,16 @@ class _WhatsNewScreenState extends State<WhatsNewScreen> {
   // This map contains the changelog for each version
   // The key is the version number, and the value is a map of feature title and description
   final Map<String, List<Map<String, String>>> _changelogData = {
+    '2.7.4': [
+      {
+        'title': 'Enhanced Pay Scale Table',
+        'description': 'Completely redesigned the pay scale table with synchronized scrolling in all directions. Fixed column headers stay in place while scrolling through the data.',
+      },
+      {
+        'title': 'Improved Visual Design',
+        'description': 'Refined the table appearance with better spacing, colors, and typography for improved readability in both light and dark themes.',
+      },
+    ],
     '2.7.3': [
       {
         'title': 'Enhanced Pay Scale Table',

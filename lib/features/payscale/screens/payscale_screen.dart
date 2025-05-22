@@ -15,50 +15,10 @@ class _PayscaleScreenState extends State<PayscaleScreen> {
   bool _isLoading = true;
   String? _errorMessage;
 
-  // Scroll controllers for synchronized scrolling
-  final ScrollController _verticalController1 = ScrollController();
-  final ScrollController _verticalController2 = ScrollController();
-  final ScrollController _horizontalScrollController = ScrollController();
-
-  // Flag to prevent infinite loop when syncing scrolls
-  bool _isScrolling = false;
-
   @override
   void initState() {
     super.initState();
     _loadPayscaleData();
-    
-    // Set up scroll synchronization
-    _verticalController1.addListener(_syncScrollVertical1);
-    _verticalController2.addListener(_syncScrollVertical2);
-  }
-
-  // Sync scroll from first column to second column
-  void _syncScrollVertical1() {
-    if (!_isScrolling && _verticalController1.hasClients && _verticalController2.hasClients) {
-      _isScrolling = true;
-      _verticalController2.jumpTo(_verticalController1.offset);
-      _isScrolling = false;
-    }
-  }
-
-  // Sync scroll from second column to first column
-  void _syncScrollVertical2() {
-    if (!_isScrolling && _verticalController1.hasClients && _verticalController2.hasClients) {
-      _isScrolling = true;
-      _verticalController1.jumpTo(_verticalController2.offset);
-      _isScrolling = false;
-    }
-  }
-
-  @override
-  void dispose() {
-    _verticalController1.removeListener(_syncScrollVertical1);
-    _verticalController2.removeListener(_syncScrollVertical2);
-    _verticalController1.dispose();
-    _verticalController2.dispose();
-    _horizontalScrollController.dispose();
-    super.dispose();
   }
 
   Future<void> _loadPayscaleData() async {
@@ -175,27 +135,36 @@ class _PayscaleScreenState extends State<PayscaleScreen> {
       'spreadover(hourly)': 'Spreadover Rate (Hourly)',
     };
 
-    final cellPadding = const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0);
+    // Define enhanced colors and styles
+    final cardBackgroundColor = Theme.of(context).brightness == Brightness.dark 
+        ? Theme.of(context).cardColor
+        : Colors.white;
+        
+    final oddRowOverlayColor = (Theme.of(context).brightness == Brightness.dark 
+        ? Colors.white.withOpacity(0.04) 
+        : Colors.black.withOpacity(0.02));
+        
+    final headerBackgroundColor = Theme.of(context).brightness == Brightness.dark
+        ? AppTheme.primaryColor.withOpacity(0.2)
+        : AppTheme.primaryColor.withOpacity(0.1);
+        
+    final borderColor = Theme.of(context).brightness == Brightness.dark
+        ? Colors.white.withOpacity(0.1)
+        : Colors.black.withOpacity(0.07);
+
     final headerTextStyle = TextStyle(
       fontWeight: FontWeight.bold,
-      color: Theme.of(context).colorScheme.onSurface,
+      color: Theme.of(context).brightness == Brightness.dark
+          ? Colors.white.withOpacity(0.9)
+          : AppTheme.primaryColor.withOpacity(0.9),
       fontSize: 14,
     );
+    
     final cellTextStyle = TextStyle(
       color: Theme.of(context).colorScheme.onSurface.withOpacity(0.87),
       fontSize: 14,
     );
-    final headerBackgroundColor = Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.2);
 
-    // Define colors for alternating rows
-    final cardBackgroundColor = Theme.of(context).cardColor;
-    final oddRowOverlayColor = (Theme.of(context).brightness == Brightness.dark 
-        ? Colors.white.withOpacity(0.05) 
-        : Colors.black.withOpacity(0.03));
-
-    // Fixed row height for consistency
-    const double rowHeight = 60.0;
-    
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: Column(
@@ -211,180 +180,76 @@ class _PayscaleScreenState extends State<PayscaleScreen> {
           const SizedBox(height: 8),
           Text(
             'The following rates apply based on length of service:',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
           ),
           const SizedBox(height: 20),
           Expanded(
-            child: Card(
-              elevation: 2,
-              clipBehavior: Clip.antiAlias,
-              shape: RoundedRectangleBorder(
+            child: Container(
+              decoration: BoxDecoration(
+                color: cardBackgroundColor,
                 borderRadius: BorderRadius.circular(AppTheme.borderRadius),
-              ),
-              color: cardBackgroundColor,
-              margin: EdgeInsets.zero,
-              child: Column(
-                children: [
-                  // Header row (frozen at top)
-                  Container(
-                    color: headerBackgroundColor,
-                    height: rowHeight,
-                    child: Row(
-                      children: [
-                        // Fixed header column
-                        Container(
-                          width: 190,
-                          padding: cellPadding,
-                          alignment: Alignment.centerLeft,
-                          decoration: BoxDecoration(
-                            border: Border(
-                              right: BorderSide(color: Theme.of(context).dividerColor.withOpacity(0.5), width: 1),
-                              bottom: BorderSide(color: Theme.of(context).dividerColor.withOpacity(0.3), width: 1),
-                            ),
-                          ),
-                          child: Text(
-                            labelMap[fixedColumnKey] ?? fixedColumnKey,
-                            style: headerTextStyle,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        // Scrollable headers
-                        Expanded(
-                          child: SingleChildScrollView(
-                            controller: _horizontalScrollController,
-                            scrollDirection: Axis.horizontal,
-                            child: Row(
-                              children: scrollableColumnHeaders.map((header) {
-                                final label = labelMap[header] ?? header;
-                                return Container(
-                                  width: 120,
-                                  padding: cellPadding,
-                                  alignment: Alignment.center,
-                                  decoration: BoxDecoration(
-                                    border: Border(
-                                      bottom: BorderSide(color: Theme.of(context).dividerColor.withOpacity(0.3), width: 1),
-                                    ),
-                                  ),
-                                  child: Text(
-                                    label,
-                                    style: headerTextStyle,
-                                    textAlign: TextAlign.center,
-                                  ),
-                                );
-                              }).toList(),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  // Table body with synchronized scrolling
-                  Expanded(
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Fixed left column
-                        SizedBox(
-                          width: 190,
-                          child: GestureDetector(
-                            // Make the left column also respond to horizontal swipes
-                            onHorizontalDragUpdate: (details) {
-                              if (_horizontalScrollController.hasClients) {
-                                _horizontalScrollController.position.jumpTo(
-                                  _horizontalScrollController.position.pixels - details.delta.dx
-                                );
-                              }
-                            },
-                            child: ListView.builder(
-                              controller: _verticalController1,
-                              itemCount: _payscaleData!.length,
-                              itemExtent: rowHeight,
-                              physics: const ClampingScrollPhysics(),
-                              itemBuilder: (context, index) {
-                                Map<String, dynamic> row = _payscaleData![index];
-                                String cellValue = row[fixedColumnKey] ?? '';
-                                cellValue = paymentTypeFormatMap[cellValue.toLowerCase()] ?? cellValue;
-                                
-                                return Container(
-                                  height: rowHeight,
-                                  decoration: BoxDecoration(
-                                    color: index.isOdd 
-                                      ? oddRowOverlayColor 
-                                      : Colors.transparent,
-                                    border: Border(
-                                      right: BorderSide(color: Theme.of(context).dividerColor.withOpacity(0.5), width: 1),
-                                      bottom: BorderSide(color: Theme.of(context).dividerColor.withOpacity(0.2), width: 1),
-                                    ),
-                                  ),
-                                  padding: cellPadding,
-                                  alignment: Alignment.centerLeft,
-                                  child: Text(
-                                    cellValue, 
-                                    style: cellTextStyle, 
-                                    overflow: TextOverflow.ellipsis,
-                                    maxLines: 2,
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
-                        ),
-                        // Scrollable data columns
-                        Expanded(
-                          child: SingleChildScrollView(
-                            controller: _horizontalScrollController,
-                            scrollDirection: Axis.horizontal,
-                            child: SizedBox(
-                              width: scrollableColumnHeaders.length * 120.0,
-                              child: ListView.builder(
-                                controller: _verticalController2,
-                                itemCount: _payscaleData!.length,
-                                itemExtent: rowHeight,
-                                physics: const ClampingScrollPhysics(),
-                                itemBuilder: (context, rowIndex) {
-                                  Map<String, dynamic> row = _payscaleData![rowIndex];
-                                  
-                                  return Container(
-                                    height: rowHeight,
-                                    decoration: BoxDecoration(
-                                      color: rowIndex.isOdd 
-                                        ? oddRowOverlayColor 
-                                        : Colors.transparent,
-                                      border: Border(
-                                        bottom: BorderSide(color: Theme.of(context).dividerColor.withOpacity(0.2), width: 1),
-                                      ),
-                                    ),
-                                    child: Row(
-                                      children: scrollableColumnHeaders.map((header) {
-                                        String cellValue = row[header] ?? '';
-                                        try {
-                                          final value = double.parse(cellValue);
-                                          cellValue = '€${value.toStringAsFixed(2)}';
-                                        } catch (e) {
-                                          // Keep original
-                                        }
-                                        return Container(
-                                          width: 120,
-                                          padding: cellPadding,
-                                          alignment: Alignment.centerRight,
-                                          child: Text(
-                                            cellValue, 
-                                            style: cellTextStyle,
-                                            textAlign: TextAlign.right,
-                                          ),
-                                        );
-                                      }).toList(),
-                                    ),
-                                  );
-                                },
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Theme.of(context).shadowColor.withOpacity(0.1),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
                   ),
                 ],
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: HorizontalSplitTable(
+                fixedColumnWidth: 190.0,
+                headerHeight: 56.0,
+                headerBackgroundColor: headerBackgroundColor,
+                dataColumnWidth: 120.0,
+                fixedColumnHeader: labelMap[fixedColumnKey] ?? fixedColumnKey,
+                dataColumnHeaders: scrollableColumnHeaders.map((header) => labelMap[header] ?? header).toList(),
+                rowCount: _payscaleData!.length,
+                fixedColumnCellBuilder: (context, index) {
+                  Map<String, dynamic> row = _payscaleData![index];
+                  String cellValue = row[fixedColumnKey] ?? '';
+                  cellValue = paymentTypeFormatMap[cellValue.toLowerCase()] ?? cellValue;
+                  
+                  return Container(
+                    alignment: Alignment.centerLeft,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Text(
+                      cellValue, 
+                      style: cellTextStyle.copyWith(
+                        fontWeight: FontWeight.w500,
+                      ), 
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 2,
+                    ),
+                  );
+                },
+                dataCellBuilder: (context, rowIndex, colIndex) {
+                  Map<String, dynamic> row = _payscaleData![rowIndex];
+                  String header = scrollableColumnHeaders[colIndex];
+                  String cellValue = row[header] ?? '';
+                  
+                  try {
+                    final value = double.parse(cellValue);
+                    cellValue = '€${value.toStringAsFixed(2)}';
+                  } catch (e) {
+                    // Keep original
+                  }
+                  
+                  return Container(
+                    alignment: Alignment.centerRight,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Text(
+                      cellValue, 
+                      style: cellTextStyle,
+                      textAlign: TextAlign.right,
+                    ),
+                  );
+                },
+                alternateRowColor: oddRowOverlayColor,
+                headerTextStyle: headerTextStyle,
+                borderColor: borderColor,
               ),
             ),
           ),
@@ -394,36 +259,228 @@ class _PayscaleScreenState extends State<PayscaleScreen> {
   }
 }
 
-// Helper widget for the fixed column with synchronized scrolling
-class ScrollableColumn extends StatelessWidget {
-  final ScrollController verticalController;
-  final int itemCount;
-  final double itemHeight;
-  final Widget Function(BuildContext, int) itemBuilder;
+class HorizontalSplitTable extends StatefulWidget {
+  final double fixedColumnWidth;
+  final double headerHeight;
+  final Color headerBackgroundColor;
+  final double dataColumnWidth;
+  final String fixedColumnHeader;
+  final List<String> dataColumnHeaders;
+  final int rowCount;
+  final Widget Function(BuildContext, int) fixedColumnCellBuilder;
+  final Widget Function(BuildContext, int, int) dataCellBuilder;
+  final Color alternateRowColor;
+  final TextStyle headerTextStyle;
+  final Color borderColor;
 
-  const ScrollableColumn({
+  const HorizontalSplitTable({
     Key? key,
-    required this.verticalController,
-    required this.itemCount,
-    required this.itemHeight,
-    required this.itemBuilder,
+    required this.fixedColumnWidth,
+    required this.headerHeight,
+    required this.headerBackgroundColor,
+    required this.dataColumnWidth,
+    required this.fixedColumnHeader,
+    required this.dataColumnHeaders,
+    required this.rowCount,
+    required this.fixedColumnCellBuilder,
+    required this.dataCellBuilder,
+    required this.alternateRowColor,
+    required this.headerTextStyle,
+    required this.borderColor,
   }) : super(key: key);
 
   @override
+  _HorizontalSplitTableState createState() => _HorizontalSplitTableState();
+}
+
+class _HorizontalSplitTableState extends State<HorizontalSplitTable> {
+  final ScrollController _horizontalScrollController1 = ScrollController();
+  final ScrollController _horizontalScrollController2 = ScrollController();
+  final ScrollController _verticalScrollController1 = ScrollController();
+  final ScrollController _verticalScrollController2 = ScrollController();
+  bool _isScrollingHorizontally = false;
+  bool _isScrollingVertically = false;
+
+  @override
+  void initState() {
+    super.initState();
+    
+    // Set up horizontal scroll synchronization
+    _horizontalScrollController1.addListener(() {
+      if (!_isScrollingHorizontally) {
+        _isScrollingHorizontally = true;
+        _horizontalScrollController2.jumpTo(_horizontalScrollController1.offset);
+        _isScrollingHorizontally = false;
+      }
+    });
+    
+    _horizontalScrollController2.addListener(() {
+      if (!_isScrollingHorizontally) {
+        _isScrollingHorizontally = true;
+        _horizontalScrollController1.jumpTo(_horizontalScrollController2.offset);
+        _isScrollingHorizontally = false;
+      }
+    });
+    
+    // Set up vertical scroll synchronization
+    _verticalScrollController1.addListener(() {
+      if (!_isScrollingVertically) {
+        _isScrollingVertically = true;
+        _verticalScrollController2.jumpTo(_verticalScrollController1.offset);
+        _isScrollingVertically = false;
+      }
+    });
+    
+    _verticalScrollController2.addListener(() {
+      if (!_isScrollingVertically) {
+        _isScrollingVertically = true;
+        _verticalScrollController1.jumpTo(_verticalScrollController2.offset);
+        _isScrollingVertically = false;
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _horizontalScrollController1.dispose();
+    _horizontalScrollController2.dispose();
+    _verticalScrollController1.dispose();
+    _verticalScrollController2.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return NotificationListener<ScrollNotification>(
-      onNotification: (notification) {
-        // No need to handle scroll notifications
-        // as we are using the same controller
-        return false;
-      },
-      child: ListView.builder(
-        controller: verticalController,
-        itemCount: itemCount,
-        itemExtent: itemHeight,
-        physics: const ClampingScrollPhysics(),
-        itemBuilder: itemBuilder,
-      ),
+    final totalWidth = widget.dataColumnWidth * widget.dataColumnHeaders.length;
+    
+    return Column(
+      children: [
+        // Header Row
+        SizedBox(
+          height: widget.headerHeight,
+          child: Row(
+            children: [
+              // Top-left fixed cell
+              Container(
+                width: widget.fixedColumnWidth,
+                height: widget.headerHeight,
+                alignment: Alignment.centerLeft,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                decoration: BoxDecoration(
+                  color: widget.headerBackgroundColor,
+                  border: Border(
+                    right: BorderSide(color: widget.borderColor, width: 1),
+                    bottom: BorderSide(color: widget.borderColor, width: 1),
+                  ),
+                ),
+                child: Text(
+                  widget.fixedColumnHeader,
+                  style: widget.headerTextStyle,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              // Header scrollable part
+              Expanded(
+                child: SingleChildScrollView(
+                  controller: _horizontalScrollController1,
+                  scrollDirection: Axis.horizontal,
+                  physics: const ClampingScrollPhysics(),
+                  child: Container(
+                    height: widget.headerHeight,
+                    width: totalWidth,
+                    decoration: BoxDecoration(
+                      color: widget.headerBackgroundColor,
+                      border: Border(
+                        bottom: BorderSide(color: widget.borderColor, width: 1),
+                      ),
+                    ),
+                    child: Row(
+                      children: List.generate(widget.dataColumnHeaders.length, (index) {
+                        return Container(
+                          width: widget.dataColumnWidth,
+                          height: widget.headerHeight,
+                          alignment: Alignment.centerRight,
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: Text(
+                            widget.dataColumnHeaders[index],
+                            style: widget.headerTextStyle,
+                            textAlign: TextAlign.right,
+                          ),
+                        );
+                      }),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        // Table Body
+        Expanded(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Fixed left column
+              SizedBox(
+                width: widget.fixedColumnWidth,
+                child: ListView.builder(
+                  controller: _verticalScrollController1,
+                  itemCount: widget.rowCount,
+                  physics: const ClampingScrollPhysics(),
+                  itemBuilder: (context, index) {
+                    return Container(
+                      height: widget.headerHeight,
+                      decoration: BoxDecoration(
+                        color: index.isOdd ? widget.alternateRowColor : Colors.transparent,
+                        border: Border(
+                          right: BorderSide(color: widget.borderColor, width: 1),
+                          bottom: BorderSide(color: widget.borderColor.withOpacity(0.5), width: 1),
+                        ),
+                      ),
+                      child: widget.fixedColumnCellBuilder(context, index),
+                    );
+                  },
+                ),
+              ),
+              // Scrollable data area
+              Expanded(
+                child: SingleChildScrollView(
+                  controller: _horizontalScrollController2,
+                  scrollDirection: Axis.horizontal,
+                  physics: const ClampingScrollPhysics(),
+                  child: SizedBox(
+                    width: totalWidth,
+                    child: ListView.builder(
+                      controller: _verticalScrollController2,
+                      itemCount: widget.rowCount,
+                      physics: const ClampingScrollPhysics(),
+                      itemBuilder: (context, rowIndex) {
+                        return Container(
+                          height: widget.headerHeight,
+                          decoration: BoxDecoration(
+                            color: rowIndex.isOdd ? widget.alternateRowColor : Colors.transparent,
+                            border: Border(
+                              bottom: BorderSide(color: widget.borderColor.withOpacity(0.5), width: 1),
+                            ),
+                          ),
+                          child: Row(
+                            children: List.generate(widget.dataColumnHeaders.length, (colIndex) {
+                              return Container(
+                                width: widget.dataColumnWidth,
+                                child: widget.dataCellBuilder(context, rowIndex, colIndex),
+                              );
+                            }),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 } 
