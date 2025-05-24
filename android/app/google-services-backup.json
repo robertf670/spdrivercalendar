@@ -1,41 +1,41 @@
 {
   "project_info": {
-    "project_number": "000000000000",
-    "project_id": "dummy-project-id",
-    "storage_bucket": "dummy-project-id.appspot.com"
+    "project_number": "YOUR_PROJECT_NUMBER",
+    "project_id": "your-project-id",
+    "storage_bucket": "your-project-id.appspot.com"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:000000000000:android:0000000000000000000000",
+        "mobilesdk_app_id": "1:YOUR_PROJECT_NUMBER:android:YOUR_SHA1_HASH",
         "android_client_info": {
           "package_name": "ie.qqrxi.spdrivercalendar"
         }
       },
       "oauth_client": [
         {
-          "client_id": "000000000000-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.apps.googleusercontent.com",
+          "client_id": "YOUR_WEB_CLIENT_ID",
           "client_type": 3
         },
         {
-          "client_id": "000000000000-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.apps.googleusercontent.com",
+          "client_id": "YOUR_ANDROID_CLIENT_ID",
           "client_type": 1,
           "android_info": {
             "package_name": "ie.qqrxi.spdrivercalendar",
-            "certificate_hash": "0000000000000000000000000000000000000000"
+            "certificate_hash": "YOUR_SHA1_HASH"
           }
         }
       ],
       "api_key": [
         {
-          "current_key": "AIzaSyDummyKeyForCIBuilds-XXXXXXXXXXXXXXX"
+          "current_key": "YOUR_API_KEY"
         }
       ],
       "services": {
         "appinvite_service": {
           "other_platform_oauth_client": [
             {
-              "client_id": "000000000000-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.apps.googleusercontent.com",
+              "client_id": "YOUR_WEB_CLIENT_ID",
               "client_type": 3
             }
           ]

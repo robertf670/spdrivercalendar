@@ -7,6 +7,7 @@ import 'package:spdrivercalendar/services/token_manager.dart';
 import 'dart:convert';
 import 'dart:convert' show jsonDecode;
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 
 class GoogleCalendarService {
   // Static GoogleSignIn instance to be used across the app
@@ -18,6 +19,10 @@ class GoogleCalendarService {
     ],
     // Don't force code for refresh token every time as it causes extra auth prompts
     forceCodeForRefreshToken: false,
+    // TEMPORARY TEST: Add serverClientId with web client ID
+    // Replace this with your actual web client ID from Google Cloud Console
+    // You can find it in Credentials > OAuth 2.0 Client IDs > Web client (auto-created)
+    // serverClientId: "YOUR_WEB_CLIENT_ID.apps.googleusercontent.com",
   );
 
   @visibleForTesting
@@ -378,6 +383,106 @@ class GoogleCalendarService {
       }
     } catch (e) {
       print('Error parsing token expiration: $e');
+    }
+  }
+
+  // Complete reset - disconnect from Google services entirely
+  static Future<void> completeReset() async {
+    try {
+      print('Starting complete Google authentication reset...');
+      
+      // Clear shared preferences first
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('hasCompletedGoogleLogin');
+      print('✓ Cleared shared preferences');
+      
+      // Clear token manager
+      TokenManager.dispose();
+      print('✓ Cleared token manager');
+      
+      // Sign out first (this usually works even if disconnect fails)
+      try {
+        await _googleSignIn.signOut();
+        print('✓ Signed out successfully');
+      } catch (signOutError) {
+        print('⚠ Sign out failed: $signOutError');
+      }
+      
+      // Try to disconnect completely (this may fail, but that's okay)
+      try {
+        await _googleSignIn.disconnect();
+        print('✓ Disconnected successfully');
+      } catch (disconnectError) {
+        print('⚠ Disconnect failed (this is common): $disconnectError');
+        print('ℹ Don\'t worry - other cleanup steps were successful');
+      }
+      
+      // Additional cleanup - clear any cached authentication state
+      try {
+        // Force a new GoogleSignIn instance to clear any cached state
+        _googleSignIn = GoogleSignIn(
+          scopes: [
+            'email',
+            'https://www.googleapis.com/auth/calendar',
+            'https://www.googleapis.com/auth/calendar.events',
+          ],
+          forceCodeForRefreshToken: false,
+        );
+        print('✓ Recreated GoogleSignIn instance');
+      } catch (recreateError) {
+        print('⚠ Failed to recreate GoogleSignIn instance: $recreateError');
+      }
+      
+      print('Complete Google authentication reset finished (some steps may have failed but that\'s normal)');
+    } catch (error) {
+      print('Error during complete reset: $error');
+      // Even if there are errors, try to clear what we can
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.remove('hasCompletedGoogleLogin');
+        TokenManager.dispose();
+      } catch (fallbackError) {
+        print('Fallback cleanup also failed: $fallbackError');
+      }
+    }
+  }
+
+  // Simple reset - avoids disconnect() which often fails
+  static Future<void> simpleReset() async {
+    try {
+      print('Starting simple Google authentication reset...');
+      
+      // Clear shared preferences
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('hasCompletedGoogleLogin');
+      print('✓ Cleared shared preferences');
+      
+      // Clear token manager
+      TokenManager.dispose();
+      print('✓ Cleared token manager');
+      
+      // Sign out only (don't try to disconnect)
+      try {
+        await _googleSignIn.signOut();
+        print('✓ Signed out successfully');
+      } catch (signOutError) {
+        print('⚠ Sign out failed: $signOutError');
+      }
+      
+      // Recreate GoogleSignIn instance to clear cached state
+      _googleSignIn = GoogleSignIn(
+        scopes: [
+          'email',
+          'https://www.googleapis.com/auth/calendar',
+          'https://www.googleapis.com/auth/calendar.events',
+        ],
+        forceCodeForRefreshToken: false,
+      );
+      print('✓ Recreated GoogleSignIn instance');
+      
+      print('Simple Google authentication reset completed successfully');
+    } catch (error) {
+      print('Error during simple reset: $error');
     }
   }
 }

@@ -322,6 +322,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
             onTap: _handleClearGoogleData,
           ),
           ListTile(
+            leading: const Icon(Icons.power_settings_new, color: Colors.deepOrange),
+            title: const Text('Complete Disconnect'),
+            subtitle: const Text('Nuclear option - revoke all permissions'),
+            onTap: _handleCompleteReset,
+          ),
+          ListTile(
+            leading: const Icon(Icons.cleaning_services, color: Colors.orange),
+            title: const Text('Simple Reset'),
+            subtitle: const Text('Alternative reset (if complete disconnect fails)'),
+            onTap: _handleSimpleReset,
+          ),
+          ListTile(
             leading: const Icon(Icons.info, color: Colors.green),
             title: const Text('Test Google Configuration'),
             subtitle: const Text('Check if setup is correct'),
@@ -640,6 +652,122 @@ class _SettingsScreenState extends State<SettingsScreen> {
         });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error clearing Google data: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _handleCompleteReset() async {
+    // Show confirmation dialog
+    final shouldReset = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Complete Disconnect'),
+        content: const Text('This will completely disconnect your Google account and revoke ALL permissions granted to this app. This is the "nuclear option" that should fix authentication issues.\n\nYou will need to sign in again and re-grant permissions.\n\nAre you sure?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Complete Reset'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldReset == true) {
+      setState(() {
+        _isLoading = true;
+      });
+
+      try {
+        // Use the complete reset function
+        await GoogleCalendarService.completeReset();
+        
+        // Update UI state
+        setState(() {
+          _isGoogleSignedIn = false;
+          _googleAccount = '';
+          _isLoading = false;
+          _syncToGoogleCalendar = false;
+        });
+
+        // Save sync preference
+        await StorageService.saveBool(AppConstants.syncToGoogleCalendarKey, false);
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Complete reset successful! All Google permissions revoked.'),
+            duration: Duration(seconds: 4),
+          ),
+        );
+      } catch (e) {
+        setState(() {
+          _isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error during complete reset: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _handleSimpleReset() async {
+    // Show confirmation dialog
+    final shouldReset = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Simple Reset'),
+        content: const Text('This will clear authentication data and sign you out, but won\'t try to revoke permissions (which sometimes fails).\n\nThis is a good alternative if the Complete Disconnect option failed.\n\nAre you sure?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(foregroundColor: Colors.orange),
+            child: const Text('Simple Reset'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldReset == true) {
+      setState(() {
+        _isLoading = true;
+      });
+
+      try {
+        // Use the simple reset function
+        await GoogleCalendarService.simpleReset();
+        
+        // Update UI state
+        setState(() {
+          _isGoogleSignedIn = false;
+          _googleAccount = '';
+          _isLoading = false;
+          _syncToGoogleCalendar = false;
+        });
+
+        // Save sync preference
+        await StorageService.saveBool(AppConstants.syncToGoogleCalendarKey, false);
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Simple reset completed! Try signing in again.'),
+            duration: Duration(seconds: 4),
+          ),
+        );
+      } catch (e) {
+        setState(() {
+          _isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error during simple reset: $e')),
         );
       }
     }

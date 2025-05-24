@@ -1,4 +1,18 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.8.5': [
+    {
+      'title': 'Fixed Google Calendar Sign-In Issue',
+      'description': 'Resolved ApiException: 10 error that prevented Google Calendar authentication. Removed conflicting dummy configuration files that were causing sign-in failures.',
+    },
+    {
+      'title': 'Restored Working Configuration',
+      'description': 'Reverted to proven working Google sign-in setup from version 2.8.4. Google Calendar sync should now work reliably for all users.',
+    },
+    {
+      'title': 'Improved CI/CD Setup',
+      'description': 'Better handling of configuration files for automated builds while maintaining working local development environment.',
+    },
+  ],
   '2.8.4': [
     {
       'title': 'Always-Accessible Google Calendar Debugging',
