@@ -20,6 +20,8 @@ import 'package:spdrivercalendar/services/backup_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:spdrivercalendar/features/calendar/services/event_service.dart';
 import 'package:spdrivercalendar/features/settings/screens/version_history_screen.dart';
+import 'package:spdrivercalendar/services/update_service.dart';
+import 'package:spdrivercalendar/core/widgets/update_dialog.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -85,6 +87,24 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     super.dispose();
   }
 
+  Future<void> _checkForUpdatesOnResume() async {
+    // Small delay to ensure the app is fully resumed
+    await Future.delayed(const Duration(seconds: 1));
+    
+    try {
+      final updateInfo = await UpdateService.checkForUpdate();
+      
+      if (updateInfo != null && updateInfo.hasUpdate && mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => UpdateDialog(updateInfo: updateInfo),
+        );
+      }
+    } catch (e) {
+      print('Error checking for updates on resume: $e');
+    }
+  }
+
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) async {
     super.didChangeAppLifecycleState(state);
@@ -104,6 +124,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       }
     } else if (state == AppLifecycleState.resumed) {
       setState(() {});
+      _checkForUpdatesOnResume();
     }
   }
 
@@ -196,6 +217,9 @@ class _SplashScreenState extends State<SplashScreen> {
     }
 
     await _checkOnboardingStatus();
+    
+    // Check for app updates after onboarding is complete
+    _checkForAppUpdates();
   }
 
   Future<bool> _checkVersionUpdate() async {
@@ -231,6 +255,29 @@ class _SplashScreenState extends State<SplashScreen> {
 
     if (mounted) {
       Navigator.pushReplacementNamed(context, nextRoute);
+    }
+  }
+
+  Future<void> _checkForAppUpdates() async {
+    // Wait for navigation to complete and give the app a moment to settle
+    await Future.delayed(const Duration(seconds: 3));
+    
+    if (!mounted) return;
+    
+    try {
+      final updateInfo = await UpdateService.checkForUpdate();
+      
+      if (updateInfo != null && updateInfo.hasUpdate && mounted) {
+        // Get the current context from the navigator
+        final currentContext = Navigator.of(context).context;
+        
+        showDialog(
+          context: currentContext,
+          builder: (context) => UpdateDialog(updateInfo: updateInfo),
+        );
+      }
+    } catch (e) {
+      print('Error checking for updates: $e');
     }
   }
 

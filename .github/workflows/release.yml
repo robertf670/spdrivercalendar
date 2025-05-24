@@ -1,0 +1,65 @@
+name: Build and Release APK
+
+on:
+  push:
+    tags:
+      - 'v*'  # Triggers on version tags like v2.8.0
+
+jobs:
+  build:
+    name: Build APK
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Java
+      uses: actions/setup-java@v3
+      with:
+        distribution: 'zulu'
+        java-version: '17'
+    
+    - name: Setup Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: '3.16.0'
+        channel: 'stable'
+    
+    - name: Get dependencies
+      run: flutter pub get
+    
+    - name: Build APK
+      run: flutter build apk --release
+    
+    - name: Rename APK with version
+      run: |
+        VERSION=${GITHUB_REF#refs/tags/}
+        mv build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/spdrivercalendar-${VERSION}.apk
+    
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: build/app/outputs/flutter-apk/spdrivercalendar-*.apk
+        name: Release ${{ github.ref_name }}
+        body: |
+          ## What's New in ${{ github.ref_name }}
+          
+          🚀 **SpDriverCalendar Update**
+          
+          ### ✨ Features & Improvements
+          - Performance optimizations
+          - Bug fixes and stability improvements
+          
+          ### 📱 Installation
+          1. Download the APK file below
+          2. Enable "Install from unknown sources" if prompted
+          3. Install the update
+          
+          **Note:** Your calendar data and settings will be preserved during the update.
+          
+          ---
+          *For detailed changes, check the commit history since the previous release.*
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 

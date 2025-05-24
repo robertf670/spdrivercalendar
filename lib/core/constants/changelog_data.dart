@@ -1,5 +1,4 @@
-final Map<String, List<Map<String, String>>> changelogData = {
-  '2.7.5': [
+final Map<String, List<Map<String, String>>> changelogData = {  '2.8.0': [    {      'title': 'Auto-Update System',      'description': 'Implemented automatic update checking and installation. The app now checks for new versions on startup and when resumed, with seamless download and installation process.',    },    {      'title': 'GitHub Releases Integration',      'description': 'Updates are now distributed through GitHub Releases with automated builds via GitHub Actions. This ensures reliable, secure, and fast update delivery.',    },    {      'title': 'Smart Update Management',      'description': 'Added intelligent update frequency control (checks every 24 hours by default) and preserves user data during updates. Updates include detailed release notes and installation guidance.',    },    {      'title': 'Enhanced User Experience',      'description': 'Beautiful update dialogs with clear installation steps, download progress indication, and optional update timing to never interrupt your workflow.',    },  ],  '2.7.5': [
     {
       'title': 'Version History Screen',
       'description': 'Added a new "Version History" screen, accessible from Settings > App, to view past changelog entries.',
