@@ -1,4 +1,14 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.8.2': [
+    {
+      'title': 'Fixed Backup File Selection',
+      'description': 'Resolved issue where backup files with duplicate names (containing numbers like "backup (1).json") were rejected during restore. Now accepts any file containing ".json" in the filename.',
+    },
+    {
+      'title': 'Backup Restore Validation',
+      'description': 'Improved file type validation to be more flexible with Windows file naming patterns when creating duplicate files.',
+    },
+  ],
   '2.8.1': [
     {
       'title': 'Fixed Backup Restore Issue',

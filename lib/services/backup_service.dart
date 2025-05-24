@@ -164,7 +164,7 @@ class BackupService {
 
         // Validate if the picked file is a .json file
         final pickedFile = result.files.single;
-        if (pickedFile.name == null || !pickedFile.name!.toLowerCase().endsWith('.json')) {
+        if (pickedFile.name == null || !pickedFile.name!.toLowerCase().contains('.json')) {
           print("Invalid file type picked. Expected .json, got: ${pickedFile.name}");
           // We can't show a SnackBar here, so we rely on returning false
           // and letting SettingsScreen handle the user notification.
