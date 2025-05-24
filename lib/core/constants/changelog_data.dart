@@ -1,4 +1,14 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.8.3': [
+    {
+      'title': 'Google Calendar Re-authentication',
+      'description': 'Added "Re-authenticate Google" option in Settings to easily fix Google Calendar connection issues that may occur after app updates or reinstalls.',
+    },
+    {
+      'title': 'Enhanced APK Update Support',
+      'description': 'Improved guidance for APK installations to preserve Google Calendar authentication. Added recovery options for authentication issues.',
+    },
+  ],
   '2.8.2': [
     {
       'title': 'Fixed Backup File Selection',

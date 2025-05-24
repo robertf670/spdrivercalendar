@@ -168,6 +168,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           _buildGoogleAccountSection(),
           _buildGoogleSyncOption(),
           _buildManualSyncOption(),
+          _buildGoogleReauthOption(),
           
           // --- Modify Notifications Section --- 
           const Divider(height: 32),
@@ -321,6 +322,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
         trailing: _isGoogleSignedIn ? const Icon(Icons.chevron_right) : null,
         enabled: _isGoogleSignedIn,
         onTap: _isGoogleSignedIn ? () => _showSyncDialog(context) : null,
+      ),
+    );
+  }
+
+  Widget _buildGoogleReauthOption() {
+    if (!_isGoogleSignedIn) return const SizedBox.shrink();
+    
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 4.0),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppTheme.borderRadius),
+      ),
+      child: ListTile(
+        leading: const Icon(Icons.refresh, color: Colors.orange),
+        title: const Text('Re-authenticate Google'),
+        subtitle: const Text('Fix Google Calendar connection issues'),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: _handleGoogleReauth,
       ),
     );
   }
@@ -509,6 +528,44 @@ class _SettingsScreenState extends State<SettingsScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Disconnected from Google Calendar')),
     );
+  }
+
+  Future<void> _handleGoogleReauth() async {
+    setState(() {
+      _isLoading = true;
+    });
+    
+    try {
+      // First sign out to clear any stale tokens
+      await GoogleCalendarService.signOut();
+      await GoogleCalendarService.clearLoginData();
+      
+      // Then sign in fresh
+      final account = await GoogleCalendarService.signIn();
+      
+      setState(() {
+        _isGoogleSignedIn = account != null;
+        _googleAccount = account?.email ?? '';
+        _isLoading = false;
+      });
+      
+      if (account != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Successfully re-authenticated with Google Calendar')),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Re-authentication was cancelled')),
+        );
+      }
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Re-authentication failed: $e')),
+      );
+    }
   }
 
   Future<void> _showSyncDialog(BuildContext context) async {
