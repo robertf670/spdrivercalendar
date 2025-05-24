@@ -1,4 +1,18 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.8.4': [
+    {
+      'title': 'Always-Accessible Google Calendar Debugging',
+      'description': 'Added "Google Sign-In Debugging" section in Settings that\'s always visible, even when not signed in. Includes Force Re-authentication, Clear All Google Data, and Test Configuration tools.',
+    },
+    {
+      'title': 'Improved Fresh Install Experience', 
+      'description': 'Fixed issue where Google Calendar re-authentication tools were only accessible after successful sign-in, making them unreachable on fresh installs with login problems.',
+    },
+    {
+      'title': 'Enhanced Google Setup Guidance',
+      'description': 'Added comprehensive setup guide with alternative methods for fixing Android toolchain issues and detailed Google Cloud Console configuration steps.',
+    },
+  ],
   '2.8.3': [
     {
       'title': 'Google Calendar Re-authentication',

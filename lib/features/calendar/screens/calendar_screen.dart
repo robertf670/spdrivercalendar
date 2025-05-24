@@ -2574,7 +2574,7 @@ class CalendarScreenState extends State<CalendarScreen>
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                           decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.surface,
+                            color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.5), // Use theme color
                             borderRadius: BorderRadius.circular(16),
                             border: Border.all(
                               color: Theme.of(context).dividerColor,
@@ -2637,7 +2637,7 @@ class CalendarScreenState extends State<CalendarScreen>
                                 color: isSelected
                                     ? Theme.of(context).colorScheme.primary
                                     : isCurrentMonth
-                                        ? Theme.of(context).colorScheme.primaryContainer.withOpacity(0.2)
+                                        ? Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.2)
                                         : null,
                                 borderRadius: BorderRadius.circular(8),
                                 border: Border.all(
@@ -2694,8 +2694,8 @@ class CalendarScreenState extends State<CalendarScreen>
         alignment: Alignment.center,
         decoration: BoxDecoration(
           color: isHoliday 
-              ? holidayColor.withOpacity(0.3)
-              : shiftInfo?.color.withOpacity(0.3),
+              ? holidayColor.withValues(alpha: 0.3)
+              : shiftInfo?.color.withValues(alpha: 0.3),
           borderRadius: BorderRadius.circular(8.0),
           border: isToday
               ? Border.all(
@@ -2901,7 +2901,7 @@ class CalendarScreenState extends State<CalendarScreen>
                             const SizedBox(height: 8),
                             Container(
                               decoration: BoxDecoration(
-                                color: Theme.of(context).colorScheme.surface.withOpacity(0.5), // Use theme color
+                                color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.5), // Use theme color
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(color: Theme.of(context).dividerColor), // Use theme divider color
                               ),
@@ -2922,7 +2922,7 @@ class CalendarScreenState extends State<CalendarScreen>
                                       ),
                                       boxShadow: [
                                         BoxShadow(
-                                          color: Colors.black.withOpacity(0.05),
+                                          color: Colors.black.withValues(alpha: 0.05),
                                           blurRadius: 4,
                                           offset: const Offset(0, 2),
                                         ),
@@ -3146,7 +3146,7 @@ class CalendarScreenState extends State<CalendarScreen>
                           ),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.05),
+                              color: Colors.black.withValues(alpha: 0.05),
                               blurRadius: 4,
                               offset: const Offset(0, 2),
                             ),
@@ -3349,7 +3349,7 @@ class CalendarScreenState extends State<CalendarScreen>
                           ),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.05),
+                              color: Colors.black.withValues(alpha: 0.05),
                               blurRadius: 4,
                               offset: const Offset(0, 2),
                             ),

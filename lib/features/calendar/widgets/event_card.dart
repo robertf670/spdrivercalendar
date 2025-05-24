@@ -1004,9 +1004,9 @@ class _EventCardState extends State<EventCard> {
     Color cardColor = Colors.white;
     if (isWorkShift) {
       if (widget.isRestDay) {
-        cardColor = widget.shiftInfoMap['R']?.color.withOpacity(0.3) ?? Colors.grey.shade100;
+        cardColor = widget.shiftInfoMap['R']?.color.withValues(alpha: 0.3) ?? Colors.grey.shade100;
       } else {
-        cardColor = shiftInfo?.color.withOpacity(0.2) ?? Colors.blue.withOpacity(0.2);
+        cardColor = shiftInfo?.color.withValues(alpha: 0.2) ?? Colors.blue.withValues(alpha: 0.2);
       }
     }
     
@@ -1014,9 +1014,9 @@ class _EventCardState extends State<EventCard> {
     if (Theme.of(context).brightness == Brightness.dark) {
       if (isWorkShift) {
         if (widget.isRestDay) {
-          cardColor = widget.shiftInfoMap['R']?.color.withOpacity(0.3) ?? Colors.blueGrey.shade700;
+          cardColor = widget.shiftInfoMap['R']?.color.withValues(alpha: 0.3) ?? Colors.blueGrey.shade700;
         } else {
-          cardColor = shiftInfo?.color.withOpacity(0.2) ?? Colors.blueGrey.withOpacity(0.2);
+          cardColor = shiftInfo?.color.withValues(alpha: 0.2) ?? Colors.blueGrey.withValues(alpha: 0.2);
         }
       } else {
         cardColor = Colors.grey.shade800;
@@ -1162,7 +1162,7 @@ class _EventCardState extends State<EventCard> {
                               TextSpan(
                                 text: widget.event.formattedStartTime,
                                 style: TextStyle( // Removed const and hardcoded black color
-                                  color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.9), // Use theme color, slightly less emphasis
+                                  color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.9), // Use theme color, slightly less emphasis
                                   fontWeight: widget.event.title.contains('(OT)') ? FontWeight.bold : FontWeight.normal,
                                 ),
                               ),
@@ -1172,7 +1172,7 @@ class _EventCardState extends State<EventCard> {
                                 TextSpan(
                                   text: ' $startLocation',
                                   style: TextStyle(
-                                    color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.9),
+                                    color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.9),
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
@@ -1181,7 +1181,7 @@ class _EventCardState extends State<EventCard> {
                                 TextSpan(
                                   text: ' $finishBreakLocation',
                                   style: TextStyle(
-                                    color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.9),
+                                    color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.9),
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
@@ -1190,7 +1190,7 @@ class _EventCardState extends State<EventCard> {
                                 TextSpan(
                                   text: ' $startLocation',
                                   style: TextStyle(
-                                    color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.9),
+                                    color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.9),
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
@@ -1201,7 +1201,7 @@ class _EventCardState extends State<EventCard> {
                               TextSpan(
                                 text: widget.event.formattedEndTime,
                                 style: TextStyle( // Removed const and hardcoded black color
-                                  color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.9), // Use theme color, slightly less emphasis
+                                  color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.9), // Use theme color, slightly less emphasis
                                   fontWeight: widget.event.title.contains('(OT)') ? FontWeight.bold : FontWeight.normal,
                                 ),
                               ),
@@ -1211,7 +1211,7 @@ class _EventCardState extends State<EventCard> {
                                 TextSpan(
                                   text: ' $startBreakLocation',
                                   style: TextStyle(
-                                    color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.9),
+                                    color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.9),
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
@@ -1220,7 +1220,7 @@ class _EventCardState extends State<EventCard> {
                                 TextSpan(
                                   text: ' $finishLocation',
                                   style: TextStyle(
-                                    color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.9),
+                                    color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.9),
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
@@ -1229,7 +1229,7 @@ class _EventCardState extends State<EventCard> {
                                 TextSpan(
                                   text: ' $finishLocation',
                                   style: TextStyle(
-                                    color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.9),
+                                    color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.9),
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
@@ -1269,7 +1269,7 @@ class _EventCardState extends State<EventCard> {
                               TextSpan(
                                 text: _calculateOvertimeWorkTime() ?? '',
                                 style: TextStyle(
-                                  color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.9),
+                                  color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.9),
                                 ),
                               ),
                             ],

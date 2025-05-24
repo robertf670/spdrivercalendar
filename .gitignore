@@ -119,3 +119,7 @@ overtime_plan.md
 
 # Generated files
 repomix.xml
+
+# Google Services configuration files (contain sensitive data)
+android/app/google-services.json
+ios/Runner/GoogleService-Info.plist

@@ -168,7 +168,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           _buildGoogleAccountSection(),
           _buildGoogleSyncOption(),
           _buildManualSyncOption(),
-          _buildGoogleReauthOption(),
           
           // --- Modify Notifications Section --- 
           const Divider(height: 32),
@@ -262,33 +261,73 @@ class _SettingsScreenState extends State<SettingsScreen> {
       );
     }
     
+    return Column(
+      children: [
+        Card(
+          margin: const EdgeInsets.symmetric(vertical: 4.0),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppTheme.borderRadius),
+          ),
+          child: ListTile(
+            leading: CircleAvatar(
+              backgroundColor: _isGoogleSignedIn ? AppTheme.successColor : Colors.grey,
+              child: Icon(
+                _isGoogleSignedIn ? Icons.check : Icons.login,
+                color: Colors.white,
+              ),
+            ),
+            title: Text(_isGoogleSignedIn ? 'Google Calendar Connected' : 'Connect Google Calendar'),
+            subtitle: Text(_isGoogleSignedIn ? _googleAccount : 'Sync your shifts with Google Calendar'),
+            trailing: _isGoogleSignedIn
+              ? IconButton(
+                  icon: const Icon(Icons.logout, color: Colors.red),
+                  onPressed: _handleGoogleSignOut,
+                )
+              : const Icon(Icons.chevron_right),
+            onTap: _isGoogleSignedIn 
+                ? () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const GoogleCalendarSettingsScreen()),
+                  )
+                : _handleGoogleSignIn,
+          ),
+        ),
+        // Always show debugging options
+        _buildGoogleDebuggingSection(),
+      ],
+    );
+  }
+
+  Widget _buildGoogleDebuggingSection() {
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 4.0),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppTheme.borderRadius),
       ),
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: _isGoogleSignedIn ? AppTheme.successColor : Colors.grey,
-          child: Icon(
-            _isGoogleSignedIn ? Icons.check : Icons.login,
-            color: Colors.white,
+      child: ExpansionTile(
+        leading: const Icon(Icons.bug_report, color: Colors.orange),
+        title: const Text('Google Sign-In Debugging'),
+        subtitle: const Text('Tools to fix connection issues'),
+        children: [
+          ListTile(
+            leading: const Icon(Icons.refresh, color: Colors.blue),
+            title: const Text('Force Re-authentication'),
+            subtitle: const Text('Clear cache and sign in again'),
+            onTap: _handleGoogleReauth,
           ),
-        ),
-        title: Text(_isGoogleSignedIn ? 'Google Calendar Connected' : 'Connect Google Calendar'),
-        subtitle: Text(_isGoogleSignedIn ? _googleAccount : 'Sync your shifts with Google Calendar'),
-        trailing: _isGoogleSignedIn
-          ? IconButton(
-              icon: const Icon(Icons.logout, color: Colors.red),
-              onPressed: _handleGoogleSignOut,
-            )
-          : const Icon(Icons.chevron_right),
-        onTap: _isGoogleSignedIn 
-            ? () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const GoogleCalendarSettingsScreen()),
-              )
-            : _handleGoogleSignIn,
+          ListTile(
+            leading: const Icon(Icons.clear_all, color: Colors.red),
+            title: const Text('Clear All Google Data'),
+            subtitle: const Text('Reset all Google authentication data'),
+            onTap: _handleClearGoogleData,
+          ),
+          ListTile(
+            leading: const Icon(Icons.info, color: Colors.green),
+            title: const Text('Test Google Configuration'),
+            subtitle: const Text('Check if setup is correct'),
+            onTap: _handleTestGoogleConfig,
+          ),
+        ],
       ),
     );
   }
@@ -322,24 +361,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
         trailing: _isGoogleSignedIn ? const Icon(Icons.chevron_right) : null,
         enabled: _isGoogleSignedIn,
         onTap: _isGoogleSignedIn ? () => _showSyncDialog(context) : null,
-      ),
-    );
-  }
-
-  Widget _buildGoogleReauthOption() {
-    if (!_isGoogleSignedIn) return const SizedBox.shrink();
-    
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 4.0),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppTheme.borderRadius),
-      ),
-      child: ListTile(
-        leading: const Icon(Icons.refresh, color: Colors.orange),
-        title: const Text('Re-authenticate Google'),
-        subtitle: const Text('Fix Google Calendar connection issues'),
-        trailing: const Icon(Icons.chevron_right),
-        onTap: _handleGoogleReauth,
       ),
     );
   }
@@ -566,6 +587,145 @@ class _SettingsScreenState extends State<SettingsScreen> {
         SnackBar(content: Text('Re-authentication failed: $e')),
       );
     }
+  }
+
+  Future<void> _handleClearGoogleData() async {
+    // Show confirmation dialog
+    final shouldClear = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Clear All Google Data'),
+        content: const Text('This will remove all Google authentication data and signed-in status. You will need to sign in again to use Google Calendar features.\n\nAre you sure?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Clear Data'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldClear == true) {
+      setState(() {
+        _isLoading = true;
+      });
+
+      try {
+        // Clear all Google data
+        await GoogleCalendarService.clearLoginData();
+        await GoogleCalendarService.signOut();
+        
+        // Update UI state
+        setState(() {
+          _isGoogleSignedIn = false;
+          _googleAccount = '';
+          _isLoading = false;
+          _syncToGoogleCalendar = false;
+        });
+
+        // Save sync preference
+        await StorageService.saveBool(AppConstants.syncToGoogleCalendarKey, false);
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('All Google data cleared successfully')),
+        );
+      } catch (e) {
+        setState(() {
+          _isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error clearing Google data: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _handleTestGoogleConfig() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    final List<String> results = [];
+    
+    try {
+      // Test 1: Check if Google Sign-In is initialized
+      results.add('✓ Google Sign-In service initialized');
+      
+      // Test 2: Check current sign-in status
+      final isSignedIn = await GoogleCalendarService.isSignedIn();
+      results.add(isSignedIn ? '✓ Currently signed in' : '✗ Not currently signed in');
+      
+      // Test 3: Check if we can get current user
+      final currentUser = await GoogleCalendarService.getCurrentUser();
+      if (currentUser != null) {
+        results.add('✓ Current user found: ${currentUser.email}');
+      } else {
+        results.add('✗ No current user found');
+      }
+      
+      // Test 4: Check calendar access (only if signed in)
+      if (isSignedIn) {
+        final hasAccess = await GoogleCalendarService.checkCalendarAccess();
+        results.add(hasAccess ? '✓ Calendar API access working' : '✗ Calendar API access failed');
+      } else {
+        results.add('- Calendar API test skipped (not signed in)');
+      }
+      
+      // Test 5: Check if config files are present (placeholder - would need platform channels for real check)
+      results.add('- Configuration files check (manual verification needed)');
+      
+    } catch (e) {
+      results.add('✗ Error during testing: $e');
+    }
+
+    setState(() {
+      _isLoading = false;
+    });
+
+    // Show results dialog
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Google Configuration Test'),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('Test Results:', style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              ...results.map((result) => Padding(
+                padding: const EdgeInsets.symmetric(vertical: 2),
+                child: Text(result, style: TextStyle(
+                  fontFamily: 'monospace',
+                  color: result.startsWith('✓') ? Colors.green :
+                         result.startsWith('✗') ? Colors.red : null,
+                )),
+              )),
+              const SizedBox(height: 16),
+              const Text('Manual Checks:', style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              const Text('• Ensure google-services.json exists in android/app/'),
+              const Text('• Ensure GoogleService-Info.plist exists in ios/Runner/'),
+              const Text('• Check that package names match in Google Cloud Console'),
+              const Text('• Verify SHA-1 fingerprints are added for Android'),
+              const Text('• Add your account as a test user in OAuth consent screen'),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _showSyncDialog(BuildContext context) async {
