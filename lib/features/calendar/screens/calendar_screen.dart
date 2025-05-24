@@ -420,16 +420,8 @@ class CalendarScreenState extends State<CalendarScreen>
                     if (line.trim().isEmpty) continue;
                     final parts = line.split(',');
                     if (parts.isNotEmpty) {
-                      // Identify workout duties (duties with missing middle columns)
-                      bool isWorkout = false;
-                      if (parts.length > 5) {
-                        isWorkout = parts.sublist(5, min(10, parts.length)).any((value) => 
-                          value.trim().toLowerCase() == 'nan' || value.trim().isEmpty);
-                      }
-                      
-                      if (!isWorkout) {
+                      // For work shifts, include ALL duties (including workouts)
                       combinedShifts.add(parts[0]);
-                      }
                     }
                   }
                 } catch (e) {
@@ -447,16 +439,8 @@ class CalendarScreenState extends State<CalendarScreen>
                       if (line.trim().isEmpty) continue;
                       final parts = line.split(',');
                       if (parts.isNotEmpty) {
-                        // Identify workout duties (duties with missing middle columns)
-                        bool isWorkout = false;
-                        if (parts.length > 5) {
-                          isWorkout = parts.sublist(5, min(10, parts.length)).any((value) => 
-                            value.trim().toLowerCase() == 'nan' || value.trim().isEmpty);
-                        }
-                        
-                        if (!isWorkout) {
+                        // For work shifts, include ALL duties (including workouts)
                         combinedShifts.add(parts[0]);
-                        }
                       }
                     }
                   } catch (e) {
@@ -500,11 +484,9 @@ class CalendarScreenState extends State<CalendarScreen>
                       final shiftName = parts[0].trim();
                       final shiftDayType = parts[1].trim();
 
-                      // Check if this is a workout duty
-                      final isWorkout = parts.length > 3 && parts[3].toLowerCase().contains("workout");
-
-                      // Add shift if day type matches, it's not already added, and it's not a workout duty
-                      if (shiftDayType == currentDayType && shiftName.isNotEmpty && !seenShifts.contains(shiftName) && !isWorkout) {
+                      // For work shifts, include ALL duties (including workouts)
+                      // Add shift if day type matches and it's not already added
+                      if (shiftDayType == currentDayType && shiftName.isNotEmpty && !seenShifts.contains(shiftName)) {
                         seenShifts.add(shiftName);
                         shiftNumbers.add(shiftName);
                       }
@@ -532,39 +514,9 @@ class CalendarScreenState extends State<CalendarScreen>
                     if (parts.isNotEmpty && parts[0].trim().isNotEmpty) {
                       final shift = parts[0].trim();
                       
-                      // Improved workout duty detection using the same approach as ShiftService._parseBreakTime
-                      bool isWorkout = false;
-                      if (parts.length > 5) {
-                        final breakStart = parts.length > 5 ? parts[5].trim().toLowerCase() : '';
-                        final breakEnd = parts.length > 8 ? parts[8].trim().toLowerCase() : '';
-                        
-                        // Check all conditions for workout shifts as in ShiftService._parseBreakTime
-                        isWorkout = breakStart == 'nan' || breakStart == 'workout' || breakStart.isEmpty || 
-                                  breakEnd == 'nan' || breakEnd == 'workout' || breakEnd.isEmpty ||
-                                  breakStart == 'n/a' || breakEnd == 'n/a';
-                        
-                        // Additional check: if break times are invalid or equal, it's likely a workout
-                        if (!isWorkout && breakStart.isNotEmpty && breakEnd.isNotEmpty) {
-                          final startParts = breakStart.split(':');
-                          final endParts = breakEnd.split(':');
-                          
-                          if (startParts.length < 2 || endParts.length < 2) {
-                            isWorkout = true;
-                          } else {
-                            final startHour = int.tryParse(startParts[0]);
-                            final startMinute = int.tryParse(startParts[1]);
-                            final endHour = int.tryParse(endParts[0]);
-                            final endMinute = int.tryParse(endParts[1]);
-                            
-                            // If times can't be parsed or are equal, it's likely a workout
-                            isWorkout = startHour == null || startMinute == null || 
-                                       endHour == null || endMinute == null ||
-                                       (startHour == endHour && startMinute == endMinute);
-                          }
-                        }
-                      }
-                      
-                      if (!seenShifts.contains(shift) && shift != "shift" && !isWorkout) {
+                      // For work shifts, include ALL duties (including workouts)
+                      // Workout filtering should only apply to overtime, not regular work shifts
+                      if (!seenShifts.contains(shift) && shift != "shift") {
                         seenShifts.add(shift);
                         shiftNumbers.add(shift);
                       }
@@ -3957,38 +3909,8 @@ class CalendarScreenState extends State<CalendarScreen>
                     if (line.trim().isEmpty) continue;
                     final parts = line.split(',');
                     if (parts.isNotEmpty) {
-                      // Enhanced detection for Uni/Euro workout duties
-                      bool isWorkout = false;
-                      
-                      // Some known workout duty codes for Uni/Euro
-                      final String dutyCode = parts[0].trim();
-                      final List<String> knownWorkoutDuties = [
-                        '807/06', '807/07', '807/90', 
-                        // Add any other known workout duties here
-                      ];
-                      
-                      // First check if it's in our known workout list
-                      if (knownWorkoutDuties.contains(dutyCode)) {
-                        isWorkout = true;
-                      }
-                      
-                      // Then perform our standard detection logic
-                      if (!isWorkout && parts.length > 5) {
-                        isWorkout = parts.sublist(5, min(10, parts.length)).any((value) => 
-                          value.trim().toLowerCase() == 'nan' || value.trim().isEmpty);
-                        
-                        // Additional check for any "workout" text
-                        for (int i = 1; i < parts.length; i++) {
-                          if (parts[i].trim().toLowerCase().contains('workout')) {
-                            isWorkout = true;
-                            break;
-                          }
-                        }
-                      }
-                      
-                      if (!isWorkout) {
-                        combinedShifts.add(dutyCode);
-                      }
+                      // For work shifts, include ALL duties (including workouts)
+                      combinedShifts.add(parts[0]);
                     }
                   }
                 } catch (e) {
@@ -4006,38 +3928,8 @@ class CalendarScreenState extends State<CalendarScreen>
                       if (line.trim().isEmpty) continue;
                       final parts = line.split(',');
                       if (parts.isNotEmpty) {
-                        // Enhanced detection for Uni/Euro workout duties
-                        bool isWorkout = false;
-                        
-                        // Some known workout duty codes for Uni/Euro
-                        final String dutyCode = parts[0].trim();
-                        final List<String> knownWorkoutDuties = [
-                          '807/06', '807/07', '807/90', 
-                          // Add any other known workout duties here
-                        ];
-                        
-                        // First check if it's in our known workout list
-                        if (knownWorkoutDuties.contains(dutyCode)) {
-                          isWorkout = true;
-                        }
-                        
-                        // Then perform our standard detection logic
-                        if (!isWorkout && parts.length > 5) {
-                          isWorkout = parts.sublist(5, min(10, parts.length)).any((value) => 
-                            value.trim().toLowerCase() == 'nan' || value.trim().isEmpty);
-                          
-                          // Additional check for any "workout" text
-                          for (int i = 1; i < parts.length; i++) {
-                            if (parts[i].trim().toLowerCase().contains('workout')) {
-                              isWorkout = true;
-                              break;
-                            }
-                          }
-                        }
-                        
-                        if (!isWorkout) {
-                          combinedShifts.add(dutyCode);
-                        }
+                        // For work shifts, include ALL duties (including workouts)
+                        combinedShifts.add(parts[0]);
                       }
                     }
                   } catch (e) {
@@ -4054,7 +3946,7 @@ class CalendarScreenState extends State<CalendarScreen>
                     shiftNumbers.add(shift);
                   }
                 }
-              } else if (selectedZone == 'Bus Check') {
+              } else if (selectedZone == 'Bus Check') { 
                 try {
                   final csv = await rootBundle.loadString('assets/buscheck.csv');
                   final lines = csv.split('\n');
@@ -4081,26 +3973,9 @@ class CalendarScreenState extends State<CalendarScreen>
                       final shiftName = parts[0].trim();
                       final shiftDayType = parts[1].trim();
 
-                      // Improved workout duty detection (can have different format in bus check file)
-                      bool isWorkout = false;
-                      if (parts.length > 3) {
-                        // First check for explicit "workout" mention
-                        isWorkout = parts[3].toLowerCase().contains("workout");
-                        
-                        // Additional checks if data format allows
-                        if (!isWorkout && parts.length > 5) {
-                          final startTime = parts[2].trim().toLowerCase();
-                          final endTime = parts[3].trim().toLowerCase();
-                          
-                          // Check for nan values or empty fields
-                          isWorkout = startTime == 'nan' || startTime.isEmpty ||
-                                     endTime == 'nan' || endTime.isEmpty ||
-                                     startTime == 'n/a' || endTime == 'n/a';
-                        }
-                      }
-
-                      // Add shift if day type matches, it's not already added, and it's not a workout duty
-                      if (shiftDayType == currentDayType && shiftName.isNotEmpty && !seenShifts.contains(shiftName) && !isWorkout) {
+                      // For work shifts, include ALL duties (including workouts)
+                      // Add shift if day type matches and it's not already added
+                      if (shiftDayType == currentDayType && shiftName.isNotEmpty && !seenShifts.contains(shiftName)) {
                         seenShifts.add(shiftName);
                         shiftNumbers.add(shiftName);
                       }
@@ -4128,39 +4003,9 @@ class CalendarScreenState extends State<CalendarScreen>
                     if (parts.isNotEmpty && parts[0].trim().isNotEmpty) {
                       final shift = parts[0].trim();
                       
-                      // Improved workout duty detection using the same approach as ShiftService._parseBreakTime
-                      bool isWorkout = false;
-                      if (parts.length > 5) {
-                        final breakStart = parts.length > 5 ? parts[5].trim().toLowerCase() : '';
-                        final breakEnd = parts.length > 8 ? parts[8].trim().toLowerCase() : '';
-                        
-                        // Check all conditions for workout shifts as in ShiftService._parseBreakTime
-                        isWorkout = breakStart == 'nan' || breakStart == 'workout' || breakStart.isEmpty || 
-                                  breakEnd == 'nan' || breakEnd == 'workout' || breakEnd.isEmpty ||
-                                  breakStart == 'n/a' || breakEnd == 'n/a';
-                        
-                        // Additional check: if break times are invalid or equal, it's likely a workout
-                        if (!isWorkout && breakStart.isNotEmpty && breakEnd.isNotEmpty) {
-                          final startParts = breakStart.split(':');
-                          final endParts = breakEnd.split(':');
-                          
-                          if (startParts.length < 2 || endParts.length < 2) {
-                            isWorkout = true;
-                          } else {
-                            final startHour = int.tryParse(startParts[0]);
-                            final startMinute = int.tryParse(startParts[1]);
-                            final endHour = int.tryParse(endParts[0]);
-                            final endMinute = int.tryParse(endParts[1]);
-                            
-                            // If times can't be parsed or are equal, it's likely a workout
-                            isWorkout = startHour == null || startMinute == null || 
-                                      endHour == null || endMinute == null ||
-                                      (startHour == endHour && startMinute == endMinute);
-                          }
-                        }
-                      }
-                      
-                      if (!seenShifts.contains(shift) && shift != "shift" && !isWorkout) {
+                      // For work shifts, include ALL duties (including workouts)
+                      // Workout filtering should only apply to overtime, not regular work shifts
+                      if (!seenShifts.contains(shift) && shift != "shift") {
                         seenShifts.add(shift);
                         shiftNumbers.add(shift);
                       }
