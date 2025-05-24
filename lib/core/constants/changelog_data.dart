@@ -1,4 +1,14 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.8.6': [
+    {
+      'title': 'Fixed GitHub CI Build Configuration',
+      'description': 'Resolved Google Services build dependency conflicts that were preventing proper GitHub-built APK functionality. GitHub releases should now work correctly with Google Calendar sign-in.',
+    },
+    {
+      'title': 'Improved Build Consistency',
+      'description': 'Ensured local development builds and CI builds use identical configuration, eliminating discrepancies between development and release versions.',
+    },
+  ],
   '2.8.5': [
     {
       'title': 'Fixed Google Calendar Sign-In Issue',
