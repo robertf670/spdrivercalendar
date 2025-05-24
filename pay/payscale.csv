@@ -1,0 +1,15 @@
+type,year1+2,year3+4,year5,year6,
+basicdaily,140.26,145.19,152.56,162.40
+shiftdaily,23.38,24.19,25.43,27.07
+weeklyexlsunday,818.19,846.90,889.97,943.34
+weeklyinclsunday,935.07,967.90,1017.10,1082.68
+workingrestday(mon-sat),233.77,241.98,254.28,270.67
+workingrestday(sun),350.65,362.96,381.42,406.00
+bankholiday,432.42,447.60,470.36,500.68
+overtimeweekday(hourly),29.97,31.02,32.60,34.70
+overtimesunday(hourly),53.95,55.84,58.68,62.46
+overtimebankholiday(hourly),59.93,62.05,65.20,69.40
+privatehireweekday(hourly),26.22,27.14,28.52,30.36
+privatehiresunday(hourly),47.19,48.85,51.33,54.65
+privatehirebankholiday(hourly),52.54,54.38,57.15,60.83
+spreadover(hourly),17.98,18.61,19.56,20.82

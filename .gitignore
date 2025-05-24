@@ -91,9 +91,6 @@ coverage/
 !**/ios/**/default.perspectivev3
 !/packages/flutter_tools/test/data/dart_dependencies_test/**/.packages
 
-# Added to ignore the assets directory
-assets/
-
 # Local consolidated duty files
 consolidated_sunday_duties.txt
 consolidated_saturday_duties.txt
@@ -104,7 +101,7 @@ testfiles/
 
 jamestownunitest/
 
-# Dublin Bus timetable processing scripts and outputs
+# Dublin Bus timetable processing scripts and outputs (keep the scripts ignored but not the pay/ directory)
 duties_by_number.py
 duties_clean.py
 duties_final.py
@@ -115,7 +112,6 @@ excel_to_vertical_sequential.py
 extract_duty_data.py
 simple_excel_to_text.py
 boards/
-pay/
 
 # Overtime feature plan file
 overtimeplan.txt

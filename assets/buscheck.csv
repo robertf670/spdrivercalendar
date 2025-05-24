@@ -1,0 +1,7 @@
+duty,day,start,finish
+BusCheck1,MF,04:00,09:40
+BusCheck2,MF,04:00,09:40
+BusCheck1,SAT,04:00,09:40
+BusCheck2,SAT,06:00,15:00
+BusCheck1,SUN,04:00,09:00
+BusCheck2,SUN,08:00,13:00
