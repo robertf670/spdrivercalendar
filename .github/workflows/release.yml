@@ -5,6 +5,9 @@ on:
     tags:
       - 'v*'  # Triggers on version tags like v2.8.0
 
+permissions:
+  contents: write  # Required for creating releases
+  
 jobs:
   build:
     name: Build APK
@@ -36,20 +39,16 @@ jobs:
         VERSION=${GITHUB_REF#refs/tags/}
         mv build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/spdrivercalendar-$VERSION.apk
     
-    - name: Create Release
-      id: create_release
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Create Release and Upload APK
+      uses: softprops/action-gh-release@v1
       with:
-        tag_name: ${{ github.ref }}
-        release_name: Release ${{ github.ref }}
+        name: Release ${{ github.ref_name }}
         body: |
-          ## What's New in ${{ github.ref }}
+          ## What's New in ${{ github.ref_name }}
           
           🔄 **Auto-Update System**
           - Automatic update checking and installation
-          - Smart update frequency control
+          - Smart update frequency control  
           - Detailed release notes and installation guidance
           
           📱 **Download & Install**
@@ -60,15 +59,6 @@ jobs:
           
           ---
           *This release was automatically built and deployed via GitHub Actions*
+        files: build/app/outputs/flutter-apk/spdrivercalendar-${{ github.ref_name }}.apk
         draft: false
-        prerelease: false
-    
-    - name: Upload APK to Release
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: build/app/outputs/flutter-apk/spdrivercalendar-${{ github.ref_name }}.apk
-        asset_name: spdrivercalendar-${{ github.ref_name }}.apk
-        asset_content_type: application/vnd.android.package-archive 
+        prerelease: false 
