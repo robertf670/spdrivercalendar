@@ -180,38 +180,110 @@ class BackupService {
         return false;
       }
 
+      print("Attempting to restore from: $filePath");
+
       // Read the JSON data from the file
       final String backupJson = await file.readAsString();
-      final Map<String, dynamic> backupData = jsonDecode(backupJson);
+      print("Backup file size: ${backupJson.length} characters");
+      
+      // Validate JSON structure
+      if (backupJson.trim().isEmpty) {
+        print("Error: Backup file is empty");
+        return false;
+      }
+
+      Map<String, dynamic> backupData;
+      try {
+        backupData = jsonDecode(backupJson);
+        print("Successfully parsed JSON. Found ${backupData.keys.length} keys: ${backupData.keys.toList()}");
+      } catch (e) {
+        print("Error: Invalid JSON in backup file: $e");
+        return false;
+      }
+
+      if (backupData.isEmpty) {
+        print("Error: Backup file contains no data");
+        return false;
+      }
 
       final prefs = await SharedPreferences.getInstance();
+      int restoredCount = 0;
+      int skippedCount = 0;
 
       // Restore data into SharedPreferences
       for (String key in backupData.keys) {
-        // Only restore keys we expect (optional, but safer)
-        if (_backupKeys.contains(key)) { 
-           final value = backupData[key];
-           // Need to check the type and use the correct setter
-           if (value is String) {
-             await prefs.setString(key, value);
-           } else if (value is int) {
-             await prefs.setInt(key, value);
-           } else if (value is double) {
-             await prefs.setDouble(key, value);
-           } else if (value is bool) {
-             await prefs.setBool(key, value);
-           } else if (value is List<String>) { // SharedPreferences supports List<String>
-             await prefs.setStringList(key, value);
-           } else if (value == null) {
-             await prefs.remove(key); // Handle null values if necessary
-           } else {
-             print("Warning: Skipping unsupported type for key '$key': ${value.runtimeType}");
-           }
+        try {
+          final value = backupData[key];
+          print("Processing key: '$key', value type: ${value.runtimeType}, value: $value");
+          
+          // Check if it's a key we recognize (more flexible approach)
+          bool shouldRestore = _backupKeys.contains(key) || 
+                              key == 'holidays' || // Support legacy key
+                              key.startsWith('notification') || // Support notification keys
+                              key.startsWith('google') || // Support google keys
+                              key.startsWith('events') || // Support events keys
+                              key.startsWith('start') || // Support start date/week keys
+                              key.startsWith('dark') ||  // Support dark mode
+                              key.startsWith('welcome') || // Support welcome flags
+                              key.startsWith('sync'); // Support sync settings
+          
+          if (shouldRestore) {
+            // Need to check the type and use the correct setter
+            if (value is String) {
+              await prefs.setString(key, value);
+              restoredCount++;
+              print("Restored string key: $key");
+            } else if (value is int) {
+              await prefs.setInt(key, value);
+              restoredCount++;
+              print("Restored int key: $key");
+            } else if (value is double) {
+              await prefs.setDouble(key, value);
+              restoredCount++;
+              print("Restored double key: $key");
+            } else if (value is bool) {
+              await prefs.setBool(key, value);
+              restoredCount++;
+              print("Restored bool key: $key");
+            } else if (value is List) {
+              // Try to convert to List<String> if possible
+              try {
+                final stringList = value.map((e) => e.toString()).toList();
+                await prefs.setStringList(key, stringList);
+                restoredCount++;
+                print("Restored list key: $key");
+              } catch (e) {
+                print("Warning: Could not restore list key '$key': $e");
+                skippedCount++;
+              }
+            } else if (value == null) {
+              await prefs.remove(key); // Handle null values
+              restoredCount++;
+              print("Removed null key: $key");
+            } else {
+              print("Warning: Skipping unsupported type for key '$key': ${value.runtimeType}");
+              skippedCount++;
+            }
+          } else {
+            print("Skipping unrecognized key: $key");
+            skippedCount++;
+          }
+        } catch (e) {
+          print("Error restoring key '$key': $e");
+          skippedCount++;
         }
       }
       
-      print("Restore successful from: $filePath");
-      return true;
+      print("Restore completed. Restored: $restoredCount, Skipped: $skippedCount");
+      
+      // Consider success if we restored at least some data
+      if (restoredCount > 0) {
+        print("Restore successful from: $filePath");
+        return true;
+      } else {
+        print("Restore failed: No data was restored");
+        return false;
+      }
 
     } catch (e) {
       print("Error restoring backup: $e");
