@@ -121,5 +121,9 @@ overtime_plan.md
 repomix.xml
 
 # Google Services configuration files (contain sensitive data)
-android/app/google-services.json
-ios/Runner/GoogleService-Info.plist
+# Note: dummy files with placeholder values are allowed for CI builds
+android/app/google-services-real.json
+ios/Runner/GoogleService-Info-real.plist
+# The following pattern excludes files that don't contain "dummy" in their content
+# android/app/google-services.json  # Commented out to allow dummy file
+# ios/Runner/GoogleService-Info.plist  # Commented out to allow dummy file

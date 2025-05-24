@@ -52,7 +52,7 @@
 			<string>REVERSED_CLIENT_ID</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>com.googleusercontent.apps.YOUR_REVERSED_CLIENT_ID</string>
+				<string>com.googleusercontent.apps.000000000000-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx</string>
 			</array>
 		</dict>
 	</array>
