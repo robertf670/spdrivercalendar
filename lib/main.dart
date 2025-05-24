@@ -19,6 +19,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:spdrivercalendar/services/backup_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:spdrivercalendar/features/calendar/services/event_service.dart';
+import 'package:spdrivercalendar/features/settings/screens/version_history_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -154,6 +155,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
                 },
               ),
               AppConstants.homeRoute: (context) => CalendarScreen(_isDarkModeNotifier),
+              AppConstants.versionHistoryRoute: (context) => const VersionHistoryScreen(),
             },
           ),
         );

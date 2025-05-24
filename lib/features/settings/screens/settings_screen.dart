@@ -207,6 +207,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const Divider(height: 32),
           _buildSectionHeader('App'),
           _buildShowWelcomePageButton(),
+          _buildVersionHistoryButton(),
         ],
       ),
     );
@@ -905,4 +906,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
     // Payscale button removed from settings and moved to dropdown menu
+
+  Widget _buildVersionHistoryButton() {
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 4.0),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppTheme.borderRadius),
+      ),
+      child: ListTile(
+        leading: const Icon(Icons.history),
+        title: const Text('Version History'),
+        subtitle: const Text('View changelog and app updates'),
+        onTap: () {
+          Navigator.pushNamed(
+            context,
+            '/version-history', 
+          );
+        },
+      ),
+    );
+  }
 }
