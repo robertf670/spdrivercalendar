@@ -1,4 +1,22 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.8.8': [
+    {
+      'title': 'Fixed Event and Notes Persistence Issue',
+      'description': 'Resolved critical issue where events and notes appeared to disappear from the calendar when viewing older months. Events are now loaded reliably on first view of any month.',
+    },
+    {
+      'title': 'Fixed Google Calendar Sign-In for GitHub APKs',
+      'description': 'Resolved Google Calendar authentication issues in APK files downloaded from GitHub releases. Added support for GitHub Actions build environment signing certificates.',
+    },
+    {
+      'title': 'Improved Calendar Loading Performance',
+      'description': 'Enhanced event loading mechanism to eliminate race conditions and ensure immediate display of events when navigating to different months in the calendar.',
+    },
+    {
+      'title': 'Enhanced Data Caching System',
+      'description': 'Optimized the month-based caching system to properly populate events in memory, preventing the illusion of lost data and improving overall calendar responsiveness.',
+    },
+  ],
   '2.8.7': [
     {
       'title': 'Fixed Google Calendar Sign-In for Release Builds',

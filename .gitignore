@@ -127,3 +127,6 @@ ios/Runner/GoogleService-Info-real.plist
 # The following pattern excludes files that don't contain "dummy" in their content
 # android/app/google-services.json  # Commented out to allow dummy file
 # ios/Runner/GoogleService-Info.plist  # Commented out to allow dummy file
+
+# Security reminder files (local only)
+GOOGLE_API_KEY_SECURITY_REMINDER.md

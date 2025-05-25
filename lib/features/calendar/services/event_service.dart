@@ -70,45 +70,66 @@ class EventService {
     // Normalize date to remove time component for lookup
     final normalizedDate = DateTime(day.year, day.month, day.day);
 
-    // If we don't have this date's events, load the month
-    if (!_events.containsKey(normalizedDate)) {
-      _loadEventsForMonth(normalizedDate).then((monthEvents) {
-        // Update the events map with the loaded month's events
-        for (var event in monthEvents) {
-          // Add to start date
-          final normalizedEventStartDate = DateTime(event.startDate.year, event.startDate.month, event.startDate.day);
-          if (!_events.containsKey(normalizedEventStartDate)) {
-            _events[normalizedEventStartDate] = [];
-          }
-          if (!_events[normalizedEventStartDate]!.any((e) => e.id == event.id)) {
-            _events[normalizedEventStartDate]!.add(event);
-          }
-
-          // If event spans multiple days, add reference to end date as well
-          final normalizedEventEndDate = DateTime(event.endDate.year, event.endDate.month, event.endDate.day);
-          if (normalizedEventStartDate != normalizedEventEndDate) { // Check if startDate and endDate are different days
-            if (!_events.containsKey(normalizedEventEndDate)) {
-              _events[normalizedEventEndDate] = [];
-            }
-            if (!_events[normalizedEventEndDate]!.any((e) => e.id == event.id)) {
-              _events[normalizedEventEndDate]!.add(event);
-            }
-          }
-        }
-        
-        // IMPORTANT: This async block populates the cache. The UI (CalendarScreen) needs to be
-        // notified to refresh if it has already rendered. This might involve using a
-        // ValueNotifier, Stream, or ensuring a setState happens in the UI after this point.
-        // For now, we rely on CalendarScreen's existing setState calls from onPageChanged/onDaySelected
-        // to eventually pick up these changes when the user interacts again or when eventLoader is called.
-
-      }).catchError((error) {
-      });
-    } else {
+    // If we have events for this date, return them immediately
+    if (_events.containsKey(normalizedDate)) {
+      return _events[normalizedDate]!;
     }
 
-    List<Event> result = _events[normalizedDate] ?? [];
-    return result;
+    // Check if month is being loaded or needs to be loaded
+    final monthKey = '${day.year}-${day.month}';
+    
+    // If month is not cached, preload it immediately (this will populate _events)
+    if (!_monthlyCache.containsKey(monthKey)) {
+      // Use preloadMonth which awaits the loading
+      preloadMonth(day).then((_) {
+        // Month is now loaded, but we can't return the result here due to async nature
+        // The UI will need to call this method again or use a different approach
+      }).catchError((error) {
+        print('Error preloading month for day ${day}: $error');
+      });
+      
+      // For immediate return, check if we can populate from already loaded cache
+      _populateEventsFromCache(day);
+    } else {
+      // Month is cached, ensure events are populated in _events map
+      _populateEventsFromCache(day);
+    }
+
+    // Return whatever we have (might be empty on first call, but populated on subsequent calls)
+    return _events[normalizedDate] ?? [];
+  }
+
+  // Helper method to populate _events from _monthlyCache
+  static void _populateEventsFromCache(DateTime month) {
+    final monthKey = '${month.year}-${month.month}';
+    
+    if (!_monthlyCache.containsKey(monthKey)) {
+      return; // No cache available
+    }
+
+    final monthEvents = _monthlyCache[monthKey]!;
+    
+    for (var event in monthEvents) {
+      // Add to start date
+      final normalizedEventStartDate = DateTime(event.startDate.year, event.startDate.month, event.startDate.day);
+      if (!_events.containsKey(normalizedEventStartDate)) {
+        _events[normalizedEventStartDate] = [];
+      }
+      if (!_events[normalizedEventStartDate]!.any((e) => e.id == event.id)) {
+        _events[normalizedEventStartDate]!.add(event);
+      }
+
+      // If event spans multiple days, add reference to end date as well
+      final normalizedEventEndDate = DateTime(event.endDate.year, event.endDate.month, event.endDate.day);
+      if (normalizedEventStartDate != normalizedEventEndDate) {
+        if (!_events.containsKey(normalizedEventEndDate)) {
+          _events[normalizedEventEndDate] = [];
+        }
+        if (!_events[normalizedEventEndDate]!.any((e) => e.id == event.id)) {
+          _events[normalizedEventEndDate]!.add(event);
+        }
+      }
+    }
   }
   
   // Preload events for a month (to be called when calendar page changes)
@@ -121,6 +142,9 @@ class EventService {
     
     await _loadEventsForMonth(month);
     _lastLoadedMonth = month;
+    
+    // After loading, populate _events from the monthly cache
+    _populateEventsFromCache(month);
   }
   
   // Clear old cache entries to manage memory
