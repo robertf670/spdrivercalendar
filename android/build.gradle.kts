@@ -16,8 +16,8 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        // Removed Google Services classpath since we're not using the plugin
-        // classpath("com.google.gms:google-services:4.4.0")
+        // Add Google Services classpath for google-services plugin
+        classpath("com.google.gms:google-services:4.4.0")
     }
 }
 

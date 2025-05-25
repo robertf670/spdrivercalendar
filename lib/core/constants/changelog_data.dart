@@ -1,4 +1,18 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.8.7': [
+    {
+      'title': 'Fixed Google Calendar Sign-In for Release Builds',
+      'description': 'Completely resolved Google Calendar sign-in issues in release builds (APK files from GitHub). Added proper Google Services plugin configuration and real google-services.json integration.',
+    },
+    {
+      'title': 'Enhanced Build Configuration',
+      'description': 'Fixed Android build configuration to ensure both debug and release builds have working Google Calendar authentication. Release APKs from GitHub now work identically to development builds.',
+    },
+    {
+      'title': 'Improved OAuth Setup',
+      'description': 'Streamlined Google Cloud Console integration with proper SHA-1 fingerprint configuration and Firebase integration for reliable authentication across all build types.',
+    },
+  ],
   '2.8.6': [
     {
       'title': 'Fixed GitHub CI Build Configuration',
