@@ -1,4 +1,10 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.8.11': [
+    {
+      'title': 'Final Google Sign-In Configuration Fix',
+      'description': 'Ensured correct API key and OAuth Client ID configurations are used for all builds, resolving persistent Google Sign-In issues for GitHub Actions APKs.',
+    },
+  ],
   '2.8.10': [
     {
       'title': 'Fixed Google Sign-In for GitHub Builds',

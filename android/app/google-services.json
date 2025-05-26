@@ -20,11 +20,19 @@
             "package_name": "ie.qqrxi.spdrivercalendar",
             "certificate_hash": "30ef9424664c28c7c859013edcbaef21b27ffddf"
           }
+        },
+        {
+          "client_id": "1051329330296-kujh0h4a14flb5ccisikphihq38rbcg0.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "ie.qqrxi.spdrivercalendar",
+            "certificate_hash": "618b551281c12a46b5199925c5751d7ade25c0eb"
+          }
         }
       ],
       "api_key": [
         {
-          "current_key": "AIzaSyBhHIGLTnNt9FV_s4nnKWbpMDTspB6pQP0"
+          "current_key": "AIzaSyC43Rda105qz66YP1B4PSMEBFBG5MJxMxY"
         }
       ],
       "services": {
