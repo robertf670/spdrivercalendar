@@ -28,6 +28,11 @@ jobs:
         flutter-version: '3.29.3'
         channel: 'stable'
     
+    - name: Decode Google Services JSON
+      env:
+        GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON_CONTENT }}
+      run: echo "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
+    
     - name: Get dependencies
       run: flutter pub get
     

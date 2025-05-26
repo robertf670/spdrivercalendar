@@ -1,4 +1,10 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.8.10': [
+    {
+      'title': 'Fixed Google Sign-In for GitHub Builds',
+      'description': 'Corrected SHA-1 fingerprint configuration and ensured google-services.json is available in CI, resolving Google Sign-In issues for APKs built via GitHub Actions.',
+    },
+  ],
   '2.8.9': [
     {
       'title': 'Google Sign-In Fixed',
