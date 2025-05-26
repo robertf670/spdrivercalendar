@@ -1,4 +1,10 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.8.13': [
+    {
+      'title': 'Fix Google Sign-In for Release Builds',
+      'description': 'Added ProGuard rules to resolve Google Sign-In issues in release builds. Further refined Google services configuration for CI.'
+    },
+  ],
   '2.8.12': [
     {
       'title': 'Google Sign-In & Calendar Fixes',
