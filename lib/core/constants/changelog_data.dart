@@ -1,4 +1,14 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.8.9': [
+    {
+      'title': 'Google Sign-In Fixed',
+      'description': 'Resolved issues preventing Google Sign-In for both local release builds and APKs distributed via GitHub.',
+    },
+    {
+      'title': 'API Configuration Corrected',
+      'description': 'Updated API key and SHA-1 fingerprint configurations to ensure reliable Google Calendar authentication across all build types.',
+    },
+  ],
   '2.8.8': [
     {
       'title': 'Fixed Event and Notes Persistence Issue',
