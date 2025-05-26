@@ -26,7 +26,11 @@ class _GoogleCalendarSettingsScreenState extends State<GoogleCalendarSettingsScr
     });
     
     final isSignedIn = await GoogleCalendarService.isSignedIn();
-    final hasAccess = isSignedIn ? await GoogleCalendarService.checkCalendarAccess() : false;
+    bool hasAccess = false;
+    if (isSignedIn) {
+      final httpClient = await GoogleCalendarService.getAuthenticatedClient();
+      hasAccess = await GoogleCalendarService.checkCalendarAccess(httpClient);
+    }
     
     setState(() {
       _isConnected = isSignedIn && hasAccess;
@@ -49,26 +53,13 @@ class _GoogleCalendarSettingsScreenState extends State<GoogleCalendarSettingsScr
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _buildStatusCard(),
-                const SizedBox(height: 24),
-                _buildSectionHeader('Test Actions'),
-                _buildTestCard(),
               ],
             ),
           ),
     );
   }
   
-  Widget _buildSectionHeader(String title) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
-      child: Text(
-        title,
-        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-          color: AppTheme.primaryColor,
-        ),
-      ),
-    );
-  }
+
 
   Widget _buildStatusCard() {
     return Card(
@@ -167,91 +158,5 @@ class _GoogleCalendarSettingsScreenState extends State<GoogleCalendarSettingsScr
     );
   }
 
-  Widget _buildTestCard() {
-    return Card(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppTheme.borderRadius),
-      ),
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(8),
-        child: Column(
-          children: [
-            ListTile(
-              leading: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: AppTheme.primaryColor.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(AppTheme.borderRadius / 2),
-                ),
-                child: const Icon(Icons.add_box, color: AppTheme.primaryColor),
-              ),
-              title: const Text('Add Test Event'),
-              subtitle: const Text('Create a sample event in your Google Calendar'),
-              trailing: const Icon(Icons.chevron_right),
-              enabled: _isConnected,
-              onTap: _isConnected
-                  ? () async {
-                      await CalendarTestHelper.addTestEvent(context);
-                    }
-                  : null,
-            ),
-            const Divider(),
-            ListTile(
-              leading: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: AppTheme.secondaryColor.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(AppTheme.borderRadius / 2),
-                ),
-                child: const Icon(Icons.list, color: AppTheme.secondaryColor),
-              ),
-              title: const Text('View Recent Events'),
-              subtitle: const Text('Fetch your recent calendar events'),
-              trailing: const Icon(Icons.chevron_right),
-              enabled: _isConnected,
-              onTap: _isConnected
-                  ? () async {
-                      final events = await CalendarTestHelper.fetchRecentEvents(context);
-                      if (!mounted) return;
-                      
-                      showDialog(
-                        context: context,
-                        builder: (context) => AlertDialog(
-                          title: Text('Recent Events (${events.length})'),
-                          content: SizedBox(
-                            width: double.maxFinite,
-                            height: 300,
-                            child: ListView.builder(
-                              shrinkWrap: true,
-                              itemCount: events.length,
-                              itemBuilder: (context, index) {
-                                final event = events[index];
-                                return Card(
-                                  margin: const EdgeInsets.symmetric(vertical: 4),
-                                  child: ListTile(
-                                    title: Text(event.summary ?? 'No title'),
-                                    subtitle: Text(event.start?.dateTime?.toString().substring(0, 16) ?? 'No start time'),
-                                    leading: const Icon(Icons.event, color: AppTheme.primaryColor),
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(context),
-                              child: const Text('Close'),
-                            ),
-                          ],
-                        ),
-                      );
-                    }
-                  : null,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+
 }

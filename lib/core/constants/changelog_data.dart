@@ -1,4 +1,11 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.8.12': [
+    {
+      'title': 'Google Sign-In & Calendar Fixes',
+      'description': 'Resolved issues with Google Sign-In and Google Calendar API access, ensuring smoother and more reliable integration.'
+    },
+    // You can add more Map entries here for other changes in 2.8.12
+  ],
   '2.8.11': [
     {
       'title': 'Final Google Sign-In Configuration Fix',

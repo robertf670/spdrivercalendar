@@ -6,6 +6,7 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:spdrivercalendar/features/calendar/services/shift_service.dart';
 import 'package:spdrivercalendar/models/holiday.dart'; // Import the Holiday model
+import 'package:http/http.dart' as http;
 // For date formatting
 
 // Removed duplicate Event class since we're now importing it from models/event.dart
@@ -765,25 +766,90 @@ class CalendarTestHelper {
 
   /// Helper method to get all Google Calendar events for comparison
   static Future<List<cal.Event>> _getGoogleCalendarEvents() async {
-    final calendarApi = await GoogleCalendarService.getCalendarApi();
+    cal.CalendarApi? calendarApi = await GoogleCalendarService.getCalendarApi();
+    bool triedManualClient = false;
     
     if (calendarApi == null) {
-      throw Exception('Failed to connect to Google Calendar');
+      print('[Debug _getGoogleCalendarEvents] Initial getCalendarApi() returned null.');
+      print('[Debug _getGoogleCalendarEvents] Attempting fallback with manual token client...');
+      final currentUser = await GoogleCalendarService.getCurrentUser();
+      if (currentUser == null) {
+        print('[Debug _getGoogleCalendarEvents] Fallback failed: No current user.');
+        throw Exception('Failed to connect to Google Calendar: No current user for manual token.');
+      }
+      final auth = await currentUser.authentication;
+      final accessToken = auth.accessToken;
+      if (accessToken == null) {
+        print('[Debug _getGoogleCalendarEvents] Fallback failed: Manually fetched accessToken is null.');
+        throw Exception('Failed to connect to Google Calendar: No access token for manual client.');
+      }
+      print('[Debug _getGoogleCalendarEvents] Fallback: Manually fetched accessToken (first 20): ${accessToken.substring(0, accessToken.length > 20 ? 20 : accessToken.length)}...');
+      
+      final manualHttpClient = http.Client();
+      calendarApi = cal.CalendarApi(
+        AuthenticatedHttpClient(manualHttpClient, () async => accessToken)
+      );
+      triedManualClient = true; // Mark that we are now using the manual client
+      print('[Debug _getGoogleCalendarEvents] Fallback: Created calendarApi with manual token client.');
     }
 
-    // Query for events - go back 6 months
     final now = DateTime.now();
     final pastDate = now.subtract(const Duration(days: 180)).toUtc();
     final futureDate = now.add(const Duration(days: 30)).toUtc();
     
-    final events = await calendarApi.events.list(
-      'primary',
-      timeMin: pastDate,
-      timeMax: futureDate,
-      maxResults: 2500, // Increased to handle more events
-    );
+    try {
+      print('[Debug _getGoogleCalendarEvents] Attempting events.list with current calendarApi (triedManualClient: $triedManualClient)...');
+      final events = await calendarApi.events.list(
+        'primary',
+        timeMin: pastDate,
+        timeMax: futureDate,
+        maxResults: 2500,
+      );
+      print('[Debug _getGoogleCalendarEvents] events.list call successful.');
+      return events.items ?? [];
+    } catch (e) {
+      print('[Debug _getGoogleCalendarEvents] events.list call FAILED (triedManualClient: $triedManualClient): $e');
+      if (!triedManualClient) { // Only try manual if we haven't already
+         print('[Debug _getGoogleCalendarEvents] Initial events.list failed. Attempting fallback with manual token client NOW...');
+        final currentUser = await GoogleCalendarService.getCurrentUser(); 
+        if (currentUser == null) {
+          print('[Debug _getGoogleCalendarEvents] Fallback failed post-error: No current user.');
+          throw Exception('Failed to list events and manual token fallback failed: No current user.');
+        }
+        final auth = await currentUser.authentication;
+        // ATTEMPT TO USE ID TOKEN HERE FOR THE MANUAL FALLBACK
+        final String? tokenToTry = auth.idToken; 
+        final String tokenTypeForLog = "idToken";
 
-    return events.items ?? [];
+        if (tokenToTry == null) {
+          print('[Debug _getGoogleCalendarEvents] Fallback failed post-error: Manually fetched $tokenTypeForLog is null.');
+          throw Exception('Failed to list events and manual token fallback failed: No $tokenTypeForLog.');
+        }
+        print('[Debug _getGoogleCalendarEvents] Fallback post-error: Manually fetched $tokenTypeForLog (first 20): ${tokenToTry.substring(0, tokenToTry.length > 20 ? 20 : tokenToTry.length)}...');
+        
+        final manualHttpClient = http.Client();
+        final manualTokenCalendarApi = cal.CalendarApi(
+          AuthenticatedHttpClient(manualHttpClient, () async => tokenToTry)
+        );
+        print('[Debug _getGoogleCalendarEvents] Fallback post-error: Retrying events.list with manual $tokenTypeForLog client.');
+        try {
+          final events = await manualTokenCalendarApi.events.list(
+            'primary',
+            timeMin: pastDate,
+            timeMax: futureDate,
+            maxResults: 2500,
+          );
+          print('[Debug _getGoogleCalendarEvents] Fallback post-error: events.list successful with manual $tokenTypeForLog.');
+          return events.items ?? [];
+        } catch (e2) {
+          print('[Debug _getGoogleCalendarEvents] Fallback post-error: events.list with manual $tokenTypeForLog FAILED AGAIN: $e2');
+          throw e2; 
+        } finally {
+            manualHttpClient.close();
+        }
+      }
+      throw e; 
+    }
   }
 
   /// Updates an existing event in Google Calendar

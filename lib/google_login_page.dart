@@ -45,7 +45,9 @@ class _GoogleLoginPageState extends State<GoogleLoginPage> {
       
       // If we have a user but can't access calendar, we need to re-authenticate
       if (user != null) {
-        final hasAccess = await GoogleCalendarService.checkCalendarAccess();
+        // First, get an authenticated client
+        final httpClient = await GoogleCalendarService.getAuthenticatedClient();
+        final hasAccess = await GoogleCalendarService.checkCalendarAccess(httpClient); // Pass the client
         if (!hasAccess) {
           print('User found but calendar access failed, need to re-authenticate');
           // Force re-authentication
