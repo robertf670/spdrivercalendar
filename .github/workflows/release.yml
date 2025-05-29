@@ -35,7 +35,13 @@ jobs:
     
     - name: Get dependencies
       run: flutter pub get
-    
+
+    - name: Display SHA-1 fingerprint
+      run: |
+        echo "=== GitHub Actions SHA-1 Fingerprint ==="
+        keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android -keypass android | grep SHA1
+        echo "========================================"
+
     - name: Build APK
       run: flutter build apk --release
     
