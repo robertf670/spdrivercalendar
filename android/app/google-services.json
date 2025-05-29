@@ -14,7 +14,15 @@
       },
       "oauth_client": [
         {
-          "client_id": "1051329330296-cqlt50cj3ia4k3262fksj50s32n1fif7.apps.googleusercontent.com",
+          "client_id": "1051329330296-0fh0mtr480utc12eg43vci1uea7ehs68.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "ie.qqrxi.spdrivercalendar",
+            "certificate_hash": "3b4e2605c7a44d9794953789a080c01bb5ddb689"
+          }
+        },
+        {
+          "client_id": "1051329330296-6h33i51g7r7p7pjd8fpli5g8g92iukpq.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "ie.qqrxi.spdrivercalendar",
@@ -22,12 +30,16 @@
           }
         },
         {
-          "client_id": "1051329330296-kujh0h4a14flb5ccisikphihq38rbcg0.apps.googleusercontent.com",
+          "client_id": "1051329330296-b957o3f7e3f5uikevb8tbd24nd2cnv5j.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "ie.qqrxi.spdrivercalendar",
             "certificate_hash": "618b551281c12a46b5199925c5751d7ade25c0eb"
           }
+        },
+        {
+          "client_id": "1051329330296-l7so8o8bfdm4h1g1hj9ql30dmuq1514e.apps.googleusercontent.com",
+          "client_type": 3
         }
       ],
       "api_key": [
@@ -37,7 +49,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1051329330296-l7so8o8bfdm4h1g1hj9ql30dmuq1514e.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }

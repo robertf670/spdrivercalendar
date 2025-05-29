@@ -1,4 +1,24 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.8.18': [
+    {
+      'title': 'Complete Google Calendar Authentication Fix',
+      'description': 'Added GitHub Actions SHA-1 fingerprint to Firebase configuration, ensuring APK releases from GitHub have fully working Google Calendar integration and sign-in functionality.',
+    },
+    {
+      'title': 'Unified Build Authentication',
+      'description': 'Synchronized authentication certificates across local development, release builds, and automated CI/CD deployments for consistent Google Calendar access.',
+    },
+  ],
+  '2.8.17': [
+    {
+      'title': 'Fixed GitHub Actions Keystore Issue',
+      'description': 'Resolved missing debug keystore in GitHub Actions builds that was preventing Google Calendar authentication. APK releases from GitHub should now have working Google Sign-In.',
+    },
+    {
+      'title': 'Consistent Build Environment',
+      'description': 'Ensured GitHub Actions creates the same debug keystore as local development, providing consistent SHA-1 fingerprints for OAuth authentication.',
+    },
+  ],
   '2.8.16': [
     {
       'title': 'GitHub Actions Debugging Enhancement',
