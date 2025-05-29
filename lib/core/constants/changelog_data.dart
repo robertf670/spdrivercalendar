@@ -1,4 +1,18 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.8.14': [
+    {
+      'title': 'Complete Google Calendar Integration Fix',
+      'description': 'Fully resolved Google Calendar sign-in and sync issues by implementing proper Web Client ID configuration and OAuth consent screen setup. Google Calendar now works reliably in all build types.',
+    },
+    {
+      'title': 'Enhanced Token Management',
+      'description': 'Improved token refresh mechanism and authentication flow for seamless Google Calendar access. Fixed issues with GitHub Actions builds and automated deployments.',
+    },
+    {
+      'title': 'Streamlined OAuth Setup',
+      'description': 'Simplified Google Cloud Console configuration process and ensured consistent authentication across debug, release, and CI builds.',
+    },
+  ],
   '2.8.13': [
     {
       'title': 'Fix Google Sign-In for Release Builds',

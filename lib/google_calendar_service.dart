@@ -18,10 +18,8 @@ class GoogleCalendarService {
     ],
     // Don't force code for refresh token every time as it causes extra auth prompts
     forceCodeForRefreshToken: false,
-    // TEMPORARY TEST: Add serverClientId with web client ID
-    // Replace this with your actual web client ID from Google Cloud Console
-    // You can find it in Credentials > OAuth 2.0 Client IDs > Web client (auto-created)
-    // serverClientId: "1051329330296-1240ki2jq18dv9jtfjt01m6ggkcv4jli.apps.googleusercontent.com", // Commented out for testing
+    // Add Web Client ID for token refresh functionality
+    serverClientId: "1051329330296-l7so8o8bfdm4h1g1hj9ql30dmuq1514e.apps.googleusercontent.com",
   );
 
   @visibleForTesting

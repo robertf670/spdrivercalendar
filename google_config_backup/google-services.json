@@ -1,0 +1,46 @@
+{
+  "project_info": {
+    "project_number": "1051329330296",
+    "project_id": "spdrivercalendar",
+    "storage_bucket": "spdrivercalendar.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1051329330296:android:aef8e753f2c92f9ff6c18d",
+        "android_client_info": {
+          "package_name": "ie.qqrxi.spdrivercalendar"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1051329330296-cqlt50cj3ia4k3262fksj50s32n1fif7.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "ie.qqrxi.spdrivercalendar",
+            "certificate_hash": "30ef9424664c28c7c859013edcbaef21b27ffddf"
+          }
+        },
+        {
+          "client_id": "1051329330296-kujh0h4a14flb5ccisikphihq38rbcg0.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "ie.qqrxi.spdrivercalendar",
+            "certificate_hash": "618b551281c12a46b5199925c5751d7ade25c0eb"
+          }
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC43Rda105qz66YP1B4PSMEBFBG5MJxMxY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
