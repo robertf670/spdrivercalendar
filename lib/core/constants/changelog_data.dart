@@ -1,4 +1,14 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.8.15': [
+    {
+      'title': 'Fixed GitHub Actions Build Configuration',
+      'description': 'Updated GitHub Actions secret with correct Google Services configuration to ensure APK releases from GitHub have working Google Calendar integration.',
+    },
+    {
+      'title': 'Resolved CI/CD Authentication Issues',
+      'description': 'Fixed automated build process to use the proper OAuth client configuration, ensuring consistent Google Calendar functionality across all distribution methods.',
+    },
+  ],
   '2.8.14': [
     {
       'title': 'Complete Google Calendar Integration Fix',
