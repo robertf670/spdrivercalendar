@@ -1,4 +1,14 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.8.16': [
+    {
+      'title': 'GitHub Actions Debugging Enhancement',
+      'description': 'Added SHA-1 fingerprint debugging to GitHub Actions workflow to identify and resolve signing certificate issues with automated builds.',
+    },
+    {
+      'title': 'Build Process Diagnostics',
+      'description': 'Enhanced CI/CD pipeline with detailed logging to ensure proper Google Calendar authentication configuration in automated releases.',
+    },
+  ],
   '2.8.15': [
     {
       'title': 'Fixed GitHub Actions Build Configuration',
