@@ -1,4 +1,14 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.8.22': [
+    {
+      'title': 'Cleaned OAuth Configuration',
+      'description': 'Removed duplicate OAuth clients and SHA-1 fingerprints from Google Cloud Console and Firebase. Simplified authentication setup to use only the correct keystore configuration.',
+    },
+    {
+      'title': 'Final Google Calendar Authentication Fix',
+      'description': 'Synchronized Firebase and Google Cloud Console with single, correct SHA-1 fingerprint. This should completely resolve all Google Calendar sign-in issues across all build types.',
+    },
+  ],
   '2.8.21': [
     {
       'title': 'Complete Base64 Keystore Implementation',
