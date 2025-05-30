@@ -39,8 +39,19 @@ jobs:
     - name: Create Android debug keystore
       run: |
         mkdir -p ~/.android
-        # Use fixed keystore from secrets to ensure consistent SHA-1
-        echo "${{ secrets.DEBUG_KEYSTORE_BASE64 }}" | base64 -d > ~/.android/debug.keystore
+        # Check if the secret exists
+        if [ -z "${{ secrets.DEBUG_KEYSTORE_BASE64 }}" ]; then
+          echo "ERROR: DEBUG_KEYSTORE_BASE64 secret is not set!"
+          echo "Creating fallback keystore..."
+          keytool -genkey -v -keystore ~/.android/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US" -noprompt
+        else
+          echo "Using fixed keystore from secrets..."
+          echo "${{ secrets.DEBUG_KEYSTORE_BASE64 }}" | base64 -d > ~/.android/debug.keystore
+          if [ $? -ne 0 ]; then
+            echo "ERROR: Failed to decode keystore, creating fallback..."
+            keytool -genkey -v -keystore ~/.android/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US" -noprompt
+          fi
+        fi
 
     - name: Display SHA-1 fingerprint
       run: |
