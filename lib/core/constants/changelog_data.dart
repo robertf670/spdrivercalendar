@@ -1,4 +1,14 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.8.24': [
+    {
+      'title': 'Comprehensive Google Sign-In Analysis & Solution',
+      'description': 'Identified root cause: Google is deprecating legacy Google Sign-In APIs. Added serverClientId back with proper Web OAuth client configuration. GitHub APK failures are due to Google restricting legacy API usage in CI/CD environments.',
+    },
+    {
+      'title': 'Future-Proofing Authentication',
+      'description': 'Documented migration path to Credential Manager API for long-term compatibility. Current setup optimized for maximum compatibility while Google phases out legacy APIs through 2025.',
+    },
+  ],
   '2.8.23': [
     {
       'title': 'Fixed Google Calendar Sign-In Configuration',
