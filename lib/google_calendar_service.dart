@@ -19,7 +19,7 @@ class GoogleCalendarService {
     // Don't force code for refresh token every time as it causes extra auth prompts
     forceCodeForRefreshToken: false,
     // Add Web Client ID for token refresh functionality
-    serverClientId: "1051329330296-l7so8o8bfdm4h1g1hj9ql30dmuq1514e.apps.googleusercontent.com",
+    // serverClientId: "1051329330296-l7so8o8bfdm4h1g1hj9ql30dmuq1514e.apps.googleusercontent.com",
   );
 
   @visibleForTesting
@@ -142,11 +142,13 @@ class GoogleCalendarService {
   // Handle Google sign-in
   static Future<GoogleSignInAccount?> signIn() async {
     try {
+      print('[DEBUG] Starting Google Sign-In process...');
+      
       // Check if already signed in
       if (await _googleSignIn.isSignedIn()) {
         final currentUser = _googleSignIn.currentUser;
         if (currentUser != null) {
-          print('User is already signed in: ${currentUser.email}');
+          print('[DEBUG] User is already signed in: ${currentUser.email}');
           final auth = await currentUser.authentication;
           _updateTokenExpiration(auth.accessToken, auth.idToken);
           await saveLoginStatus(true);
@@ -154,43 +156,60 @@ class GoogleCalendarService {
         }
       }
       
+      print('[DEBUG] Not currently signed in, attempting silent sign-in...');
+      
       // First, try silent sign in
       final silentUser = await _googleSignIn.signInSilently();
       if (silentUser != null) {
-        print('Silent sign-in successful: ${silentUser.email}');
+        print('[DEBUG] Silent sign-in successful: ${silentUser.email}');
         final auth = await silentUser.authentication;
         _updateTokenExpiration(auth.accessToken, auth.idToken);
         await saveLoginStatus(true);
         return silentUser;
       }
       
-      print('Silent sign-in failed, trying interactive sign-in...');
+      print('[DEBUG] Silent sign-in failed, trying interactive sign-in...');
+      print('[DEBUG] GoogleSignIn configuration:');
+      print('[DEBUG] - Scopes: ${_googleSignIn.scopes}');
+      print('[DEBUG] - ServerClientId: ${_googleSignIn.serverClientId}');
       
       // If silent sign in fails, try interactive sign in
       final account = await _googleSignIn.signIn();
+      
       if (account != null) {
-        print('[Debug SignIn] Interactive sign-in successful: ${account.email}');
+        print('[DEBUG] Interactive sign-in successful: ${account.email}');
+        print('[DEBUG] Account details:');
+        print('[DEBUG] - ID: ${account.id}');
+        print('[DEBUG] - Display Name: ${account.displayName}');
+        print('[DEBUG] - Photo URL: ${account.photoUrl}');
         
         final auth = await account.authentication;
         if (auth.accessToken == null) {
-          print('[Debug SignIn] Error: No access token received from interactive sign-in.');
+          print('[ERROR] No access token received from interactive sign-in.');
           await saveLoginStatus(false);
           return null;
         }
-        print('[Debug SignIn] Access Token from interactive sign-in (first 20 chars): ${auth.accessToken!.substring(0, auth.accessToken!.length > 20 ? 20 : auth.accessToken!.length)}...');
+        print('[DEBUG] Access Token received (first 20 chars): ${auth.accessToken!.substring(0, auth.accessToken!.length > 20 ? 20 : auth.accessToken!.length)}...');
         
         _updateTokenExpiration(auth.accessToken, auth.idToken); 
-        print('[Debug SignIn] Called _updateTokenExpiration. Now checking TokenManager.needsRefresh(): ${TokenManager.needsRefresh()}');
+        print('[DEBUG] Token expiration updated. TokenManager.needsRefresh(): ${TokenManager.needsRefresh()}');
 
         await saveLoginStatus(true);
         return account;
       } else {
-        print('Interactive sign-in canceled by user');
+        print('[DEBUG] Interactive sign-in returned null - user canceled or sign-in failed');
         await saveLoginStatus(false);
         return null;
       }
     } catch (error) {
-      print('Error during sign in: $error');
+      print('[ERROR] Exception during sign in: $error');
+      print('[ERROR] Error type: ${error.runtimeType}');
+      if (error is PlatformException) {
+        print('[ERROR] Platform Exception details:');
+        print('[ERROR] - Code: ${error.code}');
+        print('[ERROR] - Message: ${error.message}');
+        print('[ERROR] - Details: ${error.details}');
+      }
       await saveLoginStatus(false);
       return null;
     }

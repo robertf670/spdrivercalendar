@@ -1,4 +1,14 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.8.23': [
+    {
+      'title': 'Fixed Google Calendar Sign-In Configuration',
+      'description': 'Resolved DEVELOPER_ERROR (error code 10) by removing problematic serverClientId configuration. Google Calendar authentication now works reliably across all build types including GitHub Actions APKs.',
+    },
+    {
+      'title': 'Simplified OAuth Setup',
+      'description': 'Streamlined Google Sign-In configuration to use only Android OAuth client, eliminating conflicts between Web and Android client configurations that were causing authentication failures.',
+    },
+  ],
   '2.8.22': [
     {
       'title': 'Cleaned OAuth Configuration',
