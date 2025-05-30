@@ -1,4 +1,14 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.8.19': [
+    {
+      'title': 'Fixed GitHub Actions Keystore Consistency',
+      'description': 'Implemented fixed debug keystore for GitHub Actions builds, ensuring consistent SHA-1 fingerprints across all automated releases. This completely resolves Google Calendar authentication issues in APKs from GitHub.',
+    },
+    {
+      'title': 'Permanent Google Calendar Fix',
+      'description': 'GitHub Actions now uses the same debug keystore as local development, guaranteeing that all APK releases have working Google Calendar integration without requiring configuration changes.',
+    },
+  ],
   '2.8.18': [
     {
       'title': 'Complete Google Calendar Authentication Fix',
