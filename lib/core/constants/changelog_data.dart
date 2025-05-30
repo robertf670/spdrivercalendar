@@ -1,4 +1,14 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.8.21': [
+    {
+      'title': 'Complete Base64 Keystore Implementation',
+      'description': 'Fixed GitHub Actions keystore with complete, untruncated base64 encoding. This resolves the base64 decoding errors and ensures consistent SHA-1 fingerprints for Google Calendar authentication.',
+    },
+    {
+      'title': 'Definitive Google Calendar Fix',
+      'description': 'Final implementation of fixed debug keystore for GitHub Actions builds. APK releases from GitHub will now have identical Google Calendar functionality to local development builds.',
+    },
+  ],
   '2.8.20': [
     {
       'title': 'Final Google Calendar Authentication Fix',
