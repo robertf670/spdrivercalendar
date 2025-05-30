@@ -136,7 +136,7 @@ class _GoogleCalendarSettingsScreenState extends State<GoogleCalendarSettingsScr
                             );
                           }
                         : () async {
-                            final account = await GoogleCalendarService.signIn();
+                            final account = await GoogleCalendarService.signInWithGoogle();
                             await _checkConnectionStatus();
                             if (account != null) {
                               ScaffoldMessenger.of(context).showSnackBar(

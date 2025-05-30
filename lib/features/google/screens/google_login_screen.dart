@@ -97,7 +97,7 @@ class _GoogleLoginScreenState extends State<GoogleLoginScreen> {
     });
 
     try {
-      final account = await GoogleCalendarService.signIn();
+      final account = await GoogleCalendarService.signInWithGoogle();
       
       if (account != null) {
         // Successfully signed in

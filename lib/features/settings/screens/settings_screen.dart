@@ -79,11 +79,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
     });
 
     final isSignedIn = await GoogleCalendarService.isSignedIn();
-    final user = await GoogleCalendarService.getCurrentUser();
+    final user = await GoogleCalendarService.getCurrentUserEmail();
 
     setState(() {
       _isGoogleSignedIn = isSignedIn;
-      _googleAccount = user?.email ?? '';
+      _googleAccount = user ?? '';
       _isLoading = false;
     });
   }
@@ -481,11 +481,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _isLoading = true;
     });
     
-    final account = await GoogleCalendarService.signIn();
+    final account = await GoogleCalendarService.signInWithGoogle();
     
     setState(() {
       _isGoogleSignedIn = account != null;
-      _googleAccount = account?.email ?? '';
+      _googleAccount = account ?? '';
       _isLoading = false;
     });
     

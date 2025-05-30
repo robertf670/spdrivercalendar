@@ -26,7 +26,7 @@ class CalendarTestHelper {
       final isSignedIn = await GoogleCalendarService.isSignedIn();
       if (!isSignedIn) {
         print('User not signed in, attempting to sign in...');
-        final account = await GoogleCalendarService.signIn();
+        final account = await GoogleCalendarService.signInWithGoogle();
         if (account == null) {
           _showSnackBar(context, 'Failed to authenticate with Google');
           return false;
@@ -772,25 +772,15 @@ class CalendarTestHelper {
     if (calendarApi == null) {
       print('[Debug _getGoogleCalendarEvents] Initial getCalendarApi() returned null.');
       print('[Debug _getGoogleCalendarEvents] Attempting fallback with manual token client...');
-      final currentUser = await GoogleCalendarService.getCurrentUser();
-      if (currentUser == null) {
+      final currentUserEmail = await GoogleCalendarService.getCurrentUserEmail();
+      if (currentUserEmail == null) {
         print('[Debug _getGoogleCalendarEvents] Fallback failed: No current user.');
         throw Exception('Failed to connect to Google Calendar: No current user for manual token.');
       }
-      final auth = await currentUser.authentication;
-      final accessToken = auth.accessToken;
-      if (accessToken == null) {
-        print('[Debug _getGoogleCalendarEvents] Fallback failed: Manually fetched accessToken is null.');
-        throw Exception('Failed to connect to Google Calendar: No access token for manual client.');
-      }
-      print('[Debug _getGoogleCalendarEvents] Fallback: Manually fetched accessToken (first 20): ${accessToken.substring(0, accessToken.length > 20 ? 20 : accessToken.length)}...');
-      
-      final manualHttpClient = http.Client();
-      calendarApi = cal.CalendarApi(
-        AuthenticatedHttpClient(manualHttpClient, () async => accessToken)
-      );
-      triedManualClient = true; // Mark that we are now using the manual client
-      print('[Debug _getGoogleCalendarEvents] Fallback: Created calendarApi with manual token client.');
+      // Note: With Credential Manager, we can't get authentication tokens directly
+      // We need to rely on the GoogleCalendarService's authenticated client
+      print('[Debug _getGoogleCalendarEvents] Fallback failed: Cannot create manual client with Credential Manager API.');
+      throw Exception('Failed to connect to Google Calendar: No authenticated client available.');
     }
 
     final now = DateTime.now();
@@ -811,42 +801,14 @@ class CalendarTestHelper {
       print('[Debug _getGoogleCalendarEvents] events.list call FAILED (triedManualClient: $triedManualClient): $e');
       if (!triedManualClient) { // Only try manual if we haven't already
          print('[Debug _getGoogleCalendarEvents] Initial events.list failed. Attempting fallback with manual token client NOW...');
-        final currentUser = await GoogleCalendarService.getCurrentUser(); 
-        if (currentUser == null) {
+        final currentUserEmail = await GoogleCalendarService.getCurrentUserEmail(); 
+        if (currentUserEmail == null) {
           print('[Debug _getGoogleCalendarEvents] Fallback failed post-error: No current user.');
           throw Exception('Failed to list events and manual token fallback failed: No current user.');
         }
-        final auth = await currentUser.authentication;
-        // ATTEMPT TO USE ID TOKEN HERE FOR THE MANUAL FALLBACK
-        final String? tokenToTry = auth.idToken; 
-        final String tokenTypeForLog = "idToken";
-
-        if (tokenToTry == null) {
-          print('[Debug _getGoogleCalendarEvents] Fallback failed post-error: Manually fetched $tokenTypeForLog is null.');
-          throw Exception('Failed to list events and manual token fallback failed: No $tokenTypeForLog.');
-        }
-        print('[Debug _getGoogleCalendarEvents] Fallback post-error: Manually fetched $tokenTypeForLog (first 20): ${tokenToTry.substring(0, tokenToTry.length > 20 ? 20 : tokenToTry.length)}...');
-        
-        final manualHttpClient = http.Client();
-        final manualTokenCalendarApi = cal.CalendarApi(
-          AuthenticatedHttpClient(manualHttpClient, () async => tokenToTry)
-        );
-        print('[Debug _getGoogleCalendarEvents] Fallback post-error: Retrying events.list with manual $tokenTypeForLog client.');
-        try {
-          final events = await manualTokenCalendarApi.events.list(
-            'primary',
-            timeMin: pastDate,
-            timeMax: futureDate,
-            maxResults: 2500,
-          );
-          print('[Debug _getGoogleCalendarEvents] Fallback post-error: events.list successful with manual $tokenTypeForLog.');
-          return events.items ?? [];
-        } catch (e2) {
-          print('[Debug _getGoogleCalendarEvents] Fallback post-error: events.list with manual $tokenTypeForLog FAILED AGAIN: $e2');
-          throw e2; 
-        } finally {
-            manualHttpClient.close();
-        }
+        // Note: With Credential Manager, manual token fallback is not supported
+        print('[Debug _getGoogleCalendarEvents] Fallback failed post-error: Manual token fallback not supported with Credential Manager.');
+        throw Exception('Failed to list events: Manual token fallback not supported with Credential Manager.');
       }
       throw e; 
     }

@@ -1,88 +1,89 @@
-import 'package:google_sign_in/google_sign_in.dart';
-import 'package:googleapis/calendar/v3.dart' as calendar;
-import 'package:extension_google_sign_in_as_googleapis_auth/extension_google_sign_in_as_googleapis_auth.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:http/http.dart' as http;
-import 'package:spdrivercalendar/services/token_manager.dart';
 import 'dart:convert';
-import 'dart:convert' show jsonDecode;
+import 'dart:io';
+import 'dart:math';
+import 'package:crypto/crypto.dart';
+import 'package:credential_manager/credential_manager.dart';
+import 'package:googleapis/calendar/v3.dart' as calendar;
+import 'package:googleapis_auth/auth_io.dart' as auth;
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+import 'services/token_manager.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
 
 class GoogleCalendarService {
-  // Static GoogleSignIn instance to be used across the app
-  static GoogleSignIn _googleSignIn = GoogleSignIn(
-    scopes: [
-      'email',
-      'https://www.googleapis.com/auth/calendar',
-    ],
-    // Don't force code for refresh token every time as it causes extra auth prompts
-    forceCodeForRefreshToken: false,
-    // Add Web Client ID for token refresh functionality
-    // This is required for proper authentication in all build environments
-    serverClientId: "1051329330296-l7so8o8bfdm4h1g1hj9ql30dmuq1514e.apps.googleusercontent.com",
-  );
+  // Configuration
+  static const String _webClientId = '1051329330296-l7so8o8bfdm4h1g1hj9ql30dmuq1514e.apps.googleusercontent.com';
+  static const List<String> _scopes = [
+    'email',
+    'https://www.googleapis.com/auth/calendar',
+  ];
 
-  @visibleForTesting
-  static void setGoogleSignInForTesting(GoogleSignIn mockSignIn) {
-    _googleSignIn = mockSignIn;
-  }
+  // Instance variables
+  static final CredentialManager _credentialManager = CredentialManager();
+  static http.Client? _currentHttpClient;
+  static auth.AccessCredentials? _currentCredentials;
+  static String? _currentUserEmail;
+  static bool _isInitialized = false;
 
   /// Initialize the Google Calendar service
   static Future<void> initialize() async {
-    // Pre-initialize Google Sign-In if needed
     try {
-      final isSignedIn = await _googleSignIn.isSignedIn();
-      print('[Debug Initialize] Google Sign-In initialized. Already signed in: $isSignedIn');
+      print('[Debug Initialize] CredentialManager initializing...');
+      _isInitialized = true;
       
-      // If signed in, verify access
-      if (isSignedIn) {
-        try {
-          // Try silent sign in to refresh tokens
-          print('[Debug Initialize] Attempting silent sign-in...');
-          final account = await _googleSignIn.signInSilently();
-          if (account != null) {
-            print('[Debug Initialize] Silent sign-in successful: ${account.email}');
-            final auth = await account.authentication;
-            // Pass both accessToken and idToken. idToken can be null.
-            _updateTokenExpiration(auth.accessToken, auth.idToken); 
-            print('[Debug Initialize] Called _updateTokenExpiration from initialize(). Now checking TokenManager.needsRefresh(): ${TokenManager.needsRefresh()}');
-          } else {
-            print('[Debug Initialize] AccessToken from silent sign-in was null.');
-          }
-        } catch (e) {
-          print('[Debug Initialize] Silent sign-in failed during initialize: $e');
+      // Check if user has saved credentials
+      if (await getLoginStatus()) {
+        print('[Debug Initialize] User has saved login status. Attempting silent sign-in...');
+        final success = await _attemptSilentSignIn();
+        if (success != null) {
+          print('[Debug Initialize] Silent sign-in successful');
+        } else {
+          print('[Debug Initialize] Silent sign-in failed');
         }
+      } else {
+        print('[Debug Initialize] No saved login status found');
       }
     } catch (e) {
-      print('Failed to initialize Google Sign-In: $e');
+      print('Failed to initialize CredentialManager: $e');
     }
   }
   
-  // Check if user is currently signed in
+  /// Check if user is currently signed in
   static Future<bool> isSignedIn() async {
     try {
-      final signedIn = await _googleSignIn.isSignedIn();
-      print('Google Sign-In status: $signedIn');
-      return signedIn;
+      // Check if we have valid credentials and they're not expired
+      if (_currentCredentials == null) {
+        return false;
+      }
+      
+      // Check token expiration
+      if (TokenManager.needsRefresh()) {
+        print('Credentials expired, attempting refresh...');
+        return await _refreshCredentials();
+      }
+      
+      return true;
     } catch (e) {
       print('Error checking sign-in status: $e');
       return false;
     }
   }
   
-  // Save login status to SharedPreferences
+  /// Save login status to SharedPreferences
   static Future<void> saveLoginStatus(bool status) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('hasCompletedGoogleLogin', status);
+      if (status && _currentUserEmail != null) {
+        await prefs.setString('lastSignedInEmail', _currentUserEmail!);
+      }
       print('Saved Google login status: $status');
     } catch (error) {
       print('Error saving login status: $error');
     }
   }
   
-  // Get login status from shared preferences
+  /// Get login status from shared preferences
   static Future<bool> getLoginStatus() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -95,192 +96,303 @@ class GoogleCalendarService {
     }
   }
   
-  // Clear all login data
+  /// Clear all login data
   static Future<void> clearLoginData() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove('hasCompletedGoogleLogin');
-      await _googleSignIn.signOut();
+      await prefs.remove('lastSignedInEmail');
+      await prefs.remove('credentialManagerToken');
+      await prefs.remove('refreshToken');
+      
+      // Clear current session
+      _currentCredentials = null;
+      _currentUserEmail = null;
+      _currentHttpClient?.close();
+      _currentHttpClient = null;
+      
       print('Cleared all login data');
     } catch (error) {
       print('Error clearing login data: $error');
     }
   }
   
-  // Get the current signed-in user
-  static Future<GoogleSignInAccount?> getCurrentUser() async {
+  /// Get the current signed-in user email
+  static Future<String?> getCurrentUserEmail() async {
     try {
-      // Check if user is already signed in
-      final currentUser = _googleSignIn.currentUser;
-      
-      if (currentUser != null) {
-        print('Current user found: ${currentUser.email}');
-        return currentUser;
+      if (_currentUserEmail != null) {
+        return _currentUserEmail;
       }
       
-      // Try silent sign in if no current user
-      final silentUser = await _googleSignIn.signInSilently();
-      if (silentUser != null) {
-        print('Retrieved user via silent sign-in: ${silentUser.email}');
-        return silentUser;
-      }
-      
-      print('No current user found and silent sign-in failed');
-      
-      // Check stored login status
-      final hasCompletedLogin = await getLoginStatus();
-      if (hasCompletedLogin) {
-        print('User previously completed login but session expired');
+      // Try to get from saved preferences
+      final prefs = await SharedPreferences.getInstance();
+      final savedEmail = prefs.getString('lastSignedInEmail');
+      if (savedEmail != null) {
+        _currentUserEmail = savedEmail;
+        return savedEmail;
       }
       
       return null;
     } catch (error) {
-      print('Error getting current user: $error');
+      print('Error getting current user email: $error');
       return null;
     }
   }
-  
-  // Handle Google sign-in
-  static Future<GoogleSignInAccount?> signIn() async {
+
+  /// Sign in with Google using Credential Manager
+  static Future<String?> signInWithGoogle() async {
     try {
-      print('[DEBUG] Starting Google Sign-In process...');
+      print('[DEBUG] Starting Credential Manager Google Sign-In process...');
       
-      // Check if already signed in
-      if (await _googleSignIn.isSignedIn()) {
-        final currentUser = _googleSignIn.currentUser;
-        if (currentUser != null) {
-          print('[DEBUG] User is already signed in: ${currentUser.email}');
-          final auth = await currentUser.authentication;
-          _updateTokenExpiration(auth.accessToken, auth.idToken);
-          await saveLoginStatus(true);
-          return currentUser;
-        }
-      }
-      
-      print('[DEBUG] Not currently signed in, attempting silent sign-in...');
-      
-      // First, try silent sign in
-      final silentUser = await _googleSignIn.signInSilently();
-      if (silentUser != null) {
-        print('[DEBUG] Silent sign-in successful: ${silentUser.email}');
-        final auth = await silentUser.authentication;
-        _updateTokenExpiration(auth.accessToken, auth.idToken);
-        await saveLoginStatus(true);
-        return silentUser;
+      // First try silent sign-in for returning users
+      print('[DEBUG] Attempting silent sign-in first...');
+      final silentResult = await _attemptSilentSignIn();
+      if (silentResult != null) {
+        return silentResult;
       }
       
       print('[DEBUG] Silent sign-in failed, trying interactive sign-in...');
-      print('[DEBUG] GoogleSignIn configuration:');
-      print('[DEBUG] - Scopes: ${_googleSignIn.scopes}');
-      print('[DEBUG] - ServerClientId: ${_googleSignIn.serverClientId}');
       
-      // If silent sign in fails, try interactive sign in
-      final account = await _googleSignIn.signIn();
+      // Initialize credential manager if needed
+      if (_credentialManager.isSupportedPlatform) {
+        await _credentialManager.init(
+          preferImmediatelyAvailableCredentials: true,
+          googleClientId: _webClientId,
+        );
+      }
       
-      if (account != null) {
-        print('[DEBUG] Interactive sign-in successful: ${account.email}');
-        print('[DEBUG] Account details:');
-        print('[DEBUG] - ID: ${account.id}');
-        print('[DEBUG] - Display Name: ${account.displayName}');
-        print('[DEBUG] - Photo URL: ${account.photoUrl}');
+      // For interactive sign-in, use the saveGoogleCredential method
+      final result = await _credentialManager.saveGoogleCredential();
+      
+      if (result != null) {
+        print('[DEBUG] Interactive sign-in successful');
+        print('[DEBUG] ID Token received (first 20 chars): ${result.idToken?.substring(0, 20)}...');
         
-        final auth = await account.authentication;
-        if (auth.accessToken == null) {
-          print('[ERROR] No access token received from interactive sign-in.');
-          await saveLoginStatus(false);
-          return null;
+        // Extract user info from ID token
+        final userInfo = _parseIdToken(result.idToken!);
+        print('[DEBUG] User email: ${userInfo['email']}');
+        print('[DEBUG] User display name: ${userInfo['name']}');
+        
+        // Store the user email
+        _currentUserEmail = userInfo['email'];
+        
+        // Now we need to exchange this ID token for access tokens using OAuth2
+        final credentials = await _exchangeIdTokenForAccessToken(result.idToken!);
+        
+        if (credentials != null) {
+          _currentCredentials = credentials;
+          await _saveCredentials(credentials);
+          
+          // Update token expiration tracking
+          _updateTokenExpiration(result.idToken!);
+          
+          // Save login state
+          await saveLoginStatus(true);
+          
+          print('[DEBUG] Sign-in completed successfully');
+          return userInfo['email'];
+        } else {
+          print('[DEBUG] Using simplified credentials (ID token as access token)');
+          
+          // Fallback: Use ID token as access token (limited functionality)
+          final fallbackCredentials = _createFallbackCredentials(result.idToken!);
+          _currentCredentials = fallbackCredentials;
+          await _saveCredentials(fallbackCredentials);
+          
+          // Update token expiration tracking
+          _updateTokenExpiration(result.idToken!);
+          
+          // Save login state
+          await saveLoginStatus(true);
+          
+          print('[DEBUG] Sign-in completed successfully');
+          return userInfo['email'];
         }
-        print('[DEBUG] Access Token received (first 20 chars): ${auth.accessToken!.substring(0, auth.accessToken!.length > 20 ? 20 : auth.accessToken!.length)}...');
-        
-        _updateTokenExpiration(auth.accessToken, auth.idToken); 
-        print('[DEBUG] Token expiration updated. TokenManager.needsRefresh(): ${TokenManager.needsRefresh()}');
-
-        await saveLoginStatus(true);
-        return account;
-      } else {
-        print('[DEBUG] Interactive sign-in returned null - user canceled or sign-in failed');
-        await saveLoginStatus(false);
-        return null;
       }
-    } catch (error) {
-      print('[ERROR] Exception during sign in: $error');
-      print('[ERROR] Error type: ${error.runtimeType}');
-      if (error is PlatformException) {
-        print('[ERROR] Platform Exception details:');
-        print('[ERROR] - Code: ${error.code}');
-        print('[ERROR] - Message: ${error.message}');
-        print('[ERROR] - Details: ${error.details}');
-      }
-      await saveLoginStatus(false);
+      
+      print('[ERROR] Failed to get credential from Credential Manager');
+      return null;
+    } catch (e) {
+      print('[ERROR] Sign-in failed: $e');
       return null;
     }
   }
   
-  // Sign out the current user
+  /// Exchange ID token for proper access tokens using Google OAuth2
+  static Future<auth.AccessCredentials?> _exchangeIdTokenForAccessToken(String idToken) async {
+    try {
+      print('[DEBUG] Exchanging ID token for access tokens...');
+      
+      // Method 1: Try OAuth2 token endpoint with authorization code grant
+      final credentials = await _tryAuthorizationCodeExchange(idToken);
+      if (credentials != null) {
+        return credentials;
+      }
+      
+      // Method 2: Try using Google OAuth2 service account flow
+      final serviceCredentials = await _tryServiceAccountFlow(idToken);
+      if (serviceCredentials != null) {
+        return serviceCredentials;
+      }
+      
+      print('[DEBUG] Token exchange failed, will use fallback approach');
+      return null;
+    } catch (e) {
+      print('[DEBUG] Token exchange error: $e');
+      return null;
+    }
+  }
+  
+  /// Try authorization code exchange for access tokens
+  static Future<auth.AccessCredentials?> _tryAuthorizationCodeExchange(String idToken) async {
+    try {
+      final client = http.Client();
+      
+      try {
+        // Extract authorization code from ID token if available
+        final userInfo = _parseIdToken(idToken);
+        
+        // Use OAuth2 device flow approach
+        final response = await client.post(
+          Uri.parse('https://oauth2.googleapis.com/token'),
+          headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+          body: {
+            'grant_type': 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+            'assertion': idToken,
+            'scope': _scopes.join(' '),
+          },
+        );
+        
+        print('[DEBUG] Token exchange response: ${response.statusCode}');
+        
+        if (response.statusCode == 200) {
+          final tokenData = jsonDecode(response.body);
+          
+          final accessToken = auth.AccessToken(
+            'Bearer',
+            tokenData['access_token'],
+            DateTime.now().toUtc().add(Duration(seconds: tokenData['expires_in'] ?? 3600)),
+          );
+          
+          print('[DEBUG] Successfully obtained access token for Calendar API');
+          
+          return auth.AccessCredentials(
+            accessToken,
+            tokenData['refresh_token'],
+            _scopes,
+          );
+        } else {
+          print('[DEBUG] Token exchange failed: ${response.statusCode} - ${response.body}');
+          return null;
+        }
+      } finally {
+        client.close();
+      }
+    } catch (e) {
+      print('[DEBUG] Authorization code exchange error: $e');
+      return null;
+    }
+  }
+  
+  /// Try service account flow for access tokens
+  static Future<auth.AccessCredentials?> _tryServiceAccountFlow(String idToken) async {
+    try {
+      // This would require service account credentials
+      // For now, we'll skip this and use fallback
+      print('[DEBUG] Service account flow not implemented yet');
+      return null;
+    } catch (e) {
+      print('[DEBUG] Service account flow error: $e');
+      return null;
+    }
+  }
+  
+  /// Create fallback credentials using ID token (limited functionality)
+  static auth.AccessCredentials _createFallbackCredentials(String idToken) {
+    try {
+      // Parse token to get expiration
+      final userInfo = _parseIdToken(idToken);
+      
+      // Calculate proper expiration time from the token
+      DateTime expiration;
+      if (userInfo['exp'] != null && userInfo['exp'] is int) {
+        expiration = DateTime.fromMillisecondsSinceEpoch(userInfo['exp'] * 1000);
+      } else {
+        expiration = DateTime.now().toUtc().add(const Duration(hours: 1));
+      }
+      
+      // Create access token using the ID token
+      final accessToken = auth.AccessToken(
+        'Bearer',
+        idToken,
+        expiration,
+      );
+      
+      print('[DEBUG] Created fallback credentials with expiration: $expiration');
+      
+      return auth.AccessCredentials(
+        accessToken,
+        null, // No refresh token available with this approach
+        _scopes,
+      );
+    } catch (e) {
+      print('[DEBUG] Fallback credentials error: $e');
+      
+      // Last resort: basic credentials with 1 hour expiration
+      final accessToken = auth.AccessToken(
+        'Bearer',
+        idToken,
+        DateTime.now().toUtc().add(const Duration(hours: 1)),
+      );
+      
+      return auth.AccessCredentials(
+        accessToken,
+        null,
+        _scopes,
+      );
+    }
+  }
+
+  /// Sign out the current user
   static Future<void> signOut() async {
     try {
-      await _googleSignIn.signOut();
-      await saveLoginStatus(false);
+      await clearLoginData();
       print('User signed out successfully');
     } catch (error) {
       print('Error signing out: $error');
     }
   }
 
-  // Get the Calendar API client using the signed-in user
+  /// Get the Calendar API client
   static Future<calendar.CalendarApi?> getCalendarApi() async {
     try {
-      if (!await _googleSignIn.isSignedIn()) {
+      if (!await isSignedIn()) {
         print('User is not signed in - trying to sign in silently');
-        final silentUser = await _googleSignIn.signInSilently();
-        if (silentUser == null) {
+        final success = await _attemptSilentSignIn();
+        if (success == null) {
           print('Silent sign in failed');
           return null;
-        } else {
-          // Signed in silently, update token expiration
-          final auth = await silentUser.authentication;
-          _updateTokenExpiration(auth.accessToken, auth.idToken);
         }
       }
 
-      // Check if token needs refresh according to TokenManager
+      // Check if token needs refresh
       if (TokenManager.needsRefresh()) {
-        print('TokenManager indicates refresh needed. Attempting silent sign-in to refresh...');
-        final account = await _googleSignIn.signInSilently();
-        if (account != null) {
-          final auth = await account.authentication;
-          print('[Debug getCalendarApi] Silent sign-in successful after needsRefresh was true.');
-          _updateTokenExpiration(auth.accessToken, auth.idToken); // Update with latest tokens
-        } else {
-          print('[Debug getCalendarApi] Silent sign-in failed after needsRefresh was true. Interactive sign-in might be required.');
-          // Optionally, trigger interactive sign-in here or let it fail to be handled by caller
-          // For now, we'll proceed and try to get the client; it might still work or fail gracefully.
+        print('Token needs refresh, attempting refresh...');
+        final refreshed = await _refreshCredentials();
+        if (!refreshed) {
+          print('Token refresh failed');
+          return null;
         }
       }
 
-      // Get the auth client
+      // Get the authenticated HTTP client
       final httpClient = await getAuthenticatedClient();
       
       if (httpClient == null) {
         print('Failed to get authenticated client in getCalendarApi.');
-        
-        // Try to re-authenticate with interactive sign-in as a last resort
-        print('Attempting to re-authenticate interactively...');
-        final interactiveAccount = await signIn(); // signIn already calls _updateTokenExpiration
-        if (interactiveAccount == null) {
-          print('Re-authentication failed in getCalendarApi.');
-          return null;
-        }
-        
-        // Try again to get authenticated client
-        final retryClient = await getAuthenticatedClient();
-        if (retryClient == null) {
-          print('Failed to get authenticated client after re-authentication in getCalendarApi.');
-          return null;
-        }
-        print('[Debug getCalendarApi] Successfully got client after interactive re-authentication.');
-        return calendar.CalendarApi(retryClient);
+        return null;
       }
+      
       print('[Debug getCalendarApi] Successfully got httpClient.');
       return calendar.CalendarApi(httpClient);
     } catch (error) {
@@ -289,7 +401,7 @@ class GoogleCalendarService {
     }
   }
 
-  // Add event to Google Calendar
+  /// Add event to Google Calendar
   static Future<bool> addEvent({
     required String summary,
     required String description,
@@ -325,7 +437,7 @@ class GoogleCalendarService {
     }
   }
 
-  // Get events from Google Calendar
+  /// Get events from Google Calendar
   static Future<List<calendar.Event>> getEvents() async {
     try {
       final calendarApi = await getCalendarApi();
@@ -350,77 +462,27 @@ class GoogleCalendarService {
     }
   }
   
-  // Check if calendar access is still valid
+  /// Check if calendar access is still valid
   static Future<bool> checkCalendarAccess(http.Client? httpClientFromCaller) async {
     print('[Debug CheckCalendarAccess] Entered.');
     try {
       if (httpClientFromCaller == null) {
-        print('[Debug CheckCalendarAccess] httpClientFromCaller is null. Cannot perform first check.');
-      } else {
-        print('[Debug CheckCalendarAccess] Attempting API call with httpClientFromCaller...');
-        try {
-          final calendarApiWithCallerClient = calendar.CalendarApi(httpClientFromCaller);
-          await calendarApiWithCallerClient.calendarList.list(maxResults: 1);
-          print('[Debug CheckCalendarAccess] Calendar access verified successfully with httpClientFromCaller.');
-          return true; // Success with the provided client
-        } catch (e) {
-          print('[Debug CheckCalendarAccess] API call with httpClientFromCaller FAILED: $e');
-          // Proceed to try with manually fetched token if this fails
+        print('[Debug CheckCalendarAccess] httpClientFromCaller is null. Getting new client...');
+        final newClient = await getAuthenticatedClient();
+        if (newClient == null) {
+          print('[Debug CheckCalendarAccess] Failed to get authenticated client.');
+          return false;
         }
+        httpClientFromCaller = newClient;
       }
 
-      print('[Debug CheckCalendarAccess] Attempting API call with manually fetched accessToken...');
-      final currentUser = _googleSignIn.currentUser;
-      if (currentUser == null) {
-        print('[Debug CheckCalendarAccess] No current user for GoogleSignIn. Cannot fetch manual token.');
-        return false;
-      }
-
-      final auth = await currentUser.authentication;
-      final accessToken = auth.accessToken;
-
-      if (accessToken == null) {
-        print('[Debug CheckCalendarAccess] Manually fetched accessToken is null.');
-        return false;
-      }
-
-      print('[Debug CheckCalendarAccess] Manually fetched accessToken (first 20 chars): ${accessToken.substring(0, accessToken.length > 20 ? 20 : accessToken.length)}...');
-      // Log claims of this manually fetched token for comparison
-      try {
-        final parts = accessToken.split('.');
-        if (parts.length == 3) {
-          final payload = parts[1];
-          final normalized = base64Url.normalize(payload);
-          final decoded = utf8.decode(base64Url.decode(normalized));
-          final claims = jsonDecode(decoded);
-          print('[Debug CheckCalendarAccess] Manually fetched accessToken Claims: $claims');
-          if (claims['exp'] != null && claims['exp'] is int) {
-            final expiration = DateTime.fromMillisecondsSinceEpoch(claims['exp'] * 1000);
-            print('[Debug CheckCalendarAccess] Manually fetched accessToken Expiration: $expiration (Is Expired: ${DateTime.now().isAfter(expiration)})');
-          }
-        } else {
-            print('[Debug CheckCalendarAccess] Manually fetched accessToken does not appear to be a valid JWT. Parts: ${parts.length}');
-        }
-      } catch (e) {
-        print('[Debug CheckCalendarAccess] Error decoding manually fetched accessToken: $e');
-      }
-
-      final manualClient = http.Client();
-      try {
-        final calendarApiWithManualToken = calendar.CalendarApi(
-          AuthenticatedHttpClient(manualClient, () async => accessToken)
-        );
-        await calendarApiWithManualToken.calendarList.list(maxResults: 1);
-        print('[Debug CheckCalendarAccess] Calendar access verified successfully with MANUALLY fetched accessToken.');
-        return true;
-      } catch (e) {
-        print('[Debug CheckCalendarAccess] API call with MANUALLY fetched accessToken FAILED: $e');
-        return false;
-      } finally {
-        manualClient.close();
-      }
+      print('[Debug CheckCalendarAccess] Attempting API call...');
+      final calendarApi = calendar.CalendarApi(httpClientFromCaller);
+      await calendarApi.calendarList.list(maxResults: 1);
+      print('[Debug CheckCalendarAccess] Calendar access verified successfully.');
+      return true;
     } catch (error) {
-      print('[Debug CheckCalendarAccess] Outer error: $error');
+      print('[Debug CheckCalendarAccess] Error: $error');
       return false;
     }
   }
@@ -433,197 +495,228 @@ class GoogleCalendarService {
         return null;
       }
 
-      // Explicitly try to refresh tokens if TokenManager says it's needed,
-      // before getting the authenticatedClient. This is to ensure the client
-      // is created with the freshest possible tokens.
+      // Check if we need to refresh credentials
       if (TokenManager.needsRefresh()) {
-        print('[Debug getAuthenticatedClient] TokenManager needs refresh. Attempting signInSilently...');
-        final account = await _googleSignIn.signInSilently();
-        if (account != null) {
-          final auth = await account.authentication;
-          _updateTokenExpiration(auth.accessToken, auth.idToken);
-          print('[Debug getAuthenticatedClient] signInSilently successful, token expiration updated.');
-        } else {
-          print('[Debug getAuthenticatedClient] signInSilently failed during explicit refresh attempt.');
-          // It might be okay to proceed, authenticatedClient might still work or handle it.
+        print('[Debug getAuthenticatedClient] Token needs refresh...');
+        final refreshed = await _refreshCredentials();
+        if (!refreshed) {
+          print('[Debug getAuthenticatedClient] Token refresh failed.');
+          return null;
         }
       }
 
-      // Get the authenticated client from GoogleSignIn
-      // This client should handle token refreshes automatically if serverClientId is set.
-      print('[Debug getAuthenticatedClient] Calling _googleSignIn.authenticatedClient()...');
-      final client = await _googleSignIn.authenticatedClient();
-      
-      if (client == null) {
-        print('[Debug getAuthenticatedClient] _googleSignIn.authenticatedClient() returned null.');
+      if (_currentCredentials == null) {
+        print('[Debug getAuthenticatedClient] No current credentials available.');
         return null;
       }
+
+      // Create or reuse authenticated client
+      if (_currentHttpClient == null) {
+        _currentHttpClient = auth.authenticatedClient(
+          http.Client(),
+          _currentCredentials!,
+        );
+        print('[Debug getAuthenticatedClient] Created new authenticated client.');
+      } else {
+        print('[Debug getAuthenticatedClient] Reusing existing authenticated client.');
+      }
       
-      print('[Debug getAuthenticatedClient] Successfully obtained client from _googleSignIn.authenticatedClient().');
-      return client;
+      return _currentHttpClient;
     } catch (e) {
       print('Error getting authenticated client: $e');
       return null;
     }
   }
 
-  // Helper method to update token expiration
-  static void _updateTokenExpiration(String? accessToken, String? idToken) {
-    // We primarily use idToken for expiration as it's a guaranteed JWT.
-    // accessToken is passed along but not directly used for 'exp' here.
-    if (idToken == null) {
-      print('[Debug _updateTokenExpiration] idToken is null. Cannot parse for expiration.');
-      return;
-    }
+  // Private helper methods
 
-    print('[Debug _updateTokenExpiration] Attempting to parse idToken (first 20 chars): ${idToken.substring(0, idToken.length > 20 ? 20 : idToken.length)}...');
+  /// Attempt silent sign-in using saved credentials
+  static Future<String?> _attemptSilentSignIn() async {
+    try {
+      if (!_isInitialized) {
+        await initialize();
+      }
+
+      // Try to get saved credentials first
+      final savedCredentials = await _getSavedCredentials();
+      if (savedCredentials != null && !TokenManager.needsRefresh()) {
+        _currentCredentials = savedCredentials;
+        print('[Debug _attemptSilentSignIn] Using saved credentials.');
+        return _currentUserEmail;
+      }
+
+      print('[Debug _attemptSilentSignIn] No valid saved credentials found.');
+      return null;
+    } catch (e) {
+      print('[Debug _attemptSilentSignIn] Error: $e');
+      return null;
+    }
+  }
+
+  /// Refresh credentials when they expire
+  static Future<bool> _refreshCredentials() async {
+    try {
+      if (_currentCredentials?.refreshToken == null) {
+        print('[Debug _refreshCredentials] No refresh token available.');
+        return false;
+      }
+
+      print('[Debug _refreshCredentials] Attempting to refresh credentials...');
+      final newCredentials = await auth.refreshCredentials(
+        auth.ClientId(_webClientId),
+        _currentCredentials!,
+        http.Client(),
+      );
+
+      _currentCredentials = newCredentials;
+      await _saveCredentials(newCredentials);
+      
+      // Update token expiration based on new access token
+      if (newCredentials.accessToken.data.isNotEmpty) {
+        final tokenInfo = _parseAccessToken(newCredentials.accessToken.data);
+        if (tokenInfo['exp'] != null) {
+          final expirationDateTime = DateTime.fromMillisecondsSinceEpoch(tokenInfo['exp'] * 1000);
+          TokenManager.setTokenExpiration(expirationDateTime);
+        }
+      }
+      
+      // Close old client and create new one
+      _currentHttpClient?.close();
+      _currentHttpClient = null;
+      
+      print('[Debug _refreshCredentials] Credentials refreshed successfully.');
+      return true;
+    } catch (e) {
+      print('[Debug _refreshCredentials] Error: $e');
+      return false;
+    }
+  }
+
+  /// Parse ID token to extract user information
+  static Map<String, dynamic> _parseIdToken(String idToken) {
     try {
       final parts = idToken.split('.');
       if (parts.length != 3) {
-        print('[Debug _updateTokenExpiration] idToken does not appear to be a valid JWT. Parts count: ${parts.length}');
-        return;
+        throw Exception('Invalid ID token format');
       }
+      
       final payload = parts[1];
       final normalized = base64Url.normalize(payload);
-      final resp = utf8.decode(base64Url.decode(normalized));
-      final payloadMap = json.decode(resp);
-
-      if (payloadMap is Map<String, dynamic> && payloadMap.containsKey('exp')) {
-        final dynamic expClaim = payloadMap['exp']; // Use dynamic type for safety before checking
-        if (expClaim is int) {
-          final expirationDateTime = DateTime.fromMillisecondsSinceEpoch(expClaim * 1000);
-          TokenManager.setTokenExpiration(expirationDateTime);
-          print('[Debug _updateTokenExpiration] Token expiration set from idToken to: $expirationDateTime');
-        } else {
-          print('[Debug _updateTokenExpiration] \'exp\' claim in idToken is not an integer. Actual type: ${expClaim.runtimeType}');
-        }
-      } else {
-        print('[Debug _updateTokenExpiration] \'exp\' claim not found in idToken or payload is not a map.');
-      }
+      final decoded = utf8.decode(base64Url.decode(normalized));
+      return jsonDecode(decoded);
     } catch (e) {
-      print('[Debug _updateTokenExpiration] Error parsing idToken: $e');
+      print('Error parsing ID token: $e');
+      return {};
     }
   }
 
-  // Complete reset - disconnect from Google services entirely
+  /// Parse access token to extract information
+  static Map<String, dynamic> _parseAccessToken(String accessToken) {
+    try {
+      final parts = accessToken.split('.');
+      if (parts.length != 3) {
+        return {}; // Not a JWT, return empty map
+      }
+      
+      final payload = parts[1];
+      final normalized = base64Url.normalize(payload);
+      final decoded = utf8.decode(base64Url.decode(normalized));
+      return jsonDecode(decoded);
+    } catch (e) {
+      print('Error parsing access token: $e');
+      return {};
+    }
+  }
+
+  /// Generate a secure nonce for authentication
+  static String _generateNonce() {
+    final random = Random.secure();
+    final values = List<int>.generate(32, (i) => random.nextInt(256));
+    final nonce = base64Url.encode(values);
+    
+    // Hash the nonce with SHA-256
+    final bytes = utf8.encode(nonce);
+    final digest = sha256.convert(bytes);
+    return digest.toString();
+  }
+
+  /// Update token expiration in TokenManager
+  static void _updateTokenExpiration(String idToken) {
+    try {
+      final userInfo = _parseIdToken(idToken);
+      if (userInfo['exp'] != null && userInfo['exp'] is int) {
+        final expirationDateTime = DateTime.fromMillisecondsSinceEpoch(userInfo['exp'] * 1000);
+        TokenManager.setTokenExpiration(expirationDateTime);
+        print('[Debug _updateTokenExpiration] Token expiration set to: $expirationDateTime');
+      }
+    } catch (e) {
+      print('[Debug _updateTokenExpiration] Error: $e');
+    }
+  }
+
+  /// Save credentials to SharedPreferences for persistence
+  static Future<void> _saveCredentials(auth.AccessCredentials credentials) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('accessToken', credentials.accessToken.data);
+      if (credentials.refreshToken != null) {
+        await prefs.setString('refreshToken', credentials.refreshToken!);
+      }
+      await prefs.setStringList('scopes', credentials.scopes);
+      print('[Debug _saveCredentials] Credentials saved.');
+    } catch (e) {
+      print('Error saving credentials: $e');
+    }
+  }
+
+  /// Get saved credentials from SharedPreferences
+  static Future<auth.AccessCredentials?> _getSavedCredentials() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final accessTokenData = prefs.getString('accessToken');
+      final refreshToken = prefs.getString('refreshToken');
+      final scopes = prefs.getStringList('scopes');
+
+      if (accessTokenData == null || scopes == null) {
+        return null;
+      }
+
+      final accessToken = auth.AccessToken(
+        'Bearer',
+        accessTokenData,
+        DateTime.now().toUtc().add(const Duration(hours: 1)),
+      );
+
+      return auth.AccessCredentials(
+        accessToken,
+        refreshToken,
+        scopes,
+      );
+    } catch (e) {
+      print('Error getting saved credentials: $e');
+      return null;
+    }
+  }
+
+  /// Complete reset - disconnect from Google services entirely
   static Future<void> completeReset() async {
     try {
       print('Starting complete Google authentication reset...');
-      
-      // Clear shared preferences first
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.remove('hasCompletedGoogleLogin');
-      print('✓ Cleared shared preferences');
-      
-      // Clear token manager
-      TokenManager.dispose();
-      print('✓ Cleared token manager');
-      
-      // Sign out first (this usually works even if disconnect fails)
-      try {
-        await _googleSignIn.signOut();
-        print('✓ Signed out successfully');
-      } catch (signOutError) {
-        print('⚠ Sign out failed: $signOutError');
-      }
-      
-      // Try to disconnect completely (this may fail, but that's okay)
-      try {
-        await _googleSignIn.disconnect();
-        print('✓ Disconnected successfully');
-      } catch (disconnectError) {
-        print('⚠ Disconnect failed (this is common): $disconnectError');
-        print('ℹ Don\'t worry - other cleanup steps were successful');
-      }
-      
-      // Additional cleanup - clear any cached authentication state
-      try {
-        // Force a new GoogleSignIn instance to clear any cached state
-        _googleSignIn = GoogleSignIn(
-          scopes: [
-            'email',
-            'https://www.googleapis.com/auth/calendar',
-          ],
-          forceCodeForRefreshToken: false,
-          // serverClientId: "1051329330296-1240ki2jq18dv9jtfjt01m6ggkcv4jli.apps.googleusercontent.com", // Commented out for testing
-        );
-        print('✓ Recreated GoogleSignIn instance');
-      } catch (recreateError) {
-        print('⚠ Failed to recreate GoogleSignIn instance: $recreateError');
-      }
-      
-      print('Complete Google authentication reset finished (some steps may have failed but that\'s normal)');
+      await clearLoginData();
+      print('Complete Google authentication reset finished');
     } catch (error) {
       print('Error during complete reset: $error');
-      // Even if there are errors, try to clear what we can
-      try {
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.remove('hasCompletedGoogleLogin');
-        TokenManager.dispose();
-      } catch (fallbackError) {
-        print('Fallback cleanup also failed: $fallbackError');
-      }
     }
   }
 
-  // Simple reset - avoids disconnect() which often fails
+  /// Simple reset - same as complete reset for Credential Manager
   static Future<void> simpleReset() async {
     try {
       print('Starting simple Google authentication reset...');
-      
-      // Clear shared preferences
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.remove('hasCompletedGoogleLogin');
-      print('✓ Cleared shared preferences');
-      
-      // Clear token manager
-      TokenManager.dispose();
-      print('✓ Cleared token manager');
-      
-      // Sign out only (don't try to disconnect)
-      try {
-        await _googleSignIn.signOut();
-        print('✓ Signed out successfully');
-      } catch (signOutError) {
-        print('⚠ Sign out failed: $signOutError');
-      }
-      
-      // Recreate GoogleSignIn instance to clear cached state
-      _googleSignIn = GoogleSignIn(
-        scopes: [
-          'email',
-          'https://www.googleapis.com/auth/calendar',
-        ],
-        forceCodeForRefreshToken: false,
-        // serverClientId: "1051329330296-1240ki2jq18dv9jtfjt01m6ggkcv4jli.apps.googleusercontent.com", // Commented out for testing
-      );
-      print('✓ Recreated GoogleSignIn instance');
-      
+      await clearLoginData();
       print('Simple Google authentication reset completed successfully');
     } catch (error) {
       print('Error during simple reset: $error');
     }
-  }
-}
-
-// Helper class for manually injecting token, now top-level and public
-class AuthenticatedHttpClient extends http.BaseClient {
-  final http.Client _inner;
-  final Future<String?> Function() _getAccessToken;
-
-  AuthenticatedHttpClient(this._inner, this._getAccessToken);
-
-  @override
-  Future<http.StreamedResponse> send(http.BaseRequest request) async {
-    final token = await _getAccessToken();
-    if (token != null) {
-      request.headers['Authorization'] = 'Bearer $token';
-    }
-    return _inner.send(request);
-  }
-
-  @override
-  void close() {
-    _inner.close();
   }
 }

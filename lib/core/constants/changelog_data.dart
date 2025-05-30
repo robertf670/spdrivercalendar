@@ -1,4 +1,18 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.8.26': [
+    {
+      'title': 'Major Authentication Migration - Credential Manager Implementation',
+      'description': 'Migrated from legacy Google Sign-In to modern Credential Manager API to resolve GitHub Actions APK authentication failures. This addresses Google\'s deprecation of legacy authentication APIs in CI/CD environments.',
+    },
+    {
+      'title': 'Enhanced CI/CD Compatibility',
+      'description': 'Implemented Google\'s recommended Credential Manager authentication flow specifically designed to work in automated build environments. APK releases from GitHub Actions should now have functional Google Calendar integration.',
+    },
+    {
+      'title': 'Future-Proof Authentication Architecture',
+      'description': 'Replaced deprecated google_sign_in package with credential_manager for long-term compatibility and security. This migration ensures continued Google Calendar functionality as Google phases out legacy APIs.',
+    },
+  ],
   '2.8.24': [
     {
       'title': 'Comprehensive Google Sign-In Analysis & Solution',

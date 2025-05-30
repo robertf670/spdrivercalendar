@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 import 'package:spdrivercalendar/google_calendar_service.dart';
 import 'package:spdrivercalendar/oauth_helper.dart';
-import 'package:spdrivercalendar/calendar_test_helper.dart';
+import 'package:spdrivercalendar/theme/app_theme.dart';
 
 class GoogleLoginPage extends StatefulWidget {
   final VoidCallback onLoginComplete;
@@ -15,18 +14,10 @@ class GoogleLoginPage extends StatefulWidget {
 
 class _GoogleLoginPageState extends State<GoogleLoginPage> {
   bool _isLoading = false;
+  String? _currentUserEmail;
   String _statusMessage = '';
   String _errorMessage = '';
-  GoogleSignInAccount? _currentUser;
   bool _showTestingRestrictionInfo = false;
-
-  // Update the GoogleSignIn initialization to include the calendar scope
-  final GoogleSignIn _googleSignIn = GoogleSignIn(
-    scopes: [
-      'email',
-      'https://www.googleapis.com/auth/calendar',
-    ],
-  );
 
   @override
   void initState() {
@@ -35,16 +26,16 @@ class _GoogleLoginPageState extends State<GoogleLoginPage> {
   }
 
   Future<void> _checkCurrentUser() async {
-    try {
-      setState(() {
-        _isLoading = true;
-        _statusMessage = 'Checking login status...';
-      });
+    setState(() {
+      _isLoading = true;
+      _statusMessage = 'Checking login status...';
+    });
 
-      final user = await GoogleCalendarService.getCurrentUser();
+    try {
+      final userEmail = await GoogleCalendarService.getCurrentUserEmail();
       
       // If we have a user but can't access calendar, we need to re-authenticate
-      if (user != null) {
+      if (userEmail != null) {
         // First, get an authenticated client
         final httpClient = await GoogleCalendarService.getAuthenticatedClient();
         final hasAccess = await GoogleCalendarService.checkCalendarAccess(httpClient); // Pass the client
@@ -53,7 +44,7 @@ class _GoogleLoginPageState extends State<GoogleLoginPage> {
           // Force re-authentication
           await GoogleCalendarService.signOut();
           setState(() {
-            _currentUser = null;
+            _currentUserEmail = null;
             _statusMessage = 'Session expired. Please sign in again.';
           });
           return;
@@ -61,9 +52,9 @@ class _GoogleLoginPageState extends State<GoogleLoginPage> {
       }
       
       setState(() {
-        _currentUser = user;
-        if (user != null) {
-          _statusMessage = 'Signed in as ${user.displayName}';
+        _currentUserEmail = userEmail;
+        if (userEmail != null) {
+          _statusMessage = 'Signed in as $userEmail';
         } else {
           _statusMessage = '';
         }
@@ -91,13 +82,13 @@ class _GoogleLoginPageState extends State<GoogleLoginPage> {
     try {
       // First, try signing in without showing the dialog
       // This will help if it's just a session expiration issue
-      final account = await GoogleCalendarService.signIn();
+      final accountEmail = await GoogleCalendarService.signInWithGoogle();
       
-      if (account != null) {
-        print('Successfully signed in: ${account.email}');
+      if (accountEmail != null) {
+        print('Successfully signed in: $accountEmail');
         setState(() {
-          _currentUser = account;
-          _statusMessage = 'Successfully signed in as ${account.displayName}';
+          _currentUserEmail = accountEmail;
+          _statusMessage = 'Successfully signed in as $accountEmail';
         });
         
         // Save that login is completed
@@ -109,13 +100,13 @@ class _GoogleLoginPageState extends State<GoogleLoginPage> {
       final shouldContinue = await OAuthHelper.showVerificationBypassDialog(context);
       
       if (shouldContinue == true) {
-        final retryAccount = await GoogleCalendarService.signIn();
+        final retryAccountEmail = await GoogleCalendarService.signInWithGoogle();
         
-        if (retryAccount != null) {
-          print('Successfully signed in after verification dialog: ${retryAccount.email}');
+        if (retryAccountEmail != null) {
+          print('Successfully signed in after verification dialog: $retryAccountEmail');
           setState(() {
-            _currentUser = retryAccount;
-            _statusMessage = 'Successfully signed in as ${retryAccount.displayName}';
+            _currentUserEmail = retryAccountEmail;
+            _statusMessage = 'Successfully signed in as $retryAccountEmail';
           });
           
           // Save that login is completed
@@ -236,195 +227,175 @@ class _GoogleLoginPageState extends State<GoogleLoginPage> {
               const SizedBox(height: 40),
               
               // Sign in button
-              if (_currentUser == null)
-                ElevatedButton(
+              if (_currentUserEmail == null)
+                ElevatedButton.icon(
                   onPressed: _isLoading ? null : _handleSignIn,
+                  icon: _isLoading 
+                    ? const SizedBox(
+                        width: 20, 
+                        height: 20, 
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.login),
+                  label: Text(_isLoading ? 'Signing in...' : 'Connect Google Calendar'),
                   style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    backgroundColor: Colors.blue,
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                    textStyle: const TextStyle(fontSize: 16),
+                    backgroundColor: Colors.blue.withOpacity(0.1),
+                    foregroundColor: Colors.blue,
                   ),
-                  child: _isLoading
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                            strokeWidth: 2,
-                          ),
-                        )
-                      : const Text(
-                          'Sign in with Google',
-                          style: TextStyle(fontSize: 16, color: Colors.white),
+                ),
+              
+              // Sign out button (when signed in)
+              if (_currentUserEmail != null) ...[
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.green.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(AppTheme.borderRadius),
+                    border: Border.all(color: Colors.green.withOpacity(0.3)),
+                  ),
+                  child: Column(
+                    children: [
+                      const Icon(Icons.check_circle, color: Colors.green, size: 48),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Successfully Connected!',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.green,
                         ),
-                ),
-              
-              // Already logged in message
-              if (_currentUser != null)
-                Column(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.green.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.green),
                       ),
-                      child: Column(
-                        children: [
-                          const Icon(Icons.check_circle, color: Colors.green, size: 40),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Signed in as ${_currentUser!.displayName}',
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            _currentUser!.email,
-                            style: const TextStyle(fontSize: 14),
-                          ),
-                        ],
+                      const SizedBox(height: 4),
+                      Text(
+                        'Signed in as $_currentUserEmail',
+                        style: const TextStyle(fontSize: 14),
+                        textAlign: TextAlign.center,
                       ),
-                    ),
-                    const SizedBox(height: 24),
-                    
-                    // Add test calendar button with clearer instructions
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.blue.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.blue),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Test Calendar Integration',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: 8),
-                          const Text(
-                            'Click the button below to create a test event in your calendar. '
-                            'The event will appear 1 hour from now.',
-                            style: TextStyle(fontSize: 14),
-                          ),
-                          const SizedBox(height: 16),
-                          Center(
-                            child: ElevatedButton.icon(
-                              icon: const Icon(Icons.calendar_month),
-                              label: const Text('Create Test Event'),
-                              style: ElevatedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
-                                backgroundColor: Colors.green,
-                              ),
-                              onPressed: () async {
-                                final success = await CalendarTestHelper.addTestEvent(context);
-                                if (success) {
-                                  setState(() {
-                                    _statusMessage = 'Test event added to your calendar';
-                                  });
-                                }
-                              },
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    
-                    // Make the continue button more prominent
-                    ElevatedButton(
-                      onPressed: widget.onLoginComplete,
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        backgroundColor: Colors.blue,
-                        textStyle: const TextStyle(fontSize: 18),
-                      ),
-                      child: const Text(
-                        'Continue to App',
-                        style: TextStyle(color: Colors.white),
-                      ),
-                    ),
-                  ],
-                ),
-              
-              const SizedBox(height: 16),
-              
-              // Skip option
-              if (_currentUser == null)
-                TextButton(
-                  onPressed: _handleSkip,
-                  child: const Text(
-                    'Skip for now',
-                    style: TextStyle(fontSize: 16),
+                    ],
                   ),
                 ),
+                const SizedBox(height: 16),
+                OutlinedButton.icon(
+                  onPressed: _isLoading ? null : () async {
+                    await GoogleCalendarService.signOut();
+                    setState(() {
+                      _currentUserEmail = null;
+                      _statusMessage = '';
+                    });
+                  },
+                  icon: const Icon(Icons.logout),
+                  label: const Text('Disconnect'),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                    foregroundColor: Colors.red,
+                    side: const BorderSide(color: Colors.red),
+                  ),
+                ),
+              ],
+              
+              const SizedBox(height: 24),
+              
+              // Skip button
+              TextButton(
+                onPressed: _isLoading ? null : _handleSkip,
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                  foregroundColor: Colors.grey[600],
+                ),
+                child: const Text(
+                  'Skip for now',
+                  style: TextStyle(fontSize: 16),
+                ),
+              ),
+              
+              const SizedBox(height: 20),
               
               // Status message
               if (_statusMessage.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(top: 16),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(AppTheme.borderRadius),
+                  ),
                   child: Text(
                     _statusMessage,
-                    style: TextStyle(
-                      color: _statusMessage.contains('Error')
-                          ? Colors.red
-                          : _statusMessage.contains('Successfully')
-                              ? Colors.green
-                              : Colors.grey,
-                      fontSize: 14,
-                    ),
+                    style: const TextStyle(color: Colors.blue),
                     textAlign: TextAlign.center,
                   ),
                 ),
               
               // Error message
               if (_errorMessage.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(top: 16),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  margin: const EdgeInsets.only(top: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(AppTheme.borderRadius),
+                  ),
                   child: Text(
                     _errorMessage,
                     style: const TextStyle(color: Colors.red),
                     textAlign: TextAlign.center,
                   ),
                 ),
-              
+                
               // Testing restriction info
               if (_showTestingRestrictionInfo)
                 Container(
-                  margin: const EdgeInsets.symmetric(vertical: 16),
                   padding: const EdgeInsets.all(16),
+                  margin: const EdgeInsets.only(top: 16),
                   decoration: BoxDecoration(
                     color: Colors.orange.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.orange),
+                    borderRadius: BorderRadius.circular(AppTheme.borderRadius),
+                    border: Border.all(color: Colors.orange.withOpacity(0.3)),
                   ),
-                  child: const Column(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(Icons.info_outline, color: Colors.orange, size: 36),
-                      SizedBox(height: 8),
-                      Text(
-                        'Testing Mode Restriction',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
+                      const Row(
+                        children: [
+                          Icon(Icons.info, color: Colors.orange),
+                          SizedBox(width: 8),
+                          Text(
+                            'App in Testing Mode',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.orange,
+                            ),
+                          ),
+                        ],
                       ),
-                      SizedBox(height: 8),
-                      Text(
-                        'This app is currently in testing mode with Google. Only approved test users can access it.',
-                        textAlign: TextAlign.center,
+                      const SizedBox(height: 8),
+                      const Text(
+                        'This app is currently in testing mode and can only be used by approved testers. You can:',
+                        style: TextStyle(fontSize: 14),
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        '• Try a different Google account\n'
+                        '• Continue using the app without Google Calendar sync\n'
+                        '• Contact the developer for testing access',
+                        style: TextStyle(fontSize: 14),
                       ),
                     ],
                   ),
+                ),
+              
+              const SizedBox(height: 40),
+              
+              // Continue button (when signed in)
+              if (_currentUserEmail != null)
+                ElevatedButton(
+                  onPressed: widget.onLoginComplete,
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                    textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  child: const Text('Continue to App'),
                 ),
             ],
           ),

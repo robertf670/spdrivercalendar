@@ -13,6 +13,12 @@
 -keep class com.google.android.gms.tasks.** { *; }
 -keep class com.google.firebase.** { *; } # Keep Firebase if you use other Firebase services
 
+# Credential Manager rules
+-if class androidx.credentials.CredentialManager
+-keep class androidx.credentials.playservices.** {
+  *;
+}
+
 # Keep certain attributes needed by some Google services
 -keepattributes Signature
 -keepattributes *Annotation*
