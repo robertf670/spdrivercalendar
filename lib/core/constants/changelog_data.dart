@@ -14,11 +14,11 @@ final Map<String, List<Map<String, String>>> changelogData = {
     },
     {
       'title': 'Fixed Google Calendar Duplicates',
-      'description': 'Resolved issue where shifts spanning midnight (like 3:10pm-12:10am) would be added twice to Google Calendar. Each shift is now synced only once.',
+      'description': 'Resolved issue where shifts spanning midnight (ending after midnight) were being added twice to Google Calendar. Now correctly syncs as single events.',
     },
     {
-      'title': 'Overtime Duty Selection Improvements',
-      'description': 'Refined overtime duty selection to exclude inappropriate duty types, ensuring only valid duties are available when adding overtime shifts.',
+      'title': 'Fixed Overtime Duty Selection',
+      'description': 'Overtime shifts now properly exclude workout duties from selection, while regular work shifts continue to show all duties including workouts as intended.',
     },
   ],
   '2.8.26': [

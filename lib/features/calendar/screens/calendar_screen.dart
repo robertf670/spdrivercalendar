@@ -420,7 +420,14 @@ class CalendarScreenState extends State<CalendarScreen>
                     if (line.trim().isEmpty) continue;
                     final parts = line.split(',');
                     if (parts.isNotEmpty) {
-                      // For work shifts, include ALL duties (including workouts)
+                      // For overtime shifts, exclude workout duties
+                      // UNI CSV format: ShiftCode,StartTime,BreakStart,BreakEnd,FinishTime
+                      if (parts.length >= 4) {
+                        final breakStart = parts[2].trim().toLowerCase();
+                        if (breakStart == 'workout' || breakStart == 'nan') {
+                          continue; // Skip workout duties for overtime
+                        }
+                      }
                       combinedShifts.add(parts[0]);
                     }
                   }
@@ -439,7 +446,14 @@ class CalendarScreenState extends State<CalendarScreen>
                       if (line.trim().isEmpty) continue;
                       final parts = line.split(',');
                       if (parts.isNotEmpty) {
-                        // For work shifts, include ALL duties (including workouts)
+                        // For overtime shifts, exclude workout duties
+                        // UNI CSV format: ShiftCode,StartTime,BreakStart,BreakEnd,FinishTime
+                        if (parts.length >= 4) {
+                          final breakStart = parts[2].trim().toLowerCase();
+                          if (breakStart == 'workout' || breakStart == 'nan') {
+                            continue; // Skip workout duties for overtime
+                          }
+                        }
                         combinedShifts.add(parts[0]);
                       }
                     }
@@ -484,7 +498,6 @@ class CalendarScreenState extends State<CalendarScreen>
                       final shiftName = parts[0].trim();
                       final shiftDayType = parts[1].trim();
 
-                      // For work shifts, include ALL duties (including workouts)
                       // Add shift if day type matches and it's not already added
                       if (shiftDayType == currentDayType && shiftName.isNotEmpty && !seenShifts.contains(shiftName)) {
                         seenShifts.add(shiftName);
@@ -514,8 +527,7 @@ class CalendarScreenState extends State<CalendarScreen>
                     if (parts.isNotEmpty && parts[0].trim().isNotEmpty) {
                       final shift = parts[0].trim();
                       
-                      // For work shifts, include ALL duties (including workouts)
-                      // Workout filtering should only apply to overtime, not regular work shifts
+                      // For regular work shifts, include ALL duties (including workouts)
                       if (!seenShifts.contains(shift) && shift != "shift") {
                         seenShifts.add(shift);
                         shiftNumbers.add(shift);
@@ -787,13 +799,7 @@ class CalendarScreenState extends State<CalendarScreen>
                     if (parts.length >= 5 && parts[0].trim() == shiftNumber) {
                         print('Found Uni/Euro shift in $filePath');
                         
-                        // Check if this is a workout duty and skip it
-                        final isWorkout = parts.length > 3 && parts[3].toLowerCase().contains("workout");
-                        if (isWorkout) {
-                            print('Skipping workout duty: $shiftNumber');
-                            continue;
-                        }
-                        
+                        // Include all duties for _getShiftTimes (filtering handled in dialog loading)
                         final startTimeRaw = parts[1].trim();
                         final endTimeRaw = parts[4].trim();
                         
@@ -872,13 +878,7 @@ class CalendarScreenState extends State<CalendarScreen>
              if (csvShiftCode == shiftNumber) {
                 print('Found matching PZ shift code');
                 
-                // Check if this is a workout duty and skip it
-                final isWorkout = parts.length > 3 && parts[3].toLowerCase().contains("workout");
-                if (isWorkout) {
-                   print('Skipping workout duty: $shiftNumber');
-                   continue;
-                }
-                
+                // Include all duties for _getShiftTimes (filtering handled in dialog loading)
                 final startTime = _parseTimeOfDay(parts[2].trim()); // Report time
                 final endTime = _parseTimeOfDay(parts[12].trim()); // SignOff time
 
@@ -3911,7 +3911,14 @@ class CalendarScreenState extends State<CalendarScreen>
                     if (line.trim().isEmpty) continue;
                     final parts = line.split(',');
                     if (parts.isNotEmpty) {
-                      // For work shifts, include ALL duties (including workouts)
+                      // For overtime shifts, exclude workout duties
+                      // UNI CSV format: ShiftCode,StartTime,BreakStart,BreakEnd,FinishTime
+                      if (parts.length >= 4) {
+                        final breakStart = parts[2].trim().toLowerCase();
+                        if (breakStart == 'workout' || breakStart == 'nan') {
+                          continue; // Skip workout duties for overtime
+                        }
+                      }
                       combinedShifts.add(parts[0]);
                     }
                   }
@@ -3930,7 +3937,14 @@ class CalendarScreenState extends State<CalendarScreen>
                       if (line.trim().isEmpty) continue;
                       final parts = line.split(',');
                       if (parts.isNotEmpty) {
-                        // For work shifts, include ALL duties (including workouts)
+                        // For overtime shifts, exclude workout duties
+                        // UNI CSV format: ShiftCode,StartTime,BreakStart,BreakEnd,FinishTime
+                        if (parts.length >= 4) {
+                          final breakStart = parts[2].trim().toLowerCase();
+                          if (breakStart == 'workout' || breakStart == 'nan') {
+                            continue; // Skip workout duties for overtime
+                          }
+                        }
                         combinedShifts.add(parts[0]);
                       }
                     }
@@ -3975,7 +3989,6 @@ class CalendarScreenState extends State<CalendarScreen>
                       final shiftName = parts[0].trim();
                       final shiftDayType = parts[1].trim();
 
-                      // For work shifts, include ALL duties (including workouts)
                       // Add shift if day type matches and it's not already added
                       if (shiftDayType == currentDayType && shiftName.isNotEmpty && !seenShifts.contains(shiftName)) {
                         seenShifts.add(shiftName);
@@ -4005,8 +4018,16 @@ class CalendarScreenState extends State<CalendarScreen>
                     if (parts.isNotEmpty && parts[0].trim().isNotEmpty) {
                       final shift = parts[0].trim();
                       
-                      // For work shifts, include ALL duties (including workouts)
-                      // Workout filtering should only apply to overtime, not regular work shifts
+                      // For overtime shifts, exclude workout duties
+                      // Check if this is a workout duty by examining the break time column
+                      if (parts.length >= 6) {
+                        final startBreak = parts[5].trim().toLowerCase();
+                        if (startBreak == 'workout' || startBreak == 'nan') {
+                          continue; // Skip workout duties for overtime
+                        }
+                      }
+                      
+                      // For regular work shifts, include ALL duties (including workouts)
                       if (!seenShifts.contains(shift) && shift != "shift") {
                         seenShifts.add(shift);
                         shiftNumbers.add(shift);
