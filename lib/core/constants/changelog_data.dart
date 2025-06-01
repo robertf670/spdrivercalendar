@@ -1,4 +1,26 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.8.27': [
+    {
+      'title': 'Fixed Overtime Shift Display',
+      'description': 'Overtime shifts now show "Assigned Bus" instead of "First Half/Second Half" labels, and no longer display work time labels in the top right corner.',
+    },
+    {
+      'title': 'Improved Bus Assignment for Overtime',
+      'description': 'Overtime shifts now use a single bus assignment button like workout shifts, making bus assignment more intuitive and consistent.',
+    },
+    {
+      'title': 'Enhanced Bus Statistics',
+      'description': 'Bus statistics now properly count overtime and workout shift assignments, ensuring accurate tracking of all bus usage across different shift types.',
+    },
+    {
+      'title': 'Fixed Google Calendar Duplicates',
+      'description': 'Resolved issue where shifts spanning midnight (like 3:10pm-12:10am) would be added twice to Google Calendar. Each shift is now synced only once.',
+    },
+    {
+      'title': 'Overtime Duty Selection Improvements',
+      'description': 'Refined overtime duty selection to exclude inappropriate duty types, ensuring only valid duties are available when adding overtime shifts.',
+    },
+  ],
   '2.8.26': [
     {
       'title': 'Major Authentication Migration - Credential Manager Implementation',

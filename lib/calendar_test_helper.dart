@@ -6,6 +6,7 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:spdrivercalendar/features/calendar/services/shift_service.dart';
 import 'package:spdrivercalendar/models/holiday.dart'; // Import the Holiday model
+import 'package:spdrivercalendar/features/calendar/services/event_service.dart'; // Import EventService
 import 'package:http/http.dart' as http;
 // For date formatting
 
@@ -16,29 +17,25 @@ const String _holidayColorId = '8';
 // Constant prefix for storing the app's holiday ID in the description
 const String _holidayIdPrefix = 'App Holiday ID: ';
 
+/// Utilities for Google Calendar testing
 class CalendarTestHelper {
-  /// Adds a test event to the user's Google Calendar
-  static Future<bool> addTestEvent(BuildContext context) async {
+  /// Test creating a sample event in Google Calendar
+  static Future<bool> createTestEvent(BuildContext context) async {
     try {
       print('Starting test event creation...');
       
-      // First check if we're signed in
+      // Check if signed in
       final isSignedIn = await GoogleCalendarService.isSignedIn();
       if (!isSignedIn) {
-        print('User not signed in, attempting to sign in...');
-        final account = await GoogleCalendarService.signInWithGoogle();
-        if (account == null) {
-          _showSnackBar(context, 'Failed to authenticate with Google');
-          return false;
-        }
+        print('User not signed in, cannot create test event');
+        _showSnackBar(context, 'Error: Please sign in to Google Calendar first');
+        return false;
       }
       
-      // Use the Calendar API directly from GoogleCalendarService
-      print('Getting Calendar API client...');
-      final calendarApi = await GoogleCalendarService.getCalendarApi();
-      
-      if (calendarApi == null) {
-        print('Failed to get Calendar API client');
+      // Test connection
+      final hasConnection = await GoogleCalendarService.testConnection();
+      if (!hasConnection) {
+        print('Failed to connect to Google Calendar');
         _showSnackBar(context, 'Error: Failed to connect to Google Calendar');
         return false;
       }
@@ -73,20 +70,23 @@ class CalendarTestHelper {
       event.colorId = '4';  // Red color for test events
       event.location = 'Test Location';
 
-      print('Inserting event into calendar...');
-      // Insert the event
-      final createdEvent = await calendarApi.events.insert(
-        event,
-        'primary',  // Use the user's primary calendar
-      );
+      print('Creating event via GoogleCalendarService...');
+      // Use the new createEvent method
+      final createdEvent = await GoogleCalendarService.createEvent(event: event);
 
-      print('Event created with ID: ${createdEvent.id}');
-      _showSnackBar(
-        context, 
-        'Test event created successfully! Check your Google Calendar.',
-      );
+      if (createdEvent != null) {
+        print('Event created with ID: ${createdEvent.id}');
+        _showSnackBar(
+          context, 
+          'Test event created successfully! Check your Google Calendar.',
+        );
+        return true;
+      } else {
+        print('Failed to create event');
+        _showSnackBar(context, 'Error: Failed to create test event');
+        return false;
+      }
       
-      return true;
     } catch (e) {
       print('Error creating test event: $e');
       _showSnackBar(context, 'Error creating test event: $e');
@@ -97,11 +97,10 @@ class CalendarTestHelper {
   /// Fetch recent events from the user's Google Calendar
   static Future<List<cal.Event>> fetchRecentEvents(BuildContext context) async {
     try {
-      // Use the Calendar API directly from GoogleCalendarService
-      final calendarApi = await GoogleCalendarService.getCalendarApi();
-      
-      if (calendarApi == null) {
-        _showSnackBar(context, 'Error: Failed to connect to Google Calendar');
+      // Check if signed in
+      final isSignedIn = await GoogleCalendarService.isSignedIn();
+      if (!isSignedIn) {
+        _showSnackBar(context, 'Error: Please sign in to Google Calendar first');
         return [];
       }
 
@@ -110,14 +109,13 @@ class CalendarTestHelper {
       final pastDate = now.subtract(const Duration(days: 1)).toUtc();
       final futureDate = now.add(const Duration(days: 7)).toUtc();
       
-      final events = await calendarApi.events.list(
-        'primary',  // Use the user's primary calendar
-        timeMin: pastDate,
-        timeMax: futureDate,
-        maxResults: 10,
+      // Use the new listEvents method
+      final events = await GoogleCalendarService.listEvents(
+        startTime: pastDate,
+        endTime: futureDate,
       );
 
-      return events.items ?? [];
+      return events;
     } catch (e) {
       _showSnackBar(context, 'Error fetching events: $e');
       return [];
@@ -149,17 +147,14 @@ class CalendarTestHelper {
         return false;
       }
       
-      // Get the HTTP client
-      final httpClient = await GoogleCalendarService.getAuthenticatedClient();
-      if (httpClient == null) {
+      // Test connection
+      final hasConnection = await GoogleCalendarService.testConnection();
+      if (!hasConnection) {
         if (isContextMounted) {
           _showSnackBar(context, 'Failed to authenticate with Google');
         }
         return false;
       }
-      
-      // Create Calendar API client
-      final calendarApi = cal.CalendarApi(httpClient);
       
       // Create a new event
       final event = cal.Event();
@@ -187,23 +182,25 @@ class CalendarTestHelper {
       // Set color based on shift type
       event.colorId = _getColorIdForShift(title);
       
-      // Insert the event
-      final createdEvent = await calendarApi.events.insert(
-        event,
-        'primary',  // Use the user's primary calendar
-      );
+      // Use the new createEvent method
+      final createdEvent = await GoogleCalendarService.createEvent(event: event);
 
-      print('Work shift added with ID: ${createdEvent.id}');
-      
-      // Only show SnackBar if context is still valid
-      if (isContextMounted) {
-        _showSnackBar(
-          context, 
-          'Work shift added to your Google Calendar',
-        );
+      if (createdEvent != null) {
+        print('Work shift added with ID: ${createdEvent.id}');
+        
+        // Only show SnackBar if context is still valid
+        if (isContextMounted) {
+          _showSnackBar(
+            context, 
+            'Work shift added to your Google Calendar',
+          );
+        }
+        
+        return true;
+      } else {
+        print('Failed to create work shift');
+        return false;
       }
-      
-      return true;
     } catch (e) {
       print('Error adding work shift to calendar: $e');
       return false;
@@ -229,663 +226,594 @@ class CalendarTestHelper {
         return false;
       }
       
-      // Get Calendar API client
-      final calendarApi = await GoogleCalendarService.getCalendarApi();
-      
-      if (calendarApi == null) {
-        print('Failed to get Calendar API client');
-        return false;
-      }
-
-      // Find events that match the title - limit the search window to 1 day if start time is provided
-      DateTime timeMin = eventStartTime != null 
-          ? DateTime(eventStartTime.year, eventStartTime.month, eventStartTime.day)
-          : DateTime.now().subtract(const Duration(days: 30));
-      
-      DateTime timeMax = eventStartTime != null 
-          ? DateTime(eventStartTime.year, eventStartTime.month, eventStartTime.day, 23, 59, 59)
-          : DateTime.now().add(const Duration(days: 30));
-      
-      final events = await calendarApi.events.list(
-        'primary',
-        timeMin: timeMin.toUtc(),
-        timeMax: timeMax.toUtc(),
-        q: title, // Search by title
+      // First, find the event by searching for it
+      final events = await GoogleCalendarService.listEvents(
+        startTime: DateTime.now().subtract(const Duration(days: 30)),
+        endTime: DateTime.now().add(const Duration(days: 30)),
       );
       
-      // If no events found, return
-      if (events.items == null || events.items!.isEmpty) {
-        print('No matching events found to delete');
-        return false;
-      }
-      
-      // If we found matching events, delete the ones that match both title and date/time (if provided)
-      bool deletedAny = false;
-      for (var event in events.items!) {
-        bool shouldDelete = event.summary == title;
-        
-        // If start time is provided, verify the event starts on the same day and time
-        if (shouldDelete && eventStartTime != null && event.start?.dateTime != null) {
-          final eventDateTime = event.start!.dateTime!;
-          
-          // Check if the event occurs on the same day
-          bool sameDay = eventDateTime.year == eventStartTime.year && 
-                         eventDateTime.month == eventStartTime.month && 
-                         eventDateTime.day == eventStartTime.day;
-          
-          // Only delete if it's on the same day (and approximately same time if provided)
-          if (sameDay) {
-            // For precision, we could also check if the hour/minute is close, 
-            // but for most cases the day match plus exact title should be sufficient
-            print('Deleting event with ID: ${event.id} (matches title and date)');
-            await calendarApi.events.delete('primary', event.id!);
-            deletedAny = true;
+      // Find the event with matching title
+      cal.Event? targetEvent;
+      for (final event in events) {
+        if (event.summary == title) {
+          // If start time is provided, also check that
+          if (eventStartTime != null) {
+            final eventStart = event.start?.dateTime;
+            if (eventStart != null && _isSameDateTime(eventStart, eventStartTime)) {
+              targetEvent = event;
+              break;
+            }
+          } else {
+            targetEvent = event;
+            break;
           }
-        } else if (shouldDelete) {
-          // If no start time provided, just delete based on title
-          print('Deleting event with ID: ${event.id} (matches title only)');
-          await calendarApi.events.delete('primary', event.id!);
-          deletedAny = true;
         }
       }
       
-      if (deletedAny) {
-        print('Successfully deleted event(s) from Google Calendar');
-        return true;
-      } else {
-        print('No exact matches found to delete');
+      if (targetEvent == null || targetEvent.id == null) {
+        print('Event not found: $title');
+        if (isContextMounted) {
+          _showSnackBar(context, 'Event not found in Google Calendar');
+        }
         return false;
       }
+      
+      // Delete the event using the new method
+      final success = await GoogleCalendarService.deleteEvent(eventId: targetEvent.id!);
+      
+      if (success) {
+        print('Event deleted successfully: ${targetEvent.id}');
+        if (isContextMounted) {
+          _showSnackBar(context, 'Event deleted from Google Calendar');
+        }
+        return true;
+      } else {
+        print('Failed to delete event');
+        return false;
+      }
+      
     } catch (e) {
       print('Error deleting event from calendar: $e');
       return false;
     }
   }
 
-  // Helper method to show a snackbar
-  static void _showSnackBar(BuildContext context, String message) {
-    // Additional safety check
-    if (!context.mounted) return;
-    
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        duration: const Duration(seconds: 2), // Reduced from 5 seconds to 2 seconds
-      ),
-    );
-  }
-
-  // Helper method to determine Google Calendar color ID based on shift title
-  static String _getColorIdForShift(String shiftTitle) {
-    // Google Calendar color IDs:
-    // 1: Blue, 2: Green, 3: Purple, 4: Red, 5: Yellow, 
-    // 6: Orange, 7: Turquoise, 8: Gray, 9: Bold blue, 10: Bold green, 11: Bold red
-    
-    // Extract shift type from title (assuming format "Shift: TYPE")
-    final shiftType = shiftTitle.replaceAll('Shift:', '').trim();
-    
-    if (shiftType.startsWith('SP')) {
-      return '5'; // Yellow for Spare shifts
-    } else if (RegExp(r'^\d{2,3}/').hasMatch(shiftType)) {
-      return '7'; // Turquoise for Uni/Euro shifts
-    } else if (shiftType.endsWith('X')) {
-      return '6'; // Orange for Bogey shifts
-    } else {
-      // Try to determine shift type by parsing the shift code (e.g., PZ1/123)
-      if (shiftType.contains('PZ1')) {
-        return '2'; // Green for Zone 1 shifts (often Early)
-      } else if (shiftType.contains('PZ3')) {
-        return '3'; // Purple for Zone 3 shifts (often Relief)
-      } else if (shiftType.contains('PZ4')) {
-        return '6'; // Orange for Zone 4 shifts (often Late)
-      }
-    }
-    
-    // Default color if we can't determine
-    return '9'; // Bold blue as default
-  }
-
-  /// Adds a user-defined holiday to the Google Calendar
-  static Future<bool> addHolidayToCalendar(Holiday holiday) async {
-    try {
-      print('Adding holiday to Google Calendar: ${holiday.type} (${holiday.id})');
-
-      // Check sign-in status
-      final isSignedIn = await GoogleCalendarService.isSignedIn();
-      if (!isSignedIn) {
-        print('User not signed in, cannot add holiday event');
-        return false;
-      }
-
-      // Get Calendar API client
-      final calendarApi = await GoogleCalendarService.getCalendarApi();
-      if (calendarApi == null) {
-        print('Failed to get Calendar API client');
-        return false;
-      }
-
-      // Create the event object for an all-day event
-      final event = cal.Event();
-
-      // Determine summary based on holiday type
-      switch (holiday.type) {
-        case 'winter':
-          event.summary = 'Winter Holiday';
-          break;
-        case 'summer':
-          event.summary = 'Summer Holiday';
-          break;
-        case 'other':
-          event.summary = 'Holiday';
-          break;
-        default:
-          event.summary = 'Holiday';
-      }
-
-      // Add unique identifier to description
-      event.description = '$_holidayIdPrefix${holiday.id}';
-
-      // Set start date (all-day) - Use DateTime directly
-      final startEventDateTime = cal.EventDateTime();
-      // Use only the date part (set time to 00:00:00 UTC)
-      startEventDateTime.date = DateTime.utc(holiday.startDate.year, holiday.startDate.month, holiday.startDate.day);
-      event.start = startEventDateTime;
-
-      // Set end date (all-day events end date is exclusive)
-      final endEventDateTime = cal.EventDateTime();
-      // Google Calendar API expects the end date to be the day *after* the last day of the event
-      final endDateExclusive = holiday.endDate.add(const Duration(days: 1));
-      // Use only the date part (set time to 00:00:00 UTC)
-      endEventDateTime.date = DateTime.utc(endDateExclusive.year, endDateExclusive.month, endDateExclusive.day);
-      event.end = endEventDateTime;
-
-      // Disable notifications
-      final reminders = cal.EventReminders();
-      reminders.useDefault = false;
-      reminders.overrides = [];
-      event.reminders = reminders;
-
-      // Set color for holidays
-      event.colorId = _holidayColorId;
-
-      // Insert the event
-      final createdEvent = await calendarApi.events.insert(
-        event,
-        'primary', // Use the user's primary calendar
-      );
-
-      print('Holiday event added with ID: ${createdEvent.id}');
-      return true;
-    } catch (e) {
-      print('Error adding holiday to calendar: $e');
-      return false;
-    }
-  }
-
-  /// Deletes a user-defined holiday from Google Calendar
-  static Future<bool> deleteHolidayFromCalendar(Holiday holiday) async {
-    try {
-      print('Deleting holiday from Google Calendar: ${holiday.type} (${holiday.id})');
-
-      // Check sign-in status
-      final isSignedIn = await GoogleCalendarService.isSignedIn();
-      if (!isSignedIn) {
-        print('User not signed in, cannot delete holiday event');
-        return false;
-      }
-
-      // Get Calendar API client
-      final calendarApi = await GoogleCalendarService.getCalendarApi();
-      if (calendarApi == null) {
-        print('Failed to get Calendar API client');
-        return false;
-      }
-
-      // Determine expected summary
-      String expectedSummary;
-       switch (holiday.type) {
-        case 'winter':
-          expectedSummary = 'Winter Holiday';
-          break;
-        case 'summer':
-          expectedSummary = 'Summer Holiday';
-          break;
-        case 'other':
-        default:
-          expectedSummary = 'Holiday';
-          break;
-      }
-
-      // Define search window slightly wider than the holiday period
-      final timeMin = holiday.startDate.subtract(const Duration(days: 1)).toUtc();
-      // Add 2 days to end date because end date is exclusive in Google API
-      final timeMax = holiday.endDate.add(const Duration(days: 2)).toUtc();
-
-      print('Searching for events between $timeMin and $timeMax with summary "$expectedSummary"');
-
-      // Find events that match the title and date range
-      final events = await calendarApi.events.list(
-        'primary',
-        timeMin: timeMin,
-        timeMax: timeMax,
-        q: expectedSummary, // Search by summary
-        singleEvents: true, // Expand recurring events if needed (though holidays shouldn't be recurring)
-        maxResults: 50, // Limit results
-      );
-
-      // If no events found, return
-      if (events.items == null || events.items!.isEmpty) {
-        print('No matching Google Calendar events found to delete for holiday ID ${holiday.id}');
-        return false;
-      }
-
-      print('Found ${events.items!.length} potential matches.');
-
-      // Find the specific event using the unique ID in the description
-      String? eventIdToDelete;
-      final expectedDescription = '$_holidayIdPrefix${holiday.id}';
-
-      for (var event in events.items!) {
-         print('Checking event: ${event.summary} - ${event.description} (ID: ${event.id})');
-        if (event.summary == expectedSummary && event.description == expectedDescription) {
-           print('Found matching event based on summary and description: ID ${event.id}');
-           eventIdToDelete = event.id;
-           break; // Found the unique event, no need to check further
-        }
-      }
-
-      if (eventIdToDelete != null) {
-        print('Attempting to delete event ID: $eventIdToDelete');
-        await calendarApi.events.delete('primary', eventIdToDelete);
-        print('Successfully deleted holiday event from Google Calendar');
-        return true;
-      } else {
-        print('No Google Calendar event found with the exact description: $expectedDescription');
-        return false;
-      }
-    } catch (e) {
-      print('Error deleting holiday from calendar: $e');
-      return false;
-    }
-  }
-
-  /// Checks if all local events are synced to Google Calendar
-  static Future<Map<String, int>> checkCalendarSyncStatus() async {
-    try {
-      // First check if we're signed in
-      final isSignedIn = await GoogleCalendarService.isSignedIn();
-      if (!isSignedIn) {
-        throw Exception('Not signed in to Google Calendar');
-      }
-      
-      // Get local events
-      final localEvents = await _getLocalEvents();
-      print('Found ${localEvents.length} total local events');
-      
-      // Get Google Calendar events for the last 6 months
-      final googleEvents = await _getGoogleCalendarEvents();
-      print('Found ${googleEvents.length} Google Calendar events');
-      
-      // Compare events
-      int matchedCount = 0;
-      final unmatched = <Event>[];
-      
-      for (final localEvent in localEvents) {
-        // Only check work shift events (PZ or UNI/EURO shifts)
-        final isWorkShift = localEvent.title.contains('PZ') || 
-                           RegExp(r'^\d{2,3}/').hasMatch(localEvent.title) ||
-                           localEvent.title.startsWith('SP');
-        
-        if (!isWorkShift) {
-          print('Skipping non-work shift: ${localEvent.title}');
-          continue;
-        }
-        
-        print('Checking work shift: ${localEvent.title}');
-        
-        bool found = false;
-        for (final googleEvent in googleEvents) {
-          if (googleEvent.summary == localEvent.title) {
-            // Compare the date and start time
-            final localStartTime = DateTime(
-              localEvent.startDate.year,
-              localEvent.startDate.month,
-              localEvent.startDate.day,
-              localEvent.startTime.hour,
-              localEvent.startTime.minute,
-            );
-            
-            final googleStartTime = googleEvent.start?.dateTime;
-            if (googleStartTime != null) {
-              // Allow 1 minute difference to account for rounding errors
-              final difference = googleStartTime.difference(localStartTime).inMinutes.abs();
-              if (difference <= 1) {
-                print('Found match for ${localEvent.title}');
-                found = true;
-                break;
-              }
-            }
-          }
-        }
-        
-        if (found) {
-          matchedCount++;
-        } else {
-          print('No match found for work shift: ${localEvent.title}');
-          unmatched.add(localEvent);
-        }
-      }
-      
-      // Store unmatched events for later use
-      _unmatchedEvents = unmatched;
-      
-      print('Sync status: ${localEvents.length} total events, $matchedCount matched, ${unmatched.length} unmatched');
-      
-      return {
-        'totalLocalEvents': localEvents.length,
-        'matchedEvents': matchedCount,
-        'missingEvents': unmatched.length,
-      };
-    } catch (e) {
-      print('Error checking calendar sync status: $e');
-      rethrow;
-    }
-  }
-  
-  // Store unmatched events for sync operation
-  static List<Event> _unmatchedEvents = [];
-  
-  /// Sync missing events to Google Calendar
-  static Future<Map<String, int>> syncMissingEventsToGoogleCalendar(BuildContext context) async {
-    try {
-      int syncedCount = 0;
-      int updatedCount = 0;
-      
-      // If we haven't run a check yet, do it now
-      if (_unmatchedEvents.isEmpty) {
-        print('No unmatched events found, running sync status check...');
-        await checkCalendarSyncStatus();
-      }
-      
-      final totalToSync = _unmatchedEvents.length;
-      print('Found $totalToSync events to sync');
-      
-      // Get Calendar API client
-      final calendarApi = await GoogleCalendarService.getCalendarApi();
-      
-      if (calendarApi == null) {
-        throw Exception('Failed to connect to Google Calendar');
-      }
-
-      // Get existing events from Google Calendar to check for duplicates
-      final now = DateTime.now();
-      final pastDate = now.subtract(const Duration(days: 180)).toUtc();
-      final futureDate = now.add(const Duration(days: 30)).toUtc();
-      
-      final existingEvents = await calendarApi.events.list(
-        'primary',
-        timeMin: pastDate,
-        timeMax: futureDate,
-        maxResults: 2500,
-      );
-      
-      print('Found ${existingEvents.items?.length ?? 0} existing Google Calendar events');
-      
-      // Upload each missing event
-      for (final event in _unmatchedEvents) {
-        try {
-          print('Processing event: ${event.title}');
-          
-          // Create a full DateTime with both date and time components
-          final startDateTime = DateTime(
-            event.startDate.year,
-            event.startDate.month,
-            event.startDate.day,
-            event.startTime.hour,
-            event.startTime.minute,
-          );
-          
-          final endDateTime = DateTime(
-            event.endDate.year,
-            event.endDate.month,
-            event.endDate.day,
-            event.endTime.hour,
-            event.endTime.minute,
-          );
-
-          // Get workout information
-          final breakTime = await ShiftService.getBreakTime(event);
-          final isWorkout = breakTime?.toLowerCase().contains('workout') ?? false;
-          final description = isWorkout ? 'Workout' : null;
-
-          // Check if event already exists
-          bool eventExists = false;
-          String? existingEventId;
-          for (final existingEvent in existingEvents.items ?? []) {
-            if (existingEvent.summary == event.title) {
-              // If event has same title, check if it's on the same day and approximately same time
-              final existingStartTime = existingEvent.start?.dateTime;
-              if (existingStartTime != null) {
-                final timeDifference = existingStartTime.difference(startDateTime).inMinutes.abs();
-                if (timeDifference <= 1) {  // Allow 1 minute difference for rounding
-                  print('Event already exists: ${event.title}');
-                  eventExists = true;
-                  existingEventId = existingEvent.id;
-                  
-                  // If it's a workout and the existing event doesn't have workout info, update it
-                  if (isWorkout && (existingEvent.description == null || !existingEvent.description!.toLowerCase().contains('workout'))) {
-                    print('Updating existing event with workout information: ${event.title}');
-                    final success = await updateEventInCalendar(
-                      context: context,
-                      eventId: existingEventId!,
-                      title: event.title,
-                      startTime: startDateTime,
-                      endTime: endDateTime,
-                      description: description,
-                    );
-                    
-                    if (success) {
-                      print('Successfully updated event with workout info: ${event.title}');
-                      updatedCount++;
-                    } else {
-                      print('Failed to update event with workout info: ${event.title}');
-                    }
-                  }
-                  break;
-                }
-              }
-            }
-          }
-
-          // Only add if event doesn't exist
-          if (!eventExists) {
-            print('Adding event to Google Calendar: ${event.title}');
-            final success = await addWorkShiftToCalendar(
-              context: context,
-              title: event.title,
-              startTime: startDateTime,
-              endTime: endDateTime,
-              description: description,
-            );
-            
-            if (success) {
-              print('Successfully added event: ${event.title}');
-              syncedCount++;
-            } else {
-              print('Failed to add event: ${event.title}');
-            }
-          }
-        } catch (e) {
-          print('Failed to sync event ${event.title}: $e');
-          // Continue with next event
-        }
-      }
-      
-      // Clear the unmatched events list
-      _unmatchedEvents = [];
-      
-      print('Sync complete. Synced $syncedCount new events and updated $updatedCount existing events');
-      
-      return {
-        'totalToSync': totalToSync,
-        'syncedCount': syncedCount,
-        'updatedCount': updatedCount,
-      };
-    } catch (e) {
-      print('Error syncing events to Google Calendar: $e');
-      rethrow;
-    }
-  }
-  
-  /// Helper method to get all local events from the app's storage
-  static Future<List<Event>> _getLocalEvents() async {
-    final prefs = await SharedPreferences.getInstance();
-    final eventsJson = prefs.getString('events');
-    
-    if (eventsJson == null || eventsJson.isEmpty) {
-      return [];
-    }
-    
-    final Map<String, dynamic> decodedData = jsonDecode(eventsJson);
-    final List<Event> allEvents = [];
-    
-    decodedData.forEach((dateStr, eventsList) {
-      final List<dynamic> eventsData = eventsList;
-      
-      for (final eventData in eventsData) {
-        final event = Event.fromMap(eventData);
-        // To avoid duplicates, only add events that aren't already in the list
-        if (!allEvents.any((e) => e.id == event.id)) {
-          allEvents.add(event);
-        }
-      }
-    });
-    
-    return allEvents;
-  }
-
-  /// Helper method to get all Google Calendar events for comparison
-  static Future<List<cal.Event>> _getGoogleCalendarEvents() async {
-    cal.CalendarApi? calendarApi = await GoogleCalendarService.getCalendarApi();
-    bool triedManualClient = false;
-    
-    if (calendarApi == null) {
-      print('[Debug _getGoogleCalendarEvents] Initial getCalendarApi() returned null.');
-      print('[Debug _getGoogleCalendarEvents] Attempting fallback with manual token client...');
-      final currentUserEmail = await GoogleCalendarService.getCurrentUserEmail();
-      if (currentUserEmail == null) {
-        print('[Debug _getGoogleCalendarEvents] Fallback failed: No current user.');
-        throw Exception('Failed to connect to Google Calendar: No current user for manual token.');
-      }
-      // Note: With Credential Manager, we can't get authentication tokens directly
-      // We need to rely on the GoogleCalendarService's authenticated client
-      print('[Debug _getGoogleCalendarEvents] Fallback failed: Cannot create manual client with Credential Manager API.');
-      throw Exception('Failed to connect to Google Calendar: No authenticated client available.');
-    }
-
-    final now = DateTime.now();
-    final pastDate = now.subtract(const Duration(days: 180)).toUtc();
-    final futureDate = now.add(const Duration(days: 30)).toUtc();
-    
-    try {
-      print('[Debug _getGoogleCalendarEvents] Attempting events.list with current calendarApi (triedManualClient: $triedManualClient)...');
-      final events = await calendarApi.events.list(
-        'primary',
-        timeMin: pastDate,
-        timeMax: futureDate,
-        maxResults: 2500,
-      );
-      print('[Debug _getGoogleCalendarEvents] events.list call successful.');
-      return events.items ?? [];
-    } catch (e) {
-      print('[Debug _getGoogleCalendarEvents] events.list call FAILED (triedManualClient: $triedManualClient): $e');
-      if (!triedManualClient) { // Only try manual if we haven't already
-         print('[Debug _getGoogleCalendarEvents] Initial events.list failed. Attempting fallback with manual token client NOW...');
-        final currentUserEmail = await GoogleCalendarService.getCurrentUserEmail(); 
-        if (currentUserEmail == null) {
-          print('[Debug _getGoogleCalendarEvents] Fallback failed post-error: No current user.');
-          throw Exception('Failed to list events and manual token fallback failed: No current user.');
-        }
-        // Note: With Credential Manager, manual token fallback is not supported
-        print('[Debug _getGoogleCalendarEvents] Fallback failed post-error: Manual token fallback not supported with Credential Manager.');
-        throw Exception('Failed to list events: Manual token fallback not supported with Credential Manager.');
-      }
-      throw e; 
-    }
-  }
-
-  /// Updates an existing event in Google Calendar
+  /// Update an existing event in Google Calendar
   static Future<bool> updateEventInCalendar({
     required BuildContext context,
-    required String eventId,
-    required String title,
-    required DateTime startTime,
-    required DateTime endTime,
-    String? description,
+    required String oldTitle,
+    required String newTitle,
+    required DateTime newStartTime,
+    required DateTime newEndTime,
+    String? newDescription,
+    DateTime? oldEventStartTime,
   }) async {
     try {
+      // Store context.mounted in a local variable to safely check throughout the method
       final bool isContextMounted = context.mounted;
       
-      print('Updating event in calendar...');
+      print('Updating event in Google Calendar: $oldTitle -> $newTitle');
       
-      // Get Google Sign-In status
+      // Check if we're signed in
       final isSignedIn = await GoogleCalendarService.isSignedIn();
       if (!isSignedIn) {
+        print('User not signed in, cannot update event');
+        return false;
+      }
+      
+      // First, find the event by searching for it
+      final events = await GoogleCalendarService.listEvents(
+        startTime: DateTime.now().subtract(const Duration(days: 30)),
+        endTime: DateTime.now().add(const Duration(days: 30)),
+      );
+      
+      // Find the event with matching title
+      cal.Event? targetEvent;
+      for (final event in events) {
+        if (event.summary == oldTitle) {
+          // If start time is provided, also check that
+          if (oldEventStartTime != null) {
+            final eventStart = event.start?.dateTime;
+            if (eventStart != null && _isSameDateTime(eventStart, oldEventStartTime)) {
+              targetEvent = event;
+              break;
+            }
+          } else {
+            targetEvent = event;
+            break;
+          }
+        }
+      }
+      
+      if (targetEvent == null || targetEvent.id == null) {
+        print('Event not found: $oldTitle');
         if (isContextMounted) {
+          _showSnackBar(context, 'Event not found in Google Calendar');
+        }
+        return false;
+      }
+      
+      // Update the event properties
+      targetEvent.summary = newTitle;
+      targetEvent.description = newDescription;
+      
+      // Update start time
+      final startEventDateTime = cal.EventDateTime();
+      startEventDateTime.dateTime = newStartTime;
+      startEventDateTime.timeZone = 'Europe/Dublin';
+      targetEvent.start = startEventDateTime;
+      
+      // Update end time
+      final endEventDateTime = cal.EventDateTime();
+      endEventDateTime.dateTime = newEndTime;
+      endEventDateTime.timeZone = 'Europe/Dublin';
+      targetEvent.end = endEventDateTime;
+      
+      // Set color based on shift type
+      targetEvent.colorId = _getColorIdForShift(newTitle);
+      
+      // Update the event using the new method
+      final updatedEvent = await GoogleCalendarService.updateEvent(
+        eventId: targetEvent.id!,
+        event: targetEvent,
+      );
+      
+      if (updatedEvent != null) {
+        print('Event updated successfully: ${updatedEvent.id}');
+        if (isContextMounted) {
+          _showSnackBar(context, 'Event updated in Google Calendar');
+        }
+        return true;
+      } else {
+        print('Failed to update event');
+        return false;
+      }
+      
+    } catch (e) {
+      print('Error updating event in calendar: $e');
+      return false;
+    }
+  }
+
+  /// Sync all local shift events to Google Calendar
+  static Future<bool> syncAllEventsToCalendar({
+    required BuildContext context,
+    required List<Map<String, dynamic>> shiftEvents,
+  }) async {
+    try {
+      int successCount = 0;
+      int totalCount = shiftEvents.length;
+      
+      for (final shiftEvent in shiftEvents) {
+        final title = shiftEvent['title'] as String? ?? 'Work Shift';
+        final startTime = shiftEvent['startTime'] as DateTime? ?? DateTime.now();
+        final endTime = shiftEvent['endTime'] as DateTime? ?? DateTime.now().add(const Duration(hours: 8));
+        final description = shiftEvent['description'] as String?;
+        
+        final success = await addWorkShiftToCalendar(
+          context: context,
+          title: title,
+          startTime: startTime,
+          endTime: endTime,
+          description: description,
+        );
+        
+        if (success) {
+          successCount++;
+        }
+        
+        // Small delay to avoid hitting rate limits
+        await Future.delayed(const Duration(milliseconds: 500));
+      }
+      
+      _showSnackBar(
+        context,
+        'Synced $successCount of $totalCount events to Google Calendar',
+      );
+      
+      return successCount == totalCount;
+    } catch (e) {
+      print('Error syncing events to calendar: $e');
+      _showSnackBar(context, 'Error syncing events: $e');
+      return false;
+    }
+  }
+
+  /// Get available calendars
+  static Future<List<cal.CalendarListEntry>> getAvailableCalendars(BuildContext context) async {
+    try {
+      // Check if signed in
+      final isSignedIn = await GoogleCalendarService.isSignedIn();
+      if (!isSignedIn) {
+        _showSnackBar(context, 'Error: Please sign in to Google Calendar first');
+        return [];
+      }
+
+      // Use the new getCalendars method
+      return await GoogleCalendarService.getCalendars();
+    } catch (e) {
+      print('Error getting calendars: $e');
+      _showSnackBar(context, 'Error getting calendars: $e');
+      return [];
+    }
+  }
+
+  /// Test connection to Google Calendar
+  static Future<bool> testCalendarConnection(BuildContext context) async {
+    try {
+      print('Testing Google Calendar connection...');
+      
+      // Check if signed in
+      final isSignedIn = await GoogleCalendarService.isSignedIn();
+      if (!isSignedIn) {
+        _showSnackBar(context, 'Error: Please sign in to Google Calendar first');
+        return false;
+      }
+
+      // Use the new testConnection method
+      final hasConnection = await GoogleCalendarService.testConnection();
+      
+      if (hasConnection) {
+        _showSnackBar(context, 'Google Calendar connection successful!');
+      } else {
+        _showSnackBar(context, 'Google Calendar connection failed');
+      }
+      
+      return hasConnection;
+    } catch (e) {
+      print('Error testing calendar connection: $e');
+      _showSnackBar(context, 'Error testing connection: $e');
+      return false;
+    }
+  }
+
+  /// Helper function to show SnackBar messages
+  static void _showSnackBar(BuildContext context, String message) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
+  }
+  
+  /// Get color ID for different shift types
+  static String _getColorIdForShift(String title) {
+    if (title.contains('PZ1') || title.contains('Zone 1')) {
+      return '7'; // Blue
+    } else if (title.contains('PZ2') || title.contains('Zone 2')) {
+      return '10'; // Green
+    } else if (title.contains('PZ3') || title.contains('Zone 3')) {
+      return '6'; // Orange
+    } else if (title.contains('PZ4') || title.contains('Zone 4')) {
+      return '4'; // Red
+    } else if (title.contains('Spare')) {
+      return '8'; // Gray
+    } else {
+      return '1'; // Default lavender
+    }
+  }
+  
+  /// Helper to check if two DateTime objects represent the same time (within 1 minute)
+  static bool _isSameDateTime(DateTime dt1, DateTime dt2) {
+    final difference = dt1.difference(dt2).abs();
+    return difference.inMinutes <= 1;
+  }
+
+  /// Add a holiday to Google Calendar
+  static Future<bool> addHolidayToCalendar(Holiday holiday, {BuildContext? context}) async {
+    try {
+      // Get holiday name based on type
+      final holidayName = _getHolidayDisplayName(holiday);
+      print('Adding holiday to calendar: $holidayName');
+      
+      // Check if signed in
+      final isSignedIn = await GoogleCalendarService.isSignedIn();
+      if (!isSignedIn) {
+        if (context != null) {
           _showSnackBar(context, 'Please sign in to Google Calendar first');
         }
         return false;
       }
       
-      // Get the HTTP client
-      final httpClient = await GoogleCalendarService.getAuthenticatedClient();
-      if (httpClient == null) {
-        if (isContextMounted) {
+      // Test connection
+      final hasConnection = await GoogleCalendarService.testConnection();
+      if (!hasConnection) {
+        if (context != null) {
           _showSnackBar(context, 'Failed to authenticate with Google');
         }
         return false;
       }
       
-      // Create Calendar API client
-      final calendarApi = cal.CalendarApi(httpClient);
+      // Create holiday event
+      final event = cal.Event();
+      event.summary = holidayName;
+      event.description = '${_holidayIdPrefix}${holiday.id}\n\n${holiday.type.toUpperCase()} Holiday';
       
-      // Get the existing event
-      final existingEvent = await calendarApi.events.get('primary', eventId);
+      // Set as all-day event
+      final eventDate = cal.EventDateTime();
+      eventDate.date = holiday.startDate;
+      event.start = eventDate;
+      event.end = eventDate;
       
-      // Update the event
-      existingEvent.summary = title;
-      if (description != null) {
-        existingEvent.description = description;
+      // Set holiday color (teal)
+      event.colorId = _holidayColorId;
+      
+      // Disable notifications for holidays
+      final reminders = cal.EventReminders();
+      reminders.useDefault = false;
+      reminders.overrides = [];
+      event.reminders = reminders;
+      
+      // Create the event
+      final createdEvent = await GoogleCalendarService.createEvent(event: event);
+      
+      if (createdEvent != null) {
+        print('Holiday added with ID: ${createdEvent.id}');
+        if (context != null) {
+          _showSnackBar(context, 'Holiday added to Google Calendar');
+        }
+        return true;
+      } else {
+        print('Failed to create holiday event');
+        return false;
       }
       
-      // Update start time
-      final startEventDateTime = cal.EventDateTime();
-      startEventDateTime.dateTime = startTime;
-      startEventDateTime.timeZone = 'Europe/Dublin';
-      existingEvent.start = startEventDateTime;
+    } catch (e) {
+      print('Error adding holiday to calendar: $e');
+      if (context != null) {
+        _showSnackBar(context, 'Error adding holiday: $e');
+      }
+      return false;
+    }
+  }
+
+  /// Delete a holiday from Google Calendar
+  static Future<bool> deleteHolidayFromCalendar(Holiday holiday, {BuildContext? context}) async {
+    try {
+      final holidayName = _getHolidayDisplayName(holiday);
+      print('Deleting holiday from calendar: $holidayName');
       
-      // Update end time
-      final endEventDateTime = cal.EventDateTime();
-      endEventDateTime.dateTime = endTime;
-      endEventDateTime.timeZone = 'Europe/Dublin';
-      existingEvent.end = endEventDateTime;
+      // Check if signed in
+      final isSignedIn = await GoogleCalendarService.isSignedIn();
+      if (!isSignedIn) {
+        print('User not signed in, cannot delete holiday');
+        return false;
+      }
       
-      // Update the event
-      await calendarApi.events.update(existingEvent, 'primary', eventId);
+      // Search for the holiday event by name and date
+      final events = await GoogleCalendarService.listEvents(
+        startTime: holiday.startDate.subtract(const Duration(days: 1)),
+        endTime: holiday.startDate.add(const Duration(days: 1)),
+      );
       
-      print('Event updated successfully: $title');
+      // Find the holiday event
+      cal.Event? targetEvent;
+      for (final event in events) {
+        if (event.summary == holidayName && 
+            event.description != null && 
+            event.description!.contains('${_holidayIdPrefix}${holiday.id}')) {
+          targetEvent = event;
+          break;
+        }
+      }
       
+      if (targetEvent == null || targetEvent.id == null) {
+        print('Holiday event not found: $holidayName');
+        if (context != null) {
+          _showSnackBar(context, 'Holiday not found in Google Calendar');
+        }
+        return false;
+      }
+      
+      // Delete the event
+      final success = await GoogleCalendarService.deleteEvent(eventId: targetEvent.id!);
+      
+      if (success) {
+        print('Holiday deleted successfully: ${targetEvent.id}');
+        if (context != null) {
+          _showSnackBar(context, 'Holiday deleted from Google Calendar');
+        }
+        return true;
+      } else {
+        print('Failed to delete holiday');
+        return false;
+      }
+      
+    } catch (e) {
+      print('Error deleting holiday from calendar: $e');
+      if (context != null) {
+        _showSnackBar(context, 'Error deleting holiday: $e');
+      }
+      return false;
+    }
+  }
+
+  /// Check calendar sync status
+  static Future<Map<String, dynamic>> checkCalendarSyncStatus({BuildContext? context}) async {
+    try {
+      print('Checking calendar sync status...');
+      
+      // Check if signed in
+      final isSignedIn = await GoogleCalendarService.isSignedIn();
+      if (!isSignedIn) {
+        return {
+          'error': 'Not signed in to Google Calendar',
+          'totalLocalEvents': 0,
+          'matchedEvents': 0,
+          'missingEvents': 0,
+          'missingSyncEvents': <Map<String, dynamic>>[],
+        };
+      }
+      
+      // Test connection
+      final hasConnection = await GoogleCalendarService.testConnection();
+      if (!hasConnection) {
+        return {
+          'error': 'Failed to connect to Google Calendar',
+          'totalLocalEvents': 0,
+          'matchedEvents': 0,
+          'missingEvents': 0,
+          'missingSyncEvents': <Map<String, dynamic>>[],
+        };
+      }
+      
+      // Get local events from the last 30 days and next 30 days
+      final now = DateTime.now();
+      final startDate = now.subtract(const Duration(days: 30));
+      final endDate = now.add(const Duration(days: 30));
+      
+      // Get Google Calendar events
+      final googleEvents = await GoogleCalendarService.listEvents(
+        startTime: startDate,
+        endTime: endDate,
+      );
+      
+      // Get local events using EventService
+      final localEvents = _getEventsInRange(startDate, endDate);
+      
+      // Compare and find missing events
+      final missingSyncEvents = <Map<String, dynamic>>[];
+      int matchedCount = 0;
+      
+      for (final localEvent in localEvents) {
+        final matchingGoogleEvent = googleEvents.where((gEvent) {
+          return gEvent.summary == localEvent.title &&
+                 gEvent.start?.dateTime != null &&
+                 _isSameDateTime(gEvent.start!.dateTime!, localEvent.fullStartDateTime);
+        }).isNotEmpty;
+        
+        if (matchingGoogleEvent) {
+          matchedCount++;
+        } else {
+          missingSyncEvents.add({
+            'title': localEvent.title,
+            'startTime': localEvent.fullStartDateTime,
+            'endTime': localEvent.fullEndDateTime,
+            'description': '', // Can add description if needed
+          });
+        }
+      }
+      
+      return {
+        'totalLocalEvents': localEvents.length,
+        'matchedEvents': matchedCount,
+        'missingEvents': missingSyncEvents.length,
+        'missingSyncEvents': missingSyncEvents,
+      };
+      
+    } catch (e) {
+      print('Error checking calendar sync status: $e');
+      return {
+        'error': 'Error checking sync status: $e',
+        'totalLocalEvents': 0,
+        'matchedEvents': 0,
+        'missingEvents': 0,
+        'missingSyncEvents': <Map<String, dynamic>>[],
+      };
+    }
+  }
+
+  /// Sync missing events to Google Calendar
+  static Future<Map<String, dynamic>> syncMissingEventsToGoogleCalendar(BuildContext context) async {
+    try {
+      print('Getting sync status to find missing events...');
+      
+      // First get the sync status to find missing events
+      final syncStatus = await checkCalendarSyncStatus(context: context);
+      final missingSyncEvents = syncStatus['missingSyncEvents'] as List<Map<String, dynamic>>? ?? [];
+      
+      print('Syncing ${missingSyncEvents.length} missing events to Google Calendar...');
+      
+      int successCount = 0;
+      
+      for (final eventData in missingSyncEvents) {
+        final success = await addWorkShiftToCalendar(
+          context: context,
+          title: eventData['title'] as String? ?? 'Work Shift',
+          startTime: eventData['startTime'] as DateTime? ?? DateTime.now(),
+          endTime: eventData['endTime'] as DateTime? ?? DateTime.now().add(const Duration(hours: 8)),
+          description: eventData['description'] as String?,
+        );
+        
+        if (success) {
+          successCount++;
+        }
+        
+        // Small delay to avoid hitting rate limits
+        await Future.delayed(const Duration(milliseconds: 500));
+      }
+      
+      final isContextMounted = context.mounted;
       if (isContextMounted) {
         _showSnackBar(
-          context, 
-          'Event updated in your Google Calendar',
+          context,
+          'Synced $successCount of ${missingSyncEvents.length} events to Google Calendar',
         );
       }
       
-      return true;
+      return {
+        'syncedCount': successCount,
+        'updatedCount': 0, // For now, we're only syncing new events
+        'totalProcessed': missingSyncEvents.length,
+      };
+      
     } catch (e) {
-      print('Error updating event in calendar: $e');
-      return false;
+      print('Error syncing missing events: $e');
+      _showSnackBar(context, 'Error syncing events: $e');
+      return {
+        'syncedCount': 0,
+        'updatedCount': 0,
+        'totalProcessed': 0,
+        'error': e.toString(),
+      };
     }
+  }
+
+  /// Add a test event (alias for createTestEvent for backwards compatibility)
+  static Future<bool> addTestEvent(BuildContext context) async {
+    return await createTestEvent(context);
+  }
+
+  /// Get holiday display name based on type
+  static String _getHolidayDisplayName(Holiday holiday) {
+    switch (holiday.type.toLowerCase()) {
+      case 'winter':
+        return 'Winter Holiday';
+      case 'summer':
+        return 'Summer Holiday';
+      case 'other':
+        return 'Holiday';
+      default:
+        return 'Holiday';
+    }
+  }
+
+  /// Get events in a date range from local storage
+  static List<Event> _getEventsInRange(DateTime startDate, DateTime endDate) {
+    final Map<String, Event> uniqueEvents = {}; // Use Map to deduplicate by event ID
+    
+    // Iterate through each day in the range
+    for (DateTime date = startDate; 
+         date.isBefore(endDate.add(const Duration(days: 1))); 
+         date = date.add(const Duration(days: 1))) {
+      
+      // Get events for this day using EventService
+      final dayEvents = EventService.getEventsForDay(date);
+      
+      // Add work shifts only (filter out holidays and other non-work events)
+      for (final event in dayEvents) {
+        if (event.isWorkShift) {
+          // Use event ID as key to prevent duplicates
+          // This ensures shifts spanning midnight are only included once
+          uniqueEvents[event.id] = event;
+        }
+      }
+    }
+    
+    // Return list of unique events
+    return uniqueEvents.values.toList();
   }
 }

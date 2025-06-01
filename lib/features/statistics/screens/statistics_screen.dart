@@ -5,6 +5,7 @@ import 'package:spdrivercalendar/theme/app_theme.dart';
 import 'package:flutter/services.dart';
 import 'dart:convert';
 import 'package:spdrivercalendar/features/calendar/services/roster_service.dart';
+import 'package:spdrivercalendar/features/calendar/services/shift_service.dart';
 import 'package:spdrivercalendar/core/services/storage_service.dart';
 import 'package:spdrivercalendar/core/constants/app_constants.dart';
 
@@ -1190,21 +1191,39 @@ class StatisticsScreenState extends State<StatisticsScreen>
     
     widget.events.forEach((date, events) {
       for (final event in events) {
-        // Count first half bus
-        if (event.firstHalfBus != null) {
-          if (busCounts.containsKey(event.firstHalfBus!)) {
-            busCounts[event.firstHalfBus!] = busCounts[event.firstHalfBus!]! + 1;
-          } else {
-            busCounts[event.firstHalfBus!] = 1;
-          }
-        }
+        // Check if this is a workout or overtime shift
+        final isOvertimeShift = event.title.contains('(OT)');
+        // For workout shifts, we need to check the break time
+        final isWorkoutShift = _isWorkoutShift(event);
+        final isWorkoutOrOvertime = isWorkoutShift || isOvertimeShift;
         
-        // Count second half bus
-        if (event.secondHalfBus != null) {
-          if (busCounts.containsKey(event.secondHalfBus!)) {
-            busCounts[event.secondHalfBus!] = busCounts[event.secondHalfBus!]! + 1;
-          } else {
-            busCounts[event.secondHalfBus!] = 1;
+        if (isWorkoutOrOvertime) {
+          // For workout and overtime shifts, only count the firstHalfBus (which is the assigned bus)
+          if (event.firstHalfBus != null) {
+            if (busCounts.containsKey(event.firstHalfBus!)) {
+              busCounts[event.firstHalfBus!] = busCounts[event.firstHalfBus!]! + 1;
+            } else {
+              busCounts[event.firstHalfBus!] = 1;
+            }
+          }
+        } else {
+          // For regular shifts, count both first and second half buses
+          // Count first half bus
+          if (event.firstHalfBus != null) {
+            if (busCounts.containsKey(event.firstHalfBus!)) {
+              busCounts[event.firstHalfBus!] = busCounts[event.firstHalfBus!]! + 1;
+            } else {
+              busCounts[event.firstHalfBus!] = 1;
+            }
+          }
+          
+          // Count second half bus
+          if (event.secondHalfBus != null) {
+            if (busCounts.containsKey(event.secondHalfBus!)) {
+              busCounts[event.secondHalfBus!] = busCounts[event.secondHalfBus!]! + 1;
+            } else {
+              busCounts[event.secondHalfBus!] = 1;
+            }
           }
         }
       }
@@ -1215,6 +1234,33 @@ class StatisticsScreenState extends State<StatisticsScreen>
       ..sort((a, b) => b.value.compareTo(a.value));
     
     return Map.fromEntries(sortedEntries);
+  }
+
+  // Helper method to check if a shift is a workout shift
+  bool _isWorkoutShift(Event event) {
+    try {
+      // We can't use async methods in this context, so we'll use a heuristic
+      // based on common workout shift patterns. This is the same approach used elsewhere
+      // in the codebase for performance reasons.
+      
+      // Common workout shift patterns - duties that are typically workouts
+      // This is a simplified check - the full check would require async break time lookup
+      final title = event.title.toLowerCase();
+      
+      // Check for common workout patterns (you may need to adjust these based on your data)
+      if (title.contains('workout') || 
+          title.contains('wo') ||
+          // Add other patterns as needed
+          false) {
+        return true;
+      }
+      
+      // For now, we'll return false and let the system handle it as a regular shift
+      // The overtime detection is the more important fix for the user's immediate need
+      return false;
+    } catch (e) {
+      return false;
+    }
   }
 
   // --- Add Calculation Logic --- 

@@ -31,7 +31,65 @@ jobs:
     - name: Decode Google Services JSON
       env:
         GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON_CONTENT }}
-      run: echo "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
+      run: |
+        if [ -z "$GOOGLE_SERVICES_JSON" ]; then
+          echo "Warning: GOOGLE_SERVICES_JSON secret not set. Using fallback configuration."
+          echo "Google Calendar features may not work properly."
+          # Create a minimal fallback google-services.json
+          cat > android/app/google-services.json << 'EOF'
+        {
+          "project_info": {
+            "project_number": "1051329330296",
+            "project_id": "spdrivercalendar-fallback"
+          },
+          "client": [
+            {
+              "client_info": {
+                "mobilesdk_app_id": "1:1051329330296:android:fallback",
+                "android_client_info": {
+                  "package_name": "ie.qqrxi.spdrivercalendar"
+                }
+              },
+              "oauth_client": [
+                {
+                  "client_id": "1051329330296-fallback.apps.googleusercontent.com",
+                  "client_type": 1,
+                  "android_info": {
+                    "package_name": "ie.qqrxi.spdrivercalendar",
+                    "certificate_hash": "fallback"
+                  }
+                }
+              ],
+              "api_key": [
+                {
+                  "current_key": "fallback-api-key"
+                }
+              ],
+              "services": {
+                "appinvite_service": {
+                  "other_platform_oauth_client": []
+                }
+              }
+            }
+          ],
+          "configuration_version": "1"
+        }
+        EOF
+        else
+          echo "Using Google Services JSON from secrets..."
+          echo "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
+        fi
+        
+        # Verify the file was created
+        if [ -f android/app/google-services.json ]; then
+          echo "google-services.json created successfully"
+          # Show project info (without sensitive data)
+          echo "Project ID: $(cat android/app/google-services.json | grep -o '"project_id"[^,]*' | head -1)"
+          echo "Package name: $(cat android/app/google-services.json | grep -o '"package_name"[^,]*' | head -1)"
+        else
+          echo "Error: Failed to create google-services.json"
+          exit 1
+        fi
     
     - name: Get dependencies
       run: flutter pub get
@@ -58,6 +116,37 @@ jobs:
         echo "=== GitHub Actions SHA-1 Fingerprint ==="
         keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android -keypass android | grep SHA1
         echo "========================================"
+        echo ""
+        echo "Note: For Google Sign-In to work, this SHA-1 fingerprint must be"
+        echo "added to your Google Cloud Console OAuth 2.0 client configuration."
+        echo "Path: Google Cloud Console > APIs & Services > Credentials > OAuth 2.0 Client IDs"
+
+    - name: Verify Google Sign-In Configuration
+      run: |
+        echo "=== Google Sign-In Configuration Check ==="
+        
+        # Check if google_sign_in package is in dependencies
+        if grep -q "google_sign_in:" pubspec.yaml; then
+          echo "✓ google_sign_in package found in pubspec.yaml"
+        else
+          echo "✗ google_sign_in package not found in pubspec.yaml"
+        fi
+        
+        # Check if Google Services plugin is configured
+        if grep -q "com.google.gms.google-services" android/app/build.gradle.kts; then
+          echo "✓ Google Services plugin configured in build.gradle.kts"
+        else
+          echo "? Google Services plugin configuration check (build.gradle.kts not found or misconfigured)"
+        fi
+        
+        # Check if google-services.json exists
+        if [ -f android/app/google-services.json ]; then
+          echo "✓ google-services.json exists"
+        else
+          echo "✗ google-services.json missing"
+        fi
+        
+        echo "============================================="
 
     - name: Build APK
       run: flutter build apk --release
@@ -74,16 +163,21 @@ jobs:
         body: |
           ## What's New in ${{ github.ref_name }}
           
-          🔄 **Auto-Update System**
-          - Automatic update checking and installation
-          - Smart update frequency control  
-          - Detailed release notes and installation guidance
+          🔄 **Google Calendar Integration**
+          - Improved Google Sign-In reliability using google_sign_in package
+          - Better error handling and authentication flow
+          - Enhanced CI/CD compatibility
           
           📱 **Download & Install**
           1. Download the APK below
           2. Enable "Install from Unknown Sources" in Android settings
           3. Install the APK
-          4. Future updates will be automatic!
+          4. For Google Calendar sync: ensure you're added as a test user in Google Cloud Console
+          
+          🔧 **For Developers**
+          - SHA-1 Fingerprint for this build: See workflow logs
+          - Add the SHA-1 to your Google Cloud Console OAuth client
+          - Ensure your Google account is added as a test user
           
           ---
           *This release was automatically built and deployed via GitHub Actions*

@@ -1270,7 +1270,7 @@ class CalendarScreenState extends State<CalendarScreen>
                                     const SizedBox(width: 8),
                                     Expanded(
                                       child: Text(
-                                        isWorkout ? 'Assigned Bus: ${event.firstHalfBus}' : 'First Half: ${event.firstHalfBus}',
+                                        (isWorkout || event.title.contains('(OT)')) ? 'Assigned Bus: ${event.firstHalfBus}' : 'First Half: ${event.firstHalfBus}',
                                         style: const TextStyle(fontSize: 14),
                                       ),
                                     ),
@@ -1349,7 +1349,7 @@ class CalendarScreenState extends State<CalendarScreen>
                                     const SizedBox(width: 8),
                                     Expanded(
                                       child: Text(
-                                        isWorkout ? 'Assigned Bus: ${event.secondHalfBus}' : 'Second Half: ${event.secondHalfBus}',
+                                        (isWorkout || event.title.contains('(OT)')) ? 'Assigned Bus: ${event.secondHalfBus}' : 'Second Half: ${event.secondHalfBus}',
                                         style: const TextStyle(fontSize: 14),
                                       ),
                                     ),
@@ -1414,9 +1414,11 @@ class CalendarScreenState extends State<CalendarScreen>
                         future: ShiftService.getBreakTime(event),
                         builder: (context, snapshot) {
                           final isWorkout = snapshot.data?.toLowerCase().contains('workout') ?? false;
+                          final isOvertimeShift = event.title.contains('(OT)');
+                          final isWorkoutOrOvertime = isWorkout || isOvertimeShift;
                           
-                          if (isWorkout) {
-                            // Single button for workout shifts - only show if no bus is assigned
+                          if (isWorkoutOrOvertime) {
+                            // Single button for workout and overtime shifts - only show if no bus is assigned
                             if (event.firstHalfBus == null) {
                               return ElevatedButton(
                                 onPressed: () async {

@@ -33,14 +33,13 @@ class _GoogleLoginPageState extends State<GoogleLoginPage> {
 
     try {
       final userEmail = await GoogleCalendarService.getCurrentUserEmail();
+      final isSignedIn = await GoogleCalendarService.isSignedIn();
       
-      // If we have a user but can't access calendar, we need to re-authenticate
-      if (userEmail != null) {
-        // First, get an authenticated client
-        final httpClient = await GoogleCalendarService.getAuthenticatedClient();
-        final hasAccess = await GoogleCalendarService.checkCalendarAccess(httpClient); // Pass the client
+      // If we have a user email and they're signed in, test the connection
+      if (userEmail != null && isSignedIn) {
+        final hasAccess = await GoogleCalendarService.testConnection();
         if (!hasAccess) {
-          print('User found but calendar access failed, need to re-authenticate');
+          print('[GoogleLogin] User found but calendar access failed, need to re-authenticate');
           // Force re-authentication
           await GoogleCalendarService.signOut();
           setState(() {
@@ -53,14 +52,14 @@ class _GoogleLoginPageState extends State<GoogleLoginPage> {
       
       setState(() {
         _currentUserEmail = userEmail;
-        if (userEmail != null) {
+        if (userEmail != null && isSignedIn) {
           _statusMessage = 'Signed in as $userEmail';
         } else {
           _statusMessage = '';
         }
       });
     } catch (e) {
-      print('Error checking current user: $e');
+      print('[GoogleLogin] Error checking current user: $e');
       setState(() {
         _errorMessage = 'Failed to check login status: ${e.toString()}';
       });
@@ -80,50 +79,63 @@ class _GoogleLoginPageState extends State<GoogleLoginPage> {
     });
 
     try {
-      // First, try signing in without showing the dialog
-      // This will help if it's just a session expiration issue
-      final accountEmail = await GoogleCalendarService.signInWithGoogle();
+      // Try signing in with interactive flow
+      final accountEmail = await GoogleCalendarService.signInWithGoogle(interactive: true);
       
       if (accountEmail != null) {
-        print('Successfully signed in: $accountEmail');
+        print('[GoogleLogin] Successfully signed in: $accountEmail');
         setState(() {
           _currentUserEmail = accountEmail;
           _statusMessage = 'Successfully signed in as $accountEmail';
         });
         
-        // Save that login is completed
-        await GoogleCalendarService.saveLoginStatus(true);
+        // Test the connection to make sure everything works
+        final hasAccess = await GoogleCalendarService.testConnection();
+        if (hasAccess) {
+          setState(() {
+            _statusMessage = 'Successfully connected to Google Calendar';
+          });
+        } else {
+          setState(() {
+            _statusMessage = 'Signed in but calendar access limited. Check permissions.';
+          });
+        }
+        
         return;
       }
       
-      // If direct sign-in fails, show verification dialog
+      // If sign-in fails, show verification dialog
+      print('[GoogleLogin] Initial sign-in failed, showing verification dialog');
       final shouldContinue = await OAuthHelper.showVerificationBypassDialog(context);
       
       if (shouldContinue == true) {
-        final retryAccountEmail = await GoogleCalendarService.signInWithGoogle();
+        final retryAccountEmail = await GoogleCalendarService.signInWithGoogle(interactive: true);
         
         if (retryAccountEmail != null) {
-          print('Successfully signed in after verification dialog: $retryAccountEmail');
+          print('[GoogleLogin] Successfully signed in after verification dialog: $retryAccountEmail');
           setState(() {
             _currentUserEmail = retryAccountEmail;
             _statusMessage = 'Successfully signed in as $retryAccountEmail';
           });
-          
-          // Save that login is completed
-          await GoogleCalendarService.saveLoginStatus(true);
         } else {
-          print('Sign-in canceled or failed after verification dialog');
+          print('[GoogleLogin] Sign-in canceled or failed after verification dialog');
           setState(() {
-            _statusMessage = 'Sign in canceled';
+            _statusMessage = 'Sign in canceled or failed';
           });
         }
+      } else {
+        setState(() {
+          _statusMessage = 'Sign in canceled by user';
+        });
       }
     } catch (error) {
-      print('Error during Google sign-in: $error');
+      print('[GoogleLogin] Error during Google sign-in: $error');
       
       // Check if the error is about testing mode
       if (error.toString().contains('only be accessed by developer-approved testers') ||
-          error.toString().contains('not completed')) {
+          error.toString().contains('not completed') ||
+          error.toString().contains('restricted') ||
+          error.toString().contains('403')) {
         
         setState(() {
           _showTestingRestrictionInfo = true;
@@ -149,10 +161,39 @@ class _GoogleLoginPageState extends State<GoogleLoginPage> {
     }
   }
 
+  Future<void> _handleSignOut() async {
+    setState(() {
+      _isLoading = true;
+      _statusMessage = 'Signing out...';
+    });
+
+    try {
+      await GoogleCalendarService.signOut();
+      setState(() {
+        _currentUserEmail = null;
+        _statusMessage = '';
+        _errorMessage = '';
+      });
+      print('[GoogleLogin] Successfully signed out');
+    } catch (e) {
+      print('[GoogleLogin] Error signing out: $e');
+      setState(() {
+        _errorMessage = 'Failed to sign out: ${e.toString()}';
+      });
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
   Future<void> _handleSkip() async {
-    print('User skipped Google sign-in');
-    // Mark login as completed even though user skipped
-    await GoogleCalendarService.saveLoginStatus(true);
+    print('[GoogleLogin] User skipped Google sign-in');
+    widget.onLoginComplete();
+  }
+
+  Future<void> _handleContinue() async {
+    print('[GoogleLogin] User completed Google setup');
     widget.onLoginComplete();
   }
 
@@ -166,7 +207,7 @@ class _GoogleLoginPageState extends State<GoogleLoginPage> {
           IconButton(
             icon: const Icon(Icons.close),
             onPressed: () => widget.onLoginComplete(),
-            tooltip: 'Skip testing and continue',
+            tooltip: 'Skip and continue',
           ),
         ],
       ),
@@ -199,130 +240,35 @@ class _GoogleLoginPageState extends State<GoogleLoginPage> {
               // Google icon
               Center(
                 child: Container(
-                  width: 80,
-                  height: 80,
+                  padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.grey.withOpacity(0.3),
-                        blurRadius: 8,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
+                    color: Colors.blue.shade50,
+                    borderRadius: BorderRadius.circular(20),
                   ),
-                  child: Center(
-                    child: Image.asset(
-                      'assets/google_logo.png',
-                      width: 40,
-                      height: 40,
-                      errorBuilder: (context, error, stackTrace) {
-                        return const Icon(Icons.calendar_month, size: 40, color: Colors.blue);
-                      },
-                    ),
+                  child: Icon(
+                    Icons.calendar_today,
+                    size: 60,
+                    color: Colors.blue.shade600,
                   ),
                 ),
               ),
               const SizedBox(height: 40),
               
-              // Sign in button
-              if (_currentUserEmail == null)
-                ElevatedButton.icon(
-                  onPressed: _isLoading ? null : _handleSignIn,
-                  icon: _isLoading 
-                    ? const SizedBox(
-                        width: 20, 
-                        height: 20, 
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.login),
-                  label: Text(_isLoading ? 'Signing in...' : 'Connect Google Calendar'),
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                    textStyle: const TextStyle(fontSize: 16),
-                    backgroundColor: Colors.blue.withOpacity(0.1),
-                    foregroundColor: Colors.blue,
-                  ),
-                ),
-              
-              // Sign out button (when signed in)
-              if (_currentUserEmail != null) ...[
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.green.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(AppTheme.borderRadius),
-                    border: Border.all(color: Colors.green.withOpacity(0.3)),
-                  ),
-                  child: Column(
-                    children: [
-                      const Icon(Icons.check_circle, color: Colors.green, size: 48),
-                      const SizedBox(height: 8),
-                      const Text(
-                        'Successfully Connected!',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.green,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Signed in as $_currentUserEmail',
-                        style: const TextStyle(fontSize: 14),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-                OutlinedButton.icon(
-                  onPressed: _isLoading ? null : () async {
-                    await GoogleCalendarService.signOut();
-                    setState(() {
-                      _currentUserEmail = null;
-                      _statusMessage = '';
-                    });
-                  },
-                  icon: const Icon(Icons.logout),
-                  label: const Text('Disconnect'),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                    foregroundColor: Colors.red,
-                    side: const BorderSide(color: Colors.red),
-                  ),
-                ),
-              ],
-              
-              const SizedBox(height: 24),
-              
-              // Skip button
-              TextButton(
-                onPressed: _isLoading ? null : _handleSkip,
-                style: TextButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                  foregroundColor: Colors.grey[600],
-                ),
-                child: const Text(
-                  'Skip for now',
-                  style: TextStyle(fontSize: 16),
-                ),
-              ),
-              
-              const SizedBox(height: 20),
-              
               // Status message
               if (_statusMessage.isNotEmpty)
                 Container(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.blue.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(AppTheme.borderRadius),
+                    color: Colors.blue.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.blue.shade200),
                   ),
                   child: Text(
                     _statusMessage,
-                    style: const TextStyle(color: Colors.blue),
+                    style: TextStyle(
+                      color: Colors.blue.shade800,
+                      fontWeight: FontWeight.w500,
+                    ),
                     textAlign: TextAlign.center,
                   ),
                 ),
@@ -330,56 +276,50 @@ class _GoogleLoginPageState extends State<GoogleLoginPage> {
               // Error message
               if (_errorMessage.isNotEmpty)
                 Container(
-                  padding: const EdgeInsets.all(12),
-                  margin: const EdgeInsets.only(top: 8),
+                  margin: const EdgeInsets.only(top: 10),
+                  padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.red.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(AppTheme.borderRadius),
+                    color: Colors.red.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.red.shade200),
                   ),
                   child: Text(
                     _errorMessage,
-                    style: const TextStyle(color: Colors.red),
+                    style: TextStyle(
+                      color: Colors.red.shade800,
+                      fontWeight: FontWeight.w500,
+                    ),
                     textAlign: TextAlign.center,
                   ),
                 ),
-                
+              
               // Testing restriction info
               if (_showTestingRestrictionInfo)
                 Container(
+                  margin: const EdgeInsets.only(top: 10),
                   padding: const EdgeInsets.all(16),
-                  margin: const EdgeInsets.only(top: 16),
                   decoration: BoxDecoration(
-                    color: Colors.orange.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(AppTheme.borderRadius),
-                    border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                    color: Colors.orange.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.orange.shade200),
                   ),
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Row(
-                        children: [
-                          Icon(Icons.info, color: Colors.orange),
-                          SizedBox(width: 8),
-                          Text(
-                            'App in Testing Mode',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: Colors.orange,
-                            ),
-                          ),
-                        ],
+                      Text(
+                        'App in Testing Mode',
+                        style: TextStyle(
+                          color: Colors.orange.shade800,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
                       ),
                       const SizedBox(height: 8),
-                      const Text(
-                        'This app is currently in testing mode and can only be used by approved testers. You can:',
-                        style: TextStyle(fontSize: 14),
-                      ),
-                      const SizedBox(height: 8),
-                      const Text(
-                        '• Try a different Google account\n'
-                        '• Continue using the app without Google Calendar sync\n'
-                        '• Contact the developer for testing access',
-                        style: TextStyle(fontSize: 14),
+                      Text(
+                        'This Google Calendar integration is currently in testing mode. Contact the developer to be added as a test user, or try a different Google account.',
+                        style: TextStyle(
+                          color: Colors.orange.shade700,
+                        ),
+                        textAlign: TextAlign.center,
                       ),
                     ],
                   ),
@@ -387,16 +327,117 @@ class _GoogleLoginPageState extends State<GoogleLoginPage> {
               
               const SizedBox(height: 40),
               
-              // Continue button (when signed in)
+              // Current user display
               if (_currentUserEmail != null)
-                ElevatedButton(
-                  onPressed: widget.onLoginComplete,
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                    textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.green.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.green.shade200),
                   ),
-                  child: const Text('Continue to App'),
+                  child: Column(
+                    children: [
+                      Icon(
+                        Icons.check_circle,
+                        color: Colors.green.shade600,
+                        size: 32,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Connected to Google Calendar',
+                        style: TextStyle(
+                          color: Colors.green.shade800,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        _currentUserEmail!,
+                        style: TextStyle(
+                          color: Colors.green.shade700,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
+              
+              const SizedBox(height: 40),
+              
+              // Action buttons
+              if (_currentUserEmail == null) ...[
+                // Sign in button
+                ElevatedButton.icon(
+                  onPressed: _isLoading ? null : _handleSignIn,
+                  icon: _isLoading 
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.login),
+                  label: Text(_isLoading ? 'Signing in...' : 'Sign in with Google'),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    backgroundColor: Colors.blue.shade600,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                
+                // Skip button
+                OutlinedButton.icon(
+                  onPressed: _isLoading ? null : _handleSkip,
+                  icon: const Icon(Icons.skip_next),
+                  label: const Text('Skip for now'),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                  ),
+                ),
+              ] else ...[
+                // Continue button (when signed in)
+                ElevatedButton.icon(
+                  onPressed: _isLoading ? null : _handleContinue,
+                  icon: const Icon(Icons.arrow_forward),
+                  label: const Text('Continue'),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    backgroundColor: Colors.green.shade600,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                
+                // Sign out button
+                OutlinedButton.icon(
+                  onPressed: _isLoading ? null : _handleSignOut,
+                  icon: _isLoading 
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.logout),
+                  label: Text(_isLoading ? 'Signing out...' : 'Sign out'),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                  ),
+                ),
+              ],
+              
+              const SizedBox(height: 20),
+              
+              // Privacy notice
+              Text(
+                'Your Google account information is only used for calendar integration and is not stored on external servers.',
+                style: TextStyle(
+                  color: Colors.grey.shade600,
+                  fontSize: 12,
+                ),
+                textAlign: TextAlign.center,
+              ),
             ],
           ),
         ),

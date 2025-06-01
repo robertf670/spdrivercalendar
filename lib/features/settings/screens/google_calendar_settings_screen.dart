@@ -28,8 +28,7 @@ class _GoogleCalendarSettingsScreenState extends State<GoogleCalendarSettingsScr
     final isSignedIn = await GoogleCalendarService.isSignedIn();
     bool hasAccess = false;
     if (isSignedIn) {
-      final httpClient = await GoogleCalendarService.getAuthenticatedClient();
-      hasAccess = await GoogleCalendarService.checkCalendarAccess(httpClient);
+      hasAccess = await GoogleCalendarService.testConnection();
     }
     
     setState(() {

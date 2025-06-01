@@ -1064,7 +1064,7 @@ class _EventCardState extends State<EventCard> {
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      if (workTime != null) ...[
+                      if (workTime != null && !widget.event.title.contains('(OT)')) ...[
                         Text(
                           'Work: $workTime',
                           style: TextStyle(
@@ -1395,8 +1395,11 @@ class _EventCardState extends State<EventCard> {
                         future: ShiftService.getBreakTime(widget.event),
                         builder: (context, snapshot) {
                           final isWorkout = snapshot.data?.toLowerCase().contains('workout') ?? false;
+                          final isOvertimeShift = widget.event.title.contains('(OT)');
+                          final isWorkoutOrOvertime = isWorkout || isOvertimeShift;
+                          
                           return Text(
-                            isWorkout
+                            isWorkoutOrOvertime
                                 ? 'Assigned Bus: ${widget.event.firstHalfBus}'
                                 : [
                                     if (widget.event.firstHalfBus != null)

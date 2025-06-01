@@ -14,7 +14,6 @@ import 'package:spdrivercalendar/core/config/flutter_config.dart';
 import 'package:spdrivercalendar/core/widgets/rebuild_text.dart';
 import 'package:spdrivercalendar/services/notification_service.dart';
 import 'package:spdrivercalendar/core/services/cache_service.dart';
-import 'package:spdrivercalendar/services/token_manager.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:spdrivercalendar/services/backup_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -83,7 +82,6 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _isDarkModeNotifier.dispose();
-    TokenManager.dispose();
     super.dispose();
   }
 
@@ -171,7 +169,6 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
               ),
               AppConstants.googleLoginRoute: (context) => GoogleLoginScreen(
                 onLoginComplete: () async {
-                  await GoogleCalendarService.saveLoginStatus(true);
                   Navigator.pushReplacementNamed(context, AppConstants.homeRoute);
                 },
               ),
