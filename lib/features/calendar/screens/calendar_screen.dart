@@ -420,14 +420,7 @@ class CalendarScreenState extends State<CalendarScreen>
                     if (line.trim().isEmpty) continue;
                     final parts = line.split(',');
                     if (parts.isNotEmpty) {
-                      // For overtime shifts, exclude workout duties
-                      // UNI CSV format: ShiftCode,StartTime,BreakStart,BreakEnd,FinishTime
-                      if (parts.length >= 4) {
-                        final breakStart = parts[2].trim().toLowerCase();
-                        if (breakStart == 'workout' || breakStart == 'nan') {
-                          continue; // Skip workout duties for overtime
-                        }
-                      }
+                      // For regular work shifts, include ALL duties (including workouts)
                       combinedShifts.add(parts[0]);
                     }
                   }
@@ -446,14 +439,7 @@ class CalendarScreenState extends State<CalendarScreen>
                       if (line.trim().isEmpty) continue;
                       final parts = line.split(',');
                       if (parts.isNotEmpty) {
-                        // For overtime shifts, exclude workout duties
-                        // UNI CSV format: ShiftCode,StartTime,BreakStart,BreakEnd,FinishTime
-                        if (parts.length >= 4) {
-                          final breakStart = parts[2].trim().toLowerCase();
-                          if (breakStart == 'workout' || breakStart == 'nan') {
-                            continue; // Skip workout duties for overtime
-                          }
-                        }
+                        // For regular work shifts, include ALL duties (including workouts)
                         combinedShifts.add(parts[0]);
                       }
                     }
@@ -3910,15 +3896,19 @@ class CalendarScreenState extends State<CalendarScreen>
                   for (final line in lines) {
                     if (line.trim().isEmpty) continue;
                     final parts = line.split(',');
-                    if (parts.isNotEmpty) {
+                    if (parts.length >= 5) {
                       // For overtime shifts, exclude workout duties
-                      // UNI CSV format: ShiftCode,StartTime,BreakStart,BreakEnd,FinishTime
-                      if (parts.length >= 4) {
-                        final breakStart = parts[2].trim().toLowerCase();
-                        if (breakStart == 'workout' || breakStart == 'nan') {
-                          continue; // Skip workout duties for overtime
-                        }
+                      // UNI format: ShiftCode,StartTime,BreakStart,BreakEnd,FinishTime
+                      final breakStart = parts[2].trim().toLowerCase();
+                      final breakEnd = parts[3].trim().toLowerCase();
+                      
+                      // Skip workout duties (those with 'nan', 'workout', empty, or equal break times)
+                      if (breakStart == 'nan' || breakStart == 'workout' || breakStart.isEmpty ||
+                          breakEnd == 'nan' || breakEnd == 'workout' || breakEnd.isEmpty ||
+                          breakStart == breakEnd) {
+                        continue; // Skip workout duties for overtime
                       }
+                      
                       combinedShifts.add(parts[0]);
                     }
                   }
@@ -3936,15 +3926,19 @@ class CalendarScreenState extends State<CalendarScreen>
                     for (final line in lines) {
                       if (line.trim().isEmpty) continue;
                       final parts = line.split(',');
-                      if (parts.isNotEmpty) {
+                      if (parts.length >= 5) {
                         // For overtime shifts, exclude workout duties
-                        // UNI CSV format: ShiftCode,StartTime,BreakStart,BreakEnd,FinishTime
-                        if (parts.length >= 4) {
-                          final breakStart = parts[2].trim().toLowerCase();
-                          if (breakStart == 'workout' || breakStart == 'nan') {
-                            continue; // Skip workout duties for overtime
-                          }
+                        // UNI format: ShiftCode,StartTime,BreakStart,BreakEnd,FinishTime
+                        final breakStart = parts[2].trim().toLowerCase();
+                        final breakEnd = parts[3].trim().toLowerCase();
+                        
+                        // Skip workout duties (those with 'nan', 'workout', empty, or equal break times)
+                        if (breakStart == 'nan' || breakStart == 'workout' || breakStart.isEmpty ||
+                            breakEnd == 'nan' || breakEnd == 'workout' || breakEnd.isEmpty ||
+                            breakStart == breakEnd) {
+                          continue; // Skip workout duties for overtime
                         }
+                        
                         combinedShifts.add(parts[0]);
                       }
                     }
