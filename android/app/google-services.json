@@ -22,6 +22,14 @@
           }
         },
         {
+          "client_id": "1051329330296-l22g5cv9gp40jg1gvqb2bm7nf687a9t6.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "ie.qqrxi.spdrivercalendar",
+            "certificate_hash": "ea7200746c655e675f033dd836d73f564ae1664a"
+          }
+        },
+        {
           "client_id": "1051329330296-l7so8o8bfdm4h1g1hj9ql30dmuq1514e.apps.googleusercontent.com",
           "client_type": 3
         }

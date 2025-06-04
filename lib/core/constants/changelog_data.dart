@@ -1,12 +1,18 @@
 final Map<String, List<Map<String, String>>> changelogData = {
-  '2.8.33': [
+  '2.8.34': [
     {
-      'title': 'Revolutionary Google Calendar Fix - Web OAuth Client',
-      'description': 'Switched from Android OAuth client (requires SHA-1) to Web OAuth client (no SHA-1 required). This breakthrough solution should make Google Calendar work consistently across ALL builds including GitHub Actions APKs.',
+      'title': 'Fixed Google Calendar Authentication with Release Keystore',
+      'description': 'Implemented production release keystore for consistent app signing. This ensures Google Calendar authentication works properly in all GitHub-built APKs by maintaining consistent SHA-1 certificate fingerprints.',
     },
     {
-      'title': 'SHA-1 Independence Achievement',
-      'description': 'By using serverClientId with Web OAuth client, Google Calendar authentication no longer depends on certificate fingerprints. This eliminates the root cause of GitHub Actions authentication failures once and for all.',
+      'title': 'Resolved CI/CD Certificate Consistency Issues',
+      'description': 'Replaced random debug keystores with a fixed release keystore in GitHub Actions. This solves both Google Sign-In authentication failures and enables reliable app updates from GitHub releases.',
+    },
+  ],
+  '2.8.33': [
+    {
+      'title': 'Attempted Web OAuth Client Approach',
+      'description': 'Tried using Web OAuth client with serverClientId to bypass SHA-1 certificate requirements. However, this approach still depends on Android OAuth client for native apps, so authentication issues persisted.',
     },
   ],
   '2.8.32': [
@@ -487,4 +493,4 @@ final Map<String, List<Map<String, String>>> changelogData = {
       'description': 'Added this screen to keep you informed about new features',
     },
   ],
-}; 
+};

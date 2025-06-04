@@ -5,6 +5,13 @@ plugins {
     id("com.google.gms.google-services")
 }
 
+// Load keystore properties from key.properties file
+val keystoreProperties = Properties()
+val keystorePropertiesFile = rootProject.file("key.properties")
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+}
+
 android {
     namespace = "ie.qqrxi.spdrivercalendar"
     compileSdk = flutter.compileSdkVersion
@@ -18,6 +25,16 @@ android {
 
     kotlinOptions {
         jvmTarget = JavaVersion.VERSION_11.toString()
+    }
+
+    // Signing configurations
+    signingConfigs {
+        create("release") {
+            keyAlias = keystoreProperties["keyAlias"] as String? ?: ""
+            keyPassword = keystoreProperties["keyPassword"] as String? ?: ""
+            storeFile = keystoreProperties["storeFile"]?.let { file(it) }
+            storePassword = keystoreProperties["storePassword"] as String? ?: ""
+        }
     }
 
     defaultConfig {
@@ -40,13 +57,11 @@ android {
             signingConfig = signingConfigs.getByName("debug")
         }
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            // Use release signing config for production builds
+            signingConfig = signingConfigs.getByName("release")
             isMinifyEnabled = true // Re-enable R8/ProGuard
             isShrinkResources = true // Re-enable resource shrinking
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-            // Note: For production, you should create a proper release signing config
         }
     }
 }

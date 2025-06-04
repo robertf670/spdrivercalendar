@@ -94,36 +94,48 @@ jobs:
     - name: Get dependencies
       run: flutter pub get
 
-    - name: Create Android debug keystore
+    - name: Setup Release Keystore
       env:
-        DEBUG_KEYSTORE_BASE64: ${{ secrets.DEBUG_KEYSTORE_BASE64 }}
+        RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+        KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+        KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+        KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
       run: |
-        mkdir -p ~/.android
-        # Check if the secret exists
-        if [ -z "$DEBUG_KEYSTORE_BASE64" ]; then
-          echo "ERROR: DEBUG_KEYSTORE_BASE64 secret is not set!"
-          echo "Creating fallback keystore..."
-          keytool -genkey -v -keystore ~/.android/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US" -noprompt
-        else
-          echo "Using fixed keystore from secrets..."
-          echo "$DEBUG_KEYSTORE_BASE64" | base64 -d > ~/.android/debug.keystore
-          if [ $? -ne 0 ]; then
-            echo "ERROR: Failed to decode keystore, creating fallback..."
-            keytool -genkey -v -keystore ~/.android/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US" -noprompt
-          else
-            echo "SUCCESS: Fixed keystore decoded successfully!"
-          fi
+        # Check if all required secrets exist
+        if [ -z "$RELEASE_KEYSTORE_BASE64" ] || [ -z "$KEYSTORE_PASSWORD" ] || [ -z "$KEY_ALIAS" ] || [ -z "$KEY_PASSWORD" ]; then
+          echo "ERROR: Missing release keystore secrets!"
+          echo "Required secrets: RELEASE_KEYSTORE_BASE64, KEYSTORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD"
+          exit 1
         fi
+        
+        # Decode and setup release keystore
+        echo "$RELEASE_KEYSTORE_BASE64" | base64 -d > release-keystore.jks
+        if [ $? -ne 0 ]; then
+          echo "ERROR: Failed to decode release keystore!"
+          exit 1
+        fi
+        
+        # Create key.properties file for Android build
+        cat > android/key.properties << EOF
+        storePassword=$KEYSTORE_PASSWORD
+        keyPassword=$KEY_PASSWORD
+        keyAlias=$KEY_ALIAS
+        storeFile=../release-keystore.jks
+        EOF
+        
+        echo "SUCCESS: Release keystore configured!"
 
-    - name: Display SHA-1 fingerprint
+    - name: Display Release Keystore SHA-1 fingerprint
+      env:
+        KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+        KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
       run: |
-        echo "=== GitHub Actions SHA-1 Fingerprint ==="
-        keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android -keypass android | grep SHA1
+        echo "=== Release Keystore SHA-1 Fingerprint ==="
+        keytool -list -v -keystore release-keystore.jks -alias $KEY_ALIAS -storepass $KEYSTORE_PASSWORD | grep SHA1
         echo "========================================"
         echo ""
-        echo "Note: For Google Sign-In to work, this SHA-1 fingerprint must be"
-        echo "added to your Google Cloud Console OAuth 2.0 client configuration."
-        echo "Path: Google Cloud Console > APIs & Services > Credentials > OAuth 2.0 Client IDs"
+        echo "This SHA-1 fingerprint should be registered in your Google Cloud Console"
+        echo "OAuth 2.0 client configuration for Google Sign-In to work properly."
 
     - name: Verify Google Sign-In Configuration
       run: |
@@ -150,6 +162,13 @@ jobs:
           echo "✗ google-services.json missing"
         fi
         
+        # Check if release signing is configured
+        if [ -f android/key.properties ]; then
+          echo "✓ Release keystore configuration found"
+        else
+          echo "✗ Release keystore configuration missing"
+        fi
+        
         echo "============================================="
 
     - name: Build APK
@@ -168,23 +187,23 @@ jobs:
           ## What's New in ${{ github.ref_name }}
           
           🔄 **Google Calendar Integration**
-          - Improved Google Sign-In reliability using google_sign_in package
-          - Better error handling and authentication flow
-          - Enhanced CI/CD compatibility
+          - Fixed Google Sign-In authentication using release keystore
+          - Consistent certificate signing for reliable app updates
+          - Improved authentication flow stability
           
           📱 **Download & Install**
           1. Download the APK below
           2. Enable "Install from Unknown Sources" in Android settings
           3. Install the APK
-          4. For Google Calendar sync: ensure you're added as a test user in Google Cloud Console
+          4. Google Calendar sync should now work properly
           
-          🔧 **For Developers**
-          - SHA-1 Fingerprint for this build: See workflow logs
-          - Add the SHA-1 to your Google Cloud Console OAuth client
-          - Ensure your Google account is added as a test user
+          🔧 **Technical Improvements**
+          - Using production release keystore for consistent signing
+          - Fixed SHA-1 fingerprint registration for Google OAuth
+          - Enhanced CI/CD build reliability
           
           ---
-          *This release was automatically built and deployed via GitHub Actions*
+          *This release was automatically built and deployed via GitHub Actions with release keystore*
         files: build/app/outputs/flutter-apk/spdrivercalendar-${{ github.ref_name }}.apk
         draft: false
         prerelease: false 
