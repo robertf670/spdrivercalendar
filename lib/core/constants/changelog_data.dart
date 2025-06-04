@@ -1,4 +1,18 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.8.49': [
+    {
+      'title': '🎯 TARGET UPDATE - Automatic Detection Test!',
+      'description': 'This is the target update that v2.8.48 should automatically detect! If you\'re seeing this dialog automatically (without clicking anything), SUCCESS! 🎉',
+    },
+    {
+      'title': '📱 Smart Download Final Validation',
+      'description': 'Now test "Smart Download (Recommended)" to confirm it downloads in-app with progress instead of opening browser. This validates both fixes working together!',
+    },
+    {
+      'title': '✅ Revolutionary Update System - FINAL TEST',
+      'description': 'If both automatic detection AND Smart Download work, our transformation is complete: from manual browser downloads to seamless app-store-like updates!',
+    },
+  ],
   '2.8.48': [
     {
       'title': '🔧 ENHANCED AUTO-DETECTION - Debug Mode!',
