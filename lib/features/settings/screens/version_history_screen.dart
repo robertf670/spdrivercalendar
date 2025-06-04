@@ -4,7 +4,7 @@ import 'package:spdrivercalendar/core/constants/app_constants.dart';
 import 'package:spdrivercalendar/theme/app_theme.dart';
 import 'package:spdrivercalendar/core/constants/changelog_data.dart';
 import 'package:spdrivercalendar/services/update_service.dart';
-import 'package:spdrivercalendar/core/widgets/update_dialog.dart';
+import 'package:spdrivercalendar/core/widgets/enhanced_update_dialog.dart';
 
 class VersionHistoryScreen extends StatefulWidget {
   const VersionHistoryScreen({Key? key}) : super(key: key);
@@ -55,7 +55,7 @@ class _VersionHistoryScreenState extends State<VersionHistoryScreen> {
       if (updateInfo != null && updateInfo.hasUpdate && mounted) {
         showDialog(
           context: context,
-          builder: (context) => UpdateDialog(updateInfo: updateInfo),
+          builder: (context) => EnhancedUpdateDialog(updateInfo: updateInfo),
         );
       } else if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -168,7 +168,7 @@ class _VersionHistoryScreenState extends State<VersionHistoryScreen> {
             onPressed: () {
               showDialog(
                 context: context,
-                builder: (context) => UpdateDialog(updateInfo: _updateInfo!),
+                builder: (context) => EnhancedUpdateDialog(updateInfo: _updateInfo!),
               );
             },
             child: const Text('Update'),

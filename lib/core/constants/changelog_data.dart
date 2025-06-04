@@ -1,4 +1,22 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.8.42': [
+    {
+      'title': '🚀 Revolutionary In-App Update Experience',
+      'description': 'Introducing smart APK downloads! No more switching to browser and navigating through folders. Updates now download directly in-app with real-time progress tracking and automatic installation.',
+    },
+    {
+      'title': '📱 Enhanced Update Dialog',
+      'description': 'Beautiful new update dialog with two options: "Smart Download (Recommended)" for seamless in-app updates, or "Browser Download" for traditional method. Shows download progress with MB transferred and percentage completion.',
+    },
+    {
+      'title': '⚡ Streamlined User Experience',
+      'description': 'Transforms update flow from: App → Browser → Downloads folder → Manual install, to simply: App → Download → Install → Done. Significantly improves update adoption rates.',
+    },
+    {
+      'title': '🔧 Technical Infrastructure',
+      'description': 'New APK Download Manager with smart permissions handling, automatic fallbacks, and comprehensive error handling. Provides 80% of app store convenience while maintaining independence from Google Play.',
+    },
+  ],
   '2.8.41': [
     {
       'title': 'Fixed Calendar Display Issue',

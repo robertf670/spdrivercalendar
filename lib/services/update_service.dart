@@ -4,6 +4,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:spdrivercalendar/core/services/storage_service.dart';
 import 'package:spdrivercalendar/core/constants/app_constants.dart';
+import 'package:spdrivercalendar/services/apk_download_manager.dart';
 
 class UpdateInfo {
   final String latestVersion;
@@ -145,8 +146,55 @@ class UpdateService {
     }
   }
 
-  /// Download the update APK
+  /// Download and install update using in-app downloader with fallback
+  static Future<bool> downloadAndInstallUpdate(
+    UpdateInfo updateInfo,
+    Function(DownloadProgress) onProgress,
+  ) async {
+    try {
+      print('[Update] Starting in-app download for version ${updateInfo.latestVersion}');
+      
+      // Clean up old downloads first
+      await ApkDownloadManager.cleanupOldDownloads();
+      
+      // Download APK
+      final filePath = await ApkDownloadManager.downloadApk(
+        updateInfo.downloadUrl,
+        updateInfo.latestVersion,
+        onProgress,
+      );
+
+      if (filePath == null) {
+        print('[Update] In-app download failed, falling back to browser');
+        return await _fallbackToBrowser(updateInfo.downloadUrl);
+      }
+
+      // Try to install
+      print('[Update] Attempting to install APK: $filePath');
+      final installSuccess = await ApkDownloadManager.installApk(filePath, onProgress);
+      
+      if (installSuccess) {
+        print('[Update] Install process initiated successfully');
+        return true;
+      } else {
+        print('[Update] Install failed, falling back to browser');
+        return await _fallbackToBrowser(updateInfo.downloadUrl);
+      }
+
+    } catch (e) {
+      print('[Update] Error during download/install: $e');
+      // Fallback to browser on any error
+      return await _fallbackToBrowser(updateInfo.downloadUrl);
+    }
+  }
+
+  /// Original download method (browser-based) - kept as fallback
   static Future<bool> downloadUpdate(String downloadUrl) async {
+    return await _fallbackToBrowser(downloadUrl);
+  }
+
+  /// Fallback to browser download
+  static Future<bool> _fallbackToBrowser(String downloadUrl) async {
     try {
       final uri = Uri.parse(downloadUrl);
       if (await canLaunchUrl(uri)) {
@@ -161,6 +209,11 @@ class UpdateService {
       print('Error downloading update: $e');
       return false;
     }
+  }
+
+  /// Cancel ongoing download
+  static void cancelDownload() {
+    ApkDownloadManager.cancelDownload();
   }
 
   /// Get formatted release notes for display
@@ -192,5 +245,10 @@ class UpdateService {
   /// Get current update check frequency
   static Future<int> getUpdateCheckFrequency() async {
     return await StorageService.getInt(updateCheckIntervalHours, defaultValue: 24);
+  }
+
+  /// Get download directory for display purposes
+  static Future<String> getDownloadPath() async {
+    return await ApkDownloadManager.getDownloadPath();
   }
 } 

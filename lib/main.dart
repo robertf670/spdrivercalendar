@@ -20,7 +20,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:spdrivercalendar/features/calendar/services/event_service.dart';
 import 'package:spdrivercalendar/features/settings/screens/version_history_screen.dart';
 import 'package:spdrivercalendar/services/update_service.dart';
-import 'package:spdrivercalendar/core/widgets/update_dialog.dart';
+import 'package:spdrivercalendar/core/widgets/enhanced_update_dialog.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -95,7 +95,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       if (updateInfo != null && updateInfo.hasUpdate && mounted) {
         showDialog(
           context: context,
-          builder: (context) => UpdateDialog(updateInfo: updateInfo),
+          builder: (context) => EnhancedUpdateDialog(updateInfo: updateInfo),
         );
       }
     } catch (e) {
@@ -270,7 +270,7 @@ class _SplashScreenState extends State<SplashScreen> {
         
         showDialog(
           context: currentContext,
-          builder: (context) => UpdateDialog(updateInfo: updateInfo),
+          builder: (context) => EnhancedUpdateDialog(updateInfo: updateInfo),
         );
       }
     } catch (e) {
