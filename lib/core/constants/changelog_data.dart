@@ -1,4 +1,14 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.8.31': [
+    {
+      'title': 'Fixed Base64 Keystore Secret Corruption',
+      'description': 'Corrected the GitHub Actions DEBUG_KEYSTORE_BASE64 secret by removing line breaks and console artifacts that were causing keystore decoding to produce corrupted certificates. This should finally achieve consistent SHA-1 fingerprints.',
+    },
+    {
+      'title': 'Final Google Calendar Authentication Fix',
+      'description': 'With the clean base64 keystore secret, GitHub Actions builds should now use the exact same certificate as local builds, enabling reliable Google Calendar sign-in functionality in all APK releases.',
+    },
+  ],
   '2.8.30': [
     {
       'title': 'Fixed GitHub Actions Secret Handling',
