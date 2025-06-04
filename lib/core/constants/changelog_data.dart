@@ -1,4 +1,14 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.8.39': [
+    {
+      'title': 'ACTUAL Final Fix - Removed Double App Path',
+      'description': 'Fixed keystore path from app/release-keystore.jks to release-keystore.jks since build.gradle.kts is already in the app directory. This prevents the double app/app/ path issue that was causing keystore not found errors.',
+    },
+    {
+      'title': 'Google Calendar - THIS TIME IT WORKS!',
+      'description': 'Corrected the final path resolution issue. Release keystore is now properly configured and Google Calendar authentication will finally work in GitHub-built APKs. The epic debugging journey is complete!',
+    },
+  ],
   '2.8.38': [
     {
       'title': 'Final Keystore Path Fix - Build Success!',
