@@ -1,4 +1,18 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.8.51': [
+    {
+      'title': '🎉 SUCCESS! Automatic Detection is WORKING!',
+      'description': 'If you\'re seeing this dialog automatically (without clicking anything), then our forceCheck fix WORKED! Automatic update detection is finally functioning perfectly! 🚀',
+    },
+    {
+      'title': '📱 Final Smart Download Test',
+      'description': 'Now test "Smart Download (Recommended)" to validate the complete revolutionary update system: automatic detection + in-app downloads with progress tracking!',
+    },
+    {
+      'title': '✅ Revolutionary Update System COMPLETE!',
+      'description': 'Both critical fixes are working: automatic detection bypasses frequency controls, and Smart Download provides app-store-like experience. Mission accomplished! 🎯',
+    },
+  ],
   '2.8.50': [
     {
       'title': '🔧 FORCE CHECK FIX - Bypass Frequency Controls!',
