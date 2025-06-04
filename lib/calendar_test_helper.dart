@@ -639,6 +639,7 @@ class CalendarTestHelper {
       // Check if signed in
       final isSignedIn = await GoogleCalendarService.isSignedIn();
       if (!isSignedIn) {
+        print('Error: Not signed in to Google Calendar');
         return {
           'error': 'Not signed in to Google Calendar',
           'totalLocalEvents': 0,
@@ -651,6 +652,7 @@ class CalendarTestHelper {
       // Test connection
       final hasConnection = await GoogleCalendarService.testConnection();
       if (!hasConnection) {
+        print('Error: Failed to connect to Google Calendar');
         return {
           'error': 'Failed to connect to Google Calendar',
           'totalLocalEvents': 0,
@@ -665,14 +667,32 @@ class CalendarTestHelper {
       final startDate = now.subtract(const Duration(days: 30));
       final endDate = now.add(const Duration(days: 30));
       
+      print('Searching for events between ${startDate.toString()} and ${endDate.toString()}');
+      
       // Get Google Calendar events
+      print('Fetching Google Calendar events...');
       final googleEvents = await GoogleCalendarService.listEvents(
         startTime: startDate,
         endTime: endDate,
       );
+      print('Found ${googleEvents.length} Google Calendar events');
       
       // Get local events using EventService
+      print('Fetching local events...');
       final localEvents = _getEventsInRange(startDate, endDate);
+      print('Found ${localEvents.length} local work shift events');
+      
+      // Debug: Print first few local events
+      for (int i = 0; i < localEvents.take(3).length; i++) {
+        final event = localEvents[i];
+        print('Local event $i: "${event.title}" on ${event.fullStartDateTime}');
+      }
+      
+      // Debug: Print first few Google events
+      for (int i = 0; i < googleEvents.take(3).length; i++) {
+        final event = googleEvents[i];
+        print('Google event $i: "${event.summary}" starts ${event.start?.dateTime}');
+      }
       
       // Compare and find missing events
       final missingSyncEvents = <Map<String, dynamic>>[];
@@ -696,6 +716,8 @@ class CalendarTestHelper {
           });
         }
       }
+      
+      print('Sync status: ${localEvents.length} local events, $matchedCount matched, ${missingSyncEvents.length} missing');
       
       return {
         'totalLocalEvents': localEvents.length,

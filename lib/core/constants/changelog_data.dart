@@ -1,4 +1,14 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.8.28': [
+    {
+      'title': 'Fixed Google Sign-In for Release APK Builds',
+      'description': 'Resolved issue where Google Calendar sign-in worked in debug builds but failed in release APK builds. Enhanced ProGuard rules now prevent code obfuscation of Google authentication classes.',
+    },
+    {
+      'title': 'Improved Release Build Compatibility',
+      'description': 'Release APKs built locally and via GitHub Actions should now have fully functional Google Calendar integration. This addresses the root cause of authentication failures in optimized builds.',
+    },
+  ],
   '2.8.27': [
     {
       'title': 'Fixed Overtime Shift Display',

@@ -13,6 +13,19 @@
 -keep class com.google.android.gms.tasks.** { *; }
 -keep class com.google.firebase.** { *; } # Keep Firebase if you use other Firebase services
 
+# Additional Google Sign-In specific rules
+-keep class com.google.android.gms.signin.** { *; }
+-keep class com.google.android.gms.safetynet.** { *; }
+-keep class com.google.android.gms.security.** { *; }
+-keep class com.google.api.** { *; }
+-keep class com.google.gson.** { *; }
+
+# OAuth and authentication rules
+-keep class * extends java.util.ListResourceBundle {
+    protected java.lang.Object[][] getContents();
+}
+-keep class com.google.android.gms.internal.** { *; }
+
 # Credential Manager rules
 -if class androidx.credentials.CredentialManager
 -keep class androidx.credentials.playservices.** {
@@ -23,9 +36,12 @@
 -keepattributes Signature
 -keepattributes *Annotation*
 -keepattributes EnclosingMethod
+-keepattributes InnerClasses
 
 # Don't warn about missing classes in Google Play services (they might be optional)
 -dontwarn com.google.android.gms.**
+-dontwarn com.google.api.**
+-dontwarn com.google.gson.**
 
 # Add any project-specific rules here.
 # E.g., if you use reflection or specific native libraries that R8 might remove. 
