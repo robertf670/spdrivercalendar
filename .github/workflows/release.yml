@@ -108,8 +108,8 @@ jobs:
           exit 1
         fi
         
-        # Decode and setup release keystore
-        echo "$RELEASE_KEYSTORE_BASE64" | base64 -d > release-keystore.jks
+        # Decode and setup release keystore in android directory
+        echo "$RELEASE_KEYSTORE_BASE64" | base64 -d > android/release-keystore.jks
         if [ $? -ne 0 ]; then
           echo "ERROR: Failed to decode release keystore!"
           exit 1
@@ -120,7 +120,7 @@ jobs:
         storePassword=$KEYSTORE_PASSWORD
         keyPassword=$KEY_PASSWORD
         keyAlias=$KEY_ALIAS
-        storeFile=../release-keystore.jks
+        storeFile=release-keystore.jks
         EOF
         
         echo "SUCCESS: Release keystore configured!"
@@ -131,7 +131,7 @@ jobs:
         KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
       run: |
         echo "=== Release Keystore SHA-1 Fingerprint ==="
-        keytool -list -v -keystore release-keystore.jks -alias $KEY_ALIAS -storepass $KEYSTORE_PASSWORD | grep SHA1
+        keytool -list -v -keystore android/release-keystore.jks -alias $KEY_ALIAS -storepass $KEYSTORE_PASSWORD | grep SHA1
         echo "========================================"
         echo ""
         echo "This SHA-1 fingerprint should be registered in your Google Cloud Console"

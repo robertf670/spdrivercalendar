@@ -1,4 +1,14 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.8.37': [
+    {
+      'title': 'Fixed Release Keystore File Path',
+      'description': 'Resolved keystore file path issue by placing the release keystore directly in the android directory. This ensures the signing configuration can locate the keystore file during GitHub Actions builds.',
+    },
+    {
+      'title': 'Complete Release Build Fix',
+      'description': 'All release keystore configuration issues are now resolved. Google Calendar authentication should work perfectly in GitHub-built APKs with consistent signing certificates.',
+    },
+  ],
   '2.8.36': [
     {
       'title': 'Fixed Android Build Script Compilation',
