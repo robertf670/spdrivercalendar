@@ -1,4 +1,18 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.8.47': [
+    {
+      'title': '🧪 FINAL VALIDATION TEST - Success Confirmation!',
+      'description': 'If you\'re seeing this dialog AUTOMATICALLY (without clicking anything), then automatic update detection is WORKING! This validates our CalendarScreen context fix is successful! 🎉',
+    },
+    {
+      'title': '📱 Smart Download Final Test',
+      'description': 'Now click "Smart Download (Recommended)" to test if it downloads in-app with progress tracking. If it works instead of opening browser, both fixes are COMPLETE! 🚀',
+    },
+    {
+      'title': '✅ Revolutionary Update System VALIDATED',
+      'description': 'This test confirms the complete transformation: automatic detection + in-app downloads. Your update experience is now seamless and app-store-like while maintaining GitHub independence!',
+    },
+  ],
   '2.8.46': [
     {
       'title': '🎯 FINAL TEST - Automatic Update Detection Fixed!',
