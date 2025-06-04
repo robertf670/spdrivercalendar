@@ -1,4 +1,14 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.8.38': [
+    {
+      'title': 'Final Keystore Path Fix - Build Success!',
+      'description': 'Moved release keystore to correct android/app directory where build.gradle.kts expects it. This resolves the final path issue preventing successful release builds in GitHub Actions.',
+    },
+    {
+      'title': 'Google Calendar Authentication - WORKING!',
+      'description': 'All release keystore configuration issues are definitively resolved. Google Calendar authentication now works perfectly in GitHub-built APKs with consistent SHA-1 certificate signing.',
+    },
+  ],
   '2.8.37': [
     {
       'title': 'Fixed Release Keystore File Path',
