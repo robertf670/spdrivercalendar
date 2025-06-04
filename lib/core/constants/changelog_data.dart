@@ -1,4 +1,14 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.8.35': [
+    {
+      'title': 'Fixed Release Keystore Base64 Encoding',
+      'description': 'Corrected GitHub Actions base64 keystore format by removing PEM headers that were causing Linux decode failures. This should resolve the keytool authentication errors in CI builds.',
+    },
+    {
+      'title': 'Final Release Keystore Implementation',
+      'description': 'Cleaned base64 encoding ensures proper keystore decoding in GitHub Actions. Google Calendar authentication should now work consistently in all automated builds.',
+    },
+  ],
   '2.8.34': [
     {
       'title': 'Fixed Google Calendar Authentication with Release Keystore',
