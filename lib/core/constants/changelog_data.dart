@@ -1,4 +1,14 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.8.36': [
+    {
+      'title': 'Fixed Android Build Script Compilation',
+      'description': 'Resolved Kotlin compilation errors in build.gradle.kts by adding required Java imports and fixing lambda syntax. This enables successful release builds with the production keystore.',
+    },
+    {
+      'title': 'Complete Release Keystore Integration',
+      'description': 'Fixed all remaining build configuration issues for production release keystore. Google Calendar authentication should now work consistently in GitHub-built APKs.',
+    },
+  ],
   '2.8.35': [
     {
       'title': 'Fixed Release Keystore Base64 Encoding',
