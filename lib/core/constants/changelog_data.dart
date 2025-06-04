@@ -1,4 +1,14 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.8.40': [
+    {
+      'title': 'Fixed Version History Display Bug',
+      'description': 'Fixed version sorting in the Version History screen to properly display versions in chronological order. Versions are now sorted semantically (2.8.39 > 2.8.38 > 2.8.9) instead of lexicographically, showing the complete changelog including recent Google Calendar authentication fixes.',
+    },
+    {
+      'title': 'Enhanced Version Management',
+      'description': 'Improved semantic version comparison for better version history navigation and display consistency.',
+    },
+  ],
   '2.8.39': [
     {
       'title': 'ACTUAL Final Fix - Removed Double App Path',

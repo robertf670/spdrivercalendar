@@ -83,7 +83,7 @@ class _VersionHistoryScreenState extends State<VersionHistoryScreen> {
   @override
   Widget build(BuildContext context) {
     final sortedVersions = changelogData.keys.toList()
-      ..sort((a, b) => b.compareTo(a));
+      ..sort((a, b) => _compareVersions(b, a));
 
     return Scaffold(
       appBar: AppBar(
@@ -271,5 +271,26 @@ class _VersionHistoryScreenState extends State<VersionHistoryScreen> {
         ),
       ),
     );
+  }
+
+  int _compareVersions(String version1, String version2) {
+    try {
+      final v1Parts = version1.split('.').map(int.parse).toList();
+      final v2Parts = version2.split('.').map(int.parse).toList();
+      
+      // Ensure both have same number of parts
+      while (v1Parts.length < v2Parts.length) v1Parts.add(0);
+      while (v2Parts.length < v1Parts.length) v2Parts.add(0);
+      
+      for (int i = 0; i < v1Parts.length; i++) {
+        if (v1Parts[i] != v2Parts[i]) {
+          return v1Parts[i].compareTo(v2Parts[i]);
+        }
+      }
+      return 0;
+    } catch (e) {
+      // Fallback to string comparison if parsing fails
+      return version1.compareTo(version2);
+    }
   }
 } 
