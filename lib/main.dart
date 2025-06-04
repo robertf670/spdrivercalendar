@@ -70,18 +70,12 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   late ValueNotifier<bool> _isDarkModeNotifier;
   final _rebuildKey = GlobalKey();
-  bool _hasCheckedForUpdatesOnStartup = false;
 
   @override
   void initState() {
     super.initState();
     _isDarkModeNotifier = ValueNotifier(widget.isDarkModeInitial);
     WidgetsBinding.instance.addObserver(this);
-    
-    // Check for updates after a short delay to ensure app is fully initialized
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _scheduleStartupUpdateCheck();
-    });
   }
 
   @override
@@ -89,39 +83,6 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     WidgetsBinding.instance.removeObserver(this);
     _isDarkModeNotifier.dispose();
     super.dispose();
-  }
-
-  Future<void> _scheduleStartupUpdateCheck() async {
-    // Wait for app to fully initialize and navigate to main screen
-    await Future.delayed(const Duration(seconds: 5));
-    
-    if (mounted && !_hasCheckedForUpdatesOnStartup) {
-      _hasCheckedForUpdatesOnStartup = true;
-      _checkForUpdatesOnStartup();
-    }
-  }
-
-  Future<void> _checkForUpdatesOnStartup() async {
-    try {
-      print('[AutoUpdate] Checking for updates on app startup...');
-      final updateInfo = await UpdateService.checkForUpdate();
-      
-      if (updateInfo != null && updateInfo.hasUpdate && mounted) {
-        print('[AutoUpdate] Update found: ${updateInfo.latestVersion}');
-        
-        // Get the current navigator context
-        final navigatorContext = Navigator.of(context, rootNavigator: true).context;
-        
-        showDialog(
-          context: navigatorContext,
-          builder: (context) => EnhancedUpdateDialog(updateInfo: updateInfo),
-        );
-      } else {
-        print('[AutoUpdate] No updates available or update check failed');
-      }
-    } catch (e) {
-      print('[AutoUpdate] Error checking for updates on startup: $e');
-    }
   }
 
   @override

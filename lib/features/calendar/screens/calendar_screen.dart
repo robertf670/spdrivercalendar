@@ -37,6 +37,8 @@ import 'package:spdrivercalendar/features/feedback/screens/feedback_screen.dart'
 import 'package:spdrivercalendar/features/bills/screens/bills_screen.dart'; // Import the Bills screen
 import 'package:spdrivercalendar/features/payscale/screens/payscale_screen.dart'; // Import the Payscale screen
 import 'package:uuid/uuid.dart';
+import 'package:spdrivercalendar/services/update_service.dart';
+import 'package:spdrivercalendar/core/widgets/enhanced_update_dialog.dart';
 
 class CalendarScreen extends StatefulWidget {
   final ValueNotifier<bool> isDarkModeNotifier;
@@ -58,6 +60,7 @@ class CalendarScreenState extends State<CalendarScreen>
   List<BankHoliday>? _bankHolidays;
   List<Holiday> _holidays = [];
   late AnimationController _animationController;
+  bool _hasCheckedForUpdatesOnStartup = false;
   
   final Map<String, ShiftInfo> _shiftInfoMap = {
     'E': ShiftInfo('Early', AppTheme.shiftColors['E']!),
@@ -92,6 +95,39 @@ class CalendarScreenState extends State<CalendarScreen>
         );
       }
     });
+
+    // Schedule automatic update check after calendar loads
+    _scheduleAutomaticUpdateCheck();
+  }
+
+  Future<void> _scheduleAutomaticUpdateCheck() async {
+    // Wait for calendar to fully initialize
+    await Future.delayed(const Duration(seconds: 3));
+    
+    if (mounted && !_hasCheckedForUpdatesOnStartup) {
+      _hasCheckedForUpdatesOnStartup = true;
+      _checkForAutomaticUpdates();
+    }
+  }
+
+  Future<void> _checkForAutomaticUpdates() async {
+    try {
+      print('[AutoUpdate] Checking for updates on calendar screen startup...');
+      final updateInfo = await UpdateService.checkForUpdate();
+      
+      if (updateInfo != null && updateInfo.hasUpdate && mounted) {
+        print('[AutoUpdate] Update found: ${updateInfo.latestVersion}');
+        
+        showDialog(
+          context: context,
+          builder: (context) => EnhancedUpdateDialog(updateInfo: updateInfo),
+        );
+      } else {
+        print('[AutoUpdate] No updates available or update check failed');
+      }
+    } catch (e) {
+      print('[AutoUpdate] Error checking for updates on startup: $e');
+    }
   }
 
   Future<void> _initializeCurrentMonth() async {

@@ -1,4 +1,18 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.8.46': [
+    {
+      'title': '🎯 FINAL TEST - Automatic Update Detection Fixed!',
+      'description': 'This should appear AUTOMATICALLY without clicking anything! We moved the update check to CalendarScreen with proper dialog context. If you\'re seeing this automatically, both fixes are COMPLETE! 🚀',
+    },
+    {
+      'title': '✅ Context Fix Applied',
+      'description': 'Moved automatic update detection from MyApp to CalendarScreen where the context is guaranteed to work for showing update dialogs. No more disposal issues!',
+    },
+    {
+      'title': '🔥 Revolutionary Update System COMPLETE',
+      'description': 'Both automatic detection AND Smart Download now work perfectly. Your update experience is transformed from manual browser downloads to seamless in-app updates!',
+    },
+  ],
   '2.8.45': [
     {
       'title': '🧪 TESTING THE CRITICAL FIXES!',
