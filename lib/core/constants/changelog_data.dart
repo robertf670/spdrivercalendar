@@ -1,4 +1,18 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.8.53': [
+    {
+      'title': '⏰ TIMING TEST - Automatic Update Detection',
+      'description': 'This is a test version to validate the 2-second automatic update detection timing. If you\'re seeing this dialog automatically without clicking anything, the rapid detection is working perfectly! 🎯',
+    },
+    {
+      'title': '🧪 Quick Response Validation',
+      'description': 'Testing the optimized timing where updates appear within 2 seconds of app startup instead of the previous 10-second delay. This ensures immediate notification without being intrusive.',
+    },
+    {
+      'title': '✅ Revolutionary Update System - Timing Perfect!',
+      'description': 'If this appeared quickly and automatically, both automatic detection AND timing optimization are working flawlessly. The update experience is now truly seamless! 🚀',
+    },
+  ],
   '2.8.52': [
     {
       'title': '🎉 REVOLUTIONARY UPDATE SYSTEM COMPLETE!',
