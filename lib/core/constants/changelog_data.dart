@@ -1,4 +1,14 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.8.30': [
+    {
+      'title': 'Fixed GitHub Actions Secret Handling',
+      'description': 'Resolved critical issue where GitHub Actions workflow was not properly reading the DEBUG_KEYSTORE_BASE64 secret, causing it to create random keystores. Fixed environment variable handling for multi-line base64 content.',
+    },
+    {
+      'title': 'Definitive Keystore Consistency Fix',
+      'description': 'GitHub Actions builds should now consistently use the same debug keystore as local builds, ensuring reliable Google Calendar authentication. This addresses the root cause of random SHA-1 fingerprints in CI builds.',
+    },
+  ],
   '2.8.29': [
     {
       'title': 'Fixed GitHub Actions Keystore Consistency',
