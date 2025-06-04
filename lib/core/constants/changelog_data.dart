@@ -1,4 +1,18 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.8.45': [
+    {
+      'title': '🧪 TESTING THE CRITICAL FIXES!',
+      'description': 'This is a test update to validate our critical fixes! If you\'re seeing this dialog automatically (without manually clicking), then automatic update detection is WORKING! 🎉',
+    },
+    {
+      'title': '📱 Smart Download Validation Test',
+      'description': 'Use "Smart Download (Recommended)" to test if it actually downloads in-app with permission requests and progress tracking, instead of opening the browser.',
+    },
+    {
+      'title': '🔧 What We Fixed in v2.8.44',
+      'description': 'Fixed broken automatic updates (context disposal) and Smart Download permissions (always fell back to browser). This test validates both fixes work perfectly!',
+    },
+  ],
   '2.8.44': [
     {
       'title': '🔧 CRITICAL FIXES: Update System Overhaul',
