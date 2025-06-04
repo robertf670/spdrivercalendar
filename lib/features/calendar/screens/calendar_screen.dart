@@ -945,6 +945,10 @@ class CalendarScreenState extends State<CalendarScreen>
         final breakStartTime = event.breakStartTime;
         final breakEndTime = event.breakEndTime;
         
+        print('[Sync Debug] Break time retrieved: "$breakTime"');
+        print('[Sync Debug] Event break start: $breakStartTime');
+        print('[Sync Debug] Event break end: $breakEndTime');
+        
         // Build description with all break information
         String description = ''; // Initialize as empty string
         if (breakTime != null) {
@@ -957,17 +961,17 @@ class CalendarScreenState extends State<CalendarScreen>
           }
         }
         
-        // print('[Sync Debug] Initial description: "$description"'); // Debug -- Removed
+        print('[Sync Debug] Initial description: "$description"');
         
         // Check if it's a rest day using RosterService
         // final normalizedDate = DateTime(event.startDate.year, event.startDate.month, event.startDate.day); // Not needed anymore
         // final bool isRest = RestDaysService.isRestDay(normalizedDate); // Replaced with RosterService check
         final String shiftType = getShiftForDate(event.startDate); // Use existing screen method
         final bool isRest = shiftType == 'R';
-        // print('[Sync Debug] Is Rest Day based on Roster ($shiftType)? $isRest'); // Updated Debug -- Removed
+        print('[Sync Debug] Is Rest Day based on Roster ($shiftType)? $isRest');
         
         if (isRest) {
-          // print('[Sync Debug] Appending rest day info.'); // Debug -- Removed
+          print('[Sync Debug] Appending rest day info.');
           if (description.isNotEmpty) {
             description += '\n(Working on Rest Day)';
           } else {
@@ -975,12 +979,12 @@ class CalendarScreenState extends State<CalendarScreen>
           }
         }
         
-        // print('[Sync Debug] Final description before check: "$description"'); // Debug -- Removed
+        print('[Sync Debug] Final description before check: "$description"');
         
         // Handle case where description might still be empty
         final finalDescription = description.isEmpty ? null : description;
         
-        // print('[Sync Debug] Final description passed to helper: "$finalDescription"'); // Debug -- Removed
+        print('[Sync Debug] Final description passed to helper: "$finalDescription"');
         
         // Add to Google Calendar
         final success = await CalendarTestHelper.addWorkShiftToCalendar(
@@ -2649,39 +2653,53 @@ class CalendarScreenState extends State<CalendarScreen>
                     )
                   : null,
         ),
-        // Wrap the Column with Center
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text('${date.day}'),
-              if (shift.isNotEmpty && !isHoliday)
-                // Replace FittedBox with simple Text
-                Text(
-                  shift,
-                  style: const TextStyle(
-                    fontSize: 11, // Keep the small font size
-                    fontWeight: FontWeight.bold,
+        // Use Stack for more compact layout
+        child: Stack(
+          children: [
+            // Main content centered
+            Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min, // Important: minimize space
+                children: [
+                  Text(
+                    '${date.day}',
+                    style: const TextStyle(fontSize: 14), // Slightly smaller
                   ),
-                  maxLines: 1, // Prevent wrapping
-                  overflow: TextOverflow.clip, // Clip if somehow too long
-                ),
-              if (isHoliday)
-                // Replace FittedBox with simple Text
-                Text(
-                  'H',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white, // Consider using theme color here
-                  ),
-                  maxLines: 1, // Prevent wrapping
-                  overflow: TextOverflow.clip, // Clip if somehow too long
-                ),
-              if (hasEvents)
-                Container(
-                  width: 8,
-                  height: 8,
+                  if (shift.isNotEmpty && !isHoliday)
+                    Text(
+                      shift,
+                      style: const TextStyle(
+                        fontSize: 10, // Smaller font
+                        fontWeight: FontWeight.bold,
+                        height: 1.0, // Reduce line height
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.clip,
+                    ),
+                  if (isHoliday)
+                    Text(
+                      'H',
+                      style: const TextStyle(
+                        fontSize: 10, // Smaller font
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        height: 1.0, // Reduce line height
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.clip,
+                    ),
+                ],
+              ),
+            ),
+            // Event indicator positioned in bottom-right corner
+            if (hasEvents)
+              Positioned(
+                bottom: 2,
+                right: 2,
+                child: Container(
+                  width: 6, // Smaller dot
+                  height: 6, // Smaller dot
                   decoration: BoxDecoration(
                     color: isHoliday 
                         ? holidayColor 
@@ -2689,8 +2707,8 @@ class CalendarScreenState extends State<CalendarScreen>
                     shape: BoxShape.circle,
                   ),
                 ),
-            ],
-          ),
+              ),
+          ],
         ),
       ),
     );

@@ -141,6 +141,6 @@ Note: Check the GitHub Releases page periodically for updates.
 
 ## Support
 
-For support or questions, please contact ixrqq@tuta.io
+For support or questions, please contact rob@ixrqq.pro
 
 For Google Calendar setup issues, please refer to the [setup guide](GOOGLE_CALENDAR_SETUP_GUIDE.md) first.

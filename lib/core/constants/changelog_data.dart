@@ -1,4 +1,14 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.8.41': [
+    {
+      'title': 'Fixed Calendar Display Issue',
+      'description': 'Resolved UI overflow error in calendar day cells where content was 4 pixels too tall, causing visual rendering issues.',
+    },
+    {
+      'title': 'Updated Feedback Email',
+      'description': 'Changed feedback email address to rob@ixrqq.pro for better communication with users.',
+    },
+  ],
   '2.8.40': [
     {
       'title': 'Fixed Version History Display Bug',

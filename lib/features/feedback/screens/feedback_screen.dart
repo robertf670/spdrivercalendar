@@ -29,7 +29,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
     final scaffoldMessenger = ScaffoldMessenger.of(context); // Capture ScaffoldMessenger
 
     // --- Replace placeholder with url_launcher logic ---
-    const String recipientEmail = 'ixrqq@tuta.io'; // <-- *** REPLACE WITH YOUR EMAIL ***
+    const String recipientEmail = 'rob@ixrqq.pro'; // <-- *** REPLACE WITH YOUR EMAIL ***
     const String subject = 'Spare Driver Calendar App Feedback';
     final String body = feedback;
 
