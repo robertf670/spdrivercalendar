@@ -119,7 +119,7 @@ class CalendarScreenState extends State<CalendarScreen>
   Future<void> _checkForAutomaticUpdates() async {
     try {
       print('[AutoUpdate] Checking for updates on calendar screen startup...');
-      final updateInfo = await UpdateService.checkForUpdate();
+      final updateInfo = await UpdateService.checkForUpdate(forceCheck: true);
       
       if (updateInfo != null && updateInfo.hasUpdate && mounted) {
         print('[AutoUpdate] Update found: ${updateInfo.latestVersion}');

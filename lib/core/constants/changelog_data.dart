@@ -1,4 +1,18 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.8.50': [
+    {
+      'title': '🔧 FORCE CHECK FIX - Bypass Frequency Controls!',
+      'description': 'Fixed automatic update detection by adding forceCheck: true to bypass frequency controls and API caching that was preventing automatic checks from finding available updates!',
+    },
+    {
+      'title': '⚡ Guaranteed Update Detection',
+      'description': 'Automatic checks now use the same force parameters as manual checks, ensuring consistent behavior. This should solve the "random timing" issue where automatic checks missed updates!',
+    },
+    {
+      'title': '🎯 FINAL FIX TEST',
+      'description': 'If this appears automatically when v2.8.48 restarts, our automatic detection is FINALLY working! Then test Smart Download to complete the revolutionary update system! 🚀',
+    },
+  ],
   '2.8.49': [
     {
       'title': '🎯 TARGET UPDATE - Automatic Detection Test!',
