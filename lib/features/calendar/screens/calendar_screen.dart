@@ -101,12 +101,18 @@ class CalendarScreenState extends State<CalendarScreen>
   }
 
   Future<void> _scheduleAutomaticUpdateCheck() async {
-    // Wait for calendar to fully initialize
-    await Future.delayed(const Duration(seconds: 3));
+    // Wait longer for calendar to fully initialize
+    await Future.delayed(const Duration(seconds: 10));
     
     if (mounted && !_hasCheckedForUpdatesOnStartup) {
       _hasCheckedForUpdatesOnStartup = true;
-      _checkForAutomaticUpdates();
+      await _checkForAutomaticUpdates();
+      
+      // If no update found, try again after another 10 seconds
+      await Future.delayed(const Duration(seconds: 10));
+      if (mounted) {
+        await _checkForAutomaticUpdates();
+      }
     }
   }
 
@@ -118,15 +124,37 @@ class CalendarScreenState extends State<CalendarScreen>
       if (updateInfo != null && updateInfo.hasUpdate && mounted) {
         print('[AutoUpdate] Update found: ${updateInfo.latestVersion}');
         
-        showDialog(
+        // Force show the dialog even if context might be questionable
+        await showDialog(
           context: context,
+          barrierDismissible: false,
           builder: (context) => EnhancedUpdateDialog(updateInfo: updateInfo),
         );
       } else {
         print('[AutoUpdate] No updates available or update check failed');
+        
+        // Show a temporary debug message (will remove this after testing)
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Auto-update check completed - No updates found'),
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
       }
     } catch (e) {
       print('[AutoUpdate] Error checking for updates on startup: $e');
+      
+      // Show debug error message (will remove this after testing)
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Auto-update check failed: $e'),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
     }
   }
 

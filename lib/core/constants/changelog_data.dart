@@ -1,4 +1,18 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.8.48': [
+    {
+      'title': '🔧 ENHANCED AUTO-DETECTION - Debug Mode!',
+      'description': 'Improved automatic update detection with longer delays (10 seconds), retry attempts, and temporary debug messages. You should see snackbar messages indicating update check status!',
+    },
+    {
+      'title': '🕒 Extended Timing & Retries',
+      'description': 'Automatic checks now wait 10 seconds for full app load, then retry after another 10 seconds if no update found. This should catch any timing issues.',
+    },
+    {
+      'title': '📱 Debug Messages Added',
+      'description': 'Temporary snackbar messages will show update check results so we can see what\'s happening without debug logs. This helps diagnose the detection issue!',
+    },
+  ],
   '2.8.47': [
     {
       'title': '🧪 FINAL VALIDATION TEST - Success Confirmation!',
