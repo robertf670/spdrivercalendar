@@ -1,4 +1,14 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.8.32': [
+    {
+      'title': 'Fixed Linux Base64 Compatibility Issue',
+      'description': 'Replaced Windows PowerShell base64 encoding with certutil-generated RFC 3548 standard formatting. This should resolve the "base64: invalid input" error in GitHub Actions and finally enable consistent keystore decoding.',
+    },
+    {
+      'title': 'Ultimate Google Calendar Authentication Fix',
+      'description': 'With Linux-compatible base64 encoding, GitHub Actions should now successfully decode the debug keystore, producing APKs with the correct SHA-1 fingerprint and working Google Calendar sign-in functionality.',
+    },
+  ],
   '2.8.31': [
     {
       'title': 'Fixed Base64 Keystore Secret Corruption',
