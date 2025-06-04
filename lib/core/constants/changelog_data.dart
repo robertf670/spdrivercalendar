@@ -1,4 +1,14 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.8.43': [
+    {
+      'title': '🧪 Testing the Revolutionary Update System',
+      'description': 'This is a test update to demonstrate the new in-app APK download functionality! If you\'re seeing this, the smart download system is working perfectly.',
+    },
+    {
+      'title': '✨ New Update Experience Validation',
+      'description': 'Testing real-time progress tracking, automatic installation, and the beautiful new update dialog. This validates the complete transformation from browser-based to in-app updates.',
+    },
+  ],
   '2.8.42': [
     {
       'title': '🚀 Revolutionary In-App Update Experience',
