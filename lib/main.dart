@@ -70,12 +70,18 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   late ValueNotifier<bool> _isDarkModeNotifier;
   final _rebuildKey = GlobalKey();
+  bool _hasCheckedForUpdatesOnStartup = false;
 
   @override
   void initState() {
     super.initState();
     _isDarkModeNotifier = ValueNotifier(widget.isDarkModeInitial);
     WidgetsBinding.instance.addObserver(this);
+    
+    // Check for updates after a short delay to ensure app is fully initialized
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _scheduleStartupUpdateCheck();
+    });
   }
 
   @override
@@ -85,21 +91,36 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     super.dispose();
   }
 
-  Future<void> _checkForUpdatesOnResume() async {
-    // Small delay to ensure the app is fully resumed
-    await Future.delayed(const Duration(seconds: 1));
+  Future<void> _scheduleStartupUpdateCheck() async {
+    // Wait for app to fully initialize and navigate to main screen
+    await Future.delayed(const Duration(seconds: 5));
     
+    if (mounted && !_hasCheckedForUpdatesOnStartup) {
+      _hasCheckedForUpdatesOnStartup = true;
+      _checkForUpdatesOnStartup();
+    }
+  }
+
+  Future<void> _checkForUpdatesOnStartup() async {
     try {
+      print('[AutoUpdate] Checking for updates on app startup...');
       final updateInfo = await UpdateService.checkForUpdate();
       
       if (updateInfo != null && updateInfo.hasUpdate && mounted) {
+        print('[AutoUpdate] Update found: ${updateInfo.latestVersion}');
+        
+        // Get the current navigator context
+        final navigatorContext = Navigator.of(context, rootNavigator: true).context;
+        
         showDialog(
-          context: context,
+          context: navigatorContext,
           builder: (context) => EnhancedUpdateDialog(updateInfo: updateInfo),
         );
+      } else {
+        print('[AutoUpdate] No updates available or update check failed');
       }
     } catch (e) {
-      print('Error checking for updates on resume: $e');
+      print('[AutoUpdate] Error checking for updates on startup: $e');
     }
   }
 
@@ -122,7 +143,6 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       }
     } else if (state == AppLifecycleState.resumed) {
       setState(() {});
-      _checkForUpdatesOnResume();
     }
   }
 
@@ -214,9 +234,6 @@ class _SplashScreenState extends State<SplashScreen> {
     }
 
     await _checkOnboardingStatus();
-    
-    // Check for app updates after onboarding is complete
-    _checkForAppUpdates();
   }
 
   Future<bool> _checkVersionUpdate() async {
@@ -252,29 +269,6 @@ class _SplashScreenState extends State<SplashScreen> {
 
     if (mounted) {
       Navigator.pushReplacementNamed(context, nextRoute);
-    }
-  }
-
-  Future<void> _checkForAppUpdates() async {
-    // Wait for navigation to complete and give the app a moment to settle
-    await Future.delayed(const Duration(seconds: 3));
-    
-    if (!mounted) return;
-    
-    try {
-      final updateInfo = await UpdateService.checkForUpdate();
-      
-      if (updateInfo != null && updateInfo.hasUpdate && mounted) {
-        // Get the current context from the navigator
-        final currentContext = Navigator.of(context).context;
-        
-        showDialog(
-          context: currentContext,
-          builder: (context) => EnhancedUpdateDialog(updateInfo: updateInfo),
-        );
-      }
-    } catch (e) {
-      print('Error checking for updates: $e');
     }
   }
 

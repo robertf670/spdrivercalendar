@@ -1,4 +1,22 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.8.44': [
+    {
+      'title': '🔧 CRITICAL FIXES: Update System Overhaul',
+      'description': 'Fixed automatic update detection that was broken due to context disposal issues. Updates will now properly appear on app startup when available!',
+    },
+    {
+      'title': '🛠️ Smart Download Permission Fix',
+      'description': 'Fixed Smart Download immediately falling back to browser. Now properly requests storage and install permissions, with detailed progress tracking and error messages.',
+    },
+    {
+      'title': '📱 Enhanced Error Handling',
+      'description': 'Added comprehensive error handling with descriptive messages for download failures, permission issues, network timeouts, and installation problems.',
+    },
+    {
+      'title': '🔍 Improved Debugging',
+      'description': 'Added detailed logging for troubleshooting update detection, permission requests, downloads, and installations. Better Android version detection.',
+    },
+  ],
   '2.8.43': [
     {
       'title': '🧪 Testing the Revolutionary Update System',
