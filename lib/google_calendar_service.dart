@@ -36,6 +36,8 @@ class GoogleCalendarService {
       // Configure GoogleSignIn
       _googleSignIn = GoogleSignIn(
         scopes: _scopes,
+        // Use Web OAuth client ID - doesn't require SHA-1 fingerprints
+        serverClientId: '1051329330296-l7so8o8bfdm4h1g1hj9ql30dmuq1514e.apps.googleusercontent.com',
         // For Android, use the client ID from google-services.json
         // For web builds, you can specify serverClientId if needed
       );
