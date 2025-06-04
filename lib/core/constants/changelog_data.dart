@@ -1,4 +1,18 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.8.54': [
+    {
+      'title': '⚡ INSTANT UPDATE DETECTION - Zero Delay Test!',
+      'description': 'Testing INSTANT automatic update detection with NO delay! If you\'re seeing this dialog immediately as the calendar screen loads (within milliseconds), then instant detection is working perfectly! 🚀',
+    },
+    {
+      'title': '🎯 Lightning-Fast Response Validation',
+      'description': 'Removed all delays - updates now appear instantly when the calendar screen is shown. This provides immediate notification the moment an update is available, making the experience truly seamless!',
+    },
+    {
+      'title': '⚡ INSTANT Revolutionary Update System!',
+      'description': 'If this appeared instantly without any perceptible delay, both automatic detection AND instant timing are working flawlessly. The update experience is now truly instantaneous! ⚡',
+    },
+  ],
   '2.8.53': [
     {
       'title': '⏰ TIMING TEST - Automatic Update Detection',

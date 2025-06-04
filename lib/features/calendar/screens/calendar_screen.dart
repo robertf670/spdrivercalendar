@@ -101,8 +101,8 @@ class CalendarScreenState extends State<CalendarScreen>
   }
 
   Future<void> _scheduleAutomaticUpdateCheck() async {
-    // Wait briefly for calendar to initialize
-    await Future.delayed(const Duration(seconds: 2));
+    // Check for updates immediately when calendar loads - no delay
+    // await Future.delayed(const Duration(seconds: 2)); // REMOVED: No delay for instant detection
     
     if (mounted && !_hasCheckedForUpdatesOnStartup) {
       _hasCheckedForUpdatesOnStartup = true;
