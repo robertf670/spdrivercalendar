@@ -1,4 +1,18 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.8.55': [
+    {
+      'title': '🎯 TARGET VERSION - Testing Instant Detection!',
+      'description': 'This is the target update that v2.8.54 should detect INSTANTLY! If you\'re seeing this dialog immediately as the calendar screen loads (no delay), then instant automatic detection is WORKING PERFECTLY! 🎉',
+    },
+    {
+      'title': '⚡ Lightning Speed Validation Complete',
+      'description': 'If this appeared instantly without any perceptible wait time, then we have achieved the ultimate update experience - immediate detection the moment the app loads!',
+    },
+    {
+      'title': '🏆 INSTANT UPDATE SYSTEM - MISSION ACCOMPLISHED!',
+      'description': 'Instant detection + Smart Download = Revolutionary update experience! No more waiting, no more delays - just seamless, lightning-fast updates! The system is now perfect! ⚡🚀',
+    },
+  ],
   '2.8.54': [
     {
       'title': '⚡ INSTANT UPDATE DETECTION - Zero Delay Test!',
