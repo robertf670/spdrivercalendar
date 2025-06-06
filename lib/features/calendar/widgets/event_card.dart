@@ -1329,7 +1329,7 @@ class _EventCardState extends State<EventCard> {
                         // Calculate and include break duration
                         () {
                           String baseText;
-                          // Only show break locations for PZ shifts that are not workouts
+                        // Only show break locations for PZ shifts that are not workouts
                           if (!breakTime!.toLowerCase().contains('workout') && widget.event.title.contains('PZ')) {
                             baseText = '${startBreakLocation != null ? "$startBreakLocation " : ""}${breakTime!}${finishBreakLocation != null ? " $finishBreakLocation" : ""}';
                           } else if (breakTime!.toLowerCase().contains('workout')) {
@@ -1588,10 +1588,11 @@ class _EventCardState extends State<EventCard> {
 
                   // Check if this is a workout duty (marked as "WORKOUT" or "nan" in startbreak column)
                   final startBreak = parts[5].trim();
-                  if (startBreak.toUpperCase() == 'WORKOUT' || 
+                  // Skip workouts for half duty assignments (when halfIndicator is not null)
+                  if (halfIndicator != null && (startBreak.toUpperCase() == 'WORKOUT' || 
                       startBreak.toLowerCase() == 'workout' ||
-                      startBreak.toLowerCase() == 'nan') {
-                    continue; // Skip workout duties
+                      startBreak.toLowerCase() == 'nan')) {
+                    continue; // Skip workout duties for half duties
                   }
 
                   final dutyCode = parts[0].trim();
@@ -1634,7 +1635,7 @@ class _EventCardState extends State<EventCard> {
               children: [
                 if (halfIndicator != null) ...[
                   const Text(
-                    'Workouts excluded, found in full duty',
+                    'Workouts excluded for half duty assignments',
                     style: TextStyle(
                       fontSize: 12,
                       color: Colors.grey,
@@ -1779,7 +1780,42 @@ class _EventCardState extends State<EventCard> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Spare Shift'),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                Icons.schedule,
+                color: AppTheme.primaryColor,
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Spare Shift',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Text(
+                    '${widget.event.title} • ${widget.event.formattedStartTime} - ${widget.event.formattedEndTime}',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
         contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -1787,56 +1823,180 @@ class _EventCardState extends State<EventCard> {
           children: [
             // Show duty addition buttons if we have less than 2 duties
             if (widget.event.assignedDuties == null || widget.event.assignedDuties!.length < 2) ...[
-              // Label text for adding a duty
-              const Text(
-                'Add another duty to your Spare Event Card:',
+              // Analyze existing duties to determine what can be added
+              () {
+                bool hasFullDuty = false;
+                bool hasHalfDuty = false;
+                
+                if (widget.event.assignedDuties != null) {
+                  for (String duty in widget.event.assignedDuties!) {
+                    // Remove UNI: prefix if present for analysis
+                    String dutyCode = duty.startsWith('UNI:') ? duty.substring(4) : duty;
+                    
+                    if (dutyCode.endsWith('A') || dutyCode.endsWith('B')) {
+                      hasHalfDuty = true;
+                    } else {
+                      hasFullDuty = true;
+                    }
+                  }
+                }
+                
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Enhanced section header
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primaryColor.withValues(alpha: 0.05),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppTheme.primaryColor.withValues(alpha: 0.1)),
+                      ),
+                      child: Column(
+                        children: [
+                          Row(
+                            children: [
+                              Icon(Icons.add_circle_outline, color: AppTheme.primaryColor, size: 20),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Add Duty',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppTheme.primaryColor,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            hasFullDuty 
+                              ? 'Full duty assigned - no additional duties allowed'
+                              : hasHalfDuty
+                                ? 'Half duties assigned - only additional half duties allowed'
+                                : 'Choose the type of duty to add to your spare shift:',
                 style: TextStyle(
                   fontSize: 14,
-                  color: Colors.grey,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ],
                 ),
               ),
               const SizedBox(height: 16),
 
-              // "Full Duty" button
-              OutlinedButton(
+                    // Show buttons based on existing duties
+                    if (!hasFullDuty && !hasHalfDuty) ...[
+                      // No duties assigned - show all options
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
                 onPressed: () {
                   Navigator.of(context).pop();
                   _showDutySelectionDialog(context);
                 },
-                style: OutlinedButton.styleFrom(
+                          icon: const Icon(Icons.work, size: 18),
+                          label: const Text('Full Duty'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.primaryColor,
+                            foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 12),
-                  side: const BorderSide(color: AppTheme.primaryColor),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
                 ),
-                child: const Text('Full Duty'),
+                        ),
               ),
-              const SizedBox(height: 8),
-
-              // "First Half" button
-              OutlinedButton(
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ElevatedButton.icon(
                 onPressed: () {
                   Navigator.of(context).pop();
-                  _showDutySelectionDialog(context, 'A');  // 'A' indicates first half
-                },
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  side: const BorderSide(color: AppTheme.primaryColor),
+                                _showDutySelectionDialog(context, 'A');
+                              },
+                              icon: const Icon(Icons.schedule, size: 16),
+                              label: const Text('First Half'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.orange,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 10),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Text('First Half'),
+                              ),
+                            ),
               ),
-              const SizedBox(height: 8),
-
-              // "Second Half" button
-              OutlinedButton(
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: ElevatedButton.icon(
                 onPressed: () {
                   Navigator.of(context).pop();
-                  _showDutySelectionDialog(context, 'B');  // 'B' indicates second half
-                },
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  side: const BorderSide(color: AppTheme.primaryColor),
-                ),
-                child: const Text('Second Half'),
-              ),
+                                _showDutySelectionDialog(context, 'B');
+                              },
+                              icon: const Icon(Icons.access_time, size: 16),
+                              label: const Text('Second Half'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.teal,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 10),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ] else if (hasHalfDuty && !hasFullDuty) ...[
+                      // Half duties assigned - only show half duty options
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: () {
+                                Navigator.of(context).pop();
+                                _showDutySelectionDialog(context, 'A');
+                              },
+                              icon: const Icon(Icons.schedule, size: 16),
+                              label: const Text('First Half'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.orange,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 10),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: () {
+                                Navigator.of(context).pop();
+                                _showDutySelectionDialog(context, 'B');
+                              },
+                              icon: const Icon(Icons.access_time, size: 16),
+                              label: const Text('Second Half'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.teal,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 10),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                    // If hasFullDuty is true, no buttons are shown
+                  ],
+                );
+              }(),
               const SizedBox(height: 16),
             ],
             
@@ -1863,7 +2023,11 @@ class _EventCardState extends State<EventCard> {
 
                 return sortedDuties.map((duty) => Padding(
                   padding: const EdgeInsets.only(bottom: 8.0),
-                  child: Row(
+                                       child: Column(
+                       crossAxisAlignment: CrossAxisAlignment.start,
+                       children: [
+                         // Duty info row
+                         Row(
                     children: [
                       Expanded(
                         child: Text(
@@ -1877,7 +2041,7 @@ class _EventCardState extends State<EventCard> {
                           ),
                         ),
                       ),
-                      OutlinedButton(
+                             IconButton(
                         onPressed: () async {
                           // Create a copy of the old event
                           final oldEvent = Event(
@@ -1891,10 +2055,13 @@ class _EventCardState extends State<EventCard> {
                             breakStartTime: widget.event.breakStartTime,
                             breakEndTime: widget.event.breakEndTime,
                             assignedDuties: widget.event.assignedDuties,
+                                   busAssignments: widget.event.busAssignments,
                           );
                           
-                          // Remove the specific duty
-                          widget.event.assignedDuties!.remove(duty['dutyCode']);
+                                 // Remove the specific duty and its bus assignment
+                                 final dutyCode = duty['dutyCode'] as String;
+                                 widget.event.assignedDuties!.remove(dutyCode);
+                                 widget.event.setBusForDuty(dutyCode, null);
                           
                           // If no duties left, set to null
                           if (widget.event.assignedDuties!.isEmpty) {
@@ -1934,12 +2101,94 @@ class _EventCardState extends State<EventCard> {
                             ));
                           }
                         },
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                          side: const BorderSide(color: Colors.red),
-                          foregroundColor: Colors.red,
+                               icon: const Icon(Icons.delete_outline),
+                               color: Colors.red,
+                               iconSize: 20,
+                               constraints: const BoxConstraints(
+                                 minWidth: 32,
+                                 minHeight: 32,
+                               ),
+                               padding: EdgeInsets.zero,
+                               tooltip: 'Remove duty',
+                             ),
+                           ],
+                         ),
+                         const SizedBox(height: 8),
+                         // Bus assignment row
+                         Container(
+                           padding: const EdgeInsets.all(10),
+                           decoration: BoxDecoration(
+                             color: widget.event.getBusForDuty(duty['dutyCode'] ?? '') != null 
+                                 ? Colors.green.withValues(alpha: 0.1)
+                                 : Colors.orange.withValues(alpha: 0.1),
+                             borderRadius: BorderRadius.circular(8),
+                             border: Border.all(
+                               color: widget.event.getBusForDuty(duty['dutyCode'] ?? '') != null 
+                                   ? Colors.green.withValues(alpha: 0.3)
+                                   : Colors.orange.withValues(alpha: 0.3),
+                             ),
+                           ),
+                           child: Row(
+                             children: [
+                               Icon(
+                                 widget.event.getBusForDuty(duty['dutyCode'] ?? '') != null 
+                                     ? Icons.directions_bus 
+                                     : Icons.bus_alert_outlined,
+                                 color: widget.event.getBusForDuty(duty['dutyCode'] ?? '') != null 
+                                     ? Colors.green 
+                                     : Colors.orange,
+                                 size: 18,
+                               ),
+                               const SizedBox(width: 8),
+                               Expanded(
+                                 child: Column(
+                                   crossAxisAlignment: CrossAxisAlignment.start,
+                                   children: [
+                                     Text(
+                                       widget.event.getBusForDuty(duty['dutyCode'] ?? '') != null 
+                                           ? 'Assigned Bus'
+                                           : 'No Bus Assigned',
+                                       style: TextStyle(
+                                         fontSize: 11,
+                                         fontWeight: FontWeight.w600,
+                                         color: widget.event.getBusForDuty(duty['dutyCode'] ?? '') != null 
+                                             ? Colors.green 
+                                             : Colors.orange,
+                                       ),
+                                     ),
+                                     if (widget.event.getBusForDuty(duty['dutyCode'] ?? '') != null)
+                                       Text(
+                                         widget.event.getBusForDuty(duty['dutyCode'] ?? '')!,
+                                         style: TextStyle(
+                                           fontSize: 13,
+                                           fontWeight: FontWeight.bold,
+                                           color: Colors.green[700],
                         ),
-                        child: const Text('Remove'),
+                                       ),
+                                   ],
+                                 ),
+                               ),
+                                                                ElevatedButton(
+                                   onPressed: () async {
+                                     await _showDutyBusAssignmentDialog(context, duty['dutyCode'] ?? '');
+                                   },
+                                 child: const Icon(
+                                   Icons.add,
+                                   size: 14,
+                                 ),
+                                 style: ElevatedButton.styleFrom(
+                                   backgroundColor: AppTheme.primaryColor,
+                                   foregroundColor: Colors.white,
+                                   padding: const EdgeInsets.all(8),
+                                   minimumSize: Size.zero,
+                                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                   shape: RoundedRectangleBorder(
+                                     borderRadius: BorderRadius.circular(6),
+                                   ),
+                                 ),
+                               ),
+                             ],
+                           ),
                       ),
                     ],
                   ),
@@ -1949,22 +2198,34 @@ class _EventCardState extends State<EventCard> {
             ],
             
             // Show delete button at the bottom
-            OutlinedButton(
+             Container(
+               width: double.infinity,
+               margin: const EdgeInsets.only(top: 8),
+               child: ElevatedButton.icon(
               onPressed: () async {
                 // Show confirmation dialog
                 final shouldDelete = await showDialog<bool>(
                   context: context,
                   builder: (context) => AlertDialog(
-                    title: const Text('Delete Event'),
-                    content: const Text('Are you sure you want to delete this spare event?'),
+                       title: Row(
+                         children: [
+                           Icon(Icons.warning_amber, color: Colors.red, size: 24),
+                           const SizedBox(width: 8),
+                           const Text('Delete Event'),
+                         ],
+                       ),
+                       content: const Text('Are you sure you want to delete this spare event? This action cannot be undone.'),
                     actions: [
                       TextButton(
                         onPressed: () => Navigator.of(context).pop(false),
                         child: const Text('Cancel'),
                       ),
-                      TextButton(
+                         ElevatedButton(
                         onPressed: () => Navigator.of(context).pop(true),
-                        style: TextButton.styleFrom(foregroundColor: Colors.red),
+                           style: ElevatedButton.styleFrom(
+                             backgroundColor: Colors.red,
+                             foregroundColor: Colors.white,
+                           ),
                         child: const Text('Delete'),
                       ),
                     ],
@@ -1982,12 +2243,17 @@ class _EventCardState extends State<EventCard> {
                   widget.onEdit(widget.event);
                 }
               },
-              style: OutlinedButton.styleFrom(
+                 icon: const Icon(Icons.delete_forever),
+                 label: const Text('Delete Spare Event'),
+                 style: ElevatedButton.styleFrom(
+                   backgroundColor: Colors.red,
+                   foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 12),
-                side: const BorderSide(color: Colors.red),
-                foregroundColor: Colors.red,
+                   shape: RoundedRectangleBorder(
+                     borderRadius: BorderRadius.circular(8),
               ),
-              child: const Text('Delete Event'),
+                 ),
+               ),
             ),
           ],
         ),
@@ -2068,9 +2334,7 @@ class _EventCardState extends State<EventCard> {
       final isFirstHalf = duty['isFirstHalf'] == 'true';
       final isSecondHalf = duty['isSecondHalf'] == 'true';
 
-      final halfDutyText = isHalfDuty 
-          ? (isFirstHalf ? ' (First Half)' : ' (Second Half)')
-          : '';
+
       
       // Determine duty type for display
       final dutyTypeText = isUniDuty ? 'UNI/EURO' : 'Zone';
@@ -2097,13 +2361,10 @@ class _EventCardState extends State<EventCard> {
                   children: [
                     Expanded(
                       child: Text(
-                        isUniDuty
-                          ? 'Assigned: $displayDutyCode | '
+                          'Assigned: $displayDutyCode | '
                             '${_formatTimeString(duty['startTime'])} to '
-                            '${_formatTimeString(duty['endTime'])}$halfDutyText'
-                          : 'Assigned: $displayDutyCode | '
-                            '${_formatTimeString(duty['startTime'])} to '
-                            '${_formatTimeString(duty['endTime'])}$halfDutyText',
+                          '${_formatTimeString(duty['endTime'])}'
+                          '${widget.event.getBusForDuty(duty['dutyCode'] ?? '') != null ? ' | Bus: ${widget.event.getBusForDuty(duty['dutyCode'] ?? '')}' : ''}',
                         style: TextStyle(
                           color: Theme.of(context).brightness == Brightness.dark
                               ? Colors.white
@@ -2251,6 +2512,85 @@ class _EventCardState extends State<EventCard> {
         ],
       ),
     );
+  }
+
+  // Show bus assignment dialog for a specific duty
+  Future<void> _showDutyBusAssignmentDialog(BuildContext context, String dutyCode) async {
+    String? busNumber = widget.event.getBusForDuty(dutyCode);
+    
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text('Assign Bus to $dutyCode'),
+        content: TextField(
+          onChanged: (value) => busNumber = value.isEmpty ? null : value,
+          controller: TextEditingController(text: widget.event.getBusForDuty(dutyCode) ?? ''),
+          decoration: const InputDecoration(
+            labelText: 'Bus Number',
+            hintText: 'e.g., EW64, PA168, SG559',
+          ),
+          textCapitalization: TextCapitalization.characters,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Cancel'),
+          ),
+          if (widget.event.getBusForDuty(dutyCode) != null)
+            TextButton(
+              onPressed: () async {
+                await _updateDutyBus(dutyCode, null);
+                Navigator.of(dialogContext).pop();
+              },
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
+              child: const Text('Remove Bus'),
+            ),
+          TextButton(
+            onPressed: () async {
+              // Normalize the bus number like other duties
+              String? normalizedBusNumber = busNumber?.trim().toUpperCase();
+              // Remove any spaces
+              normalizedBusNumber = normalizedBusNumber?.replaceAll(' ', '');
+              
+              await _updateDutyBus(dutyCode, normalizedBusNumber?.isEmpty == true ? null : normalizedBusNumber);
+              Navigator.of(dialogContext).pop();
+            },
+            child: const Text('Assign'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Update duty bus assignment
+  Future<void> _updateDutyBus(String dutyCode, String? newBus) async {
+    // Create a copy of the old event
+    final oldEvent = Event(
+      id: widget.event.id,
+      title: widget.event.title,
+      startDate: widget.event.startDate,
+      startTime: widget.event.startTime,
+      endDate: widget.event.endDate,
+      endTime: widget.event.endTime,
+      assignedDuties: widget.event.assignedDuties,
+      busAssignments: widget.event.busAssignments,
+    );
+    
+    // Update the bus assignment
+    widget.event.setBusForDuty(dutyCode, newBus);
+    
+    // Save the updated event
+    await EventService.updateEvent(oldEvent, widget.event);
+    
+    // Refresh the UI
+    if (mounted) {
+      setState(() {});
+      // Also close and reopen the spare shift dialog to show the updated bus assignment
+      Navigator.of(context).pop();
+      Future.delayed(const Duration(milliseconds: 100), () {
+        if (mounted) _showSpareShiftDialog(context);
+      });
+    }
   }
 
   // Add helper function to format the title

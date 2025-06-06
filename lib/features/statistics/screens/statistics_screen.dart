@@ -1211,7 +1211,30 @@ class StatisticsScreenState extends State<StatisticsScreen>
         final isWorkoutShift = _isWorkoutShift(event);
         final isWorkoutOrOvertime = isWorkoutShift || isOvertimeShift;
         
-        if (isWorkoutOrOvertime) {
+        // Check if this is a spare shift with bus assignments
+        if (event.title.startsWith('SP')) {
+          if (event.hasEnhancedDuties) {
+            // For spare shifts with enhanced duties, count buses from individual duty assignments
+            for (final assignedDuty in event.enhancedAssignedDuties!) {
+              if (assignedDuty.assignedBus != null) {
+                if (busCounts.containsKey(assignedDuty.assignedBus!)) {
+                  busCounts[assignedDuty.assignedBus!] = busCounts[assignedDuty.assignedBus!]! + 1;
+                } else {
+                  busCounts[assignedDuty.assignedBus!] = 1;
+                }
+              }
+            }
+          } else if (event.busAssignments != null) {
+            // For spare shifts with current bus assignment system, count buses from busAssignments
+            for (final busNumber in event.busAssignments!.values) {
+              if (busCounts.containsKey(busNumber)) {
+                busCounts[busNumber] = busCounts[busNumber]! + 1;
+              } else {
+                busCounts[busNumber] = 1;
+              }
+            }
+          }
+        } else if (isWorkoutOrOvertime) {
           // For workout and overtime shifts, only count the firstHalfBus (which is the assigned bus)
           if (event.firstHalfBus != null) {
             if (busCounts.containsKey(event.firstHalfBus!)) {

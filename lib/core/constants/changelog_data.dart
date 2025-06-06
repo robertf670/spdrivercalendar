@@ -1,4 +1,30 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.8.57': [
+    {
+      'title': 'Enhanced Spare Duty System - Individual Bus Assignments',
+      'description': 'Revolutionary upgrade to spare shift functionality! You can now assign individual buses to each spare duty. Add multiple duties (full duties, first half, second half) with dedicated bus assignments per duty.',
+    },
+    {
+      'title': 'Smart Duty Type Restrictions',
+      'description': 'Intelligent business logic prevents incompatible duty combinations: full duties block half duties, half duties block full duties. System guides you to logical assignments with contextual messaging.',
+    },
+    {
+      'title': 'Improved Workout Duty Filtering',
+      'description': 'Fixed workout duty logic: workouts now correctly excluded for half duties (first/second half) but allowed for full duties, matching operational requirements.',
+    },
+    {
+      'title': 'Enhanced Spare Duty Bus Statistics',
+      'description': 'Spare duty bus assignments now properly included in "Most Frequent Buses" statistics! All individual bus assignments from spare duties are tracked and counted alongside regular shifts.',
+    },
+    {
+      'title': 'Professional Spare Shift Dialog Design',
+      'description': 'Completely redesigned spare shift interface with modern cards, color-coded duty type buttons (Full=blue, First Half=orange, Second Half=teal), status indicators, and intuitive bus assignment workflow.',
+    },
+    {
+      'title': 'Simplified Bus Assignment Button',
+      'description': 'Streamlined bus assignment interface with clean "+" icon buttons. Replaced text-heavy "Assign/Change" buttons with compact, elegant blue "+" icons for a cleaner, more intuitive user experience.',
+    },
+  ],
   '2.8.56': [
     {
       'title': 'Critical Layout Fixes - Navigation Bar & Content Issues',

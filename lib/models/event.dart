@@ -1,5 +1,80 @@
 import 'package:flutter/material.dart';
 
+// New class for enhanced duty tracking
+class AssignedDuty {
+  final String dutyCode;
+  final String? assignedBus;
+  final String? startTime;
+  final String? endTime;
+  final String? location;
+  final bool? isHalfDuty;
+  final bool? isSecondHalf;
+
+  AssignedDuty({
+    required this.dutyCode,
+    this.assignedBus,
+    this.startTime,
+    this.endTime,
+    this.location,
+    this.isHalfDuty,
+    this.isSecondHalf,
+  });
+
+  // Convert to map for storage
+  Map<String, dynamic> toMap() {
+    return {
+      'dutyCode': dutyCode,
+      'assignedBus': assignedBus,
+      'startTime': startTime,
+      'endTime': endTime,
+      'location': location,
+      'isHalfDuty': isHalfDuty,
+      'isSecondHalf': isSecondHalf,
+    };
+  }
+
+  // Create from map
+  factory AssignedDuty.fromMap(Map<String, dynamic> map) {
+    return AssignedDuty(
+      dutyCode: map['dutyCode'],
+      assignedBus: map['assignedBus'],
+      startTime: map['startTime'],
+      endTime: map['endTime'],
+      location: map['location'],
+      isHalfDuty: map['isHalfDuty'],
+      isSecondHalf: map['isSecondHalf'],
+    );
+  }
+
+  // Create from legacy string format for migration
+  factory AssignedDuty.fromLegacyString(String dutyString) {
+    return AssignedDuty(
+      dutyCode: dutyString,
+    );
+  }
+
+  // Copy with method for updates
+  AssignedDuty copyWith({
+    String? dutyCode,
+    String? assignedBus,
+    String? startTime,
+    String? endTime,
+    String? location,
+    bool? isHalfDuty,
+    bool? isSecondHalf,
+  }) {
+    return AssignedDuty(
+      dutyCode: dutyCode ?? this.dutyCode,
+      assignedBus: assignedBus ?? this.assignedBus,
+      startTime: startTime ?? this.startTime,
+      endTime: endTime ?? this.endTime,
+      location: location ?? this.location,
+      isHalfDuty: isHalfDuty ?? this.isHalfDuty,
+      isSecondHalf: isSecondHalf ?? this.isSecondHalf,
+    );
+  }
+}
+
 class Event {
   final String id;
   String title;
@@ -10,9 +85,11 @@ class Event {
   Duration? workTime;  // For PZ shifts
   TimeOfDay? breakStartTime;  // For UNI shifts
   TimeOfDay? breakEndTime;    // For UNI shifts
-  List<String>? assignedDuties;  // For storing multiple duties assigned to spare shifts
+  List<String>? assignedDuties;  // For storing multiple duties assigned to spare shifts (legacy)
+  List<AssignedDuty>? enhancedAssignedDuties;  // New enhanced duty tracking
   String? firstHalfBus;  // For storing the first half bus number
   String? secondHalfBus;  // For storing the second half bus number
+  Map<String, String>? busAssignments;  // Map of duty code to assigned bus number
   bool isHoliday;  // Whether this event represents a holiday
   String? holidayType;  // The type of holiday ('winter' or 'summer')
   String? notes; // Add notes field
@@ -32,8 +109,10 @@ class Event {
     this.breakStartTime,
     this.breakEndTime,
     this.assignedDuties,
+    this.enhancedAssignedDuties,
     this.firstHalfBus,
     this.secondHalfBus,
+    this.busAssignments,
     this.isHoliday = false,
     this.holidayType,
     this.notes,
@@ -41,6 +120,58 @@ class Event {
     this.tookFullBreak = false,
     this.overtimeDuration,
   });
+
+  // Helper method to check if using enhanced duties
+  bool get hasEnhancedDuties => enhancedAssignedDuties != null && enhancedAssignedDuties!.isNotEmpty;
+
+  // Migrate legacy duties to enhanced format
+  void migrateLegacyDuties() {
+    if (assignedDuties != null && assignedDuties!.isNotEmpty && !hasEnhancedDuties) {
+      enhancedAssignedDuties = assignedDuties!.map((dutyString) => AssignedDuty.fromLegacyString(dutyString)).toList();
+      
+      // Migrate bus assignments if this is a spare shift
+      if (title.startsWith('SP') && enhancedAssignedDuties!.isNotEmpty) {
+        // Assign firstHalfBus to first duty, secondHalfBus to second duty if they exist
+        if (firstHalfBus != null && enhancedAssignedDuties!.isNotEmpty) {
+          enhancedAssignedDuties![0] = enhancedAssignedDuties![0].copyWith(assignedBus: firstHalfBus);
+        }
+        if (secondHalfBus != null && enhancedAssignedDuties!.length > 1) {
+          enhancedAssignedDuties![1] = enhancedAssignedDuties![1].copyWith(assignedBus: secondHalfBus);
+        }
+      }
+      
+      // Clear legacy fields after migration
+      assignedDuties = null;
+    }
+  }
+
+  // Get current duties (enhanced or legacy)
+  List<String> getCurrentDutyCodes() {
+    if (hasEnhancedDuties) {
+      return enhancedAssignedDuties!.map((duty) => duty.dutyCode).toList();
+    }
+    return assignedDuties ?? [];
+  }
+
+  // Get assigned bus for a specific duty
+  String? getBusForDuty(String dutyCode) {
+    return busAssignments?[dutyCode];
+  }
+
+  // Set assigned bus for a specific duty
+  void setBusForDuty(String dutyCode, String? busNumber) {
+    if (busNumber == null || busNumber.trim().isEmpty) {
+      // Remove bus assignment
+      busAssignments?.remove(dutyCode);
+      if (busAssignments?.isEmpty == true) {
+        busAssignments = null;
+      }
+    } else {
+      // Add/update bus assignment
+      busAssignments ??= {};
+      busAssignments![dutyCode] = busNumber.trim();
+    }
+  }
 
   // Add copyWith method
   Event copyWith({
@@ -54,8 +185,10 @@ class Event {
     TimeOfDay? breakStartTime,
     TimeOfDay? breakEndTime,
     List<String>? assignedDuties,
+    List<AssignedDuty>? enhancedAssignedDuties,
     String? firstHalfBus,
     String? secondHalfBus,
+    Map<String, String>? busAssignments,
     bool? isHoliday,
     String? holidayType,
     String? notes,
@@ -74,8 +207,10 @@ class Event {
       breakStartTime: breakStartTime ?? this.breakStartTime,
       breakEndTime: breakEndTime ?? this.breakEndTime,
       assignedDuties: assignedDuties ?? this.assignedDuties,
+      enhancedAssignedDuties: enhancedAssignedDuties ?? this.enhancedAssignedDuties,
       firstHalfBus: firstHalfBus ?? this.firstHalfBus,
       secondHalfBus: secondHalfBus ?? this.secondHalfBus,
+      busAssignments: busAssignments ?? this.busAssignments,
       isHoliday: isHoliday ?? this.isHoliday,
       holidayType: holidayType ?? this.holidayType,
       notes: notes ?? this.notes,
@@ -102,8 +237,10 @@ class Event {
         ? {'hour': breakEndTime!.hour, 'minute': breakEndTime!.minute}
         : null,
       'assignedDuties': assignedDuties,
+      'enhancedAssignedDuties': enhancedAssignedDuties?.map((duty) => duty.toMap()).toList(),
       'firstHalfBus': firstHalfBus,
       'secondHalfBus': secondHalfBus,
+      'busAssignments': busAssignments,
       'isHoliday': isHoliday,
       'holidayType': holidayType,
       'notes': notes,
@@ -115,7 +252,7 @@ class Event {
 
   // Create from map from storage
   factory Event.fromMap(Map<String, dynamic> map) {
-    return Event(
+    final event = Event(
       id: map['id'],
       title: map['title'],
       startDate: DateTime.parse(map['startDate']),
@@ -146,8 +283,16 @@ class Event {
       assignedDuties: map['assignedDuties'] != null 
         ? List<String>.from(map['assignedDuties'])
         : null,
+      enhancedAssignedDuties: map['enhancedAssignedDuties'] != null
+        ? (map['enhancedAssignedDuties'] as List)
+            .map((dutyMap) => AssignedDuty.fromMap(dutyMap))
+            .toList()
+        : null,
       firstHalfBus: map['firstHalfBus'],
       secondHalfBus: map['secondHalfBus'],
+      busAssignments: map['busAssignments'] != null 
+        ? Map<String, String>.from(map['busAssignments'])
+        : null,
       isHoliday: map['isHoliday'] ?? false,
       holidayType: map['holidayType'],
       notes: map['notes'],
@@ -155,6 +300,11 @@ class Event {
       tookFullBreak: map['tookFullBreak'] ?? false,
       overtimeDuration: map['overtimeDuration'],
     );
+    
+    // Auto-migrate legacy duties if needed
+    event.migrateLegacyDuties();
+    
+    return event;
   }
 
   // Format times for display

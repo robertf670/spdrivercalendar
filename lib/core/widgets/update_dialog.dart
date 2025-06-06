@@ -1,11 +1,71 @@
 import 'package:flutter/material.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:spdrivercalendar/services/update_service.dart';
 import 'package:spdrivercalendar/core/constants/changelog_data.dart';
 
-class UpdateDialog extends StatelessWidget {
+class UpdateDialog extends StatefulWidget {
   final UpdateInfo updateInfo;
 
   const UpdateDialog({Key? key, required this.updateInfo}) : super(key: key);
+
+  @override
+  State<UpdateDialog> createState() => _UpdateDialogState();
+}
+
+class _UpdateDialogState extends State<UpdateDialog> {
+  String? _currentVersion;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCurrentVersion();
+  }
+
+  Future<void> _loadCurrentVersion() async {
+    try {
+      final packageInfo = await PackageInfo.fromPlatform();
+      setState(() {
+        _currentVersion = packageInfo.version;
+      });
+    } catch (e) {
+      // Ignore error, will use fallback in changelog method
+    }
+  }
+
+  /// Compare two version strings semantically
+  int _compareVersions(String version1, String version2) {
+    try {
+      final v1Parts = version1.split('.').map(int.parse).toList();
+      final v2Parts = version2.split('.').map(int.parse).toList();
+      
+      // Ensure both have same number of parts
+      while (v1Parts.length < v2Parts.length) v1Parts.add(0);
+      while (v2Parts.length < v1Parts.length) v2Parts.add(0);
+      
+      for (int i = 0; i < v1Parts.length; i++) {
+        if (v1Parts[i] != v2Parts[i]) {
+          return v1Parts[i].compareTo(v2Parts[i]);
+        }
+      }
+      return 0;
+    } catch (e) {
+      // Fallback to string comparison if parsing fails
+      return version1.compareTo(version2);
+    }
+  }
+
+  /// Get list of versions between current and latest (inclusive of latest)
+  List<String> _getMissedVersions() {
+    if (_currentVersion == null) return [widget.updateInfo.latestVersion];
+    
+    final allVersions = changelogData.keys.toList()
+      ..sort((a, b) => _compareVersions(a, b)); // Ascending order
+    
+    return allVersions.where((version) {
+      return _compareVersions(version, _currentVersion!) > 0 && 
+             _compareVersions(version, widget.updateInfo.latestVersion) <= 0;
+    }).toList();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -60,13 +120,13 @@ class UpdateDialog extends StatelessWidget {
                     size: 18,
                   ),
                   const SizedBox(width: 8),
-                  Text(
-                    'Version ${updateInfo.latestVersion}',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: theme.colorScheme.primary,
-                    ),
+                                  Text(
+                  'Version ${widget.updateInfo.latestVersion}',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: theme.colorScheme.primary,
                   ),
+                ),
                 ],
               ),
             ),
@@ -121,7 +181,7 @@ class UpdateDialog extends StatelessWidget {
         ElevatedButton(
           onPressed: () {
             Navigator.of(context).pop();
-            UpdateService.downloadUpdate(updateInfo.downloadUrl);
+            UpdateService.downloadUpdate(widget.updateInfo.downloadUrl);
           },
           child: const Text('Download'),
         ),
@@ -131,27 +191,57 @@ class UpdateDialog extends StatelessWidget {
 
   /// Get properly formatted changelog notes from local data
   String _getLocalChangelogNotes() {
-    final version = updateInfo.latestVersion;
-    final versionChanges = changelogData[version];
+    final missedVersions = _getMissedVersions();
     
-    if (versionChanges == null || versionChanges.isEmpty) {
-      // Fallback to generic notes if version not found in local changelog
+    if (missedVersions.isEmpty) {
       return 'Bug fixes and performance improvements\n\nCheck the What\'s New screen in the app for detailed information.';
     }
     
-    // Format changelog entries nicely for the update dialog
-    final formattedEntries = versionChanges.map((entry) {
-      final title = entry['title'] ?? 'Update';
-      final description = entry['description'] ?? '';
+    if (missedVersions.length == 1) {
+      // Single version - use existing format
+      final version = missedVersions.first;
+      final versionChanges = changelogData[version];
       
-      // Format as bullet points with title and description
-      if (description.isNotEmpty) {
-        return '• $title\n  $description';
-      } else {
-        return '• $title';
+      if (versionChanges == null || versionChanges.isEmpty) {
+        return 'Bug fixes and performance improvements\n\nCheck the What\'s New screen in the app for detailed information.';
       }
-    }).join('\n\n');
+      
+      final formattedEntries = versionChanges.map((entry) {
+        final title = entry['title'] ?? 'Update';
+        final description = entry['description'] ?? '';
+        
+        if (description.isNotEmpty) {
+          return '• $title\n  $description';
+        } else {
+          return '• $title';
+        }
+      }).join('\n\n');
+      
+      return formattedEntries;
+    }
     
-    return formattedEntries;
+    // Multiple versions - aggregate format
+    final buffer = StringBuffer();
+    buffer.writeln('Updates since your last version (${missedVersions.length} versions):\n');
+    
+    for (int i = 0; i < missedVersions.length; i++) {
+      final version = missedVersions[i];
+      final versionChanges = changelogData[version] ?? [];
+      
+      if (versionChanges.isNotEmpty) {
+        buffer.writeln('VERSION $version');
+        for (final change in versionChanges) {
+          final title = change['title'] ?? 'Update';
+          buffer.writeln('• $title');
+        }
+        
+        // Add spacing between versions, but not after the last one
+        if (i < missedVersions.length - 1) {
+          buffer.writeln();
+        }
+      }
+    }
+    
+    return buffer.toString();
   }
 } 
