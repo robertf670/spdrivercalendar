@@ -24,6 +24,10 @@ final Map<String, List<Map<String, String>>> changelogData = {
       'title': 'Simplified Bus Assignment Button',
       'description': 'Streamlined bus assignment interface with clean "+" icon buttons. Replaced text-heavy "Assign/Change" buttons with compact, elegant blue "+" icons for a cleaner, more intuitive user experience.',
     },
+    {
+      'title': 'Aggregated Changelog System',
+      'description': 'Revolutionary changelog experience! Users who miss multiple updates now see ALL missed versions in both update dialogs and What\'s New screen. No more missing important changes - complete update history displayed chronologically.',
+    },
   ],
   '2.8.56': [
     {
