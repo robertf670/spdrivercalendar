@@ -1326,10 +1326,28 @@ class _EventCardState extends State<EventCard> {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        // Only show break locations for PZ shifts that are not workouts
-                        (!breakTime!.toLowerCase().contains('workout') && widget.event.title.contains('PZ')) 
-                            ? '${startBreakLocation != null ? "$startBreakLocation " : ""}${breakTime!}${finishBreakLocation != null ? " $finishBreakLocation" : ""}'
-                            : breakTime!.toLowerCase().contains('workout') ? 'Workout' : breakTime!,
+                        // Calculate and include break duration
+                        () {
+                          String baseText;
+                          // Only show break locations for PZ shifts that are not workouts
+                          if (!breakTime!.toLowerCase().contains('workout') && widget.event.title.contains('PZ')) {
+                            baseText = '${startBreakLocation != null ? "$startBreakLocation " : ""}${breakTime!}${finishBreakLocation != null ? " $finishBreakLocation" : ""}';
+                          } else if (breakTime!.toLowerCase().contains('workout')) {
+                            baseText = 'Workout';
+                          } else {
+                            baseText = breakTime!;
+                          }
+                          
+                          // Add duration if not a workout
+                          if (!breakTime!.toLowerCase().contains('workout')) {
+                            final duration = _calculateBreakDuration(breakTime!);
+                            if (duration != null) {
+                              baseText += ' ($duration)';
+                            }
+                          }
+                          
+                          return baseText;
+                        }(),
                         style: TextStyle(
                           color: Theme.of(context).brightness == Brightness.dark
                               ? Colors.white
@@ -2384,5 +2402,63 @@ class _EventCardState extends State<EventCard> {
     final hour = time.hour.toString().padLeft(2, '0');
     final minute = time.minute.toString().padLeft(2, '0');
     return '$hour:$minute';
+  }
+
+  // Helper method to calculate break duration from break time string
+  String? _calculateBreakDuration(String breakTimeString) {
+    try {
+      // Handle workout case
+      if (breakTimeString.toLowerCase().contains('workout')) {
+        return null;
+      }
+      
+      // Extract times from format like "13:30 - 14:00" or "Location 13:30 - 14:00 Location"
+      final timePattern = RegExp(r'(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})');
+      final match = timePattern.firstMatch(breakTimeString);
+      
+      if (match == null) return null;
+      
+      final startTimeStr = match.group(1)!;
+      final endTimeStr = match.group(2)!;
+      
+      // Parse the times
+      final startParts = startTimeStr.split(':');
+      final endParts = endTimeStr.split(':');
+      
+      final startHour = int.parse(startParts[0]);
+      final startMinute = int.parse(startParts[1]);
+      final endHour = int.parse(endParts[0]);
+      final endMinute = int.parse(endParts[1]);
+      
+      // Create DateTime objects for calculation (using same day)
+      final now = DateTime.now();
+      final startDateTime = DateTime(now.year, now.month, now.day, startHour, startMinute);
+      var endDateTime = DateTime(now.year, now.month, now.day, endHour, endMinute);
+      
+      // Handle case where break spans midnight (end time is earlier than start time)
+      if (endDateTime.isBefore(startDateTime)) {
+        endDateTime = endDateTime.add(const Duration(days: 1));
+      }
+      
+      final duration = endDateTime.difference(startDateTime);
+      final minutes = duration.inMinutes;
+      
+      if (minutes <= 0) return null;
+      
+      // Format duration
+      if (minutes < 60) {
+        return '${minutes}m';
+      } else {
+        final hours = minutes ~/ 60;
+        final remainingMinutes = minutes % 60;
+        if (remainingMinutes == 0) {
+          return '${hours}h';
+        } else {
+          return '${hours}h ${remainingMinutes}m';
+        }
+      }
+    } catch (e) {
+      return null;
+    }
   }
 }

@@ -616,6 +616,7 @@ class StatisticsScreenState extends State<StatisticsScreen>
     int bogeyShifts = 0;
     int bankHolidayShifts = 0;
     int restDaysWorked = 0;
+    int overtimeShifts = 0; // Add overtime shifts counter
     
     // Track processed event IDs to avoid counting duplicates
     final Set<String> processedIds = {};
@@ -623,10 +624,7 @@ class StatisticsScreenState extends State<StatisticsScreen>
     // --- Refactored Processing Logic --- 
     widget.events.forEach((date, events) { // Iterate through all dates in the events map
       for (final event in events) { // Iterate through events on that date
-        // Only consider work shifts
-        if (!event.isWorkShift) continue;
-        
-        // Skip if already processed (handles cases where event might span midnight? Unlikely with current model but safe)
+        // Skip if already processed (handles cases where event might span midnight)
         if (processedIds.contains(event.id ?? '')) continue;
         
         // Check if event falls within the selected date range
@@ -635,6 +633,15 @@ class StatisticsScreenState extends State<StatisticsScreen>
             event.startDate.isBefore(endDate.add(const Duration(days: 1)))) {
           
           processedIds.add(event.id ?? ''); // Mark as processed
+
+          // First check if this is an overtime shift
+          if (event.isWorkShift && event.title.contains('(OT)')) {
+            overtimeShifts++;
+            continue; // Skip further processing for overtime shifts
+          }
+          
+          // Only consider non-overtime work shifts for regular statistics
+          if (!event.isWorkShift) continue;
 
           // Determine if this date was a rostered Rest Day
           final String rosterShiftType = (_startDate != null) 
@@ -690,6 +697,7 @@ class StatisticsScreenState extends State<StatisticsScreen>
       'bogeyShifts': bogeyShifts,
       'bankHolidayShifts': bankHolidayShifts,
       'restDaysWorked': restDaysWorked,
+      'overtimeShifts': overtimeShifts, // Add overtime shifts to returned data
       'dateRange': dateRangeStr,
     };
   }
@@ -1138,7 +1146,8 @@ class StatisticsScreenState extends State<StatisticsScreen>
         // Use event.startDate for checks, normalized to UTC midnight
         final eventNormalizedStartDate = DateTime.utc(event.startDate.year, event.startDate.month, event.startDate.day);
         
-        if (!event.isWorkShift || processedIds.contains(event.id)) {
+        // FIXED: Consistent null ID handling to prevent double-counting midnight-spanning shifts
+        if (!event.isWorkShift || event.title.contains('(OT)') || processedIds.contains(event.id ?? '')) {
             continue;
         }
         processedIds.add(event.id ?? '');
@@ -1188,9 +1197,14 @@ class StatisticsScreenState extends State<StatisticsScreen>
 
   Map<String, int> _getMostFrequentBuses() {
     Map<String, int> busCounts = {};
+    Set<String> processedIds = {}; // Add duplicate prevention
     
     widget.events.forEach((date, events) {
       for (final event in events) {
+        // FIXED: Added duplicate prevention for midnight-spanning events
+        if (processedIds.contains(event.id ?? '')) continue;
+        processedIds.add(event.id ?? '');
+
         // Check if this is a workout or overtime shift
         final isOvertimeShift = event.title.contains('(OT)');
         // For workout shifts, we need to check the break time
@@ -1365,7 +1379,8 @@ class StatisticsScreenState extends State<StatisticsScreen>
     if (widget.events.containsKey(localMidnightTargetDate)) {
       final eventsOnDate = widget.events[localMidnightTargetDate]!;
       for (final event in eventsOnDate) {
-        if (event.isWorkShift) {
+        // Only include rostered work shifts, exclude overtime shifts
+        if (event.isWorkShift && !event.title.contains('(OT)')) {
           final workTime = await _calculateWorkTime(event); // Use existing calculation
           shiftsDetails.add({
             'date': localMidnightTargetDate, // Store the date for display
@@ -1401,13 +1416,16 @@ class StatisticsScreenState extends State<StatisticsScreen>
   // --- Add Calculation Logic for Start Hour Frequency --- 
   Map<String, int> _getMostFrequentStartHours() {
     Map<int, int> hourCounts = {}; // Use int as key initially
+    Set<String> processedIds = {}; // Add duplicate prevention
 
     widget.events.forEach((date, events) {
       for (final event in events) {
-        if (event.isWorkShift) {
-          final startHour = event.startTime.hour;
-          hourCounts[startHour] = (hourCounts[startHour] ?? 0) + 1;
-        }
+        // FIXED: Added duplicate prevention for midnight-spanning events and exclude overtime shifts
+        if (!event.isWorkShift || event.title.contains('(OT)') || processedIds.contains(event.id ?? '')) continue;
+        processedIds.add(event.id ?? '');
+
+        final startHour = event.startTime.hour;
+        hourCounts[startHour] = (hourCounts[startHour] ?? 0) + 1;
       }
     });
 
@@ -1460,11 +1478,15 @@ class StatisticsScreenState extends State<StatisticsScreen>
     final lastMonthEnd = thisMonthStart.subtract(const Duration(days: 1));
     final lastMonthStart = DateTime(lastMonthEnd.year, lastMonthEnd.month, 1);
     
-    // Get all events with late break status from the map of events
+    // FIXED: Get all events with late break status from the map of events with duplicate prevention
     final List<Event> eventsWithBreakStatus = [];
+    final Set<String> processedIds = {}; // Add duplicate prevention
+    
     widget.events.forEach((date, dayEvents) {
       for (final event in dayEvents) {
-        if (event.hasLateBreak == true) {
+        // Only add events that haven't been processed yet (prevents midnight-spanning duplicates)
+        if (event.hasLateBreak == true && !processedIds.contains(event.id ?? '')) {
+          processedIds.add(event.id ?? '');
           eventsWithBreakStatus.add(event);
         }
       }

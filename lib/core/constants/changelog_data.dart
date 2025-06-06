@@ -1,4 +1,62 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.8.56': [
+    {
+      'title': 'Critical Layout Fixes - Navigation Bar & Content Issues',
+      'description': 'Fixed major layout problems across multiple screens! Added SafeArea wrappers to prevent navigation bar from hiding content on What\'s New, Bills, and Pay Scale screens.',
+    },
+    {
+      'title': 'What\'s New Screen Improvements',
+      'description': 'Fixed RenderFlex overflow causing text cut-off and visual corruption. Long changelog titles now wrap properly instead of being truncated. Added responsive text handling.',
+    },
+    {
+      'title': 'Bills Screen Data Visibility Enhancement',
+      'description': 'Significantly increased column widths: shift column from 50px to 80px, data columns from 70px to 110px. Improved text wrapping prevents data from being cut off.',
+    },
+    {
+      'title': 'Pay Scale Screen Bottom Content Access',
+      'description': 'Added SafeArea wrapper to prevent bottom navigation from hiding pay scale content on devices with gesture navigation.',
+    },
+    {
+      'title': 'Break Duration Display Added',
+      'description': 'Event cards now show break duration in parentheses next to break times (e.g., "13:30 - 14:00 (30 mins)"). Automatically calculated from existing break time data.',
+    },
+    {
+      'title': 'Google Calendar Access Information',
+      'description': 'Added helpful disclaimers across Google Calendar screens explaining that test user approval is required. Users are directed to the feedback section to request access.',
+    },
+    {
+      'title': 'Duty Information Disclaimer Added',
+      'description': 'Added disclaimer in event creation dialog explaining that duty information comes from depot bills and may contain mistakes. Helps users understand data source and potential limitations.',
+    },
+    {
+      'title': 'Dark Mode Disclaimer Added',
+      'description': 'Added warning disclaimer to dark mode setting explaining that dark mode is not fully implemented yet and some dialogs/screens may not display correctly. Helps set proper user expectations.',
+    },
+    {
+      'title': 'Fixed Update Dialog Information Accuracy',
+      'description': 'Update dialogs now display correct changelog information instead of generic placeholder text. Removed misleading boilerplate from GitHub release notes.',
+    },
+    {
+      'title': 'Fixed Rostered Sunday Pair Hours Calculation',
+      'description': 'Sunday pair hours calculation now properly excludes overtime shifts, ensuring accurate 14h 30m overtime threshold calculations.',
+    },
+    {
+      'title': 'Fixed Statistics Double-Counting Issue',
+      'description': 'Critical fix: shifts spanning past midnight were being counted twice in statistics. Now properly handled with duplicate prevention across all statistics methods.',
+    },
+    {
+      'title': 'Added Overtime Shifts Counter',
+      'description': 'New "Overtime Shifts" statistic separately tracks OT shifts from regular shifts. Overtime shifts are now properly excluded from regular shift statistics.',
+    },
+    {
+      'title': 'Fixed ID Handling Inconsistencies',
+      'description': 'Resolved mismatch where duplicate checking looked for null values but stored empty strings. Standardized ID handling across all statistics methods.',
+    },
+    {
+      'title': 'Enhanced User Experience',
+      'description': 'Eliminated visual corruption, improved content readability, ensured all critical app data is fully accessible, and added helpful break duration information. These fixes address fundamental layout issues across the app.',
+    },
+  ],
   '2.8.55': [
     {
       'title': '🎯 TARGET VERSION - Testing Instant Detection!',

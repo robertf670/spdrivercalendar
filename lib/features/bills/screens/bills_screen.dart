@@ -299,149 +299,151 @@ class _BillsScreenState extends State<BillsScreen> {
         title: const Text('Bills'),
         elevation: 0,
       ),
-      body: Container(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Dropdowns Container
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.grey.withOpacity(0.1),
-                    spreadRadius: 2,
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Day Type Dropdown
-                  const Text(
-                    'Day Type',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
+      body: SafeArea(
+        child: Container(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Dropdowns Container
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.grey.withOpacity(0.1),
+                      spreadRadius: 2,
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: Colors.grey.shade300),
-                    ),
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<String>(
-                        value: _selectedDayType,
-                        isExpanded: true,
-                        icon: const Padding(
-                          padding: EdgeInsets.only(right: 16.0),
-                          child: Icon(Icons.arrow_drop_down_circle, color: AppTheme.primaryColor),
-                        ),
-                        items: ['M-F', 'Sat', 'Sun'].map((String value) {
-                          return DropdownMenuItem<String>(
-                            value: value,
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    Icons.work,
-                                    color: AppTheme.primaryColor,
-                                    size: 20,
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Text(value),
-                                ],
-                              ),
-                            ),
-                          );
-                        }).toList(),
-                        onChanged: (String? newValue) {
-                          if (newValue != null && newValue != _selectedDayType) {
-                            setState(() {
-                              _selectedDayType = newValue;
-                            });
-                            _loadCsvData();
-                          }
-                        },
+                  ],
+                ),
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Day Type Dropdown
+                    const Text(
+                      'Day Type',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
                       ),
                     ),
-                  ),
-                  
-                  const SizedBox(height: 24),
-                  
-                  // Zone Dropdown
-                  const Text(
-                    'Zone',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: Colors.grey.shade300),
-                    ),
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<String>(
-                        value: _selectedZone,
-                        isExpanded: true,
-                        icon: const Padding(
-                          padding: EdgeInsets.only(right: 16.0),
-                          child: Icon(Icons.arrow_drop_down_circle, color: AppTheme.primaryColor),
-                        ),
-                        items: ['Zone 1', 'Zone 3', 'Zone 4'].map((String value) {
-                          return DropdownMenuItem<String>(
-                            value: value,
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    Icons.map,
-                                    color: AppTheme.primaryColor,
-                                    size: 20,
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Text(value),
-                                ],
+                    const SizedBox(height: 8),
+                    Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: Colors.grey.shade300),
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          value: _selectedDayType,
+                          isExpanded: true,
+                          icon: const Padding(
+                            padding: EdgeInsets.only(right: 16.0),
+                            child: Icon(Icons.arrow_drop_down_circle, color: AppTheme.primaryColor),
+                          ),
+                          items: ['M-F', 'Sat', 'Sun'].map((String value) {
+                            return DropdownMenuItem<String>(
+                              value: value,
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.work,
+                                      color: AppTheme.primaryColor,
+                                      size: 20,
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Text(value),
+                                  ],
+                                ),
                               ),
-                            ),
-                          );
-                        }).toList(),
-                        onChanged: (String? newValue) {
-                          if (newValue != null && newValue != _selectedZone) {
-                            setState(() {
-                              _selectedZone = newValue;
-                            });
-                            _loadCsvData();
-                          }
-                        },
+                            );
+                          }).toList(),
+                          onChanged: (String? newValue) {
+                            if (newValue != null && newValue != _selectedDayType) {
+                              setState(() {
+                                _selectedDayType = newValue;
+                              });
+                              _loadCsvData();
+                            }
+                          },
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                    
+                    const SizedBox(height: 24),
+                    
+                    // Zone Dropdown
+                    const Text(
+                      'Zone',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: Colors.grey.shade300),
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          value: _selectedZone,
+                          isExpanded: true,
+                          icon: const Padding(
+                            padding: EdgeInsets.only(right: 16.0),
+                            child: Icon(Icons.arrow_drop_down_circle, color: AppTheme.primaryColor),
+                          ),
+                          items: ['Zone 1', 'Zone 3', 'Zone 4'].map((String value) {
+                            return DropdownMenuItem<String>(
+                              value: value,
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.map,
+                                      color: AppTheme.primaryColor,
+                                      size: 20,
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Text(value),
+                                  ],
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                          onChanged: (String? newValue) {
+                            if (newValue != null && newValue != _selectedZone) {
+                              setState(() {
+                                _selectedZone = newValue;
+                              });
+                              _loadCsvData();
+                            }
+                          },
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            
-            const SizedBox(height: 24),
-            
-            // CSV Data Display Section
-            Expanded(
-              child: _buildCsvDataDisplay(),
-            ),
-          ],
+              
+              const SizedBox(height: 24),
+              
+              // CSV Data Display Section
+              Expanded(
+                child: _buildCsvDataDisplay(),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -521,10 +523,10 @@ class _BillsScreenState extends State<BillsScreen> {
       );
     }
 
-    // Column width constants
-    const double fixedColumnWidth = 50;
-    const double dataColumnWidth = 70;
-    const double headerHeight = 60;  // Reasonable height for wrapped text
+    // Column width constants - SIGNIFICANTLY INCREASED for better content visibility
+    const double fixedColumnWidth = 80;  // Increased from 50 to 80 for shift IDs
+    const double dataColumnWidth = 110;  // Increased from 70 to 110 for locations/times
+    const double headerHeight = 60;  // Kept same for wrapped text
 
     return Card(
       elevation: 2,
@@ -611,10 +613,10 @@ class _BillsScreenState extends State<BillsScreen> {
                                 header,
                                 style: const TextStyle(
                                   fontWeight: FontWeight.bold,
-                                  fontSize: 11,
+                                  fontSize: 10,  // Reduced from 11 to 10 for better fit
                                 ),
                                 textAlign: TextAlign.center,
-                                maxLines: 3,
+                                maxLines: 4,  // Increased from 3 to 4 lines
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ),
@@ -693,9 +695,10 @@ class _BillsScreenState extends State<BillsScreen> {
                                       colIndex < row.length ? (row[colIndex].toLowerCase() == "nan" ? "W/O" : row[colIndex]) : '',
                                       style: TextStyle(
                                         color: Colors.grey.shade800,
-                                        fontSize: 12,
+                                        fontSize: 11,  // Reduced from 12 to 11 to fit more content
                                       ),
                                       textAlign: TextAlign.center,
+                                      maxLines: 2,  // Allow 2 lines instead of 1
                                       overflow: TextOverflow.ellipsis,
                                     ),
                                   ),

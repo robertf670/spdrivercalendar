@@ -349,7 +349,42 @@ class CalendarScreenState extends State<CalendarScreen>
       builder: (context) {
         return AlertDialog(
           title: const Text('Add Event'),
-          content: const Text('What type of event would you like to add?'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Add disclaimer about duty information FIRST
+              Container(
+                padding: const EdgeInsets.all(10.0),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surfaceVariant.withValues(alpha: 0.5),
+                  borderRadius: BorderRadius.circular(6.0),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      Icons.info_outline,
+                      color: Theme.of(context).colorScheme.primary,
+                      size: 18,
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        'The duty information in this app is taken from the bills provided in the depot. There may be mistakes at times.',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text('What type of event would you like to add?'),
+            ],
+          ),
           actions: [
             TextButton(
               child: const Text('Normal Event'),
@@ -3951,19 +3986,8 @@ class CalendarScreenState extends State<CalendarScreen>
                   for (final line in lines) {
                     if (line.trim().isEmpty) continue;
                     final parts = line.split(',');
-                    if (parts.length >= 5) {
-                      // For overtime shifts, exclude workout duties
-                      // UNI format: ShiftCode,StartTime,BreakStart,BreakEnd,FinishTime
-                      final breakStart = parts[2].trim().toLowerCase();
-                      final breakEnd = parts[3].trim().toLowerCase();
-                      
-                      // Skip workout duties (those with 'nan', 'workout', empty, or equal break times)
-                      if (breakStart == 'nan' || breakStart == 'workout' || breakStart.isEmpty ||
-                          breakEnd == 'nan' || breakEnd == 'workout' || breakEnd.isEmpty ||
-                          breakStart == breakEnd) {
-                        continue; // Skip workout duties for overtime
-                      }
-                      
+                    if (parts.isNotEmpty) {
+                      // For regular work shifts, include ALL duties (including workouts)
                       combinedShifts.add(parts[0]);
                     }
                   }
@@ -3981,19 +4005,8 @@ class CalendarScreenState extends State<CalendarScreen>
                     for (final line in lines) {
                       if (line.trim().isEmpty) continue;
                       final parts = line.split(',');
-                      if (parts.length >= 5) {
-                        // For overtime shifts, exclude workout duties
-                        // UNI format: ShiftCode,StartTime,BreakStart,BreakEnd,FinishTime
-                        final breakStart = parts[2].trim().toLowerCase();
-                        final breakEnd = parts[3].trim().toLowerCase();
-                        
-                        // Skip workout duties (those with 'nan', 'workout', empty, or equal break times)
-                        if (breakStart == 'nan' || breakStart == 'workout' || breakStart.isEmpty ||
-                            breakEnd == 'nan' || breakEnd == 'workout' || breakEnd.isEmpty ||
-                            breakStart == breakEnd) {
-                          continue; // Skip workout duties for overtime
-                        }
-                        
+                      if (parts.isNotEmpty) {
+                        // For regular work shifts, include ALL duties (including workouts)
                         combinedShifts.add(parts[0]);
                       }
                     }

@@ -165,6 +165,36 @@ class _SettingsScreenState extends State<SettingsScreen> {
           
           const Divider(height: 32),
           _buildSectionHeader('Google Calendar'),
+          // Add disclaimer about Google Calendar access
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
+            child: Container(
+              padding: const EdgeInsets.all(12.0),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surfaceVariant.withValues(alpha: 0.5),
+                borderRadius: BorderRadius.circular(8.0),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    Icons.info_outline,
+                    color: Theme.of(context).colorScheme.primary,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Google Calendar access requires test user approval. Please use the feedback section to request access with your email address.',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
           _buildGoogleAccountSection(),
           _buildGoogleSyncOption(),
           _buildManualSyncOption(),
@@ -231,15 +261,53 @@ class _SettingsScreenState extends State<SettingsScreen> {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppTheme.borderRadius),
       ),
-      child: SwitchListTile(
-        title: const Text('Dark Mode'),
-        subtitle: const Text('Toggle dark mode theme'),
-        secondary: Icon(
-          _isDarkMode ? Icons.dark_mode : Icons.light_mode,
-          color: _isDarkMode ? Colors.amber : Colors.blueGrey,
-        ),
-        value: _isDarkMode,
-        onChanged: _toggleDarkMode,
+      child: Column(
+        children: [
+          SwitchListTile(
+            title: const Text('Dark Mode'),
+            subtitle: const Text('Toggle dark mode theme'),
+            secondary: Icon(
+              _isDarkMode ? Icons.dark_mode : Icons.light_mode,
+              color: _isDarkMode ? Colors.amber : Colors.blueGrey,
+            ),
+            value: _isDarkMode,
+            onChanged: _toggleDarkMode,
+          ),
+          // Add disclaimer
+          Container(
+            width: double.infinity,
+            margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+            padding: const EdgeInsets.all(8.0),
+            decoration: BoxDecoration(
+              color: Colors.orange.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(6.0),
+              border: Border.all(
+                color: Colors.orange.withValues(alpha: 0.3),
+                width: 1,
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.warning_amber_outlined,
+                  color: Colors.orange.shade700,
+                  size: 16,
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    'Dark mode is not fully implemented yet. Some dialogs and screens may not display correctly.',
+                    style: TextStyle(
+                      color: Colors.orange.shade700,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

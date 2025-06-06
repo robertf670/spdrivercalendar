@@ -184,26 +184,18 @@ jobs:
       with:
         name: Release ${{ github.ref_name }}
         body: |
-          ## What's New in ${{ github.ref_name }}
-          
-          🔄 **Google Calendar Integration**
-          - Fixed Google Sign-In authentication using release keystore
-          - Consistent certificate signing for reliable app updates
-          - Improved authentication flow stability
+          ## Release ${{ github.ref_name }}
           
           📱 **Download & Install**
           1. Download the APK below
-          2. Enable "Install from Unknown Sources" in Android settings
+          2. Enable "Install from Unknown Sources" in Android settings if needed
           3. Install the APK
-          4. Google Calendar sync should now work properly
           
-          🔧 **Technical Improvements**
-          - Using production release keystore for consistent signing
-          - Fixed SHA-1 fingerprint registration for Google OAuth
-          - Enhanced CI/CD build reliability
+          📋 **What's New**
+          Check the "What's New" screen in the app for detailed release notes and changelog.
           
-          ---
-          *This release was automatically built and deployed via GitHub Actions with release keystore*
+          🔧 **Technical Note**
+          This release was automatically built and deployed via GitHub Actions with consistent signing certificates.
         files: build/app/outputs/flutter-apk/spdrivercalendar-${{ github.ref_name }}.apk
         draft: false
         prerelease: false 

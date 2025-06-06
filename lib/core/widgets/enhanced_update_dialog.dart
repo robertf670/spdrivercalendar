@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:spdrivercalendar/services/update_service.dart';
 import 'package:spdrivercalendar/services/apk_download_manager.dart';
+import 'package:spdrivercalendar/core/constants/changelog_data.dart';
 
 class EnhancedUpdateDialog extends StatefulWidget {
   final UpdateInfo updateInfo;
@@ -37,7 +38,7 @@ class _EnhancedUpdateDialogState extends State<EnhancedUpdateDialog> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final formattedNotes = UpdateService.formatReleaseNotes(widget.updateInfo.releaseNotes);
+    final formattedNotes = _getLocalChangelogNotes();
     
     return AlertDialog(
       shape: RoundedRectangleBorder(
@@ -591,5 +592,31 @@ class _EnhancedUpdateDialogState extends State<EnhancedUpdateDialog> {
         ],
       ),
     );
+  }
+
+  /// Get properly formatted changelog notes from local data
+  String _getLocalChangelogNotes() {
+    final version = widget.updateInfo.latestVersion;
+    final versionChanges = changelogData[version];
+    
+    if (versionChanges == null || versionChanges.isEmpty) {
+      // Fallback to generic notes if version not found in local changelog
+      return 'Bug fixes and performance improvements\n\nCheck the What\'s New screen in the app for detailed information.';
+    }
+    
+    // Format changelog entries nicely for the update dialog
+    final formattedEntries = versionChanges.map((entry) {
+      final title = entry['title'] ?? 'Update';
+      final description = entry['description'] ?? '';
+      
+      // Format as bullet points with title and description
+      if (description.isNotEmpty) {
+        return '• $title\n  $description';
+      } else {
+        return '• $title';
+      }
+    }).join('\n\n');
+    
+    return formattedEntries;
   }
 } 

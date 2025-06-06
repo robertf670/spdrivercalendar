@@ -51,6 +51,37 @@ class _GoogleCalendarSettingsScreenState extends State<GoogleCalendarSettingsScr
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Add disclaimer about Google Calendar access
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
+                  child: Container(
+                    padding: const EdgeInsets.all(12.0),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.surfaceVariant.withValues(alpha: 0.5),
+                      borderRadius: BorderRadius.circular(8.0),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(
+                          Icons.info_outline,
+                          color: Theme.of(context).colorScheme.primary,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Google Calendar access requires test user approval. Please use the feedback section to request access with your email address.',
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
                 _buildStatusCard(),
               ],
             ),
