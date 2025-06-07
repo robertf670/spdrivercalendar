@@ -1,4 +1,18 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.9.1': [
+    {
+      'title': 'FIXED: Spare Duty Deletion UI Update',
+      'description': 'Fixed critical issue where deleting spare duties required navigating to another day and back to see changes. Event cards now update immediately when duties are removed with improved state management for real-time UI synchronization.',
+    },
+    {
+      'title': 'FIXED: Jamestown Statistics Integration',
+      'description': 'Fixed Jamestown Road duties (811/xx shifts) not being properly included in statistics calculations. Jamestown shifts now contribute to work time totals, shift type breakdowns, and all statistical analysis with accurate data from JAMESTOWN_DUTIES.csv.',
+    },
+    {
+      'title': 'FIXED: Google Calendar Authentication',
+      'description': 'Eliminated need for manual sign-out/sign-in cycles with improved token management, multi-strategy authentication refresh, proactive validation, and robust error handling. Google Calendar sync now maintains reliable connection automatically.',
+    },
+  ],
   '2.9.0': [
     {
       'title': 'NEW: Jamestown Road Duties Support',
@@ -23,14 +37,6 @@ final Map<String, List<Map<String, String>>> changelogData = {
     {
       'title': 'Consistent Break Times & Administrative Info',
       'description': 'Break times, routes, dates, bus assignments, and late break status now use consistent lighter font weight (w400) for proper information hierarchy, distinguishing operational details from reference information.',
-    },
-    {
-      'title': 'FIXED: Spare Duty Deletion UI Update',
-      'description': 'Fixed critical issue where deleting spare duties required navigating to another day and back to see changes. Event cards now update immediately when duties are removed with improved state management for real-time UI synchronization.',
-    },
-    {
-      'title': 'FIXED: Jamestown Statistics Integration',
-      'description': 'Fixed Jamestown Road duties (811/xx shifts) not being properly included in statistics calculations. Jamestown shifts now contribute to work time totals, shift type breakdowns, and all statistical analysis with accurate data from JAMESTOWN_DUTIES.csv.',
     },
     {
       'title': 'Professional Information Architecture',

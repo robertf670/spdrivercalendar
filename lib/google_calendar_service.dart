@@ -95,13 +95,15 @@ class GoogleCalendarService {
       throw Exception('Access token is null');
     }
 
+    // Use a shorter expiry time to force more frequent validation
+    // This helps catch token expiry issues early
+    final expiryTime = DateTime.now().toUtc().add(const Duration(minutes: 50));
+
     return auth.AccessCredentials(
       auth.AccessToken(
         'Bearer',
         googleAuth.accessToken!,
-        // Google doesn't provide expiry time through google_sign_in
-        // but tokens typically last 1 hour - MUST be in UTC
-        DateTime.now().toUtc().add(const Duration(hours: 1)),
+        expiryTime,
       ),
       googleAuth.idToken, // refresh token
       _scopes,
@@ -235,6 +237,12 @@ class GoogleCalendarService {
         throw Exception('Calendar API not initialized. Please sign in first.');
       }
 
+      // Proactively validate authentication
+      final isValid = await _validateAuthentication();
+      if (!isValid) {
+        throw Exception('Authentication validation failed. Please sign in again.');
+      }
+
       final calendar.Events events = await _calendarApi!.events.list(
         calendarId ?? 'primary',
         timeMin: startTime,
@@ -250,20 +258,25 @@ class GoogleCalendarService {
       // If authentication error, try to refresh
       if (e.toString().contains('401') || e.toString().contains('403')) {
         print('[GoogleCalendar] Authentication error, attempting to refresh...');
-        await _refreshAuthentication();
-        // Retry once
-        try {
-          final calendar.Events events = await _calendarApi!.events.list(
-            calendarId ?? 'primary',
-            timeMin: startTime,
-            timeMax: endTime,
-            singleEvents: true,
-            orderBy: 'startTime',
-          );
-          return events.items ?? [];
-        } catch (retryError) {
-          print('[GoogleCalendar] Retry failed: $retryError');
-          throw retryError;
+        final refreshSuccess = await _refreshAuthentication();
+        
+        if (refreshSuccess && _calendarApi != null) {
+          // Retry once with refreshed authentication
+          try {
+            final calendar.Events events = await _calendarApi!.events.list(
+              calendarId ?? 'primary',
+              timeMin: startTime,
+              timeMax: endTime,
+              singleEvents: true,
+              orderBy: 'startTime',
+            );
+            return events.items ?? [];
+          } catch (retryError) {
+            print('[GoogleCalendar] Retry failed: $retryError');
+            throw retryError;
+          }
+        } else {
+          throw Exception('Authentication refresh failed. Please sign in again.');
         }
       }
       
@@ -281,6 +294,13 @@ class GoogleCalendarService {
         throw Exception('Calendar API not initialized. Please sign in first.');
       }
 
+      // Proactively validate authentication
+      final isValid = await _validateAuthentication();
+      if (!isValid) {
+        print('[GoogleCalendar] Authentication validation failed for event creation');
+        return null;
+      }
+
       final calendar.Event createdEvent = await _calendarApi!.events.insert(
         event,
         calendarId ?? 'primary',
@@ -294,16 +314,22 @@ class GoogleCalendarService {
       // If authentication error, try to refresh
       if (e.toString().contains('401') || e.toString().contains('403')) {
         print('[GoogleCalendar] Authentication error, attempting to refresh...');
-        await _refreshAuthentication();
-        // Retry once
-        try {
-          final calendar.Event createdEvent = await _calendarApi!.events.insert(
-            event,
-            calendarId ?? 'primary',
-          );
-          return createdEvent;
-        } catch (retryError) {
-          print('[GoogleCalendar] Retry failed: $retryError');
+        final refreshSuccess = await _refreshAuthentication();
+        
+        if (refreshSuccess && _calendarApi != null) {
+          // Retry once with refreshed authentication
+          try {
+            final calendar.Event createdEvent = await _calendarApi!.events.insert(
+              event,
+              calendarId ?? 'primary',
+            );
+            return createdEvent;
+          } catch (retryError) {
+            print('[GoogleCalendar] Retry failed: $retryError');
+            return null;
+          }
+        } else {
+          print('[GoogleCalendar] Authentication refresh failed for event creation');
           return null;
         }
       }
@@ -337,17 +363,23 @@ class GoogleCalendarService {
       // If authentication error, try to refresh
       if (e.toString().contains('401') || e.toString().contains('403')) {
         print('[GoogleCalendar] Authentication error, attempting to refresh...');
-        await _refreshAuthentication();
-        // Retry once
-        try {
-          final calendar.Event updatedEvent = await _calendarApi!.events.update(
-            event,
-            calendarId ?? 'primary',
-            eventId,
-          );
-          return updatedEvent;
-        } catch (retryError) {
-          print('[GoogleCalendar] Retry failed: $retryError');
+        final refreshSuccess = await _refreshAuthentication();
+        
+        if (refreshSuccess && _calendarApi != null) {
+          // Retry once with refreshed authentication
+          try {
+            final calendar.Event updatedEvent = await _calendarApi!.events.update(
+              event,
+              calendarId ?? 'primary',
+              eventId,
+            );
+            return updatedEvent;
+          } catch (retryError) {
+            print('[GoogleCalendar] Retry failed: $retryError');
+            return null;
+          }
+        } else {
+          print('[GoogleCalendar] Authentication refresh failed for event update');
           return null;
         }
       }
@@ -379,16 +411,22 @@ class GoogleCalendarService {
       // If authentication error, try to refresh
       if (e.toString().contains('401') || e.toString().contains('403')) {
         print('[GoogleCalendar] Authentication error, attempting to refresh...');
-        await _refreshAuthentication();
-        // Retry once
-        try {
-          await _calendarApi!.events.delete(
-            calendarId ?? 'primary',
-            eventId,
-          );
-          return true;
-        } catch (retryError) {
-          print('[GoogleCalendar] Retry failed: $retryError');
+        final refreshSuccess = await _refreshAuthentication();
+        
+        if (refreshSuccess && _calendarApi != null) {
+          // Retry once with refreshed authentication
+          try {
+            await _calendarApi!.events.delete(
+              calendarId ?? 'primary',
+              eventId,
+            );
+            return true;
+          } catch (retryError) {
+            print('[GoogleCalendar] Retry failed: $retryError');
+            return false;
+          }
+        } else {
+          print('[GoogleCalendar] Authentication refresh failed for event deletion');
           return false;
         }
       }
@@ -397,23 +435,59 @@ class GoogleCalendarService {
     }
   }
 
-  /// Refresh authentication
-  static Future<void> _refreshAuthentication() async {
+  /// Refresh authentication with multiple retry strategies
+  static Future<bool> _refreshAuthentication() async {
     try {
       print('[GoogleCalendar] Refreshing authentication...');
       
-      if (_currentUser != null) {
-        // Clear the current authentication and re-authenticate
+      if (_currentUser == null) {
+        print('[GoogleCalendar] No current user, attempting silent sign-in...');
+        final email = await signInWithGoogle(interactive: false);
+        return email != null;
+      }
+
+      // Strategy 1: Clear auth cache and reinitialize
+      try {
         await _currentUser!.clearAuthCache();
         await _initializeCalendarApi();
-        print('[GoogleCalendar] Authentication refreshed successfully');
-      } else {
-        print('[GoogleCalendar] No current user to refresh authentication for');
+        
+        // Test the connection to verify the refresh worked
+        final testResult = await testConnection();
+        if (testResult) {
+          print('[GoogleCalendar] Authentication refreshed successfully');
+          return true;
+        }
+      } catch (e) {
+        print('[GoogleCalendar] Auth cache clear failed: $e');
       }
-    } catch (e) {
-      print('[GoogleCalendar] Error refreshing authentication: $e');
-      // If refresh fails, user needs to sign in again
+
+      // Strategy 2: Try silent sign-in to get fresh tokens
+      try {
+        print('[GoogleCalendar] Trying silent sign-in for fresh tokens...');
+        final silentUser = await _googleSignIn.signInSilently();
+        if (silentUser != null) {
+          _currentUser = silentUser;
+          await _initializeCalendarApi();
+          
+          final testResult = await testConnection();
+          if (testResult) {
+            print('[GoogleCalendar] Silent sign-in refresh successful');
+            return true;
+          }
+        }
+      } catch (e) {
+        print('[GoogleCalendar] Silent sign-in failed: $e');
+      }
+
+      // Strategy 3: Complete sign-out and indicate authentication needed
+      print('[GoogleCalendar] All refresh strategies failed, signing out...');
       await signOut();
+      return false;
+      
+    } catch (e) {
+      print('[GoogleCalendar] Error during authentication refresh: $e');
+      await signOut();
+      return false;
     }
   }
 
@@ -429,6 +503,31 @@ class GoogleCalendarService {
     } catch (e) {
       print('[GoogleCalendar] Error getting calendars: $e');
       return [];
+    }
+  }
+
+  /// Validate and refresh authentication if needed
+  static Future<bool> _validateAuthentication() async {
+    try {
+      if (_currentUser == null || _calendarApi == null) {
+        print('[GoogleCalendar] No current user or API not initialized');
+        return false;
+      }
+
+      // Quick test to validate current authentication
+      try {
+        await _calendarApi!.calendarList.list(maxResults: 1);
+        return true;
+      } catch (e) {
+        if (e.toString().contains('401') || e.toString().contains('403')) {
+          print('[GoogleCalendar] Authentication expired, refreshing...');
+          return await _refreshAuthentication();
+        }
+        throw e;
+      }
+    } catch (e) {
+      print('[GoogleCalendar] Authentication validation failed: $e');
+      return false;
     }
   }
 
