@@ -1,4 +1,18 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.8.58': [
+    {
+      'title': 'Fixed Bills Screen Row Alignment Issue',
+      'description': 'Fixed critical row misalignment between the fixed shift column and scrollable data columns in the Bills screen. All duties (including PZ1/97-100) are now perfectly aligned and visible with improved scroll synchronization.',
+    },
+    {
+      'title': 'Enhanced Bills Table Consistency',
+      'description': 'Implemented fixed row heights and improved scroll controllers to ensure perfect alignment between fixed and scrollable sections. Eliminated the scrolling offset that was causing higher-numbered duties to appear missing.',
+    },
+    {
+      'title': 'Fixed Settings Page Layout on Small Devices',
+      'description': 'Resolved issue where the Version History button was being cut off by the navigation bar on some devices. Added SafeArea wrapper and increased bottom padding to ensure all settings options are fully visible and accessible.',
+    },
+  ],
   '2.8.57': [
     {
       'title': 'Enhanced Spare Duty System - Individual Bus Assignments',

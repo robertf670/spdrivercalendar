@@ -3,7 +3,6 @@ import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:spdrivercalendar/core/services/storage_service.dart';
-import 'package:spdrivercalendar/core/constants/app_constants.dart';
 import 'package:spdrivercalendar/services/apk_download_manager.dart';
 
 class UpdateInfo {

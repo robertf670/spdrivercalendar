@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:spdrivercalendar/theme/app_theme.dart';
-import 'dart:convert';
 
 class BillsScreen extends StatefulWidget {
   const BillsScreen({Key? key}) : super(key: key);
@@ -24,17 +23,13 @@ class _BillsScreenState extends State<BillsScreen> {
   List<String> _scrollableHeaders = [];
   List<List<String>> _scrollableRows = [];
   
-  // Horizontal scroll controllers with sync lock
+  // Horizontal scroll controllers
   final ScrollController _headerScrollController = ScrollController();
   final ScrollController _dataScrollController = ScrollController();
-  bool _isScrollingHeader = false;
-  bool _isScrollingData = false;
   
-  // Vertical scroll controllers
+  // Vertical scroll controllers with improved sync
   final ScrollController _leftVerticalController = ScrollController();
   final ScrollController _rightVerticalController = ScrollController();
-  bool _isScrollingLeftVertical = false;
-  bool _isScrollingRightVertical = false;
 
   @override
   void initState() {
@@ -43,37 +38,29 @@ class _BillsScreenState extends State<BillsScreen> {
     
     // Horizontal sync: data to header
     _dataScrollController.addListener(() {
-      if (!_isScrollingData && !_isScrollingHeader) {
-        _isScrollingData = true;
+      if (_headerScrollController.offset != _dataScrollController.offset) {
         _headerScrollController.jumpTo(_dataScrollController.offset);
-        _isScrollingData = false;
       }
     });
     
     // Horizontal sync: header to data
     _headerScrollController.addListener(() {
-      if (!_isScrollingHeader && !_isScrollingData) {
-        _isScrollingHeader = true;
+      if (_dataScrollController.offset != _headerScrollController.offset) {
         _dataScrollController.jumpTo(_headerScrollController.offset);
-        _isScrollingHeader = false;
       }
     });
     
-    // Vertical sync: left to right
+    // Vertical sync: left to right with exact matching
     _leftVerticalController.addListener(() {
-      if (!_isScrollingLeftVertical && !_isScrollingRightVertical) {
-        _isScrollingLeftVertical = true;
+      if (_rightVerticalController.offset != _leftVerticalController.offset) {
         _rightVerticalController.jumpTo(_leftVerticalController.offset);
-        _isScrollingLeftVertical = false;
       }
     });
     
-    // Vertical sync: right to left
+    // Vertical sync: right to left with exact matching
     _rightVerticalController.addListener(() {
-      if (!_isScrollingRightVertical && !_isScrollingLeftVertical) {
-        _isScrollingRightVertical = true;
+      if (_leftVerticalController.offset != _rightVerticalController.offset) {
         _leftVerticalController.jumpTo(_rightVerticalController.offset);
-        _isScrollingRightVertical = false;
       }
     });
   }
@@ -527,6 +514,7 @@ class _BillsScreenState extends State<BillsScreen> {
     const double fixedColumnWidth = 80;  // Increased from 50 to 80 for shift IDs
     const double dataColumnWidth = 110;  // Increased from 70 to 110 for locations/times
     const double headerHeight = 60;  // Kept same for wrapped text
+    const double rowHeight = 40;  // Fixed row height for perfect alignment
 
     return Card(
       elevation: 2,
@@ -643,17 +631,20 @@ class _BillsScreenState extends State<BillsScreen> {
                       final isEvenRow = index % 2 == 0;
                       return Container(
                         width: fixedColumnWidth,
+                        height: rowHeight,  // Fixed height for alignment
                         color: isEvenRow ? Colors.white : Colors.grey.shade50,
                         padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-                        child: Text(
-                          _shiftColumnData[index].toLowerCase() == "nan" ? "W/O" : _shiftColumnData[index],
-                          style: TextStyle(
-                            fontWeight: FontWeight.w500, // Make shift column slightly bolder
-                            color: Colors.grey.shade800,
-                            fontSize: 12,
+                        child: Center(
+                          child: Text(
+                            _shiftColumnData[index].toLowerCase() == "nan" ? "W/O" : _shiftColumnData[index],
+                            style: TextStyle(
+                              fontWeight: FontWeight.w500, // Make shift column slightly bolder
+                              color: Colors.grey.shade800,
+                              fontSize: 12,
+                            ),
+                            textAlign: TextAlign.center,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          textAlign: TextAlign.center,
-                          overflow: TextOverflow.ellipsis,
                         ),
                       );
                     }),
@@ -684,22 +675,26 @@ class _BillsScreenState extends State<BillsScreen> {
                             final row = _scrollableRows[rowIndex];
                             
                             return Container(
+                              height: rowHeight,  // Fixed height for alignment
                               color: isEvenRow ? Colors.white : Colors.grey.shade50,
                               child: Row(
                                 children: List.generate(
                                   _scrollableHeaders.length,
                                   (colIndex) => Container(
                                     width: dataColumnWidth,
+                                    height: rowHeight,  // Fixed height for alignment
                                     padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-                                    child: Text(
-                                      colIndex < row.length ? (row[colIndex].toLowerCase() == "nan" ? "W/O" : row[colIndex]) : '',
-                                      style: TextStyle(
-                                        color: Colors.grey.shade800,
-                                        fontSize: 11,  // Reduced from 12 to 11 to fit more content
+                                    child: Center(
+                                      child: Text(
+                                        colIndex < row.length ? (row[colIndex].toLowerCase() == "nan" ? "W/O" : row[colIndex]) : '',
+                                        style: TextStyle(
+                                          color: Colors.grey.shade800,
+                                          fontSize: 11,  // Reduced from 12 to 11 to fit more content
+                                        ),
+                                        textAlign: TextAlign.center,
+                                        maxLines: 2,  // Allow 2 lines instead of 1
+                                        overflow: TextOverflow.ellipsis,
                                       ),
-                                      textAlign: TextAlign.center,
-                                      maxLines: 2,  // Allow 2 lines instead of 1
-                                      overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
                                 ),

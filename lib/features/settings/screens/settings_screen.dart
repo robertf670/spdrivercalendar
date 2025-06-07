@@ -3,12 +3,10 @@ import 'package:spdrivercalendar/core/constants/app_constants.dart';
 import 'package:spdrivercalendar/core/services/storage_service.dart';
 import 'package:spdrivercalendar/google_calendar_service.dart';
 import 'package:spdrivercalendar/features/settings/screens/google_calendar_settings_screen.dart';
-import 'package:spdrivercalendar/features/payscale/screens/payscale_screen.dart';
 import 'package:spdrivercalendar/theme/app_theme.dart';
 import 'package:spdrivercalendar/calendar_test_helper.dart';
 import 'package:spdrivercalendar/services/notification_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:spdrivercalendar/services/backup_service.dart';
 import 'dart:io'; // For File type in auto-backup list
 import 'package:intl/intl.dart'; // For DateFormat
@@ -155,90 +153,92 @@ class _SettingsScreenState extends State<SettingsScreen> {
         title: const Text('Settings'),
         elevation: 0,
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : ListView(
-        padding: const EdgeInsets.all(16.0),
-        children: [
-          _buildSectionHeader('Appearance'),
-          _buildDarkModeSwitch(),
-          
-          const Divider(height: 32),
-          _buildSectionHeader('Google Calendar'),
-          // Add disclaimer about Google Calendar access
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
-            child: Container(
-              padding: const EdgeInsets.all(12.0),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surfaceVariant.withValues(alpha: 0.5),
-                borderRadius: BorderRadius.circular(8.0),
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
+      body: SafeArea(
+        child: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : ListView(
+                padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 32.0), // Added extra bottom padding
                 children: [
-                  Icon(
-                    Icons.info_outline,
-                    color: Theme.of(context).colorScheme.primary,
-                    size: 20,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Google Calendar access requires test user approval. Please use the feedback section to request access with your email address.',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  _buildSectionHeader('Appearance'),
+                  _buildDarkModeSwitch(),
+                  
+                  const Divider(height: 32),
+                  _buildSectionHeader('Google Calendar'),
+                  // Add disclaimer about Google Calendar access
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
+                    child: Container(
+                      padding: const EdgeInsets.all(12.0),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.surfaceVariant.withValues(alpha: 0.5),
+                        borderRadius: BorderRadius.circular(8.0),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(
+                            Icons.info_outline,
+                            color: Theme.of(context).colorScheme.primary,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Google Calendar access requires test user approval. Please use the feedback section to request access with your email address.',
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
+                  _buildGoogleAccountSection(),
+                  _buildGoogleSyncOption(),
+                  _buildManualSyncOption(),
+                  
+                  // --- Modify Notifications Section --- 
+                  const Divider(height: 32),
+                  _buildSectionHeader('Notifications'),
+                  // Add the warning message here
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
+                    child: Text(
+                      'Shift notifications are temporarily disabled due to technical issues. We are working on a fix.',
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.error, // Use error color for warning
+                        //fontSize: Theme.of(context).textTheme.bodySmall?.fontSize,
+                      ),
+                    ),
+                  ),
+                  _buildNotificationsEnabledSwitch(), // This method will be modified below
+                  _buildNotificationOffsetDropdown(), // This method will be modified below
+                  _buildTestNotificationButton(), // This method will be modified below
+                  _buildViewPendingNotificationsButton(), // This method will be modified below
+                  // --- End Notifications Section --- 
+                  
+                  const Divider(height: 32),
+                  _buildSectionHeader('Schedule'),
+                  _buildResetRestDaysButton(),
+                  
+                  // --- Restore Backup & Restore section to original position ---
+                  const Divider(height: 32),
+                  _buildSectionHeader('Backup & Restore'),
+                  _buildBackupButton(),
+                  _buildRestoreButton(),
+                  _buildAutoBackupToggle(),
+                  _buildRestoreFromAutoBackupButton(),
+                  // --- End Restored Section ---
+                  
+                            // Driver Resources section removed and moved to dropdown menu
+                  
+                  const Divider(height: 32),
+                  _buildSectionHeader('App'),
+                  _buildShowWelcomePageButton(),
+                  _buildVersionHistoryButton(),
                 ],
               ),
-            ),
-          ),
-          _buildGoogleAccountSection(),
-          _buildGoogleSyncOption(),
-          _buildManualSyncOption(),
-          
-          // --- Modify Notifications Section --- 
-          const Divider(height: 32),
-          _buildSectionHeader('Notifications'),
-          // Add the warning message here
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
-            child: Text(
-              'Shift notifications are temporarily disabled due to technical issues. We are working on a fix.',
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.error, // Use error color for warning
-                //fontSize: Theme.of(context).textTheme.bodySmall?.fontSize,
-              ),
-            ),
-          ),
-          _buildNotificationsEnabledSwitch(), // This method will be modified below
-          _buildNotificationOffsetDropdown(), // This method will be modified below
-          _buildTestNotificationButton(), // This method will be modified below
-          _buildViewPendingNotificationsButton(), // This method will be modified below
-          // --- End Notifications Section --- 
-          
-          const Divider(height: 32),
-          _buildSectionHeader('Schedule'),
-          _buildResetRestDaysButton(),
-          
-          // --- Restore Backup & Restore section to original position ---
-          const Divider(height: 32),
-          _buildSectionHeader('Backup & Restore'),
-          _buildBackupButton(),
-          _buildRestoreButton(),
-          _buildAutoBackupToggle(),
-          _buildRestoreFromAutoBackupButton(),
-          // --- End Restored Section ---
-          
-                    // Driver Resources section removed and moved to dropdown menu
-          
-          const Divider(height: 32),
-          _buildSectionHeader('App'),
-          _buildShowWelcomePageButton(),
-          _buildVersionHistoryButton(),
-        ],
       ),
     );
   }

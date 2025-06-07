@@ -8,7 +8,6 @@ import 'package:spdrivercalendar/core/utils/location_utils.dart';
 import 'package:flutter/services.dart';
 import 'package:spdrivercalendar/features/calendar/services/roster_service.dart';
 import 'package:spdrivercalendar/features/calendar/services/event_service.dart';
-import 'package:csv/csv.dart';
 
 class EventCard extends StatefulWidget {
   final Event event;

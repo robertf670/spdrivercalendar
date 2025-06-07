@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:intl/intl.dart';
-import 'dart:math' show min;
 import 'package:spdrivercalendar/core/constants/app_constants.dart';
 import 'package:spdrivercalendar/core/services/storage_service.dart';
 import 'package:spdrivercalendar/features/calendar/services/roster_service.dart';
@@ -16,14 +15,11 @@ import 'package:spdrivercalendar/features/about/screens/about_screen.dart';
 import 'package:spdrivercalendar/models/event.dart';
 import 'package:spdrivercalendar/models/bank_holiday.dart';
 import 'package:spdrivercalendar/models/shift_info.dart';
-import 'package:spdrivercalendar/models/shift_data.dart';
 import 'package:spdrivercalendar/models/holiday.dart';
 import 'package:spdrivercalendar/theme/app_theme.dart';
 import 'package:spdrivercalendar/calendar_test_helper.dart';
 import 'package:spdrivercalendar/google_calendar_service.dart';
 import 'package:flutter/services.dart'; // For rootBundle
-import 'package:spdrivercalendar/services/board_service.dart';
-import 'package:spdrivercalendar/features/calendar/dialogs/view_board_dialog.dart';
 import 'package:spdrivercalendar/features/calendar/services/shift_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';

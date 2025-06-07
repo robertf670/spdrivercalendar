@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:spdrivercalendar/google_calendar_service.dart';
 import 'package:spdrivercalendar/oauth_helper.dart';
-import 'package:spdrivercalendar/theme/app_theme.dart';
 
 class GoogleLoginPage extends StatefulWidget {
   final VoidCallback onLoginComplete;

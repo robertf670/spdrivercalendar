@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:spdrivercalendar/models/event.dart';
 import 'package:spdrivercalendar/features/calendar/services/event_service.dart';
-import 'package:spdrivercalendar/theme/app_theme.dart';
 
 class EditNoteScreen extends StatefulWidget {
   final Event event;

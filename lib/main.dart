@@ -19,8 +19,6 @@ import 'package:spdrivercalendar/services/backup_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:spdrivercalendar/features/calendar/services/event_service.dart';
 import 'package:spdrivercalendar/features/settings/screens/version_history_screen.dart';
-import 'package:spdrivercalendar/services/update_service.dart';
-import 'package:spdrivercalendar/core/widgets/enhanced_update_dialog.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();

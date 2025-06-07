@@ -1,18 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:spdrivercalendar/models/event.dart';
-import 'package:spdrivercalendar/theme/app_theme.dart';
 import 'package:flutter/services.dart';
 import 'dart:convert';
 import 'package:spdrivercalendar/features/calendar/services/roster_service.dart';
-import 'package:spdrivercalendar/features/calendar/services/shift_service.dart';
 import 'package:spdrivercalendar/core/services/storage_service.dart';
 import 'package:spdrivercalendar/core/constants/app_constants.dart';
 
 // Import the new widgets
 import '../widgets/frequency_chart.dart';
 import '../widgets/shift_type_summary_card.dart';
-import '../widgets/time_range_selector.dart';
 import '../widgets/work_time_stats_card.dart';
 import '../widgets/break_statistics_card.dart';
 
