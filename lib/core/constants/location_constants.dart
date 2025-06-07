@@ -1,6 +1,7 @@
 const Map<String, String> locationMappings = {
   // Base locations
   'GARAGE': 'Garage',
+  'GAR': 'Garage',  // Added for Jamestown Road duties
   'PHIBPO': 'Garage',
   'PHIBPI': 'Garage',
   'PSQE': 'PSQE',

@@ -753,6 +753,11 @@ class StatisticsScreenState extends State<StatisticsScreen>
         isBusCheck = true;
         // print('[STAT DEBUG Flow] Shift \'$shiftCode\' identified as BusCheck.');
       
+      // Check for Jamestown Road shifts first (before UNI check)
+      } else if (shiftCode.startsWith('811/')) {
+        // Handle Jamestown Road shifts
+        return await _loadJamestownWorkTime(shiftCode);
+      
       // Check for UNI using firstMatch with simplified regex
       } else if (RegExp(r'^\d+/').firstMatch(shiftCode) != null) { // Use \d+ (one or more digits)
         // print('[STAT DEBUG Flow] Shift \'$shiftCode\' identified as UNI.'); 
@@ -933,6 +938,62 @@ class StatisticsScreenState extends State<StatisticsScreen>
       // print('Error details: $e');
       // print('Stack trace: $s'); // Print the stack trace
       return null; 
+    }
+  }
+
+  // --- ADD HELPER FUNCTION for loading Jamestown work time ---
+  Future<Duration?> _loadJamestownWorkTime(String shiftCode) async {
+    try {
+      // Check cache first
+      const fileName = 'JAMESTOWN_DUTIES.csv';
+      if (_csvWorkTimeCache.containsKey(fileName)) {
+        final cachedFile = _csvWorkTimeCache[fileName]!;
+        if (cachedFile.containsKey(shiftCode)) {
+          return cachedFile[shiftCode];
+        }
+      }
+
+      // Load and parse JAMESTOWN_DUTIES.csv
+      final csvData = await rootBundle.loadString('assets/$fileName');
+      final lines = csvData.split('\n');
+      final Map<String, Duration> parsedDurations = {};
+
+      // Skip header line and process data
+      for (int i = 1; i < lines.length; i++) {
+        final line = lines[i].trim().replaceAll('\r', '');
+        if (line.isEmpty) continue;
+        
+        final parts = line.split(',');
+        // Expected format: shift,duty,report,depart,location,startbreak,startbreaklocation,breakreport,finishbreak,finishbreaklocation,finish,finishlocation,signoff,spread,work,relief,route
+        if (parts.length >= 15) {
+          final currentShiftCode = parts[0].trim();
+          final workTimeStr = parts[14].trim(); // work column
+          
+          if (workTimeStr.isNotEmpty && workTimeStr.toLowerCase() != 'nan') {
+            // Parse work time in HH:MM format
+            final timeParts = workTimeStr.split(':');
+            if (timeParts.length >= 2) {
+              try {
+                final hours = int.parse(timeParts[0]);
+                final minutes = int.parse(timeParts[1]);
+                final duration = Duration(hours: hours, minutes: minutes);
+                parsedDurations[currentShiftCode] = duration;
+              } catch (e) {
+                print('Error parsing Jamestown work time for $currentShiftCode: $workTimeStr');
+              }
+            }
+          }
+        }
+      }
+
+      // Cache the parsed data
+      _csvWorkTimeCache[fileName] = parsedDurations;
+
+      // Return the duration for the requested shift
+      return parsedDurations[shiftCode];
+    } catch (e) {
+      print('Error loading Jamestown work time for $shiftCode: $e');
+      return null;
     }
   }
 

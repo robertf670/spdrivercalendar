@@ -580,6 +580,38 @@ class CalendarScreenState extends State<CalendarScreen>
                   shiftNumbers = [];
                   print('Error loading shifts for Bus Check: $e');
                 }
+              } else if (selectedZone == 'Jamestown Road') {
+                // Only allow Monday-Friday for Jamestown Road shifts
+                if (dayOfWeek == 'Saturday' || dayOfWeek == 'Sunday') {
+                  shiftNumbers = [];
+                } else {
+                  try {
+                    final csv = await rootBundle.loadString('assets/JAMESTOWN_DUTIES.csv');
+                    final lines = csv.split('\n');
+                    shiftNumbers = [];
+                    final seenShifts = <String>{};
+
+                    // Skip the header line
+                    for (int i = 1; i < lines.length; i++) {
+                      final line = lines[i].trim().replaceAll('\r', '');
+                      if (line.isEmpty) continue;
+                      final parts = line.split(',');
+                      // Expecting format: shift,duty,report,depart,location,startbreak,startbreaklocation,breakreport,finishbreak,finishbreaklocation,finish,finishlocation,signoff,spread,work,relief,route
+                      if (parts.isNotEmpty && parts[0].trim().isNotEmpty) {
+                        final shift = parts[0].trim();
+                        
+                        // Add unique shifts only
+                        if (!seenShifts.contains(shift) && shift != "shift") {
+                          seenShifts.add(shift);
+                          shiftNumbers.add(shift);
+                        }
+                      }
+                    }
+                  } catch (e) {
+                    shiftNumbers = [];
+                    print('Error loading shifts for Jamestown Road: $e');
+                  }
+                }
               } else {
                 // Regular zone shifts
                 final filename = RosterService.getShiftFilename(zoneNumber, dayOfWeekForFilename, shiftDate);
@@ -647,6 +679,7 @@ class CalendarScreenState extends State<CalendarScreen>
                     'Spare',
                     'Uni/Euro',
                     'Bus Check',
+                    'Jamestown Road',
                   ].map((zone) {
                     return DropdownMenuItem(
                       value: zone,
@@ -715,6 +748,8 @@ class CalendarScreenState extends State<CalendarScreen>
                         title = selectedShiftNumber;
                       } else if (selectedZone == 'Bus Check') { // ADDED: Set title for Bus Check
                         title = selectedShiftNumber; // Use the selected duty name (e.g., BusCheck1)
+                      } else if (selectedZone == 'Jamestown Road') {
+                        title = selectedShiftNumber; // Use the shift code (e.g., 811/01)
                       } else {
                         // Regular PZ shifts
                         title = selectedShiftNumber; // Title is the shift code (e.g., PZ1/01)
@@ -756,6 +791,9 @@ class CalendarScreenState extends State<CalendarScreen>
                             'endTime': const TimeOfDay(hour: 12, minute: 38),
                           };
                         }
+                      } else if (selectedZone == 'Jamestown Road') {
+                        // For Jamestown Road, load from CSV
+                        shiftTimes = await _getShiftTimes(selectedZone, selectedShiftNumber, shiftDate);
                       } else {
                         // For other zones, load from CSV
                         shiftTimes = await _getShiftTimes(selectedZone, selectedShiftNumber, shiftDate);
@@ -838,6 +876,9 @@ class CalendarScreenState extends State<CalendarScreen>
       } else { // Monday - Friday
         currentDayType = 'MF'; 
       }
+    } else if (zone == 'Jamestown Road') {
+      csvPath = 'assets/JAMESTOWN_DUTIES.csv';
+      // Jamestown Road only works Monday-Friday
     } else if (zone == 'Uni/Euro') {
       // Uni/Euro logic requires checking multiple files based on day type.
       // We'll handle this directly within the loop for Uni/Euro below.
@@ -936,6 +977,32 @@ class CalendarScreenState extends State<CalendarScreen>
                  };
               } else {
                  print('Error parsing Bus Check times for $shiftNumber: ${parts[2]}, ${parts[3]}');
+              }
+            }
+          }
+        }
+        // === Handle Jamestown Road CSV format ===
+        else if (zone == 'Jamestown Road') {
+          // Expecting format: shift,duty,report,depart,location,startbreak,startbreaklocation,breakreport,finishbreak,finishbreaklocation,finish,finishlocation,signoff,spread,work,relief,route
+          if (parts.length >= 17) {
+            final csvShiftCode = parts[0].trim();
+            
+            if (csvShiftCode == shiftNumber) {
+              print('Found matching Jamestown Road shift');
+              final startTime = _parseTimeOfDay(parts[2].trim()); // Report time
+              final endTime = _parseTimeOfDay(parts[10].trim()); // Finish time
+
+              if (startTime != null && endTime != null) {
+                 final isNextDay = endTime.hour < startTime.hour || 
+                                   (endTime.hour == startTime.hour && endTime.minute < startTime.minute);
+                 print('Parsed Jamestown Road times - Start: ${startTime.hour}:${startTime.minute}, End: ${endTime.hour}:${endTime.minute}, Next Day: $isNextDay');
+                 return {
+                   'startTime': startTime,
+                   'endTime': endTime,
+                   'isNextDay': isNextDay,
+                 };
+              } else {
+                 print('Error parsing Jamestown Road times for $shiftNumber: ${parts[2]}, ${parts[10]}');
               }
             }
           }
@@ -1094,8 +1161,26 @@ class CalendarScreenState extends State<CalendarScreen>
   }
 
   void _editEvent(Event event) {
-    // If this is a refresh trigger, just refresh the UI
+    // If this is a refresh trigger, force a complete refresh
     if (event.id == 'refresh_trigger') {
+      // Force reload events for the current selected day
+      if (_selectedDay != null) {
+        EventService.preloadMonth(_selectedDay!).then((_) {
+          if (mounted) {
+            setState(() {
+              // The UI will automatically refresh since getEventsForDay is called in build
+            });
+          }
+        });
+      } else {
+        setState(() {});
+      }
+      return;
+    }
+    
+    // If this is an updated spare event (has assigned duties or had them), refresh the day's events
+    if (event.title.startsWith('SP') && (event.assignedDuties != null || event.title.contains('SP'))) {
+      // Force refresh of the current day's events
       setState(() {});
       return;
     }

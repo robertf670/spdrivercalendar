@@ -49,8 +49,12 @@ class ShiftService {
                      shiftCode.contains('EURO') || 
                      RegExp(r'^\d{2,3}/\d{2}').hasMatch(shiftCode);
     
+    // Check if this is a Jamestown Road shift
+    bool isJamestownRoad = shiftCode.startsWith('811/');
     
-    if (isUniEuro) {
+    if (isJamestownRoad) {
+      return await _getJamestownShiftBreakTime(shiftCode, dayOfWeek, event.startDate);
+    } else if (isUniEuro) {
       return await _getUniShiftBreakTime(shiftCode, dayOfWeek, event.startDate);
     } else {
       return await _getRegularShiftBreakTime(shiftCode, dayOfWeek, event.startDate);
@@ -198,6 +202,70 @@ class ShiftService {
       return 'No break info found';
     } catch (e) {
       print('Error getting break time: $e');
+      return 'Error loading break info';
+    }
+  }
+  
+  // Helper method to get break time for Jamestown Road shifts
+  static Future<String> _getJamestownShiftBreakTime(String shiftCode, String dayOfWeek, DateTime date) async {
+    try {
+      // Load the Jamestown CSV file
+      final file = await rootBundle.loadString('assets/JAMESTOWN_DUTIES.csv');
+      final lines = file.split('\n');
+      
+      // Find the matching shift (skip header line)
+      for (int i = 1; i < lines.length; i++) {
+        final line = lines[i].trim();
+        if (line.isEmpty) continue;
+        final parts = line.split(',');
+        
+        // Expecting format: shift,duty,report,depart,location,startbreak,startbreaklocation,breakreport,finishbreak,finishbreaklocation,finish,finishlocation,signoff,spread,work,relief,route
+        if (parts.length >= 17) {
+          final shift = parts[0].trim();
+          if (shift == shiftCode) {
+            // Found matching shift, extract break information
+            final breakStart = parts[5].trim(); // startbreak column
+            final breakEnd = parts[8].trim(); // finishbreak column
+            
+            // Check if this is a workout (break times are empty or nan)
+            if (breakStart.toLowerCase() == 'nan' || 
+                breakStart.isEmpty || 
+                breakEnd.toLowerCase() == 'nan' || 
+                breakEnd.isEmpty ||
+                breakStart == breakEnd) {
+              return 'Workout';
+            }
+            
+            try {
+              // Parse and format the break times
+              final startTimeParts = breakStart.split(':');
+              final endTimeParts = breakEnd.split(':');
+              
+              if (startTimeParts.length >= 2 && endTimeParts.length >= 2) {
+                final startHour = int.tryParse(startTimeParts[0]);
+                final startMinute = int.tryParse(startTimeParts[1]);
+                final endHour = int.tryParse(endTimeParts[0]);
+                final endMinute = int.tryParse(endTimeParts[1]);
+                
+                if (startHour != null && startMinute != null && endHour != null && endMinute != null) {
+                  final formattedStart = _formatTimeOfDay(TimeOfDay(hour: startHour, minute: startMinute));
+                  final formattedEnd = _formatTimeOfDay(TimeOfDay(hour: endHour, minute: endMinute));
+                  return '$formattedStart - $formattedEnd';
+                }
+              }
+            } catch (e) {
+              print('Error parsing Jamestown break times: $e');
+            }
+            
+            // If parsing failed, assume workout
+            return 'Workout';
+          }
+        }
+      }
+      
+      return 'No break info';
+    } catch (e) {
+      print('Error loading Jamestown shift break time: $e');
       return 'Error loading break info';
     }
   }

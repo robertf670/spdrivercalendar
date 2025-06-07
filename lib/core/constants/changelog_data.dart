@@ -1,4 +1,42 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.9.0': [
+    {
+      'title': 'NEW: Jamestown Road Duties Support',
+      'description': 'Complete integration of Jamestown Road duties (811/xx shifts)! Full Monday-Friday scheduling with dedicated CSV data, break times, location information, and route display. Jamestown shifts now available in zone dropdown.',
+    },
+    {
+      'title': 'Route Information Display',
+      'description': 'Added route information for Jamestown Road duties shown as "Routes: 70/X28" with route icon. Routes displayed below break times providing essential operational reference information.',
+    },
+    {
+      'title': 'Enhanced Event Card Layout & Spacing',
+      'description': 'Completely redesigned event card information hierarchy with optimized spacing between sections. Better visual separation between operational details and administrative information for improved readability.',
+    },
+    {
+      'title': 'Standardized Font Weight Hierarchy',
+      'description': 'Implemented consistent typography system: Bold titles, semi-bold time values (w600), medium operational details (w500), and normal administrative info (w400). Creates clear visual priority and professional appearance.',
+    },
+    {
+      'title': 'Cleaner Text Formatting',
+      'description': 'Removed colons from "Report:" and "Sign Off:" labels for cleaner, more natural text flow that better matches other information lines throughout the event cards.',
+    },
+    {
+      'title': 'Consistent Break Times & Administrative Info',
+      'description': 'Break times, routes, dates, bus assignments, and late break status now use consistent lighter font weight (w400) for proper information hierarchy, distinguishing operational details from reference information.',
+    },
+    {
+      'title': 'FIXED: Spare Duty Deletion UI Update',
+      'description': 'Fixed critical issue where deleting spare duties required navigating to another day and back to see changes. Event cards now update immediately when duties are removed with improved state management for real-time UI synchronization.',
+    },
+    {
+      'title': 'FIXED: Jamestown Statistics Integration',
+      'description': 'Fixed Jamestown Road duties (811/xx shifts) not being properly included in statistics calculations. Jamestown shifts now contribute to work time totals, shift type breakdowns, and all statistical analysis with accurate data from JAMESTOWN_DUTIES.csv.',
+    },
+    {
+      'title': 'Professional Information Architecture',
+      'description': 'Restructured event cards with logical information flow: Title → Critical times → Location context → Operational details → Administrative reference. Creates intuitive, scannable interface for shift information.',
+    },
+  ],
   '2.8.58': [
     {
       'title': 'Fixed Bills Screen Row Alignment',

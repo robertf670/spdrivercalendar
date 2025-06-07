@@ -40,6 +40,7 @@ class _EventCardState extends State<EventCard> {
   String? startBreakLocation;
   String? finishBreakLocation;
   String? workTime;
+  String? routeInfo; // For Jamestown Road shifts only
   String? _departTimeStr;
   String? _finishTimeStr;
   bool isLoading = true;
@@ -156,7 +157,13 @@ class _EventCardState extends State<EventCard> {
         }
       } else {
         shiftCode = widget.event.title.replaceAll('Shift: ', '').trim();
+        // For Jamestown Road shifts, remove the "- Jamestown" suffix
+        if (shiftCode.contains('- Jamestown')) {
+          shiftCode = shiftCode.replaceAll(' - Jamestown', '').trim();
+        }
       }
+      
+      print('EventCard: Extracted shift code: "$shiftCode" from title: "${widget.event.title}"');
       
       // Skip for spare shifts
       if (shiftCode.startsWith('SP')) {
@@ -166,7 +173,15 @@ class _EventCardState extends State<EventCard> {
           startBreakLocation = null;
           finishBreakLocation = null;
           workTime = null;
+          routeInfo = null;
         });
+        return;
+      }
+      
+      // Special handling for Jamestown Road shifts (CHECK BEFORE UNI/Euro!)
+      if (shiftCode.startsWith('811/')) {
+        print('EventCard: Detected Jamestown Road shift: $shiftCode');
+        await _loadJamestownShiftData(shiftCode);
         return;
       }
       
@@ -267,6 +282,7 @@ class _EventCardState extends State<EventCard> {
           startBreakLocation = null;
           finishBreakLocation = null;
           workTime = null;
+          routeInfo = null;
         });
       }
     } catch (e) {
@@ -278,6 +294,7 @@ class _EventCardState extends State<EventCard> {
           startBreakLocation = null;
           finishBreakLocation = null;
           workTime = null;
+          routeInfo = null;
         });
       }
     }
@@ -531,6 +548,7 @@ class _EventCardState extends State<EventCard> {
           startBreakLocation = null;
           finishBreakLocation = null;
           workTime = workTimeStr;
+          routeInfo = null;
           
           // Even though we don't use times in the location fields, we're setting them
           // so that the widget can be updated with the modified event times
@@ -546,6 +564,106 @@ class _EventCardState extends State<EventCard> {
       }
     } catch (e) {
       print('Error loading UNI shift data: $e');
+    }
+  }
+
+  // Helper method to load data for Jamestown Road shifts
+  Future<void> _loadJamestownShiftData(String shiftCode) async {
+    try {
+      
+      // Load the Jamestown CSV file
+      final file = await rootBundle.loadString('assets/JAMESTOWN_DUTIES.csv');
+      final lines = file.split('\n');
+      
+      // Find the matching shift
+      for (int i = 1; i < lines.length; i++) { // Skip header line
+        final line = lines[i].trim();
+        if (line.isEmpty) continue;
+        final parts = line.split(',');
+        
+        // Expecting format: shift,duty,report,depart,location,startbreak,startbreaklocation,breakreport,finishbreak,finishbreaklocation,finish,finishlocation,signoff,spread,work,relief,route
+        if (parts.length >= 17) {
+          final shift = parts[0].trim();
+          if (shift == shiftCode) {
+            // Found matching shift, extract location and time data
+            final reportLocation = parts[4].trim(); // location column
+            final finishLoc = parts[11].trim(); // finishlocation column
+            final reportTimeRaw = parts[2].trim(); // report column (to match other duties)
+            final signoffTimeRaw = parts[12].trim(); // signoff column (to match other duties)
+            
+            // Get break information
+            final breakStartTime = parts[5].trim(); // startbreak column
+            final breakStartLoc = parts[6].trim(); // startbreaklocation column
+            final breakEndTime = parts[8].trim(); // finishbreak column
+            final breakEndLoc = parts[9].trim(); // finishbreaklocation column
+            
+            // Get work time
+            final work = parts[14].trim(); // work column
+            
+            // Get route information
+            final route = parts.length >= 17 ? parts[16].trim() : ''; // route column
+            
+            // Check if it's a workout (break times are empty or nan)
+            final isWorkout = breakStartTime.toLowerCase() == 'nan' || 
+                             breakStartTime.isEmpty || 
+                             breakEndTime.toLowerCase() == 'nan' || 
+                             breakEndTime.isEmpty ||
+                             breakStartTime == breakEndTime;
+            
+            // Format locations for display
+            final start = reportLocation.isNotEmpty && reportLocation != 'nan' ? mapLocationName(reportLocation) : '';
+            final end = finishLoc.isNotEmpty && finishLoc != 'nan' ? mapLocationName(finishLoc) : '';
+            final reportFormatted = _formatTimeWithoutSeconds(reportTimeRaw);
+            final signoffFormatted = _formatTimeWithoutSeconds(signoffTimeRaw);
+            
+            // Format break locations only if not a workout
+            String? breakStart;
+            String? breakEnd;
+            if (!isWorkout) {
+              breakStart = breakStartLoc.isNotEmpty && breakStartLoc != 'nan' ? mapLocationName(breakStartLoc) : null;
+              breakEnd = breakEndLoc.isNotEmpty && breakEndLoc != 'nan' ? mapLocationName(breakEndLoc) : null;
+            }
+            
+            if (mounted) {
+              setState(() {
+                startLocation = start;
+                finishLocation = end;
+                startBreakLocation = breakStart;
+                finishBreakLocation = breakEnd;
+                workTime = work.isNotEmpty && work != 'nan' ? work : null;
+                routeInfo = route.isNotEmpty && route != 'nan' ? route : null;
+                _departTimeStr = reportFormatted;
+                _finishTimeStr = signoffFormatted;
+              });
+            }
+            return;
+          }
+        }
+      }
+      
+      // If no match found, set to defaults
+      if (mounted) {
+        setState(() {
+          startLocation = null;
+          finishLocation = null;
+          startBreakLocation = null;
+          finishBreakLocation = null;
+          workTime = null;
+          routeInfo = null;
+        });
+      }
+    } catch (e) {
+      print('Error loading Jamestown Road shift data: $e');
+      if (mounted) {
+        setState(() {
+          startLocation = null;
+          finishLocation = null;
+          startBreakLocation = null;
+          finishBreakLocation = null;
+          workTime = null;
+          routeInfo = null;
+        });
+      }
     }
   }
 
@@ -1126,12 +1244,12 @@ class _EventCardState extends State<EventCard> {
                   ),
                 ],
               ),
-              const SizedBox(height: 6.0),
+              const SizedBox(height: 8.0), // Slightly larger gap after title
               
               // NEW: Report - Sign Off line (for PZ shifts and UNI overtime shifts)
-              if (widget.event.title.startsWith('PZ') || (widget.event.title.contains('(OT)') && RegExp(r'^\d{2,3}/').hasMatch(widget.event.title.replaceAll(RegExp(r'[AB]? \(OT\)$'), ''))))
+              if (widget.event.title.startsWith('PZ') || widget.event.title.startsWith('811/') || (widget.event.title.contains('(OT)') && RegExp(r'^\d{2,3}/').hasMatch(widget.event.title.replaceAll(RegExp(r'[AB]? \(OT\)$'), ''))))
                 Padding(
-                  padding: const EdgeInsets.only(bottom: 4.0), // Keep space below
+                  padding: const EdgeInsets.only(bottom: 2.0), // Reduced space - time info goes together
                   // Add Row for Icon
                   child: Row(
                     children: [
@@ -1152,17 +1270,17 @@ class _EventCardState extends State<EventCard> {
                             style: TextStyle( // Removed const and hardcoded black color
                               color: Theme.of(context).textTheme.bodyMedium?.color, // Use theme color
                               fontSize: 14,
-                              fontWeight: widget.event.title.contains('(OT)') ? FontWeight.bold : FontWeight.normal,
+                              fontWeight: FontWeight.w500, // Medium weight for time info labels
                             ),
                             children: <TextSpan>[
                               TextSpan(
-                                text: widget.event.title.contains('(OT)') ? 'Start: ' : 'Report: ',
+                                text: widget.event.title.contains('(OT)') ? 'Start ' : 'Report ',
                               ),
                               TextSpan(
                                 text: widget.event.formattedStartTime,
                                 style: TextStyle( // Removed const and hardcoded black color
                                   color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.9), // Use theme color, slightly less emphasis
-                                  fontWeight: widget.event.title.contains('(OT)') ? FontWeight.bold : FontWeight.normal,
+                                  fontWeight: FontWeight.w600, // Important - actual time values
                                 ),
                               ),
                               // Add location for overtime shifts if available - with correct locations based on shift type
@@ -1172,7 +1290,7 @@ class _EventCardState extends State<EventCard> {
                                   text: ' $startLocation',
                                   style: TextStyle(
                                     color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.9),
-                                    fontWeight: FontWeight.bold,
+                                    fontWeight: FontWeight.w500, // Medium weight for locations
                                   ),
                                 ),
                               ] else if (widget.event.title.contains('B (OT)') && finishBreakLocation != null && finishBreakLocation!.isNotEmpty) ...[
@@ -1181,7 +1299,7 @@ class _EventCardState extends State<EventCard> {
                                   text: ' $finishBreakLocation',
                                   style: TextStyle(
                                     color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.9),
-                                    fontWeight: FontWeight.bold,
+                                    fontWeight: FontWeight.w500, // Medium weight for locations
                                   ),
                                 ),
                               ] else if (widget.event.title.contains('(OT)') && startLocation != null && startLocation!.isNotEmpty) ...[
@@ -1190,18 +1308,18 @@ class _EventCardState extends State<EventCard> {
                                   text: ' $startLocation',
                                   style: TextStyle(
                                     color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.9),
-                                    fontWeight: FontWeight.bold,
+                                    fontWeight: FontWeight.w500, // Medium weight for locations
                                   ),
                                 ),
                               ],
                               TextSpan(
-                                text: widget.event.title.contains('(OT)') ? ' - Finish: ' : ' - Sign Off: ',
+                                text: widget.event.title.contains('(OT)') ? ' - Finish ' : ' - Sign Off ',
                               ),
                               TextSpan(
                                 text: widget.event.formattedEndTime,
                                 style: TextStyle( // Removed const and hardcoded black color
                                   color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.9), // Use theme color, slightly less emphasis
-                                  fontWeight: widget.event.title.contains('(OT)') ? FontWeight.bold : FontWeight.normal,
+                                  fontWeight: FontWeight.w600, // Important - actual time values
                                 ),
                               ),
                               // Add appropriate finish location for overtime shifts based on half type
@@ -1211,7 +1329,7 @@ class _EventCardState extends State<EventCard> {
                                   text: ' $startBreakLocation',
                                   style: TextStyle(
                                     color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.9),
-                                    fontWeight: FontWeight.bold,
+                                    fontWeight: FontWeight.w500, // Medium weight for locations
                                   ),
                                 ),
                               ] else if (widget.event.title.contains('B (OT)') && finishLocation != null && finishLocation!.isNotEmpty) ...[
@@ -1220,7 +1338,7 @@ class _EventCardState extends State<EventCard> {
                                   text: ' $finishLocation',
                                   style: TextStyle(
                                     color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.9),
-                                    fontWeight: FontWeight.bold,
+                                    fontWeight: FontWeight.w500, // Medium weight for locations
                                   ),
                                 ),
                               ] else if (widget.event.title.contains('(OT)') && finishLocation != null && finishLocation!.isNotEmpty) ...[
@@ -1229,7 +1347,7 @@ class _EventCardState extends State<EventCard> {
                                   text: ' $finishLocation',
                                   style: TextStyle(
                                     color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.9),
-                                    fontWeight: FontWeight.bold,
+                                    fontWeight: FontWeight.w500, // Medium weight for locations
                                   ),
                                 ),
                               ],
@@ -1309,7 +1427,7 @@ class _EventCardState extends State<EventCard> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 6.0),
+                const SizedBox(height: 3.0), // Reduced gap - route/location and breaks are related
               ],
               // MODIFIED: Break times row (if available AND NOT BusCheck)
               if (breakTime != null && !isBusCheckShift && !widget.event.title.contains('(OT)')) ...[
@@ -1328,8 +1446,8 @@ class _EventCardState extends State<EventCard> {
                         // Calculate and include break duration
                         () {
                           String baseText;
-                        // Only show break locations for PZ shifts that are not workouts
-                          if (!breakTime!.toLowerCase().contains('workout') && widget.event.title.contains('PZ')) {
+                        // Only show break locations for PZ shifts and Jamestown Road shifts that are not workouts
+                          if (!breakTime!.toLowerCase().contains('workout') && (widget.event.title.contains('PZ') || widget.event.title.startsWith('811/'))) {
                             baseText = '${startBreakLocation != null ? "$startBreakLocation " : ""}${breakTime!}${finishBreakLocation != null ? " $finishBreakLocation" : ""}';
                           } else if (breakTime!.toLowerCase().contains('workout')) {
                             baseText = 'Workout';
@@ -1352,13 +1470,43 @@ class _EventCardState extends State<EventCard> {
                               ? Colors.white
                               : Colors.black,
                           fontSize: 14,
-                          fontWeight: FontWeight.w500,
+                          fontWeight: FontWeight.w400, // Match date styling for operational reference info
                         ),
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 6.0),
+                // Add gap after break times if this is NOT a Jamestown shift (Jamestown gets gap from route section)
+                if (!widget.event.title.startsWith('811/'))
+                  const SizedBox(height: 8.0), // Consistent gap after break times
+              ],
+              // JAMESTOWN ROAD: Route information (if available for Jamestown Road shifts only)
+              if (routeInfo != null && widget.event.title.startsWith('811/')) ...[
+                Row(
+                  children: [
+                    Icon(
+                      Icons.route_outlined,
+                      size: 16,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white
+                          : Colors.black,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child:                       Text(
+                        'Routes: $routeInfo',
+                        style: TextStyle(
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.white
+                              : Colors.black,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w400, // Match date styling for administrative/reference info
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8.0), // Larger gap before assignment section
               ],
               // Show assigned duty details if available
               if (widget.event.assignedDuties != null && widget.event.assignedDuties!.isNotEmpty) ...[
@@ -1366,7 +1514,7 @@ class _EventCardState extends State<EventCard> {
                   padding: const EdgeInsets.only(bottom: 2.0),
                   child: _buildAssignedDuties(),
                 ),
-                const SizedBox(height: 6.0),
+                const SizedBox(height: 8.0), // Larger gap before date/bus info section
               ],
               // Date row
               Row(
@@ -1387,13 +1535,14 @@ class _EventCardState extends State<EventCard> {
                             ? Colors.white
                             : Colors.black,
                         fontSize: 12,
-                        fontWeight: FontWeight.w500,
+                        fontWeight: FontWeight.w400, // Lighter weight for administrative info (date)
                       ),
                     ),
                   ),
                   // Work time has been moved to the top right
                 ],
               ),
+              const SizedBox(height: 4.0), // Small gap between date and bus/status info
 
               // MODIFIED: Bus assignment row (Only show if NOT BusCheck AND bus data exists)
               if (!isBusCheckShift && (widget.event.firstHalfBus != null || widget.event.secondHalfBus != null)) ...[
@@ -1429,7 +1578,7 @@ class _EventCardState extends State<EventCard> {
                                   ? Colors.white
                                   : Colors.black,
                               fontSize: 12,
-                              fontWeight: FontWeight.w500,
+                              fontWeight: FontWeight.w400, // Lighter weight for administrative info (bus assignment)
                             ),
                           );
                         },
@@ -1438,6 +1587,7 @@ class _EventCardState extends State<EventCard> {
                   ],
                 ),
               ],
+              const SizedBox(height: 3.0), // Small gap between bus and late break status
 
               // Late Break Status Section
               if (widget.event.hasLateBreak) ...[
@@ -1463,7 +1613,7 @@ class _EventCardState extends State<EventCard> {
                               ? Colors.white
                               : Colors.black,
                           fontSize: 12,
-                          fontWeight: FontWeight.w500,
+                          fontWeight: FontWeight.w400, // Lighter weight for administrative info (late break status)
                         ),
                       ),
                     ),
@@ -2059,22 +2209,45 @@ class _EventCardState extends State<EventCard> {
                           
                                  // Remove the specific duty and its bus assignment
                                  final dutyCode = duty['dutyCode'] as String;
-                                 widget.event.assignedDuties!.remove(dutyCode);
-                                 widget.event.setBusForDuty(dutyCode, null);
-                          
-                          // If no duties left, set to null
-                          if (widget.event.assignedDuties!.isEmpty) {
-                            widget.event.assignedDuties = null;
-                          }
+                                 
+                                 // Create a new list without the removed duty
+                                 final newAssignedDuties = List<String>.from(widget.event.assignedDuties!);
+                                 newAssignedDuties.remove(dutyCode);
+                                 
+                                 // Create a new event object with updated duties
+                                 final updatedEvent = Event(
+                                   id: widget.event.id,
+                                   title: widget.event.title,
+                                   startDate: widget.event.startDate,
+                                   startTime: widget.event.startTime,
+                                   endDate: widget.event.endDate,
+                                   endTime: widget.event.endTime,
+                                   workTime: widget.event.workTime,
+                                   breakStartTime: widget.event.breakStartTime,
+                                   breakEndTime: widget.event.breakEndTime,
+                                   assignedDuties: newAssignedDuties.isEmpty ? null : newAssignedDuties,
+                                   busAssignments: widget.event.busAssignments,
+                                   notes: widget.event.notes,
+                                   firstHalfBus: widget.event.firstHalfBus,
+                                   secondHalfBus: widget.event.secondHalfBus,
+                                   hasLateBreak: widget.event.hasLateBreak,
+                                   tookFullBreak: widget.event.tookFullBreak,
+                                   overtimeDuration: widget.event.overtimeDuration,
+                                 );
+                                 
+                                 // Remove bus assignment for the deleted duty
+                                 updatedEvent.setBusForDuty(dutyCode, null);
                           
                           // Save the updated event
-                          await EventService.updateEvent(oldEvent, widget.event);
+                          await EventService.updateEvent(oldEvent, updatedEvent);
                           
-                          // Close the dialog
-                          Navigator.of(context).pop();
+                          // Update the widget's event reference
+                          widget.event.assignedDuties = updatedEvent.assignedDuties;
+                          widget.event.busAssignments = updatedEvent.busAssignments;
                           
-                          // Clear duty details if no duties left
+                          // Immediately update the duty details list
                           if (widget.event.assignedDuties == null) {
+                            _allDutyDetails.clear();
                             setState(() {
                               _assignedDutyStartTime = null;
                               _assignedDutyEndTime = null;
@@ -2082,22 +2255,30 @@ class _EventCardState extends State<EventCard> {
                               _assignedDutyEndLocation = null;
                             });
                           } else {
-                            // Reload duty details for the remaining duty
+                            // Reload duty details for the remaining duties
                             await _loadAssignedDutyDetails();
+                            setState(() {}); // Force rebuild with new duty details
                           }
                           
-                          // Refresh the UI by notifying the parent widget
+                          // Close the current dialog
+                          Navigator.of(context).pop();
+                          
+                          // Force immediate refresh of the parent calendar
+                          widget.onEdit(Event(
+                            id: 'refresh_trigger',
+                            title: '',
+                            startDate: widget.event.startDate,
+                            startTime: widget.event.startTime,
+                            endDate: widget.event.endDate,
+                            endTime: widget.event.endTime,
+                          ));
+                          
+                          // Small delay to ensure calendar state is updated, then reopen dialog
+                          await Future.delayed(const Duration(milliseconds: 200));
+                          
+                          // Reopen the spare shift dialog to show updated duties
                           if (mounted) {
-                            setState(() {}); // Force a rebuild of this widget
-                            // Notify parent to rebuild without showing edit dialog
-                            widget.onEdit(Event(
-                              id: 'refresh_trigger',
-                              title: '',
-                              startDate: widget.event.startDate,
-                              startTime: widget.event.startTime,
-                              endDate: widget.event.endDate,
-                              endTime: widget.event.endTime,
-                            ));
+                            _showSpareShiftDialog(context);
                           }
                         },
                                icon: const Icon(Icons.delete_outline),
@@ -2604,6 +2785,10 @@ class _EventCardState extends State<EventCard> {
         }
       }
     }
+    // Check for Jamestown Road shifts (format: 811/xx)
+    else if (title.startsWith('811/')) {
+      return '$title - Jamestown';
+    }
     // Return original title if not BusCheck or format doesn't match
     return title.isEmpty ? 'Untitled Event' : title;
   }
@@ -2629,8 +2814,8 @@ class _EventCardState extends State<EventCard> {
     final bool isFirstHalf = isOvertimeShift && widget.event.title.contains('A (OT)');
     final bool isSecondHalf = isOvertimeShift && widget.event.title.contains('B (OT)');
     
-    // For PZ shifts, use the specialized display format
-    if (widget.event.title.startsWith('PZ')) {
+    // For PZ shifts (and Jamestown Road shifts), use the specialized display format
+    if (widget.event.title.startsWith('PZ') || widget.event.title.startsWith('811/')) {
       return <TextSpan>[
         if (startLocation != null && startLocation!.isNotEmpty) ...[
           TextSpan(
