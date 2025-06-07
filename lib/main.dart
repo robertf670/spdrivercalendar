@@ -19,6 +19,7 @@ import 'package:spdrivercalendar/services/backup_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:spdrivercalendar/features/calendar/services/event_service.dart';
 import 'package:spdrivercalendar/features/settings/screens/version_history_screen.dart';
+import 'package:spdrivercalendar/services/color_customization_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -37,6 +38,7 @@ Future<void> main() async {
     RestDaysService.initialize(),
     GoogleCalendarService.initialize(),
     ShiftService.initialize(),
+    ColorCustomizationService.initialize(),
   ]);
 
   // Initialize EventService AFTER StorageService is ready (as it reads from SharedPreferences)

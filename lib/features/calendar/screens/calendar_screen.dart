@@ -35,6 +35,7 @@ import 'package:spdrivercalendar/features/payscale/screens/payscale_screen.dart'
 import 'package:uuid/uuid.dart';
 import 'package:spdrivercalendar/services/update_service.dart';
 import 'package:spdrivercalendar/core/widgets/enhanced_update_dialog.dart';
+import 'package:spdrivercalendar/services/color_customization_service.dart';
 
 class CalendarScreen extends StatefulWidget {
   final ValueNotifier<bool> isDarkModeNotifier;
@@ -58,26 +59,40 @@ class CalendarScreenState extends State<CalendarScreen>
   late AnimationController _animationController;
   bool _hasCheckedForUpdatesOnStartup = false;
   
-  final Map<String, ShiftInfo> _shiftInfoMap = {
-    'E': ShiftInfo('Early', AppTheme.shiftColors['E']!),
-    'L': ShiftInfo('Late', AppTheme.shiftColors['L']!),
-    'M': ShiftInfo('Middle', AppTheme.shiftColors['M']!),
-    'R': ShiftInfo('Rest', AppTheme.shiftColors['R']!),
-  };
+  late Map<String, ShiftInfo> _shiftInfoMap;
 
   // Add holiday color constant
   static const Color holidayColor = Color(0xFF00BCD4); // Teal color for holidays
+
+  void _initializeShiftColors() {
+    final colors = ColorCustomizationService.getShiftColors();
+    _shiftInfoMap = {
+      'E': ShiftInfo('Early', colors['E']!),
+      'L': ShiftInfo('Late', colors['L']!),
+      'M': ShiftInfo('Middle', colors['M']!),
+      'R': ShiftInfo('Rest', colors['R']!),
+    };
+  }
+
+  void refreshShiftColors() {
+    _initializeShiftColors();
+    setState(() {});
+  }
 
   @override
   void initState() {
     super.initState();
     _selectedDay = DateTime.now();
+    _initializeShiftColors();
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 300),
       vsync: this,
     );
     _animationController.forward();
     WidgetsBinding.instance.addObserver(this);
+    
+    // Register for color change notifications
+    ColorCustomizationService.setColorChangeCallback(refreshShiftColors);
     
     // Initialize with current month's events with error handling
     _initializeCurrentMonth().catchError((error) {
@@ -282,6 +297,8 @@ class CalendarScreenState extends State<CalendarScreen>
   void dispose() {
     _animationController.dispose();
     WidgetsBinding.instance.removeObserver(this);
+    // Clear color change callback
+    ColorCustomizationService.clearColorChangeCallback();
     super.dispose();
   }
   

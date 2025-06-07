@@ -10,6 +10,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:spdrivercalendar/services/backup_service.dart';
 import 'dart:io'; // For File type in auto-backup list
 import 'package:intl/intl.dart'; // For DateFormat
+import 'package:spdrivercalendar/features/settings/widgets/color_customization_widget.dart';
 
 // Define Preference Keys for Notifications (Consider moving to AppConstants if not already there)
 const String kNotificationsEnabledKey = 'notificationsEnabled';
@@ -101,6 +102,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
     await StorageService.saveBool(AppConstants.syncToGoogleCalendarKey, value);
   }
 
+  void _onColorsChanged() {
+    // Trigger a rebuild to refresh any UI that depends on colors
+    setState(() {});
+    
+    // Show a snackbar to confirm the change
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Shift colors updated successfully'),
+        backgroundColor: Colors.green,
+        duration: Duration(seconds: 2),
+      ),
+    );
+  }
+
   // --- Notification Preference Saving Methods ---
   Future<void> _saveNotificationsEnabled(bool enabled) async {
       final prefs = await SharedPreferences.getInstance();
@@ -161,6 +176,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 children: [
                   _buildSectionHeader('Appearance'),
                   _buildDarkModeSwitch(),
+                  ColorCustomizationWidget(
+                    onColorsChanged: _onColorsChanged,
+                  ),
                   
                   const Divider(height: 32),
                   _buildSectionHeader('Google Calendar'),
@@ -239,8 +257,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   _buildVersionHistoryButton(),
                 ],
               ),
-      ),
-    );
+            ),
+          );
   }
 
   Widget _buildSectionHeader(String title) {

@@ -7,6 +7,7 @@ import 'package:spdrivercalendar/core/constants/app_constants.dart';
 // Import keys for settings that might not be in AppConstants
 import 'package:spdrivercalendar/features/settings/screens/settings_screen.dart' show kNotificationsEnabledKey, kNotificationOffsetHoursKey;
 import 'package:path_provider/path_provider.dart'; // Added for auto-backup
+import 'package:spdrivercalendar/services/color_customization_service.dart';
 
 class BackupService {
   // --- Auto-Backup Configuration ---
@@ -37,6 +38,9 @@ class BackupService {
       for (String key in _backupKeys) {
         backupData[key] = prefs.get(key);
       }
+
+      // Add custom color data
+      backupData.addAll(ColorCustomizationService.exportColors());
 
       final String backupJson = jsonEncode(backupData);
       // Convert the JSON string to bytes using UTF-8 encoding
@@ -95,6 +99,9 @@ class BackupService {
           print("AutoBackup: Key '$key' not found in SharedPreferences, skipping.");
         }
       }
+
+      // Add custom color data
+      backupData.addAll(ColorCustomizationService.exportColors());
 
       final String backupJson = jsonEncode(backupData);
       final Uint8List backupBytes = utf8.encode(backupJson);
@@ -274,6 +281,14 @@ class BackupService {
         }
       }
       
+      // Import custom colors if present
+      try {
+        await ColorCustomizationService.importColors(backupData);
+        print("Custom colors imported successfully");
+      } catch (e) {
+        print("Warning: Could not import custom colors: $e");
+      }
+
       print("Restore completed. Restored: $restoredCount, Skipped: $skippedCount");
       
       // Consider success if we restored at least some data
