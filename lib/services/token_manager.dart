@@ -24,16 +24,16 @@ class TokenManager {
     if (expiryString != null) {
       _inMemoryTokenExpiration = DateTime.tryParse(expiryString);
       if (_inMemoryTokenExpiration != null) {
-        print('[TokenManager] Loaded token expiry for timer: $_inMemoryTokenExpiration');
+
         _scheduleRefresh();
       }
     }
-    print('[TokenManager] Initialized.');
+
   }
 
   static Future<void> saveLoginStatus(bool isLoggedIn) async {
     await _prefs?.setBool(_keyLoginStatus, isLoggedIn);
-    print('[TokenManager] Login status saved: $isLoggedIn');
+
   }
 
   static Future<bool> getLoginStatus() async {
@@ -43,7 +43,7 @@ class TokenManager {
   static Future<void> saveCredentials(Map<String, dynamic> credentialsMap, String email, DateTime? expiryDateTime) async {
     final String credentialsJson = jsonEncode(credentialsMap);
     await _prefs?.setString(_keyCredentials, credentialsJson);
-    print('[TokenManager] Credentials saved.');
+
     await saveUserEmail(email); // Save email alongside
 
     if (expiryDateTime != null) {
@@ -66,7 +66,7 @@ class TokenManager {
       try {
         return jsonDecode(credentialsJson) as Map<String, dynamic>;
       } catch (e) {
-        print('[TokenManager] Error decoding credentials JSON: $e');
+
         return null;
       }
     }
@@ -85,7 +85,7 @@ class TokenManager {
 
   static Future<void> saveUserEmail(String email) async {
     await _prefs?.setString(_keyUserEmail, email);
-    print('[TokenManager] User email saved: $email');
+
   }
 
   static Future<String?> getUserEmail() async {
@@ -101,7 +101,7 @@ class TokenManager {
     // It also updates the in-memory copy for the timer.
     await _prefs?.setString(_keyTokenExpiry, expiryIsoString);
     _inMemoryTokenExpiration = DateTime.tryParse(expiryIsoString);
-    print('[TokenManager] Token expiry saved: $_inMemoryTokenExpiration');
+
     if (_inMemoryTokenExpiration != null) {
       _scheduleRefresh();
     }
@@ -125,7 +125,7 @@ class TokenManager {
     await _prefs?.remove(_keyTokenExpiry);
     _inMemoryTokenExpiration = null;
     _refreshTimer?.cancel();
-    print('[TokenManager] All token data cleared.');
+
   }
 
   // Timer logic (kept from original)
@@ -141,15 +141,15 @@ class TokenManager {
     final timeUntilRefresh = _inMemoryTokenExpiration!.difference(DateTime.now()) - Duration(minutes: _refreshThresholdMinutes);
 
     if (timeUntilRefresh.isNegative) {
-      print('[TokenManager] Token already past refresh threshold.');
+
       // Potentially trigger a refresh callback if GoogleCalendarService provides one
       // For now, GoogleCalendarService checks needsRefresh() or handles expired tokens.
       return;
     }
 
-    print('[TokenManager] Scheduling token refresh timer for $timeUntilRefresh');
+
     _refreshTimer = Timer(timeUntilRefresh, () {
-      print('[TokenManager] Timer fired: Token needs refresh.');
+
       // This timer's role is to ensure proactive refresh.
       // The actual refresh is initiated by GoogleCalendarService when it checks token validity.
       // Or, a callback mechanism could be added here if needed.
@@ -160,6 +160,6 @@ class TokenManager {
     _refreshTimer?.cancel();
     _refreshTimer = null;
     _inMemoryTokenExpiration = null;
-    print('[TokenManager] Disposed.');
+
   }
 } 

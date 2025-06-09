@@ -27,10 +27,10 @@ class ColorCustomizationService {
     final prefs = await SharedPreferences.getInstance();
     
     _customColors = {
-      'E': Color(prefs.getInt(_earlyColorKey) ?? _defaultEarlyColor.value),
-      'L': Color(prefs.getInt(_lateColorKey) ?? _defaultLateColor.value),
-      'M': Color(prefs.getInt(_middleColorKey) ?? _defaultMiddleColor.value),
-      'R': Color(prefs.getInt(_restColorKey) ?? _defaultRestColor.value),
+      'E': Color(prefs.getInt(_earlyColorKey) ?? _defaultEarlyColor.toARGB32()),
+      'L': Color(prefs.getInt(_lateColorKey) ?? _defaultLateColor.toARGB32()),
+      'M': Color(prefs.getInt(_middleColorKey) ?? _defaultMiddleColor.toARGB32()),
+      'R': Color(prefs.getInt(_restColorKey) ?? _defaultRestColor.toARGB32()),
     };
     
     _isInitialized = true;
@@ -72,16 +72,16 @@ class ColorCustomizationService {
     // Save to SharedPreferences
     switch (shiftType) {
       case 'E':
-        await prefs.setInt(_earlyColorKey, color.value);
+        await prefs.setInt(_earlyColorKey, color.toARGB32());
         break;
       case 'L':
-        await prefs.setInt(_lateColorKey, color.value);
+        await prefs.setInt(_lateColorKey, color.toARGB32());
         break;
       case 'M':
-        await prefs.setInt(_middleColorKey, color.value);
+        await prefs.setInt(_middleColorKey, color.toARGB32());
         break;
       case 'R':
-        await prefs.setInt(_restColorKey, color.value);
+        await prefs.setInt(_restColorKey, color.toARGB32());
         break;
     }
     
@@ -135,10 +135,10 @@ class ColorCustomizationService {
   static Map<String, dynamic> exportColors() {
     return {
       'customShiftColors': {
-        'E': _customColors['E']?.value,
-        'L': _customColors['L']?.value,
-        'M': _customColors['M']?.value,
-        'R': _customColors['R']?.value,
+        'E': _customColors['E']?.toARGB32(),
+        'L': _customColors['L']?.toARGB32(),
+        'M': _customColors['M']?.toARGB32(),
+        'R': _customColors['R']?.toARGB32(),
       }
     };
   }

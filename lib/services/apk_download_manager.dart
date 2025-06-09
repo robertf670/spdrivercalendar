@@ -67,8 +67,8 @@ class ApkDownloadManager {
     Function(DownloadProgress) onProgress,
   ) async {
     try {
-      print('[Download] Starting APK download for version $version');
-      print('[Download] URL: $downloadUrl');
+
+
       
       // Check and request permissions
       onProgress(DownloadProgress(
@@ -79,8 +79,8 @@ class ApkDownloadManager {
       ));
       
       if (!await _checkPermissions()) {
-        final errorMsg = 'Storage permissions required for download';
-        print('[Download] Permission check failed: $errorMsg');
+        const errorMsg = 'Storage permissions required for download';
+
         onProgress(DownloadProgress.error(errorMsg));
         return null;
       }
@@ -95,13 +95,13 @@ class ApkDownloadManager {
       
       final directory = await _getDownloadDirectory();
       if (directory == null) {
-        final errorMsg = 'Could not access download directory';
-        print('[Download] Directory access failed: $errorMsg');
+        const errorMsg = 'Could not access download directory';
+
         onProgress(DownloadProgress.error(errorMsg));
         return null;
       }
 
-      print('[Download] Using directory: ${directory.path}');
+
 
       final fileName = 'spdrivercalendar-$version.apk';
       final filePath = '${directory.path}/$fileName';
@@ -109,14 +109,14 @@ class ApkDownloadManager {
       // Clean up any existing file
       final file = File(filePath);
       if (await file.exists()) {
-        print('[Download] Removing existing file: $filePath');
+
         await file.delete();
       }
 
       // Initialize cancel token
       _cancelToken = CancelToken();
 
-      print('[Download] Starting download to: $filePath');
+
 
       // Download with progress tracking
       await _dio.download(
@@ -126,7 +126,7 @@ class ApkDownloadManager {
         onReceiveProgress: (received, total) {
           if (total > 0) {
             final progress = DownloadProgress.downloading(received, total);
-            print('[Download] Progress: ${progress.percentage.toStringAsFixed(1)}% (${(received / 1024 / 1024).toStringAsFixed(1)}/${(total / 1024 / 1024).toStringAsFixed(1)} MB)');
+
             onProgress(progress);
           }
         },
@@ -141,13 +141,12 @@ class ApkDownloadManager {
 
       // Verify file was downloaded
       if (await file.exists()) {
-        final fileSize = await file.length();
-        print('[Download] File downloaded successfully: ${(fileSize / 1024 / 1024).toStringAsFixed(1)} MB');
+        // File downloaded successfully
         onProgress(DownloadProgress.completed());
         return filePath;
       } else {
-        final errorMsg = 'Download completed but file not found';
-        print('[Download] Verification failed: $errorMsg');
+        const errorMsg = 'Download completed but file not found';
+
         onProgress(DownloadProgress.error(errorMsg));
         return null;
       }
@@ -165,12 +164,12 @@ class ApkDownloadManager {
         errorMsg = 'Network error: ${e.message ?? 'Unknown'}';
       }
       
-      print('[Download] DioException: $errorMsg');
+
       onProgress(DownloadProgress.error(errorMsg));
       return null;
     } catch (e) {
       final errorMsg = 'Unexpected error: $e';
-      print('[Download] Unexpected error: $errorMsg');
+
       onProgress(DownloadProgress.error(errorMsg));
       return null;
     }
@@ -187,13 +186,13 @@ class ApkDownloadManager {
         return false;
       }
 
-      print('[Install] Attempting to install: $filePath');
+
 
       // Try to open APK file with system installer
       final result = await OpenFilex.open(filePath);
       
       if (result.type == ResultType.done) {
-        print('[Install] APK opened successfully with system installer');
+
         onProgress(DownloadProgress(
           downloadedBytes: 0,
           totalBytes: 0,
@@ -202,12 +201,12 @@ class ApkDownloadManager {
         ));
         return true;
       } else {
-        print('[Install] Failed to open APK: ${result.message}');
+
         // Fallback: Try URL launcher
         return await _openApkFile(filePath, onProgress);
       }
     } catch (e) {
-      print('[Install] Install error: $e');
+
       // Fallback: Open file with system installer
       return await _openApkFile(filePath, onProgress);
     }
@@ -229,7 +228,7 @@ class ApkDownloadManager {
       }
       return false;
     } catch (e) {
-      print('[Install] Error opening APK file: $e');
+
       return false;
     }
   }
@@ -243,40 +242,40 @@ class ApkDownloadManager {
   /// Check and request necessary permissions
   static Future<bool> _checkPermissions() async {
     try {
-      print('[Permissions] Checking permissions...');
+
       
       // For Android 11+ (API 30+), we need different permissions
       if (Platform.isAndroid) {
         final androidInfo = await _getAndroidVersion();
-        print('[Permissions] Android API level: $androidInfo');
+
         
         if (androidInfo >= 30) {
           // Android 11+ - Try MANAGE_EXTERNAL_STORAGE first
           final manageStorageStatus = await Permission.manageExternalStorage.status;
-          print('[Permissions] MANAGE_EXTERNAL_STORAGE status: $manageStorageStatus');
+
           
           if (!manageStorageStatus.isGranted) {
             // Request MANAGE_EXTERNAL_STORAGE permission
             final manageStorageResult = await Permission.manageExternalStorage.request();
-            print('[Permissions] MANAGE_EXTERNAL_STORAGE request result: $manageStorageResult');
+
             
             if (!manageStorageResult.isGranted) {
               // If denied, we can still use app-specific directory
-              print('[Permissions] MANAGE_EXTERNAL_STORAGE denied, using app-specific directory');
+
               // Continue - we'll use app-specific directory
             }
           }
         } else {
           // Android 10 and below
           final storageStatus = await Permission.storage.status;
-          print('[Permissions] STORAGE status: $storageStatus');
+
           
           if (!storageStatus.isGranted) {
             final storageResult = await Permission.storage.request();
-            print('[Permissions] STORAGE request result: $storageResult');
+
             
             if (!storageResult.isGranted) {
-              print('[Permissions] Storage permission denied');
+
               return false;
             }
           }
@@ -284,25 +283,25 @@ class ApkDownloadManager {
         
         // Check install permission (important for APK installation)
         final installStatus = await Permission.requestInstallPackages.status;
-        print('[Permissions] REQUEST_INSTALL_PACKAGES status: $installStatus');
+
         
         if (!installStatus.isGranted) {
           final installResult = await Permission.requestInstallPackages.request();
-          print('[Permissions] REQUEST_INSTALL_PACKAGES request result: $installResult');
+
           
           if (!installResult.isGranted) {
-            print('[Permissions] Install permission denied - APK installation may fail');
+
             // Continue anyway - user can manually install from Downloads
           }
         }
       }
       
-      print('[Permissions] Permission check completed successfully');
-      return true;
-    } catch (e) {
-      print('[Permissions] Error checking permissions: $e');
-      return false;
-    }
+
+              return true;
+      } catch (e) {
+        // Failed to check permissions, continue without
+        return false;
+      }
   }
 
   /// Get appropriate download directory based on Android version
@@ -330,7 +329,7 @@ class ApkDownloadManager {
       // Fallback to app documents directory
       return await getApplicationDocumentsDirectory();
     } catch (e) {
-      print('[Directory] Error getting download directory: $e');
+
       return null;
     }
   }
@@ -345,17 +344,17 @@ class ApkDownloadManager {
         if (result.exitCode == 0) {
           final apiLevel = int.tryParse(result.stdout.toString().trim());
           if (apiLevel != null) {
-            print('[Version] Detected Android API level: $apiLevel');
+
             return apiLevel;
           }
         }
       }
       
       // Fallback - assume Android 10 (API 29) for safety
-      print('[Version] Using fallback Android API level: 29');
+
       return 29;
     } catch (e) {
-      print('[Version] Error detecting Android version: $e, using fallback');
+      // Failed to get Android version, use default
       return 29;
     }
   }
@@ -375,12 +374,12 @@ class ApkDownloadManager {
           // Delete APK files older than 7 days
           if (age.inDays > 7) {
             await file.delete();
-            print('[Cleanup] Deleted old APK: ${file.path}');
+
           }
         }
       }
     } catch (e) {
-      print('[Cleanup] Error cleaning up old downloads: $e');
+      // Failed to cleanup old downloads
     }
   }
 

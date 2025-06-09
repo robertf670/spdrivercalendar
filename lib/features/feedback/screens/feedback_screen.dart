@@ -68,7 +68,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
         }
       }
     } catch (e) {
-      print('Error launching email client: $e');
+
       if (mounted) {
         scaffoldMessenger.showSnackBar(
           SnackBar(
@@ -109,10 +109,10 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 // Added Icon for visual appeal
-                Icon(
+                const Icon(
                   Icons.feedback_outlined,
                   size: 64,
-                  color: AppTheme.primaryColor.withOpacity(0.8),
+                  color: AppTheme.primaryColor,
                 ),
                 const SizedBox(height: 16),
                 Text(
@@ -127,7 +127,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                 Text(
                   'Share suggestions, report bugs, or tell us what you think. Your feedback helps improve the app.', // More detailed description
                   style: theme.textTheme.bodyLarge?.copyWith(
-                    color: theme.textTheme.bodyMedium?.color?.withOpacity(0.8), // Slightly muted color
+                    color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.8), // Slightly muted color
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -167,7 +167,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                     alignLabelWithHint: true,
                     filled: true,
                     // Use a slightly transparent fill color
-                    fillColor: (isDarkMode ? Colors.white : Colors.black).withOpacity(0.05),
+                    fillColor: (isDarkMode ? Colors.white : Colors.black).withValues(alpha: 0.05),
                   ),
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
@@ -183,7 +183,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                 Text(
                   'This feedback will be sent directly to the app creator.',
                   style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.textTheme.bodySmall?.color?.withOpacity(0.7), // Muted color
+                    color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.7), // Muted color
                   ),
                   textAlign: TextAlign.center,
                 ),

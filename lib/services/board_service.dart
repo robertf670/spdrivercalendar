@@ -37,7 +37,7 @@ class BoardService {
 
       return entries;
     } catch (e) {
-      print('Error loading board entries: $e');
+      // Error loading board entries
       return [];
     }
   }

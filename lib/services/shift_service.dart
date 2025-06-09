@@ -19,7 +19,7 @@ class ShiftService {
     // For example:
     // await _database.insert('shifts', shift.toMap());
     
-    print('Shift saved: ${shift.title}');
+    // Shift saved successfully
   }
 
   // Get shift by ID
@@ -42,7 +42,7 @@ class ShiftService {
       
       return true;
     } catch (e) {
-      print('Error deleting shift: $e');
+      // Error deleting shift
       return false;
     }
   }

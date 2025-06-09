@@ -184,9 +184,6 @@ class StatisticsScreenState extends State<StatisticsScreen>
       return "${hours}h ${minutes}m";
     }
 
-    // Max duration: 14.5 hours = 870 minutes
-    const maxSundayMinutes = 870;
-
     // Date formatter
     final DateFormat listTitleDateFormatter = DateFormat('MMM d'); // For ListTile title
     final DateFormat detailDateFormatter = DateFormat('dd/MM/yy'); // For detail lines
@@ -365,7 +362,7 @@ class StatisticsScreenState extends State<StatisticsScreen>
                 setState(() {
                   _breakTimeRange = newRange;
                 });
-                print('Break stats time range changed to: $newRange'); // Debug
+                // Break stats time range changed
               }
             },
           ),
@@ -551,8 +548,8 @@ class StatisticsScreenState extends State<StatisticsScreen>
           if (event.isWorkShift) {
             final shiftType = event.title;
             
-            if (!countedIds.contains(event.id ?? '')) {
-              countedIds.add(event.id ?? '');
+            if (!countedIds.contains(event.id)) {
+              countedIds.add(event.id);
               
               if (shiftCounts.containsKey(shiftType)) {
                 shiftCounts[shiftType] = shiftCounts[shiftType]! + 1;
@@ -622,14 +619,14 @@ class StatisticsScreenState extends State<StatisticsScreen>
     widget.events.forEach((date, events) { // Iterate through all dates in the events map
       for (final event in events) { // Iterate through events on that date
         // Skip if already processed (handles cases where event might span midnight)
-        if (processedIds.contains(event.id ?? '')) continue;
+        if (processedIds.contains(event.id)) continue;
         
         // Check if event falls within the selected date range
         // Use event.startDate for the check
         if (!event.startDate.isBefore(startDate) && 
             event.startDate.isBefore(endDate.add(const Duration(days: 1)))) {
           
-          processedIds.add(event.id ?? ''); // Mark as processed
+          processedIds.add(event.id); // Mark as processed
 
           // First check if this is an overtime shift
           if (event.isWorkShift && event.title.contains('(OT)')) {
@@ -732,7 +729,7 @@ class StatisticsScreenState extends State<StatisticsScreen>
     // If CSV lookup fails (shift not found, file error, parsing error, etc.)
     // return Duration.zero instead of falling back to potentially inaccurate calculation.
     // Keep original warning for actual failures
-    print('Warning: Could not determine work time for shift ${event.title} on ${event.startDate.toIso8601String()} (Day: $dayOfWeek) from CSV. Returning zero duration.');
+
     return Duration.zero;
   }
 
@@ -912,10 +909,8 @@ class StatisticsScreenState extends State<StatisticsScreen>
              parsedDurations[currentShiftCode] = duration;
           }
 
-        } catch (e, s) { // Inner catch for parsing/processing errors
-          // print('*** ERROR processing line for shift $currentShiftCode in $fileName ***');
-          // print('Error details: $e');
-          // print('Stack trace: $s'); // Print the stack trace
+        } catch (e) { // Inner catch for parsing/processing errors
+          // Error processing line for shift - continue to next line
         }
       }
 
@@ -933,10 +928,8 @@ class StatisticsScreenState extends State<StatisticsScreen>
          return null;
       }
 
-    } catch (e, s) { // Outer catch
-      // print('*** ERROR loading or processing CSV: $fileName for shift $shiftCode ***');
-      // print('Error details: $e');
-      // print('Stack trace: $s'); // Print the stack trace
+    } catch (e) { // Outer catch
+      // Error loading or processing CSV file
       return null; 
     }
   }
@@ -979,7 +972,7 @@ class StatisticsScreenState extends State<StatisticsScreen>
                 final duration = Duration(hours: hours, minutes: minutes);
                 parsedDurations[currentShiftCode] = duration;
               } catch (e) {
-                print('Error parsing Jamestown work time for $currentShiftCode: $workTimeStr');
+                // Failed to parse work time for shift
               }
             }
           }
@@ -992,7 +985,7 @@ class StatisticsScreenState extends State<StatisticsScreen>
       // Return the duration for the requested shift
       return parsedDurations[shiftCode];
     } catch (e) {
-      print('Error loading Jamestown work time for $shiftCode: $e');
+      // Failed to load Jamestown work time CSV
       return null;
     }
   }
@@ -1057,11 +1050,9 @@ class StatisticsScreenState extends State<StatisticsScreen>
             return null;
         }
 
-     } catch (e, s) {
-        // print('*** ERROR in _tryLoadUniShiftFromFile ($fileName) for shift $shiftCode ***');
-        // print('Error details: $e');
-        // print('Stack trace: $s');
-        return null;
+     } catch (e) {
+       // Failed to load UNI shift work time CSV
+       return null;
      }
   }
 
@@ -1205,10 +1196,10 @@ class StatisticsScreenState extends State<StatisticsScreen>
         final eventNormalizedStartDate = DateTime.utc(event.startDate.year, event.startDate.month, event.startDate.day);
         
         // FIXED: Consistent null ID handling to prevent double-counting midnight-spanning shifts
-        if (!event.isWorkShift || event.title.contains('(OT)') || processedIds.contains(event.id ?? '')) {
+        if (!event.isWorkShift || event.title.contains('(OT)') || processedIds.contains(event.id)) {
             continue;
         }
-        processedIds.add(event.id ?? '');
+        processedIds.add(event.id);
 
         final workTime = await _calculateWorkTime(event);
 
@@ -1260,8 +1251,8 @@ class StatisticsScreenState extends State<StatisticsScreen>
     widget.events.forEach((date, events) {
       for (final event in events) {
         // FIXED: Added duplicate prevention for midnight-spanning events
-        if (processedIds.contains(event.id ?? '')) continue;
-        processedIds.add(event.id ?? '');
+        if (processedIds.contains(event.id)) continue;
+        processedIds.add(event.id);
 
         // Check if this is a workout or overtime shift
         final isOvertimeShift = event.title.contains('(OT)');
@@ -1502,8 +1493,8 @@ class StatisticsScreenState extends State<StatisticsScreen>
     widget.events.forEach((date, events) {
       for (final event in events) {
         // FIXED: Added duplicate prevention for midnight-spanning events and exclude overtime shifts
-        if (!event.isWorkShift || event.title.contains('(OT)') || processedIds.contains(event.id ?? '')) continue;
-        processedIds.add(event.id ?? '');
+        if (!event.isWorkShift || event.title.contains('(OT)') || processedIds.contains(event.id)) continue;
+        processedIds.add(event.id);
 
         final startHour = event.startTime.hour;
         hourCounts[startHour] = (hourCounts[startHour] ?? 0) + 1;
@@ -1523,7 +1514,7 @@ class StatisticsScreenState extends State<StatisticsScreen>
 
   Future<void> _loadRosterSettings() async {
     final startDateString = await StorageService.getString(AppConstants.startDateKey);
-    final startWeek = await StorageService.getInt(AppConstants.startWeekKey) ?? 0;
+    final startWeek = await StorageService.getInt(AppConstants.startWeekKey, defaultValue: 0);
     
     if (mounted) {
       setState(() {
@@ -1537,7 +1528,7 @@ class StatisticsScreenState extends State<StatisticsScreen>
 
   // Add new method to calculate break statistics
   Map<String, dynamic> _calculateBreakStatistics() {
-    print('Calculating break statistics...'); // Debug print
+    // Calculating break statistics
     
     final DateTime now = DateTime.now();
     
@@ -1566,8 +1557,8 @@ class StatisticsScreenState extends State<StatisticsScreen>
     widget.events.forEach((date, dayEvents) {
       for (final event in dayEvents) {
         // Only add events that haven't been processed yet (prevents midnight-spanning duplicates)
-        if (event.hasLateBreak == true && !processedIds.contains(event.id ?? '')) {
-          processedIds.add(event.id ?? '');
+        if (event.hasLateBreak == true && !processedIds.contains(event.id)) {
+          processedIds.add(event.id);
           eventsWithBreakStatus.add(event);
         }
       }
@@ -1582,8 +1573,8 @@ class StatisticsScreenState extends State<StatisticsScreen>
       'alltime': _calculateBreakStatsForPeriod(eventsWithBreakStatus, null, null),
     };
     
-    print('Break statistics calculated: ${result.length} periods'); // Debug print
-    print('Found ${eventsWithBreakStatus.length} events with late break status'); // Debug
+    // Break statistics calculated
+    // Found events with late break status
     return result;
   }
   

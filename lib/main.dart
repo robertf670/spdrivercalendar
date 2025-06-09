@@ -89,17 +89,17 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) async {
     super.didChangeAppLifecycleState(state);
     if (state == AppLifecycleState.paused) {
-      print("App paused, checking for auto-backup.");
+
       final prefs = await SharedPreferences.getInstance();
       final bool autoBackupEnabled = prefs.getBool(AppConstants.autoBackupEnabledKey) ?? true;
 
       if (autoBackupEnabled) {
-        print("Auto-backup enabled, creating backup...");
+
         bool success = await BackupService.createAutoBackup();
         if (success) {
-          print("Auto-backup successful on app pause.");
+
         } else {
-          print("Auto-backup failed on app pause.");
+
         }
       }
     } else if (state == AppLifecycleState.resumed) {

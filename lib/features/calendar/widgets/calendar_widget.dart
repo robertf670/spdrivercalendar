@@ -101,7 +101,7 @@ class _CalendarWidgetState extends State<CalendarWidget> {
               shape: BoxShape.circle,
             ),
             todayDecoration: BoxDecoration(
-              color: Theme.of(context).primaryColor.withOpacity(0.5),
+              color: Theme.of(context).primaryColor.withValues(alpha: 0.5),
               shape: BoxShape.circle,
             ),
           ),
@@ -124,7 +124,7 @@ class _CalendarWidgetState extends State<CalendarWidget> {
                       shiftType: '',
                       shiftInfoMap: widget.shiftInfoMap,
                       onEdit: (Event e) {
-                        print("Edit requested from CalendarWidget for: ${e.title}");
+
                       },
                       onShowNotes: widget.onShowNotes,
                       isBankHoliday: false,

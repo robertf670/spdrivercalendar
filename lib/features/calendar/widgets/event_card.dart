@@ -44,10 +44,6 @@ class _EventCardState extends State<EventCard> {
   String? _departTimeStr;
   String? _finishTimeStr;
   bool isLoading = true;
-  String? _assignedDutyStartTime;
-  String? _assignedDutyEndTime;
-  String? _assignedDutyStartLocation;
-  String? _assignedDutyEndLocation;
   List<Map<String, String?>> _allDutyDetails = [];
 
   @override
@@ -105,10 +101,6 @@ class _EventCardState extends State<EventCard> {
       } else {
         // Clear duty details if no duties are assigned
         setState(() {
-          _assignedDutyStartTime = null;
-          _assignedDutyEndTime = null;
-          _assignedDutyStartLocation = null;
-          _assignedDutyEndLocation = null;
           _allDutyDetails = [];
         });
       }
@@ -125,7 +117,7 @@ class _EventCardState extends State<EventCard> {
         });
       }
     } catch (e) {
-      print('Error loading break time: $e');
+
       if (mounted) {
         setState(() {
           breakTime = 'Workout';
@@ -163,7 +155,7 @@ class _EventCardState extends State<EventCard> {
         }
       }
       
-      print('EventCard: Extracted shift code: "$shiftCode" from title: "${widget.event.title}"');
+
       
       // Skip for spare shifts
       if (shiftCode.startsWith('SP')) {
@@ -180,7 +172,7 @@ class _EventCardState extends State<EventCard> {
       
       // Special handling for Jamestown Road shifts (CHECK BEFORE UNI/Euro!)
       if (shiftCode.startsWith('811/')) {
-        print('EventCard: Detected Jamestown Road shift: $shiftCode');
+
         await _loadJamestownShiftData(shiftCode);
         return;
       }
@@ -192,9 +184,8 @@ class _EventCardState extends State<EventCard> {
       }
       
       // Regular shift handling for PZ shifts
-      // Get the day of week and check if it's a bank holiday
+      // Get the day of week
       final dayOfWeek = RosterService.getDayOfWeek(widget.event.startDate);
-      final bankHoliday = ShiftService.getBankHoliday(widget.event.startDate, ShiftService.bankHolidays);
       
       // Convert full day name to abbreviated format for file loading
       String dayOfWeekForFilename;
@@ -286,7 +277,7 @@ class _EventCardState extends State<EventCard> {
         });
       }
     } catch (e) {
-      print('Error loading location data: $e');
+
       if (mounted) {
         setState(() {
           startLocation = null;
@@ -304,7 +295,7 @@ class _EventCardState extends State<EventCard> {
   Future<void> _loadUniShiftData(String shiftCode) async {
     try {
       final dayOfWeek = RosterService.getDayOfWeek(widget.event.startDate);
-      print('Loading UNI shift data for: $shiftCode on $dayOfWeek');
+
       
       // Check bank holiday status
       final bankHoliday = ShiftService.getBankHoliday(widget.event.startDate, ShiftService.bankHolidays);
@@ -347,9 +338,9 @@ class _EventCardState extends State<EventCard> {
           
           // For overtime half shifts, adjust times and calculate work time accordingly
           if (isOvertimeShift) {
-            if (isFirstHalf && breakStartTime != null && breakStartTime.toLowerCase() != "nan") {
+            if (isFirstHalf && breakStartTime.toLowerCase() != "nan") {
               // For first half, use start time to break start time
-              final start = DateFormat('HH:mm').parse(startTime!);
+              final start = DateFormat('HH:mm').parse(startTime);
               final end = DateFormat('HH:mm').parse(breakStartTime);
               final halfShiftDuration = end.difference(start);
               
@@ -360,10 +351,10 @@ class _EventCardState extends State<EventCard> {
               
               // Update end time for display
               endTime = breakStartTime;
-            } else if (isSecondHalf && breakEndTime != null && breakEndTime.toLowerCase() != "nan") {
+            } else if (isSecondHalf && breakEndTime.toLowerCase() != "nan") {
               // For second half, use break end time to finish time
               final start = DateFormat('HH:mm').parse(breakEndTime);
-              final end = DateFormat('HH:mm').parse(endTime!);
+              final end = DateFormat('HH:mm').parse(endTime);
               final halfShiftDuration = end.difference(start);
               
               // Format work time
@@ -375,13 +366,12 @@ class _EventCardState extends State<EventCard> {
               startTime = breakEndTime;
             } else {
               // Calculate full work time
-              final start = DateFormat('HH:mm').parse(startTime!);
-              final end = DateFormat('HH:mm').parse(endTime!);
+              final start = DateFormat('HH:mm').parse(startTime);
+              final end = DateFormat('HH:mm').parse(endTime);
               final totalSpread = end.difference(start);
               
               // If there's a break, subtract it
-              if (breakStartTime != null && breakEndTime != null && 
-                  breakStartTime.toLowerCase() != 'nan' && breakEndTime.toLowerCase() != 'nan') {
+              if (breakStartTime.toLowerCase() != 'nan' && breakEndTime.toLowerCase() != 'nan') {
                 final breakStart = DateFormat('HH:mm').parse(breakStartTime);
                 final breakEnd = DateFormat('HH:mm').parse(breakEndTime);
                 final breakDuration = breakEnd.difference(breakStart);
@@ -401,13 +391,12 @@ class _EventCardState extends State<EventCard> {
           } else {
             // Original code for non-overtime shifts
             // Calculate work time
-            final start = DateFormat('HH:mm').parse(startTime!);
-            final end = DateFormat('HH:mm').parse(endTime!);
+            final start = DateFormat('HH:mm').parse(startTime);
+            final end = DateFormat('HH:mm').parse(endTime);
             final totalSpread = end.difference(start);
             
             // If there's a break, subtract it
-            if (breakStartTime != null && breakEndTime != null && 
-                breakStartTime.toLowerCase() != 'nan' && breakEndTime.toLowerCase() != 'nan') {
+            if (breakStartTime.toLowerCase() != 'nan' && breakEndTime.toLowerCase() != 'nan') {
               final breakStart = DateFormat('HH:mm').parse(breakStartTime);
               final breakEnd = DateFormat('HH:mm').parse(breakEndTime);
               final breakDuration = breakEnd.difference(breakStart);
@@ -425,7 +414,7 @@ class _EventCardState extends State<EventCard> {
             }
           }
           
-          print('Found UNI shift in 7DAYs file: $shiftCode, start: $startTime, end: $endTime, work: $workTimeStr');
+
           break;
         }
       }
@@ -456,9 +445,9 @@ class _EventCardState extends State<EventCard> {
             
             // For overtime half shifts, adjust times and calculate work time accordingly
             if (isOvertimeShift) {
-              if (isFirstHalf && breakStartTime != null && breakStartTime.toLowerCase() != "nan") {
+              if (isFirstHalf && breakStartTime.toLowerCase() != "nan") {
                 // For first half, use start time to break start time
-                final start = DateFormat('HH:mm').parse(startTime!);
+                final start = DateFormat('HH:mm').parse(startTime);
                 final end = DateFormat('HH:mm').parse(breakStartTime);
                 final halfShiftDuration = end.difference(start);
                 
@@ -469,10 +458,10 @@ class _EventCardState extends State<EventCard> {
                 
                 // Update end time for display
                 endTime = breakStartTime;
-              } else if (isSecondHalf && breakEndTime != null && breakEndTime.toLowerCase() != "nan") {
+              } else if (isSecondHalf && breakEndTime.toLowerCase() != "nan") {
                 // For second half, use break end time to finish time
                 final start = DateFormat('HH:mm').parse(breakEndTime);
-                final end = DateFormat('HH:mm').parse(endTime!);
+                final end = DateFormat('HH:mm').parse(endTime);
                 final halfShiftDuration = end.difference(start);
                 
                 // Format work time
@@ -484,13 +473,12 @@ class _EventCardState extends State<EventCard> {
                 startTime = breakEndTime;
               } else {
                 // Calculate full work time
-                final start = DateFormat('HH:mm').parse(startTime!);
-                final end = DateFormat('HH:mm').parse(endTime!);
+                final start = DateFormat('HH:mm').parse(startTime);
+                final end = DateFormat('HH:mm').parse(endTime);
                 final totalSpread = end.difference(start);
                 
                 // If there's a break, subtract it
-                if (breakStartTime != null && breakEndTime != null && 
-                    breakStartTime.toLowerCase() != 'nan' && breakEndTime.toLowerCase() != 'nan') {
+                if (breakStartTime.toLowerCase() != 'nan' && breakEndTime.toLowerCase() != 'nan') {
                   final breakStart = DateFormat('HH:mm').parse(breakStartTime);
                   final breakEnd = DateFormat('HH:mm').parse(breakEndTime);
                   final breakDuration = breakEnd.difference(breakStart);
@@ -510,13 +498,12 @@ class _EventCardState extends State<EventCard> {
             } else {
               // Original code for non-overtime shifts
               // Calculate work time
-              final start = DateFormat('HH:mm').parse(startTime!);
-              final end = DateFormat('HH:mm').parse(endTime!);
+              final start = DateFormat('HH:mm').parse(startTime);
+              final end = DateFormat('HH:mm').parse(endTime);
               final totalSpread = end.difference(start);
               
               // If there's a break, subtract it
-              if (breakStartTime != null && breakEndTime != null && 
-                  breakStartTime.toLowerCase() != 'nan' && breakEndTime.toLowerCase() != 'nan') {
+              if (breakStartTime.toLowerCase() != 'nan' && breakEndTime.toLowerCase() != 'nan') {
                 final breakStart = DateFormat('HH:mm').parse(breakStartTime);
                 final breakEnd = DateFormat('HH:mm').parse(breakEndTime);
                 final breakDuration = breakEnd.difference(breakStart);
@@ -534,7 +521,7 @@ class _EventCardState extends State<EventCard> {
               }
             }
             
-            print('Found UNI shift in M-F file: $shiftCode, start: $startTime, end: $endTime, work: $workTimeStr');
+
             break;
           }
         }
@@ -563,7 +550,7 @@ class _EventCardState extends State<EventCard> {
         });
       }
     } catch (e) {
-      print('Error loading UNI shift data: $e');
+      // Failed to load Bus Check shift data, ignore
     }
   }
 
@@ -653,7 +640,7 @@ class _EventCardState extends State<EventCard> {
         });
       }
     } catch (e) {
-      print('Error loading Jamestown Road shift data: $e');
+      // Failed to load Jamestown shift data, reset to defaults
       if (mounted) {
         setState(() {
           startLocation = null;
@@ -853,7 +840,7 @@ class _EventCardState extends State<EventCard> {
             });
           }
         } catch (e) {
-          print('Error loading UNI duty details: $e');
+
           _allDutyDetails.add({
             'dutyCode': dutyCode,
             'startTime': '00:00:00',
@@ -892,7 +879,7 @@ class _EventCardState extends State<EventCard> {
                          dayOfWeek == 'sunday' ? 'SUN_DUTIES_PZ$zone.csv' :
                          'M-F_DUTIES_PZ$zone.csv';
           
-          print('Loading zone duty: $dutyCode, zone: $zone, filename: $filename, searching for duty: $codeWithoutHalf');
+
                          
           // Load the duty file
           final file = await rootBundle.loadString('assets/$filename');
@@ -920,7 +907,7 @@ class _EventCardState extends State<EventCard> {
               // For half duties, calculate the appropriate time
               if (isFirstHalf) {
                 // For first half, use original start time and break start time if available
-                final breakStartCol = 5; // Column index for break start time in CSV files
+                const breakStartCol = 5; // Column index for break start time in CSV files
                 final breakStartTimeStr = parts.length > breakStartCol ? parts[breakStartCol].trim() : "";
                 
                 if (breakStartTimeStr.isNotEmpty && 
@@ -953,7 +940,7 @@ class _EventCardState extends State<EventCard> {
                 }
               } else if (isSecondHalf) {
                 // For second half, use break end time and finish time if available
-                final breakEndCol = 8; // Column index for break end time in CSV files
+                const breakEndCol = 8; // Column index for break end time in CSV files
                 final breakEndTimeStr = parts.length > breakEndCol ? parts[breakEndCol].trim() : "";
                 
                 if (breakEndTimeStr.isNotEmpty && 
@@ -1015,7 +1002,7 @@ class _EventCardState extends State<EventCard> {
             });
           }
         } catch (e) {
-          print('Error loading zone duty details: $e');
+
           _allDutyDetails.add({
             'dutyCode': dutyCode,
             'startTime': '00:00:00',
@@ -1040,7 +1027,7 @@ class _EventCardState extends State<EventCard> {
         return DateTime(2000, 1, 1, hour, minute, second);
       }
     } catch (e) {
-      print('Error parsing time string: $e');
+      // Failed to parse time string, return default
     }
     
     return DateTime(2000, 1, 1, 0, 0, 0);
@@ -1057,9 +1044,6 @@ class _EventCardState extends State<EventCard> {
     final isSpareShift = isWorkShift && widget.event.title.startsWith('SP');
     // Check if it's a BusCheck shift
     final bool isBusCheckShift = widget.event.title.startsWith('BusCheck');
-    
-    // Define if this is a workout shift based on break time
-    final isWorkout = breakTime?.toLowerCase().contains('workout') ?? false;
     
     // Special styling for holiday events
     if (widget.event.isHoliday) {
@@ -1681,7 +1665,7 @@ class _EventCardState extends State<EventCard> {
                     }
                   }
                 } catch (e) {
-                  print('Error loading UNI_7DAYs.csv: $e');
+                  // Failed to load UNI 7DAYs duties
                 }
                 
                 // On weekdays, also load from UNI_M-F.csv
@@ -1714,7 +1698,7 @@ class _EventCardState extends State<EventCard> {
                       }
                     }
                   } catch (e) {
-                    print('Error loading UNI_M-F.csv: $e');
+                    // Failed to load UNI M-F duties
                   }
                 }
               } else {
@@ -1758,7 +1742,7 @@ class _EventCardState extends State<EventCard> {
                 isLoading = false;
               });
             } catch (e) {
-              print('Error loading duties: $e');
+
               duties = [];
               selectedDuty = '';
               setState(() {
@@ -1937,7 +1921,7 @@ class _EventCardState extends State<EventCard> {
                 color: AppTheme.primaryColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Icon(
+              child: const Icon(
                 Icons.schedule,
                 color: AppTheme.primaryColor,
                 size: 24,
@@ -2005,11 +1989,11 @@ class _EventCardState extends State<EventCard> {
                         children: [
                           Row(
                             children: [
-                              Icon(Icons.add_circle_outline, color: AppTheme.primaryColor, size: 20),
+                              const Icon(Icons.add_circle_outline, color: AppTheme.primaryColor, size: 20),
                               const SizedBox(width: 8),
                               Text(
                                 'Add Duty',
-                                style: TextStyle(
+                                style: const TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w600,
                                   color: AppTheme.primaryColor,
@@ -2248,12 +2232,7 @@ class _EventCardState extends State<EventCard> {
                           // Immediately update the duty details list
                           if (widget.event.assignedDuties == null) {
                             _allDutyDetails.clear();
-                            setState(() {
-                              _assignedDutyStartTime = null;
-                              _assignedDutyEndTime = null;
-                              _assignedDutyStartLocation = null;
-                              _assignedDutyEndLocation = null;
-                            });
+                            setState(() {});
                           } else {
                             // Reload duty details for the remaining duties
                             await _loadAssignedDutyDetails();
@@ -2504,21 +2483,12 @@ class _EventCardState extends State<EventCard> {
             
             workDuration = '${hours}h ${minutes}m';
           } catch (e) {
-            print("Error calculating duty duration: $e");
+            // Failed to parse duty times
             workDuration = 'Err'; // Indicate error
           }
         }
       }
 
-      final isHalfDuty = duty['isHalfDuty'] == 'true';
-      final isFirstHalf = duty['isFirstHalf'] == 'true';
-      final isSecondHalf = duty['isSecondHalf'] == 'true';
-
-
-      
-      // Determine duty type for display
-      final dutyTypeText = isUniDuty ? 'UNI/EURO' : 'Zone';
-          
       // Determine if we need to show break times
       final hasBreakTimes = duty['breakStart'] != null && duty['breakEnd'] != null;
 
@@ -2608,91 +2578,7 @@ class _EventCardState extends State<EventCard> {
     );
   }
 
-  Future<void> _showBusAssignmentDialog(BuildContext context, [String? halfIndicator]) async {
-    final TextEditingController controller = TextEditingController();
-    
-    return showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(halfIndicator == 'A' 
-          ? 'Add First Half Bus'
-          : halfIndicator == 'B'
-            ? 'Add Second Half Bus'
-            : 'Add Bus'),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(
-            hintText: 'Enter bus number (e.g. PA155)',
-            labelText: 'Bus Number',
-          ),
-          textCapitalization: TextCapitalization.characters,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () async {
-              // Normalize the bus number
-              String busNumber = controller.text.trim().toUpperCase();
-              // Remove any spaces
-              busNumber = busNumber.replaceAll(' ', '');
-              
-              if (busNumber.isNotEmpty) {
-                // Create a copy of the old event
-                final oldEvent = Event(
-                  id: widget.event.id,
-                  title: widget.event.title,
-                  startDate: widget.event.startDate,
-                  startTime: widget.event.startTime,
-                  endDate: widget.event.endDate,
-                  endTime: widget.event.endTime,
-                  workTime: widget.event.workTime,
-                  breakStartTime: widget.event.breakStartTime,
-                  breakEndTime: widget.event.breakEndTime,
-                  assignedDuties: widget.event.assignedDuties,
-                  firstHalfBus: widget.event.firstHalfBus,
-                  secondHalfBus: widget.event.secondHalfBus,
-                );
-                
-                // Update the event with the new bus number based on the half indicator
-                if (halfIndicator == 'A') {
-                  widget.event.firstHalfBus = busNumber;
-                } else if (halfIndicator == 'B') {
-                  widget.event.secondHalfBus = busNumber;
-                } else {
-                  // For workout shifts or when no half indicator is provided
-                  widget.event.firstHalfBus = busNumber;
-                }
-                
-                // Save the updated event
-                await EventService.updateEvent(oldEvent, widget.event);
-                
-                // Close the dialog
-                Navigator.of(context).pop();
-                
-                // Refresh the UI
-                if (mounted) {
-                  setState(() {});
-                  // Notify parent to rebuild without showing edit dialog
-                  widget.onEdit(Event(
-                    id: 'refresh_trigger',
-                    title: '',
-                    startDate: widget.event.startDate,
-                    startTime: widget.event.startTime,
-                    endDate: widget.event.endDate,
-                    endTime: widget.event.endTime,
-                  ));
-                }
-              }
-            },
-            child: const Text('Add'),
-          ),
-        ],
-      ),
-    );
-  }
+
 
   // Show bus assignment dialog for a specific duty
   Future<void> _showDutyBusAssignmentDialog(BuildContext context, String dutyCode) async {
@@ -2922,11 +2808,7 @@ class _EventCardState extends State<EventCard> {
     }
   }
 
-  String _formatTimeOfDay(TimeOfDay time) {
-    final hour = time.hour.toString().padLeft(2, '0');
-    final minute = time.minute.toString().padLeft(2, '0');
-    return '$hour:$minute';
-  }
+
 
   // Helper method to calculate break duration from break time string
   String? _calculateBreakDuration(String breakTimeString) {

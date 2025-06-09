@@ -102,7 +102,7 @@ class StorageService {
       _cache.set(key, decoded, expiration: _cacheDuration);
       return decoded;
     } catch (e) {
-      print('Error parsing JSON from storage: $e');
+
       return null;
     }
   }

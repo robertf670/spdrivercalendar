@@ -3,7 +3,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:spdrivercalendar/core/constants/app_constants.dart';
 import 'package:spdrivercalendar/models/event.dart';
 import 'package:spdrivercalendar/services/notification_service.dart';
-import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter/foundation.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -85,7 +84,7 @@ class EventService {
         // Month is now loaded, but we can't return the result here due to async nature
         // The UI will need to call this method again or use a different approach
       }).catchError((error) {
-        print('Error preloading month for day ${day}: $error');
+
       });
       
       // For immediate return, check if we can populate from already loaded cache
@@ -162,7 +161,7 @@ class EventService {
   // Add a new event (maintains same interface)
   static Future<void> addEvent(Event event) async {
     // Ensure event has an ID
-    final eventWithId = event.id == null ? event.copyWith(id: DateTime.now().millisecondsSinceEpoch.toString()) : event;
+    final eventWithId = event.id.isEmpty ? event.copyWith(id: DateTime.now().millisecondsSinceEpoch.toString()) : event;
 
     final normalizedStartDate = DateTime(
       eventWithId.startDate.year, eventWithId.startDate.month, eventWithId.startDate.day
@@ -212,7 +211,7 @@ class EventService {
   // Update an existing event (maintains same interface)
   static Future<void> updateEvent(Event oldEvent, Event newEvent) async {
     // Ensure new event has an ID, preferably the same as the old one
-    final eventId = oldEvent.id ?? newEvent.id ?? DateTime.now().millisecondsSinceEpoch.toString();
+    final eventId = oldEvent.id.isNotEmpty ? oldEvent.id : newEvent.id.isNotEmpty ? newEvent.id : DateTime.now().millisecondsSinceEpoch.toString();
     final newEventWithId = newEvent.copyWith(id: eventId);
 
     // --- Find and Update Logic ---
@@ -281,7 +280,7 @@ class EventService {
         await _scheduleWorkShiftNotification(newEventWithId);
       }
     } else {
-        print("Warning: Event with ID $eventId not found in cache during update. Attempting to add as new.");
+
         // Fallback: If we couldn't find the event to update (edge case), treat it as adding a new one.
         // This might happen if the cache wasn't loaded correctly or the oldEvent data was stale.
         await addEvent(newEventWithId); // Use addEvent logic which includes saving
@@ -371,14 +370,14 @@ class EventService {
   // --- Notification Helper Methods ---
 
   static Future<void> _scheduleWorkShiftNotification(Event event) async {
-    print("[Notif Debug] _scheduleWorkShiftNotification called for event ID: ${event.id}");
+
     try {
       final prefs = await SharedPreferences.getInstance();
       final bool notificationsEnabled = prefs.getBool(kNotificationsEnabledKey) ?? false;
-      print("[Notif Debug] Notifications Enabled (from prefs): $notificationsEnabled");
+
       
       if (!notificationsEnabled) {
-        print("[Notif Debug] Exiting scheduling: Notifications disabled or event ID is null.");
+
         return; // Don't schedule if disabled or event has no ID
       }
 
@@ -394,11 +393,11 @@ class EventService {
       );
 
       final DateTime scheduledDateTime = reportDateTime.subtract(Duration(hours: offsetHours));
-      print("[Notif Debug] Calculated Schedule Time: ${scheduledDateTime.toIso8601String()}");
+
 
       // Ensure notification time is in the future
       if (scheduledDateTime.isBefore(DateTime.now())) {
-          print("[Notif Debug] Notification time ${scheduledDateTime.toIso8601String()} is in the past. Not scheduling for event ID: ${event.id}.");
+
           return;
       }
 
@@ -411,12 +410,12 @@ class EventService {
       // --- Explicitly check SCHEDULE_EXACT_ALARM permission before scheduling ---
       bool exactAlarmPermGranted = true; // Default to true for non-Android or older versions
       if (defaultTargetPlatform == TargetPlatform.android) {
-        print("[Notif Debug - EventService] Checking scheduleExactAlarm status before scheduling for event ID: ${event.id}");
+
         final status = await Permission.scheduleExactAlarm.status;
         exactAlarmPermGranted = status.isGranted;
-        print("[Notif Debug - EventService] scheduleExactAlarm status: ${status.name} for event ID: ${event.id}");
+
         if (!exactAlarmPermGranted) {
-           print("[Notif Debug - EventService] *** EXACT ALARM PERMISSION DENIED *** in EventService check for event ID: ${event.id}. Notification might be delayed or blocked by OS.");
+
            // Consider adding user feedback here, like a SnackBar
         }
       }
@@ -434,36 +433,36 @@ class EventService {
           scheduledDateTime: scheduledDateTime,
           payload: event.id, // Pass event ID as payload if needed later
         );
-        print("[Notif Debug] Successfully CALLED NotificationService.scheduleNotification for event ID: ${event.id} (Notif ID: $notificationId) at $scheduledDateTime");
+
         
         // --- Check pending notifications immediately after scheduling ---
         try {
           final pending = await NotificationService().getPendingNotifications();
-          print("[Notif Debug] Found ${pending.length} pending notifications immediately after scheduling.");
+
           bool found = false;
           for (var p in pending) {
-            print("[Notif Debug] Pending ID: ${p.id}, Title: ${p.title}, Scheduled: [Needs TZDateTime conversion]");
+
             if (p.id == notificationId) {
               found = true;
-              print("[Notif Debug] *** SUCCESS: Newly scheduled notification (ID: $notificationId) IS PENDING in the system! ***");
+
               break;
             }
           }
           if (!found) {
-             print("[Notif Debug] *** WARNING: Newly scheduled notification (ID: $notificationId) was NOT found in pending list immediately after scheduling! ***");
+
           }
         } catch (e) {
-          print("[Notif Debug] Error checking pending notifications: $e");
+          // Failed to get pending notifications, ignore
         }
         // --- End check pending notifications ---
 
       } catch (e) {
-        print("[Notif Debug] *** FAILED TO SCHEDULE *** for event ID: ${event.id} (Notif ID: $notificationId). Error: $e"); // Add error log
+        // Failed to schedule notification, continue silently
       }
       // --- End specific try-catch ---
       
     } catch (e) {
-        print("[Notif Debug] Error in _scheduleWorkShiftNotification (outer catch) for event ID: ${event.id}: $e"); // Modify outer catch log
+        // Error scheduling work shift notification
     }
   }
 
@@ -471,9 +470,9 @@ class EventService {
      try {
         final int notificationId = event.id.hashCode;
         await NotificationService().cancelNotification(notificationId);
-        print("Attempted to cancel notification for event ID: ${event.id} (Notif ID: $notificationId)");
+
      } catch (e) {
-        print("Error cancelling notification for event ID: ${event.id}: $e");
+       // Failed to cancel notification, ignore
      }
   }
 
@@ -501,7 +500,7 @@ class EventService {
         .toList()
         ..sort((a, b) => b.startDate.compareTo(a.startDate));
     } catch (e) {
-      print('Error loading all events with notes: $e');
+      // Failed to parse events with notes, return empty list
       return [];
     }
   }
@@ -515,7 +514,7 @@ class EventService {
     final eventsJson = prefs.getString(AppConstants.eventsStorageKey);
 
     if (eventsJson == null || eventsJson.isEmpty) {
-      print("EventService: No events found in SharedPreferences to initialize.");
+
       return; // No events to load
     }
 
@@ -546,7 +545,7 @@ class EventService {
                   }
                 }
               } catch (e) {
-                print("EventService Initialize: Error parsing individual event from stored JSON for key '$dateKeyString': $e");
+                // Failed to parse individual event, skip it
               }
             }
           }
@@ -558,10 +557,10 @@ class EventService {
       // To avoid counting same event twice if it spans days & is in two lists, count unique IDs
       Set<String> uniqueEventIds = {};
       _events.values.forEach((list) => list.forEach((event) => uniqueEventIds.add(event.id)));
-      print("EventService initialized. Loaded ${uniqueEventIds.length} unique events into the _events map across various date entries.");
+
 
     } catch (e) {
-      print("EventService Initialize: Error decoding events JSON from SharedPreferences: $e");
+
       _events = {}; // Ensure events map is empty on error to avoid partial inconsistent state
     }
   }

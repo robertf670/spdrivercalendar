@@ -17,7 +17,7 @@ class HolidayService {
       final List<dynamic> decoded = json.decode(holidaysJson);
       return decoded.map((json) => Holiday.fromJson(json)).toList();
     } catch (e) {
-      print('Error loading holidays: $e');
+      // Failed to load holidays, return empty list
       return [];
     }
   }
@@ -27,26 +27,26 @@ class HolidayService {
     try {
       final holidays = await getHolidays();
       if (holidays.any((h) => h.id == holiday.id)) {
-        print('Holiday with ID ${holiday.id} already exists.');
+
         return;
       }
       holidays.add(holiday);
       
       final encoded = json.encode(holidays.map((h) => h.toJson()).toList());
       await StorageService.saveString(_holidaysKey, encoded);
-      print('Holiday added locally: ${holiday.id}');
+
 
       final syncEnabled = await StorageService.getBool(AppConstants.syncToGoogleCalendarKey, defaultValue: false);
       final isSignedIn = await GoogleCalendarService.isSignedIn();
 
       if (syncEnabled && isSignedIn) {
-        print('Auto-sync enabled, attempting to add holiday to Google Calendar...');
+
         await CalendarTestHelper.addHolidayToCalendar(holiday);
       } else {
-        print('Auto-sync not enabled or user not signed in, skipping Google Calendar sync.');
+
       }
     } catch (e) {
-      print('Error adding holiday: $e');
+      // Failed to add holiday, ignore error
     }
   }
 
@@ -58,7 +58,7 @@ class HolidayService {
       try {
         holidayToRemove = holidays.firstWhere((h) => h.id == id);
       } catch (e) {
-        print('Holiday with ID $id not found for removal.');
+        // Holiday with this ID not found
         holidayToRemove = null;
       }
 
@@ -68,23 +68,23 @@ class HolidayService {
       if (holidays.length < initialLength && holidayToRemove != null) {
         final encoded = json.encode(holidays.map((h) => h.toJson()).toList());
         await StorageService.saveString(_holidaysKey, encoded);
-        print('Holiday removed locally: $id');
+
 
         final syncEnabled = await StorageService.getBool(AppConstants.syncToGoogleCalendarKey, defaultValue: false);
         final isSignedIn = await GoogleCalendarService.isSignedIn();
 
         if (syncEnabled && isSignedIn) {
-          print('Auto-sync enabled, attempting to remove holiday from Google Calendar...');
+
           await CalendarTestHelper.deleteHolidayFromCalendar(holidayToRemove);
         } else {
-          print('Auto-sync not enabled or user not signed in, skipping Google Calendar removal.');
+
         }
       } else if (holidayToRemove == null) {
-        print('Skipping save and Google Calendar removal as holiday $id was not found.');
+
       }
 
     } catch (e) {
-      print('Error removing holiday: $e');
+      // Failed to remove holiday, ignore error
     }
   }
 
@@ -94,7 +94,7 @@ class HolidayService {
       final holidays = await getHolidays();
       return holidays.any((holiday) => holiday.containsDate(date));
     } catch (e) {
-      print('Error checking holiday status: $e');
+      // Failed to check holiday, assume false
       return false;
     }
   }

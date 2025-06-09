@@ -14,12 +14,9 @@ class ShiftService {
   static Future<void> initialize() async {
     try {
       _bankHolidays = await RosterService.loadBankHolidays();
-      print('Loaded ${_bankHolidays.length} bank holidays');
-      for (final holiday in _bankHolidays) {
-        print('Bank holiday: ${holiday.name} on ${holiday.date}');
-      }
+      // Bank holidays loaded successfully
     } catch (e) {
-      print('Error initializing bank holidays: $e');
+
       _bankHolidays = [];
     }
   }
@@ -196,12 +193,12 @@ class ShiftService {
         }
         
       } catch (e) {
-        print('Error loading shift file: $e');
+        // Failed to load CSV file, continue to return default
       }
       
       return 'No break info found';
     } catch (e) {
-      print('Error getting break time: $e');
+
       return 'Error loading break info';
     }
   }
@@ -254,7 +251,7 @@ class ShiftService {
                 }
               }
             } catch (e) {
-              print('Error parsing Jamestown break times: $e');
+              // Failed to parse break times, assume workout
             }
             
             // If parsing failed, assume workout
@@ -265,7 +262,7 @@ class ShiftService {
       
       return 'No break info';
     } catch (e) {
-      print('Error loading Jamestown shift break time: $e');
+      // Failed to load Jamestown break info, return error message
       return 'Error loading break info';
     }
   }
@@ -318,7 +315,7 @@ class ShiftService {
         return '$formattedStart - $formattedEnd';
       }
     } catch (e) {
-      print('Error parsing break times: $e');
+      // Failed to parse break time format, default to Workout
       return 'Workout'; // Default to Workout for any errors
     }
   }

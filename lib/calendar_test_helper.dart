@@ -18,21 +18,25 @@ class CalendarTestHelper {
   /// Test creating a sample event in Google Calendar
   static Future<bool> createTestEvent(BuildContext context) async {
     try {
-      print('Starting test event creation...');
+      // Store context.mounted status
+      if (!context.mounted) return false;
+
       
       // Check if signed in
       final isSignedIn = await GoogleCalendarService.isSignedIn();
       if (!isSignedIn) {
-        print('User not signed in, cannot create test event');
-        _showSnackBar(context, 'Error: Please sign in to Google Calendar first');
+        if (context.mounted) {
+          _showSnackBar(context, 'Error: Please sign in to Google Calendar first');
+        }
         return false;
       }
       
       // Test connection
       final hasConnection = await GoogleCalendarService.testConnection();
       if (!hasConnection) {
-        print('Failed to connect to Google Calendar');
-        _showSnackBar(context, 'Error: Failed to connect to Google Calendar');
+        if (context.mounted) {
+          _showSnackBar(context, 'Error: Failed to connect to Google Calendar');
+        }
         return false;
       }
 
@@ -40,7 +44,7 @@ class CalendarTestHelper {
       final startTime = DateTime.now().add(const Duration(hours: 1));
       final endTime = DateTime.now().add(const Duration(hours: 9));
 
-      print('Creating event object...');
+
       // Create a new event
       final event = cal.Event();
       event.summary = 'Test Shift from Spare Driver Calendar';
@@ -66,26 +70,29 @@ class CalendarTestHelper {
       event.colorId = '4';  // Red color for test events
       event.location = 'Test Location';
 
-      print('Creating event via GoogleCalendarService...');
+
       // Use the new createEvent method
       final createdEvent = await GoogleCalendarService.createEvent(event: event);
 
       if (createdEvent != null) {
-        print('Event created with ID: ${createdEvent.id}');
-        _showSnackBar(
-          context, 
-          'Test event created successfully! Check your Google Calendar.',
-        );
+        if (context.mounted) {
+          _showSnackBar(
+            context, 
+            'Test event created successfully! Check your Google Calendar.',
+          );
+        }
         return true;
       } else {
-        print('Failed to create event');
-        _showSnackBar(context, 'Error: Failed to create test event');
+        if (context.mounted) {
+          _showSnackBar(context, 'Error: Failed to create test event');
+        }
         return false;
       }
       
     } catch (e) {
-      print('Error creating test event: $e');
-      _showSnackBar(context, 'Error creating test event: $e');
+      if (context.mounted) {
+        _showSnackBar(context, 'Error creating test event: $e');
+      }
       return false;
     }
   }
@@ -96,7 +103,9 @@ class CalendarTestHelper {
       // Check if signed in
       final isSignedIn = await GoogleCalendarService.isSignedIn();
       if (!isSignedIn) {
-        _showSnackBar(context, 'Error: Please sign in to Google Calendar first');
+        if (context.mounted) {
+          _showSnackBar(context, 'Error: Please sign in to Google Calendar first');
+        }
         return [];
       }
 
@@ -113,7 +122,9 @@ class CalendarTestHelper {
 
       return events;
     } catch (e) {
-      _showSnackBar(context, 'Error fetching events: $e');
+      if (context.mounted) {
+        _showSnackBar(context, 'Error fetching events: $e');
+      }
       return [];
     }
   }
@@ -130,14 +141,14 @@ class CalendarTestHelper {
       // Store context.mounted in a local variable to safely check throughout the method
       final bool isContextMounted = context.mounted;
       
-      print('Adding work shift to calendar...');
+
       
       // Get Google Sign-In status
       final isSignedIn = await GoogleCalendarService.isSignedIn();
-      print('Google Sign-In status: $isSignedIn');
+
       
       if (!isSignedIn) {
-        if (isContextMounted) {
+        if (context.mounted) {
           _showSnackBar(context, 'Please sign in to Google Calendar first');
         }
         return false;
@@ -146,7 +157,7 @@ class CalendarTestHelper {
       // Test connection
       final hasConnection = await GoogleCalendarService.testConnection();
       if (!hasConnection) {
-        if (isContextMounted) {
+        if (context.mounted) {
           _showSnackBar(context, 'Failed to authenticate with Google');
         }
         return false;
@@ -182,10 +193,10 @@ class CalendarTestHelper {
       final createdEvent = await GoogleCalendarService.createEvent(event: event);
 
       if (createdEvent != null) {
-        print('Work shift added with ID: ${createdEvent.id}');
+
         
         // Only show SnackBar if context is still valid
-        if (isContextMounted) {
+        if (context.mounted) {
           _showSnackBar(
             context, 
             'Work shift added to your Google Calendar',
@@ -194,11 +205,11 @@ class CalendarTestHelper {
         
         return true;
       } else {
-        print('Failed to create work shift');
+
         return false;
       }
     } catch (e) {
-      print('Error adding work shift to calendar: $e');
+
       return false;
     }
   }
@@ -213,12 +224,12 @@ class CalendarTestHelper {
       // Store context.mounted in a local variable to safely check throughout the method
       final bool isContextMounted = context.mounted;
       
-      print('Deleting event from Google Calendar: $title');
+
       
       // Check if we're signed in
       final isSignedIn = await GoogleCalendarService.isSignedIn();
       if (!isSignedIn) {
-        print('User not signed in, cannot delete event');
+
         return false;
       }
       
@@ -247,8 +258,8 @@ class CalendarTestHelper {
       }
       
       if (targetEvent == null || targetEvent.id == null) {
-        print('Event not found: $title');
-        if (isContextMounted) {
+
+        if (context.mounted) {
           _showSnackBar(context, 'Event not found in Google Calendar');
         }
         return false;
@@ -258,18 +269,18 @@ class CalendarTestHelper {
       final success = await GoogleCalendarService.deleteEvent(eventId: targetEvent.id!);
       
       if (success) {
-        print('Event deleted successfully: ${targetEvent.id}');
-        if (isContextMounted) {
+
+        if (context.mounted) {
           _showSnackBar(context, 'Event deleted from Google Calendar');
         }
         return true;
       } else {
-        print('Failed to delete event');
+
         return false;
       }
       
     } catch (e) {
-      print('Error deleting event from calendar: $e');
+
       return false;
     }
   }
@@ -288,12 +299,12 @@ class CalendarTestHelper {
       // Store context.mounted in a local variable to safely check throughout the method
       final bool isContextMounted = context.mounted;
       
-      print('Updating event in Google Calendar: $oldTitle -> $newTitle');
+
       
       // Check if we're signed in
       final isSignedIn = await GoogleCalendarService.isSignedIn();
       if (!isSignedIn) {
-        print('User not signed in, cannot update event');
+
         return false;
       }
       
@@ -322,8 +333,8 @@ class CalendarTestHelper {
       }
       
       if (targetEvent == null || targetEvent.id == null) {
-        print('Event not found: $oldTitle');
-        if (isContextMounted) {
+
+        if (context.mounted) {
           _showSnackBar(context, 'Event not found in Google Calendar');
         }
         return false;
@@ -355,18 +366,18 @@ class CalendarTestHelper {
       );
       
       if (updatedEvent != null) {
-        print('Event updated successfully: ${updatedEvent.id}');
-        if (isContextMounted) {
+
+        if (context.mounted) {
           _showSnackBar(context, 'Event updated in Google Calendar');
         }
         return true;
       } else {
-        print('Failed to update event');
+
         return false;
       }
       
     } catch (e) {
-      print('Error updating event in calendar: $e');
+
       return false;
     }
   }
@@ -381,6 +392,9 @@ class CalendarTestHelper {
       int totalCount = shiftEvents.length;
       
       for (final shiftEvent in shiftEvents) {
+        // Check if context is still valid before processing each event
+        if (!context.mounted) break;
+        
         final title = shiftEvent['title'] as String? ?? 'Work Shift';
         final startTime = shiftEvent['startTime'] as DateTime? ?? DateTime.now();
         final endTime = shiftEvent['endTime'] as DateTime? ?? DateTime.now().add(const Duration(hours: 8));
@@ -402,15 +416,18 @@ class CalendarTestHelper {
         await Future.delayed(const Duration(milliseconds: 500));
       }
       
-      _showSnackBar(
-        context,
-        'Synced $successCount of $totalCount events to Google Calendar',
-      );
+      if (context.mounted) {
+        _showSnackBar(
+          context,
+          'Synced $successCount of $totalCount events to Google Calendar',
+        );
+      }
       
       return successCount == totalCount;
     } catch (e) {
-      print('Error syncing events to calendar: $e');
-      _showSnackBar(context, 'Error syncing events: $e');
+      if (context.mounted) {
+        _showSnackBar(context, 'Error syncing events: $e');
+      }
       return false;
     }
   }
@@ -421,15 +438,18 @@ class CalendarTestHelper {
       // Check if signed in
       final isSignedIn = await GoogleCalendarService.isSignedIn();
       if (!isSignedIn) {
-        _showSnackBar(context, 'Error: Please sign in to Google Calendar first');
+        if (context.mounted) {
+          _showSnackBar(context, 'Error: Please sign in to Google Calendar first');
+        }
         return [];
       }
 
       // Use the new getCalendars method
       return await GoogleCalendarService.getCalendars();
     } catch (e) {
-      print('Error getting calendars: $e');
-      _showSnackBar(context, 'Error getting calendars: $e');
+      if (context.mounted) {
+        _showSnackBar(context, 'Error getting calendars: $e');
+      }
       return [];
     }
   }
@@ -437,28 +457,33 @@ class CalendarTestHelper {
   /// Test connection to Google Calendar
   static Future<bool> testCalendarConnection(BuildContext context) async {
     try {
-      print('Testing Google Calendar connection...');
+
       
       // Check if signed in
       final isSignedIn = await GoogleCalendarService.isSignedIn();
       if (!isSignedIn) {
-        _showSnackBar(context, 'Error: Please sign in to Google Calendar first');
+        if (context.mounted) {
+          _showSnackBar(context, 'Error: Please sign in to Google Calendar first');
+        }
         return false;
       }
 
       // Use the new testConnection method
       final hasConnection = await GoogleCalendarService.testConnection();
       
-      if (hasConnection) {
-        _showSnackBar(context, 'Google Calendar connection successful!');
-      } else {
-        _showSnackBar(context, 'Google Calendar connection failed');
+      if (context.mounted) {
+        if (hasConnection) {
+          _showSnackBar(context, 'Google Calendar connection successful!');
+        } else {
+          _showSnackBar(context, 'Google Calendar connection failed');
+        }
       }
       
       return hasConnection;
     } catch (e) {
-      print('Error testing calendar connection: $e');
-      _showSnackBar(context, 'Error testing connection: $e');
+      if (context.mounted) {
+        _showSnackBar(context, 'Error testing connection: $e');
+      }
       return false;
     }
   }
@@ -503,12 +528,12 @@ class CalendarTestHelper {
     try {
       // Get holiday name based on type
       final holidayName = _getHolidayDisplayName(holiday);
-      print('Adding holiday to calendar: $holidayName');
+
       
       // Check if signed in
       final isSignedIn = await GoogleCalendarService.isSignedIn();
       if (!isSignedIn) {
-        if (context != null) {
+        if (context != null && context.mounted) {
           _showSnackBar(context, 'Please sign in to Google Calendar first');
         }
         return false;
@@ -517,7 +542,7 @@ class CalendarTestHelper {
       // Test connection
       final hasConnection = await GoogleCalendarService.testConnection();
       if (!hasConnection) {
-        if (context != null) {
+        if (context != null && context.mounted) {
           _showSnackBar(context, 'Failed to authenticate with Google');
         }
         return false;
@@ -526,7 +551,7 @@ class CalendarTestHelper {
       // Create holiday event
       final event = cal.Event();
       event.summary = holidayName;
-      event.description = '${_holidayIdPrefix}${holiday.id}\n\n${holiday.type.toUpperCase()} Holiday';
+      event.description = '$_holidayIdPrefix${holiday.id}\n\n${holiday.type.toUpperCase()} Holiday';
       
       // Set as all-day event
       final eventDate = cal.EventDateTime();
@@ -547,19 +572,19 @@ class CalendarTestHelper {
       final createdEvent = await GoogleCalendarService.createEvent(event: event);
       
       if (createdEvent != null) {
-        print('Holiday added with ID: ${createdEvent.id}');
-        if (context != null) {
+
+        if (context != null && context.mounted) {
           _showSnackBar(context, 'Holiday added to Google Calendar');
         }
         return true;
       } else {
-        print('Failed to create holiday event');
+
         return false;
       }
       
     } catch (e) {
-      print('Error adding holiday to calendar: $e');
-      if (context != null) {
+
+      if (context != null && context.mounted) {
         _showSnackBar(context, 'Error adding holiday: $e');
       }
       return false;
@@ -570,12 +595,12 @@ class CalendarTestHelper {
   static Future<bool> deleteHolidayFromCalendar(Holiday holiday, {BuildContext? context}) async {
     try {
       final holidayName = _getHolidayDisplayName(holiday);
-      print('Deleting holiday from calendar: $holidayName');
+
       
       // Check if signed in
       final isSignedIn = await GoogleCalendarService.isSignedIn();
       if (!isSignedIn) {
-        print('User not signed in, cannot delete holiday');
+
         return false;
       }
       
@@ -590,15 +615,15 @@ class CalendarTestHelper {
       for (final event in events) {
         if (event.summary == holidayName && 
             event.description != null && 
-            event.description!.contains('${_holidayIdPrefix}${holiday.id}')) {
+            event.description!.contains('$_holidayIdPrefix${holiday.id}')) {
           targetEvent = event;
           break;
         }
       }
       
       if (targetEvent == null || targetEvent.id == null) {
-        print('Holiday event not found: $holidayName');
-        if (context != null) {
+
+        if (context != null && context.mounted) {
           _showSnackBar(context, 'Holiday not found in Google Calendar');
         }
         return false;
@@ -608,19 +633,19 @@ class CalendarTestHelper {
       final success = await GoogleCalendarService.deleteEvent(eventId: targetEvent.id!);
       
       if (success) {
-        print('Holiday deleted successfully: ${targetEvent.id}');
-        if (context != null) {
+
+        if (context != null && context.mounted) {
           _showSnackBar(context, 'Holiday deleted from Google Calendar');
         }
         return true;
       } else {
-        print('Failed to delete holiday');
+
         return false;
       }
       
     } catch (e) {
-      print('Error deleting holiday from calendar: $e');
-      if (context != null) {
+
+      if (context != null && context.mounted) {
         _showSnackBar(context, 'Error deleting holiday: $e');
       }
       return false;
@@ -630,12 +655,12 @@ class CalendarTestHelper {
   /// Check calendar sync status
   static Future<Map<String, dynamic>> checkCalendarSyncStatus({BuildContext? context}) async {
     try {
-      print('Checking calendar sync status...');
+
       
       // Check if signed in
       final isSignedIn = await GoogleCalendarService.isSignedIn();
       if (!isSignedIn) {
-        print('Error: Not signed in to Google Calendar');
+
         return {
           'error': 'Not signed in to Google Calendar',
           'totalLocalEvents': 0,
@@ -648,7 +673,7 @@ class CalendarTestHelper {
       // Test connection
       final hasConnection = await GoogleCalendarService.testConnection();
       if (!hasConnection) {
-        print('Error: Failed to connect to Google Calendar');
+
         return {
           'error': 'Failed to connect to Google Calendar',
           'totalLocalEvents': 0,
@@ -663,31 +688,29 @@ class CalendarTestHelper {
       final startDate = now.subtract(const Duration(days: 30));
       final endDate = now.add(const Duration(days: 30));
       
-      print('Searching for events between ${startDate.toString()} and ${endDate.toString()}');
+
       
       // Get Google Calendar events
-      print('Fetching Google Calendar events...');
+
       final googleEvents = await GoogleCalendarService.listEvents(
         startTime: startDate,
         endTime: endDate,
       );
-      print('Found ${googleEvents.length} Google Calendar events');
+
       
       // Get local events using EventService
-      print('Fetching local events...');
+
       final localEvents = _getEventsInRange(startDate, endDate);
-      print('Found ${localEvents.length} local work shift events');
+
       
       // Debug: Print first few local events
       for (int i = 0; i < localEvents.take(3).length; i++) {
-        final event = localEvents[i];
-        print('Local event $i: "${event.title}" on ${event.fullStartDateTime}');
+        // Local event logged for debugging
       }
       
       // Debug: Print first few Google events
       for (int i = 0; i < googleEvents.take(3).length; i++) {
-        final event = googleEvents[i];
-        print('Google event $i: "${event.summary}" starts ${event.start?.dateTime}');
+        // Google event logged for debugging
       }
       
       // Compare and find missing events
@@ -713,7 +736,7 @@ class CalendarTestHelper {
         }
       }
       
-      print('Sync status: ${localEvents.length} local events, $matchedCount matched, ${missingSyncEvents.length} missing');
+
       
       return {
         'totalLocalEvents': localEvents.length,
@@ -723,7 +746,7 @@ class CalendarTestHelper {
       };
       
     } catch (e) {
-      print('Error checking calendar sync status: $e');
+
       return {
         'error': 'Error checking sync status: $e',
         'totalLocalEvents': 0,
@@ -737,17 +760,20 @@ class CalendarTestHelper {
   /// Sync missing events to Google Calendar
   static Future<Map<String, dynamic>> syncMissingEventsToGoogleCalendar(BuildContext context) async {
     try {
-      print('Getting sync status to find missing events...');
+
       
       // First get the sync status to find missing events
       final syncStatus = await checkCalendarSyncStatus(context: context);
       final missingSyncEvents = syncStatus['missingSyncEvents'] as List<Map<String, dynamic>>? ?? [];
       
-      print('Syncing ${missingSyncEvents.length} missing events to Google Calendar...');
+
       
       int successCount = 0;
       
       for (final eventData in missingSyncEvents) {
+        // Check if context is still valid before processing each event
+        if (!context.mounted) break;
+        
         final success = await addWorkShiftToCalendar(
           context: context,
           title: eventData['title'] as String? ?? 'Work Shift',
@@ -764,8 +790,7 @@ class CalendarTestHelper {
         await Future.delayed(const Duration(milliseconds: 500));
       }
       
-      final isContextMounted = context.mounted;
-      if (isContextMounted) {
+      if (context.mounted) {
         _showSnackBar(
           context,
           'Synced $successCount of ${missingSyncEvents.length} events to Google Calendar',
@@ -779,8 +804,9 @@ class CalendarTestHelper {
       };
       
     } catch (e) {
-      print('Error syncing missing events: $e');
-      _showSnackBar(context, 'Error syncing events: $e');
+      if (context.mounted) {
+        _showSnackBar(context, 'Error syncing events: $e');
+      }
       return {
         'syncedCount': 0,
         'updatedCount': 0,

@@ -98,7 +98,7 @@ class _EnhancedUpdateDialogState extends State<EnhancedUpdateDialog> {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: theme.colorScheme.primary.withOpacity(0.1),
+              color: theme.colorScheme.primary.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(
@@ -141,7 +141,7 @@ class _EnhancedUpdateDialogState extends State<EnhancedUpdateDialog> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: theme.colorScheme.primaryContainer.withOpacity(0.3),
+        color: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
@@ -196,14 +196,14 @@ class _EnhancedUpdateDialogState extends State<EnhancedUpdateDialog> {
             color: theme.colorScheme.surface,
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
-              color: theme.colorScheme.outline.withOpacity(0.2),
+              color: theme.colorScheme.outline.withValues(alpha: 0.2),
             ),
           ),
           child: Text(
             formattedNotes,
             style: TextStyle(
               fontSize: 13,
-              color: theme.colorScheme.onSurface.withOpacity(0.8),
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.8),
               height: 1.4,
             ),
           ),
@@ -228,7 +228,7 @@ class _EnhancedUpdateDialogState extends State<EnhancedUpdateDialog> {
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: theme.colorScheme.surfaceVariant.withOpacity(0.3),
+            color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Column(
@@ -254,7 +254,7 @@ class _EnhancedUpdateDialogState extends State<EnhancedUpdateDialog> {
                   'Download location: $_downloadPath',
                   style: TextStyle(
                     fontSize: 11,
-                    color: theme.colorScheme.onSurface.withOpacity(0.6),
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                   ),
                 ),
               ],
@@ -281,13 +281,13 @@ class _EnhancedUpdateDialogState extends State<EnhancedUpdateDialog> {
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
           color: isSelected 
-              ? theme.colorScheme.primary.withOpacity(0.1)
+              ? theme.colorScheme.primary.withValues(alpha: 0.1)
               : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
             color: isSelected 
                 ? theme.colorScheme.primary
-                : theme.colorScheme.outline.withOpacity(0.3),
+                : theme.colorScheme.outline.withValues(alpha: 0.3),
           ),
         ),
         child: Row(
@@ -303,7 +303,7 @@ class _EnhancedUpdateDialogState extends State<EnhancedUpdateDialog> {
               size: 20,
               color: isSelected 
                   ? theme.colorScheme.primary
-                  : theme.colorScheme.onSurface.withOpacity(0.6),
+                  : theme.colorScheme.onSurface.withValues(alpha: 0.6),
             ),
             const SizedBox(width: 8),
             Expanded(
@@ -324,7 +324,7 @@ class _EnhancedUpdateDialogState extends State<EnhancedUpdateDialog> {
                     subtitle,
                     style: TextStyle(
                       fontSize: 11,
-                      color: theme.colorScheme.onSurface.withOpacity(0.6),
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                     ),
                   ),
                 ],
@@ -358,7 +358,7 @@ class _EnhancedUpdateDialogState extends State<EnhancedUpdateDialog> {
                 '${progress.percentage.toStringAsFixed(1)}%',
                 style: TextStyle(
                   fontSize: 12,
-                  color: theme.colorScheme.onSurface.withOpacity(0.7),
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
                 ),
               ),
             ],
@@ -366,7 +366,7 @@ class _EnhancedUpdateDialogState extends State<EnhancedUpdateDialog> {
           const SizedBox(height: 8),
           LinearProgressIndicator(
             value: progress.percentage / 100,
-            backgroundColor: theme.colorScheme.surfaceVariant,
+            backgroundColor: theme.colorScheme.surfaceContainerHighest,
             valueColor: AlwaysStoppedAnimation<Color>(theme.colorScheme.primary),
           ),
           const SizedBox(height: 8),
@@ -375,7 +375,7 @@ class _EnhancedUpdateDialogState extends State<EnhancedUpdateDialog> {
               '${_formatBytes(progress.downloadedBytes)} / ${_formatBytes(progress.totalBytes)}',
               style: TextStyle(
                 fontSize: 11,
-                color: theme.colorScheme.onSurface.withOpacity(0.6),
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
               ),
             ),
           ],
@@ -403,7 +403,7 @@ class _EnhancedUpdateDialogState extends State<EnhancedUpdateDialog> {
         child: Text(
           'Later',
           style: TextStyle(
-            color: theme.colorScheme.onSurface.withOpacity(0.6),
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
           ),
         ),
       ),
@@ -495,7 +495,7 @@ class _EnhancedUpdateDialogState extends State<EnhancedUpdateDialog> {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: Colors.green.withOpacity(0.1),
+                color: Colors.green.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: const Icon(
@@ -529,7 +529,7 @@ class _EnhancedUpdateDialogState extends State<EnhancedUpdateDialog> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: theme.colorScheme.primaryContainer.withOpacity(0.3),
+                color: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: const Text(
@@ -564,7 +564,7 @@ class _EnhancedUpdateDialogState extends State<EnhancedUpdateDialog> {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: Colors.blue.withOpacity(0.1),
+                color: Colors.blue.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: const Icon(
@@ -598,7 +598,7 @@ class _EnhancedUpdateDialogState extends State<EnhancedUpdateDialog> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: theme.colorScheme.primaryContainer.withOpacity(0.3),
+                color: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: const Text(

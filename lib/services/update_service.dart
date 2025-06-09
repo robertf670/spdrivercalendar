@@ -65,7 +65,7 @@ class UpdateInfo {
       }
       return false;
     } catch (e) {
-      print('Error comparing versions: $e');
+      // Error comparing versions
       return false;
     }
   }
@@ -83,7 +83,7 @@ class UpdateService {
     try {
       // Check if we should skip update check based on frequency
       if (!forceCheck && !await _shouldCheckForUpdate()) {
-        print('Skipping update check - too soon since last check');
+        // Skipping update check - too soon since last check
         return null;
       }
 
@@ -91,7 +91,7 @@ class UpdateService {
       final packageInfo = await PackageInfo.fromPlatform();
       final currentVersion = packageInfo.version;
 
-      print('Checking for updates. Current version: $currentVersion');
+      // Checking for updates
 
       // Fetch latest release from GitHub
       final response = await http.get(
@@ -103,7 +103,7 @@ class UpdateService {
       );
 
       if (response.statusCode != 200) {
-        print('Failed to check for updates: ${response.statusCode}');
+        // Failed to check for updates
         return null;
       }
 
@@ -116,12 +116,12 @@ class UpdateService {
         DateTime.now().toIso8601String()
       );
 
-      print('Update check complete. Latest version: ${updateInfo.latestVersion}, Has update: ${updateInfo.hasUpdate}');
+
       
       return updateInfo;
 
     } catch (e) {
-      print('Error checking for updates: $e');
+
       return null;
     }
   }
@@ -140,7 +140,7 @@ class UpdateService {
       
       return hoursSinceLastCheck >= checkInterval;
     } catch (e) {
-      print('Error checking update frequency: $e');
+
       return true; // Default to checking if there's an error
     }
   }
@@ -151,7 +151,7 @@ class UpdateService {
     Function(DownloadProgress) onProgress,
   ) async {
     try {
-      print('[Update] Starting in-app download for version ${updateInfo.latestVersion}');
+
       
       // Clean up old downloads first
       await ApkDownloadManager.cleanupOldDownloads();
@@ -164,24 +164,24 @@ class UpdateService {
       );
 
       if (filePath == null) {
-        print('[Update] In-app download failed, falling back to browser');
+
         return await _fallbackToBrowser(updateInfo.downloadUrl);
       }
 
       // Try to install
-      print('[Update] Attempting to install APK: $filePath');
+
       final installSuccess = await ApkDownloadManager.installApk(filePath, onProgress);
       
       if (installSuccess) {
-        print('[Update] Install process initiated successfully');
+
         return true;
       } else {
-        print('[Update] Install failed, falling back to browser');
+
         return await _fallbackToBrowser(updateInfo.downloadUrl);
       }
 
     } catch (e) {
-      print('[Update] Error during download/install: $e');
+
       // Fallback to browser on any error
       return await _fallbackToBrowser(updateInfo.downloadUrl);
     }
@@ -205,7 +205,7 @@ class UpdateService {
       }
       return false;
     } catch (e) {
-      print('Error downloading update: $e');
+
       return false;
     }
   }

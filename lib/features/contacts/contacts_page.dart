@@ -49,7 +49,7 @@ class ContactsPage extends StatelessWidget {
             ),
             child: ListTile(
               leading: CircleAvatar(
-                backgroundColor: AppTheme.primaryColor.withOpacity(0.1),
+                backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.1),
                 child: const Icon(Icons.business, color: AppTheme.primaryColor),
               ),
               title: const Text(
@@ -74,7 +74,7 @@ class ContactsPage extends StatelessWidget {
             ),
             child: ListTile(
               leading: CircleAvatar(
-                backgroundColor: AppTheme.secondaryColor.withOpacity(0.1),
+                backgroundColor: AppTheme.secondaryColor.withValues(alpha: 0.1),
                 child: const Icon(Icons.inventory_2_outlined, color: AppTheme.secondaryColor), // Icon for lost property
               ),
               title: const Text(
@@ -98,7 +98,7 @@ class ContactsPage extends StatelessWidget {
             ),
             child: ListTile(
               leading: CircleAvatar(
-                backgroundColor: Colors.teal.withOpacity(0.1),
+                backgroundColor: Colors.teal.withValues(alpha: 0.1),
                 child: const Icon(Icons.support_agent, color: Colors.teal), // Icon for controller
               ),
               title: const Text(
@@ -122,7 +122,7 @@ class ContactsPage extends StatelessWidget {
             ),
             child: ListTile(
               leading: CircleAvatar(
-                backgroundColor: Colors.teal.withOpacity(0.1),
+                backgroundColor: Colors.teal.withValues(alpha: 0.1),
                 child: const Icon(Icons.support_agent, color: Colors.teal), // Icon for controller
               ),
               title: const Text(
@@ -146,7 +146,7 @@ class ContactsPage extends StatelessWidget {
             ),
             child: ListTile(
               leading: CircleAvatar(
-                backgroundColor: Colors.teal.withOpacity(0.1),
+                backgroundColor: Colors.teal.withValues(alpha: 0.1),
                 child: const Icon(Icons.support_agent, color: Colors.teal), // Icon for controller
               ),
               title: const Text(

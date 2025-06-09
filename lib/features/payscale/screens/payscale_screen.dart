@@ -142,27 +142,27 @@ class _PayscaleScreenState extends State<PayscaleScreen> {
         : Colors.white;
         
     final oddRowOverlayColor = (Theme.of(context).brightness == Brightness.dark 
-        ? Colors.white.withOpacity(0.04) 
-        : Colors.black.withOpacity(0.02));
+        ? Colors.white.withValues(alpha: 0.04) 
+        : Colors.black.withValues(alpha: 0.02));
         
     final headerBackgroundColor = Theme.of(context).brightness == Brightness.dark
-        ? AppTheme.primaryColor.withOpacity(0.2)
-        : AppTheme.primaryColor.withOpacity(0.1);
+        ? AppTheme.primaryColor.withValues(alpha: 0.2)
+        : AppTheme.primaryColor.withValues(alpha: 0.1);
         
     final borderColor = Theme.of(context).brightness == Brightness.dark
-        ? Colors.white.withOpacity(0.1)
-        : Colors.black.withOpacity(0.07);
+        ? Colors.white.withValues(alpha: 0.1)
+        : Colors.black.withValues(alpha: 0.07);
 
     final headerTextStyle = TextStyle(
       fontWeight: FontWeight.bold,
       color: Theme.of(context).brightness == Brightness.dark
-          ? Colors.white.withOpacity(0.9)
-          : AppTheme.primaryColor.withOpacity(0.9),
+          ? Colors.white.withValues(alpha: 0.9)
+          : AppTheme.primaryColor.withValues(alpha: 0.9),
       fontSize: 14,
     );
     
     final cellTextStyle = TextStyle(
-      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.87),
+      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.87),
       fontSize: 14,
     );
 
@@ -182,7 +182,7 @@ class _PayscaleScreenState extends State<PayscaleScreen> {
           Text(
             'The following rates apply based on length of service:',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           const SizedBox(height: 20),
@@ -193,7 +193,7 @@ class _PayscaleScreenState extends State<PayscaleScreen> {
                 borderRadius: BorderRadius.circular(AppTheme.borderRadius),
                 boxShadow: [
                   BoxShadow(
-                    color: Theme.of(context).shadowColor.withOpacity(0.1),
+                    color: Theme.of(context).shadowColor.withValues(alpha: 0.1),
                     blurRadius: 10,
                     offset: const Offset(0, 2),
                   ),
@@ -435,7 +435,7 @@ class _HorizontalSplitTableState extends State<HorizontalSplitTable> {
                         color: index.isOdd ? widget.alternateRowColor : Colors.transparent,
                         border: Border(
                           right: BorderSide(color: widget.borderColor, width: 1),
-                          bottom: BorderSide(color: widget.borderColor.withOpacity(0.5), width: 1),
+                          bottom: BorderSide(color: widget.borderColor.withValues(alpha: 0.5), width: 1),
                         ),
                       ),
                       child: widget.fixedColumnCellBuilder(context, index),
@@ -461,7 +461,7 @@ class _HorizontalSplitTableState extends State<HorizontalSplitTable> {
                           decoration: BoxDecoration(
                             color: rowIndex.isOdd ? widget.alternateRowColor : Colors.transparent,
                             border: Border(
-                              bottom: BorderSide(color: widget.borderColor.withOpacity(0.5), width: 1),
+                              bottom: BorderSide(color: widget.borderColor.withValues(alpha: 0.5), width: 1),
                             ),
                           ),
                           child: Row(

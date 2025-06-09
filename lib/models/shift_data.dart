@@ -51,7 +51,7 @@ class ShiftData {
           calculatedRelief = '${reliefHours.toString().padLeft(2, '0')}:${reliefMins.toString().padLeft(2, '0')}:00';
         }
       } catch (e) {
-        print('Error calculating relief: $e');
+        // Failed to calculate relief time, use empty string
       }
     }
     

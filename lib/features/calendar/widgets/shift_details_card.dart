@@ -40,7 +40,7 @@ class ShiftDetailsCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(AppTheme.borderRadius),
           gradient: LinearGradient(
             colors: [
-              shiftInfo?.color.withOpacity(0.2) ?? Colors.blue.withOpacity(0.2),
+              shiftInfo?.color.withValues(alpha: 0.2) ?? Colors.blue.withValues(alpha: 0.2),
               Colors.transparent,
             ],
             stops: const [0.3, 1.0],
@@ -59,7 +59,7 @@ class ShiftDetailsCard extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(6), // Smaller padding
                     decoration: BoxDecoration(
-                      color: shiftInfo?.color.withOpacity(0.2) ?? Colors.blue.withOpacity(0.2),
+                      color: shiftInfo?.color.withValues(alpha: 0.2) ?? Colors.blue.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(AppTheme.borderRadius / 2),
                     ),
                     child: Icon(Icons.work, color: shiftInfo?.color, size: 20), // Smaller icon
@@ -90,7 +90,7 @@ class ShiftDetailsCard extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.all(6), // Smaller padding
                       decoration: BoxDecoration(
-                        color: AppTheme.errorColor.withOpacity(0.2),
+                        color: AppTheme.errorColor.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(AppTheme.borderRadius / 2),
                       ),
                       child: const Icon(Icons.celebration, color: AppTheme.errorColor, size: 20), // Smaller icon

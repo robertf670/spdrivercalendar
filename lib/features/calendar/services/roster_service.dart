@@ -144,7 +144,7 @@ class RosterService {
     
     // Basic validation - check if zoneNumber is one of the known zones (1, 3, 4)
     if (!['1', '3', '4'].contains(zoneNumber)) {
-        print("Warning: Unexpected zone number '$zoneNumber' encountered in getShiftFilename. Filename might be incorrect.");
+
         // Keep using the potentially incorrect suffix, assuming the file might exist unexpectedly
         // or allow the file load to fail naturally later.
     }
@@ -190,7 +190,7 @@ class RosterService {
       
       return allHolidays;
     } catch (e) {
-      print('Error loading bank holidays: $e');
+
       return [];
     }
   }
@@ -205,7 +205,7 @@ class RosterService {
     try {
       return ShiftData.fromList(parts);
     } catch (e) {
-      print('Error parsing shift data: $e');
+
       return null;
     }
   }

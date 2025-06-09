@@ -97,9 +97,9 @@ class ViewBoardDialog extends StatelessWidget {
                             // Create SPL entry based on the day
                             final splEntry = BoardEntry(
                               route: 'SPL',
-                              from: prevEntry.location ?? '',
+                              from: prevEntry.location,
                               to: 'Garage',
-                              location: prevEntry.location ?? '',
+                              location: prevEntry.location,
                               duty: dutyNumber,
                               // For M-F use arrival time from current Finish entry
                               arrival: weekday >= DateTime.monday && weekday <= DateTime.friday && !isBankHoliday
@@ -143,7 +143,7 @@ class ViewBoardDialog extends StatelessWidget {
                                         Expanded(
                                           child: Container(
                                             width: 2,
-                                            color: Theme.of(context).primaryColor.withOpacity(0.3),
+                                            color: Theme.of(context).primaryColor.withValues(alpha: 0.3),
                                           ),
                                         ),
                                       ],
@@ -208,7 +208,7 @@ class ViewBoardDialog extends StatelessWidget {
                                     Expanded(
                                       child: Container(
                                         width: 2,
-                                        color: Theme.of(context).primaryColor.withOpacity(0.3),
+                                        color: Theme.of(context).primaryColor.withValues(alpha: 0.3),
                                       ),
                                     ),
                                 ],
@@ -250,7 +250,7 @@ class ViewBoardDialog extends StatelessWidget {
                                                     vertical: 2,
                                                   ),
                                                   decoration: BoxDecoration(
-                                                    color: Theme.of(context).primaryColor.withOpacity(0.1),
+                                                    color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
                                                     borderRadius: BorderRadius.circular(12),
                                                   ),
                                                   child: Text(
@@ -447,8 +447,8 @@ class ViewBoardDialog extends StatelessWidget {
                 ),
                 decoration: BoxDecoration(
                   color: entry.route == 'SPL' 
-                    ? Colors.orange.withOpacity(0.1)
-                    : Colors.blue.withOpacity(0.1),
+                    ? Colors.orange.withValues(alpha: 0.1)
+                    : Colors.blue.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Text(
@@ -493,31 +493,8 @@ class ViewBoardDialog extends StatelessWidget {
       return 'Garage';
     }
     // If no next location found, return the current location
-    return entries[currentIndex].location ?? '';
+    return entries[currentIndex].location;
   }
 
-  bool _isEndOfFirstHalf(List<BoardEntry> entries, int currentIndex) {
-    // Look ahead for a Finish entry in Garage
-    for (var i = currentIndex + 1; i < entries.length; i++) {
-      if (entries[i].route == 'Finish' && entries[i].location == 'Garage') {
-        // Check if this is the end of first half (has "Finished Duty" in notes)
-        if (i + 1 < entries.length && entries[i + 1].notes != null && entries[i + 1].notes!.contains('Finished Duty')) {
-          return true;
-        }
-        return false;
-      }
-    }
-    return false;
-  }
 
-  String _getPreviousLocation(List<BoardEntry> entries, int currentIndex) {
-    // Look back for the previous non-SPL entry
-    for (var i = currentIndex - 1; i >= 0; i--) {
-      if (entries[i].route != 'SPL') {
-        return entries[i].location;
-      }
-    }
-    // If no previous location found, return the current location
-    return entries[currentIndex].location ?? '';
-  }
 } 

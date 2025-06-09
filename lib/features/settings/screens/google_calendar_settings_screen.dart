@@ -56,7 +56,7 @@ class _GoogleCalendarSettingsScreenState extends State<GoogleCalendarSettingsScr
                   child: Container(
                     padding: const EdgeInsets.all(12.0),
                     decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.surfaceVariant.withValues(alpha: 0.5),
+                      color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
                       borderRadius: BorderRadius.circular(8.0),
                     ),
                     child: Row(
@@ -72,7 +72,7 @@ class _GoogleCalendarSettingsScreenState extends State<GoogleCalendarSettingsScr
                           child: Text(
                             'Google Calendar access requires test user approval. Please use the feedback section to request access with your email address.',
                             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                              color: Theme.of(context).colorScheme.onSurface,
                             ),
                           ),
                         ),
@@ -126,7 +126,7 @@ class _GoogleCalendarSettingsScreenState extends State<GoogleCalendarSettingsScr
                 Row(
                   children: [
                     CircleAvatar(
-                      backgroundColor: _isConnected ? AppTheme.successColor.withOpacity(0.2) : AppTheme.errorColor.withOpacity(0.2),
+                      backgroundColor: _isConnected ? AppTheme.successColor.withValues(alpha: 0.2) : AppTheme.errorColor.withValues(alpha: 0.2),
                       child: Icon(
                         _isConnected ? Icons.check : Icons.error_outline,
                         color: _isConnected ? AppTheme.successColor : AppTheme.errorColor,

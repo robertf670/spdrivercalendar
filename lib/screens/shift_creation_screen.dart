@@ -188,7 +188,7 @@ class _ShiftCreationScreenState extends State<ShiftCreationScreen> {
         if (_addToGoogleCalendar) {
           final success = await shift.addToGoogleCalendar(context);
           if (!success) {
-            print('Failed to add shift to Google Calendar');
+
           }
         }
         

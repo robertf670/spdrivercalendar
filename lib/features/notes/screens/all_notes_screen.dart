@@ -21,7 +21,6 @@ class _AllNotesScreenState extends State<AllNotesScreen> {
   String _searchQuery = ''; // Store search query state
   DateTime? _selectedMonth; // Add selected month state
   int _selectedYear = DateTime.now().year;
-  final List<int> _years = List.generate(6, (index) => DateTime.now().year - index);
 
   @override
   void initState() {
@@ -70,7 +69,7 @@ class _AllNotesScreenState extends State<AllNotesScreen> {
       final uniqueEventsWithNotes = <String, Event>{};
       for (var event in eventsWithNotes) {
          final eventId = event.id;
-         if (eventId != null) { 
+         if (eventId.isNotEmpty) { 
              uniqueEventsWithNotes[eventId] = event;
          }
       }
@@ -85,7 +84,7 @@ class _AllNotesScreenState extends State<AllNotesScreen> {
         });
       }
     } catch (e) {
-      print("Error loading notes: $e");
+
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -141,7 +140,7 @@ class _AllNotesScreenState extends State<AllNotesScreen> {
         );
       }
     } catch (e) {
-      print("Error deleting note: $e");
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to delete note: ${e.toString()}')),
@@ -424,7 +423,7 @@ class _AllNotesScreenState extends State<AllNotesScreen> {
                                 color: isSelected
                                     ? Theme.of(context).colorScheme.primary
                                     : isCurrentMonth
-                                        ? Theme.of(context).colorScheme.primaryContainer.withOpacity(0.2)
+                                        ? Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.2)
                                         : null,
                                 borderRadius: BorderRadius.circular(8),
                                 border: Border.all(
@@ -551,7 +550,7 @@ class _AllNotesScreenState extends State<AllNotesScreen> {
                              style: TextStyle(
                                fontSize: 12, // Smaller date text when grouped
                                // Use a theme-aware color with opacity for better dark mode visibility
-                               color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
+                               color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
                                decoration: TextDecoration.underline,
                              ),
                            ),
@@ -568,7 +567,7 @@ class _AllNotesScreenState extends State<AllNotesScreen> {
                               const SizedBox(height: 8),
                               Text(
                                 event.notes ?? '', 
-                                style: TextStyle(fontSize: 14, color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.8)),
+                                style: TextStyle(fontSize: 14, color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.8)),
                                 maxLines: 10,
                                 overflow: TextOverflow.ellipsis, 
                               ),
@@ -576,7 +575,7 @@ class _AllNotesScreenState extends State<AllNotesScreen> {
                           ),
                         ),
                         trailing: IconButton(
-                          icon: Icon(Icons.delete_outline, color: Colors.redAccent.withOpacity(0.8)),
+                          icon: Icon(Icons.delete_outline, color: Colors.redAccent.withValues(alpha: 0.8)),
                           tooltip: 'Delete Note',
                           onPressed: () => _showDeleteConfirmationDialog(event),
                         ),

@@ -299,7 +299,7 @@ class _BillsScreenState extends State<BillsScreen> {
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.grey.withOpacity(0.1),
+                      color: Colors.grey.withValues(alpha: 0.1),
                       spreadRadius: 2,
                       blurRadius: 10,
                       offset: const Offset(0, 4),
@@ -340,7 +340,7 @@ class _BillsScreenState extends State<BillsScreen> {
                                 padding: const EdgeInsets.symmetric(horizontal: 16.0),
                                 child: Row(
                                   children: [
-                                    Icon(
+                                    const Icon(
                                       Icons.work,
                                       color: AppTheme.primaryColor,
                                       size: 20,
@@ -396,7 +396,7 @@ class _BillsScreenState extends State<BillsScreen> {
                                 padding: const EdgeInsets.symmetric(horizontal: 16.0),
                                 child: Row(
                                   children: [
-                                    Icon(
+                                    const Icon(
                                       Icons.map,
                                       color: AppTheme.primaryColor,
                                       size: 20,
@@ -442,7 +442,7 @@ class _BillsScreenState extends State<BillsScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            CircularProgressIndicator(
+            const CircularProgressIndicator(
               color: AppTheme.primaryColor,
             ),
             const SizedBox(height: 16),
@@ -527,7 +527,7 @@ class _BillsScreenState extends State<BillsScreen> {
           Container(
             padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
             decoration: BoxDecoration(
-              color: AppTheme.primaryColor.withOpacity(0.1),
+              color: AppTheme.primaryColor.withValues(alpha: 0.1),
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(16),
                 topRight: Radius.circular(16),
@@ -535,15 +535,15 @@ class _BillsScreenState extends State<BillsScreen> {
             ),
             child: Row(
               children: [
-                Icon(
+                const Icon(
                   Icons.description,
                   color: AppTheme.primaryColor,
                   size: 20,
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  'Schedule Data for ${_selectedDayType}, ${_selectedZone}',
-                  style: TextStyle(
+                  'Schedule Data for $_selectedDayType, $_selectedZone',
+                  style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     color: AppTheme.primaryColor,
                   ),

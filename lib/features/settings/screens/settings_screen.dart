@@ -5,7 +5,6 @@ import 'package:spdrivercalendar/google_calendar_service.dart';
 import 'package:spdrivercalendar/features/settings/screens/google_calendar_settings_screen.dart';
 import 'package:spdrivercalendar/theme/app_theme.dart';
 import 'package:spdrivercalendar/calendar_test_helper.dart';
-import 'package:spdrivercalendar/services/notification_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:spdrivercalendar/services/backup_service.dart';
 import 'dart:io'; // For File type in auto-backup list
@@ -38,7 +37,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _isLoading = false;
 
   // Notification state variables
-  bool _notificationsEnabled = false;
   int _notificationOffsetHours = 1; // Default offset
 
   // Auto-Backup state variable
@@ -61,7 +59,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _syncToGoogleCalendar = prefs.getBool(AppConstants.syncToGoogleCalendarKey) ?? false;
     
     // Load notification settings
-    _notificationsEnabled = prefs.getBool(kNotificationsEnabledKey) ?? false;
     _notificationOffsetHours = prefs.getInt(kNotificationOffsetHoursKey) ?? 1;
 
     // Load auto-backup setting - default to true
@@ -116,50 +113,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  // --- Notification Preference Saving Methods ---
-  Future<void> _saveNotificationsEnabled(bool enabled) async {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool(kNotificationsEnabledKey, enabled);
-      setState(() {
-        _notificationsEnabled = enabled;
-      });
-  }
-  
-  Future<void> _saveNotificationOffset(int hours) async {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setInt(kNotificationOffsetHoursKey, hours);
-      setState(() {
-        _notificationOffsetHours = hours;
-      });
-  }
 
-  // --- Notification Toggle Method ---
-  Future<void> _toggleNotificationsEnabled(bool value) async {
-    if (value) {
-      // Request permissions when enabling
-      bool? permissionsGranted = await NotificationService().requestPermissions();
-      if (permissionsGranted == true && mounted) {
-         await _saveNotificationsEnabled(true);
-         ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Notifications enabled.')),
-         );
-      } else if (mounted) {
-        // Permission denied or null (e.g., platform not supported)
-         await _saveNotificationsEnabled(false); // Keep it disabled
-         ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Notification permissions denied or unavailable.')),
-         );
-      }
-    } else {
-      // Just disable if turning off
-      await _saveNotificationsEnabled(false);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Notifications disabled.')),
-         );
-      }
-    }
-  }
+  
+
 
   @override
   Widget build(BuildContext context) {
@@ -188,7 +144,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     child: Container(
                       padding: const EdgeInsets.all(12.0),
                       decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.surfaceVariant.withValues(alpha: 0.5),
+                        color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
                         borderRadius: BorderRadius.circular(8.0),
                       ),
                       child: Row(
@@ -204,7 +160,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             child: Text(
                               'Google Calendar access requires test user approval. Please use the feedback section to request access with your email address.',
                               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                color: Theme.of(context).colorScheme.onSurface,
                               ),
                             ),
                           ),
@@ -691,8 +647,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       barrierDismissible: false,
       builder: (BuildContext context) {
         dialogContext = context;
-        return WillPopScope(
-          onWillPop: () async => false,
+        return PopScope(
+          canPop: false,
           child: const AlertDialog(
             title: Text('Syncing Missing Events'),
             content: Column(

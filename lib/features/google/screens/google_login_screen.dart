@@ -57,7 +57,7 @@ class _GoogleLoginScreenState extends State<GoogleLoginScreen> {
               Container(
                 padding: const EdgeInsets.all(12.0),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surfaceVariant.withValues(alpha: 0.5),
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
                   borderRadius: BorderRadius.circular(8.0),
                 ),
                 child: Row(
@@ -73,7 +73,7 @@ class _GoogleLoginScreenState extends State<GoogleLoginScreen> {
                       child: Text(
                         'Google Calendar access requires test user approval. Please use the feedback section to request access with your email address.',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                       ),
                     ),
@@ -85,7 +85,7 @@ class _GoogleLoginScreenState extends State<GoogleLoginScreen> {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.red.withOpacity(0.1),
+                    color: Colors.red.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(AppTheme.borderRadius),
                   ),
                   child: Text(

@@ -38,7 +38,7 @@ class _GoogleLoginPageState extends State<GoogleLoginPage> {
       if (userEmail != null && isSignedIn) {
         final hasAccess = await GoogleCalendarService.testConnection();
         if (!hasAccess) {
-          print('[GoogleLogin] User found but calendar access failed, need to re-authenticate');
+
           // Force re-authentication
           await GoogleCalendarService.signOut();
           setState(() {
@@ -58,7 +58,7 @@ class _GoogleLoginPageState extends State<GoogleLoginPage> {
         }
       });
     } catch (e) {
-      print('[GoogleLogin] Error checking current user: $e');
+
       setState(() {
         _errorMessage = 'Failed to check login status: ${e.toString()}';
       });
@@ -82,7 +82,7 @@ class _GoogleLoginPageState extends State<GoogleLoginPage> {
       final accountEmail = await GoogleCalendarService.signInWithGoogle(interactive: true);
       
       if (accountEmail != null) {
-        print('[GoogleLogin] Successfully signed in: $accountEmail');
+
         setState(() {
           _currentUserEmail = accountEmail;
           _statusMessage = 'Successfully signed in as $accountEmail';
@@ -104,20 +104,20 @@ class _GoogleLoginPageState extends State<GoogleLoginPage> {
       }
       
       // If sign-in fails, show verification dialog
-      print('[GoogleLogin] Initial sign-in failed, showing verification dialog');
+
       final shouldContinue = await OAuthHelper.showVerificationBypassDialog(context);
       
       if (shouldContinue == true) {
         final retryAccountEmail = await GoogleCalendarService.signInWithGoogle(interactive: true);
         
         if (retryAccountEmail != null) {
-          print('[GoogleLogin] Successfully signed in after verification dialog: $retryAccountEmail');
+
           setState(() {
             _currentUserEmail = retryAccountEmail;
             _statusMessage = 'Successfully signed in as $retryAccountEmail';
           });
         } else {
-          print('[GoogleLogin] Sign-in canceled or failed after verification dialog');
+
           setState(() {
             _statusMessage = 'Sign in canceled or failed';
           });
@@ -128,7 +128,7 @@ class _GoogleLoginPageState extends State<GoogleLoginPage> {
         });
       }
     } catch (error) {
-      print('[GoogleLogin] Error during Google sign-in: $error');
+
       
       // Check if the error is about testing mode
       if (error.toString().contains('only be accessed by developer-approved testers') ||
@@ -173,9 +173,9 @@ class _GoogleLoginPageState extends State<GoogleLoginPage> {
         _statusMessage = '';
         _errorMessage = '';
       });
-      print('[GoogleLogin] Successfully signed out');
+
     } catch (e) {
-      print('[GoogleLogin] Error signing out: $e');
+
       setState(() {
         _errorMessage = 'Failed to sign out: ${e.toString()}';
       });
@@ -187,12 +187,12 @@ class _GoogleLoginPageState extends State<GoogleLoginPage> {
   }
 
   Future<void> _handleSkip() async {
-    print('[GoogleLogin] User skipped Google sign-in');
+
     widget.onLoginComplete();
   }
 
   Future<void> _handleContinue() async {
-    print('[GoogleLogin] User completed Google setup');
+
     widget.onLoginComplete();
   }
 

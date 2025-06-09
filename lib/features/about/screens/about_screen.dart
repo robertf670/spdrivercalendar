@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:spdrivercalendar/core/constants/app_constants.dart';
 import 'package:spdrivercalendar/theme/app_theme.dart';
-import 'package:package_info_plus/package_info_plus.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:spdrivercalendar/core/mixins/text_rendering_mixin.dart';
 
 class AboutScreen extends StatefulWidget {
@@ -13,41 +11,7 @@ class AboutScreen extends StatefulWidget {
 }
 
 class _AboutScreenState extends State<AboutScreen> with TextRenderingMixin {
-  String _version = '';
-  String _buildNumber = '';
-  bool _isLoading = true;
-
   @override
-  void initState() {
-    super.initState();
-    _loadPackageInfo();
-  }
-
-  Future<void> _loadPackageInfo() async {
-    try {
-      final packageInfo = await PackageInfo.fromPlatform();
-      setState(() {
-        _version = packageInfo.version;
-        _buildNumber = packageInfo.buildNumber;
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() {
-        _version = AppConstants.appVersion;
-        _buildNumber = '1';
-        _isLoading = false;
-      });
-    }
-  }
-
-  Future<void> _launchUrl(String url) async {
-    final uri = Uri.parse(url);
-    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not launch $url')),
-      );
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -56,9 +20,7 @@ class _AboutScreenState extends State<AboutScreen> with TextRenderingMixin {
         title: const Text('About'),
         elevation: 0,
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
+      body: SingleChildScrollView(
               padding: const EdgeInsets.all(16.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.center,

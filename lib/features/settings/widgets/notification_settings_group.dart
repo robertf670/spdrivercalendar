@@ -19,8 +19,8 @@ class NotificationSettingsGroup extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color? disabledColor = Colors.grey;
-    final Color? disabledIconColor = Colors.grey;
+    const Color? disabledColor = Colors.grey;
+    const Color? disabledIconColor = Colors.grey;
     const bool isGloballyDisabled = true;
 
     return Card(

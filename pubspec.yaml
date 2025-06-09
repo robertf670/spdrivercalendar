@@ -29,6 +29,7 @@ dependencies:
   csv: ^6.0.0
   crypto: ^3.0.3
   uuid: ^3.0.7
+  collection: ^1.18.0
   
   # Google services
   googleapis: ^13.1.0

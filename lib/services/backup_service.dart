@@ -48,7 +48,7 @@ class BackupService {
 
       // Ask user where to save the file, providing the bytes directly
       // saveFile returns null on mobile when bytes are provided and saving is successful.
-      String? resultPath = await FilePicker.platform.saveFile(
+      await FilePicker.platform.saveFile(
         dialogTitle: 'Save Backup File',
         fileName: 'spdrivercalendar_backup.json',
         type: FileType.custom,
@@ -60,14 +60,14 @@ class BackupService {
       // On desktop/web it might return a path, but for consistency we check if an error was thrown.
       // If we reach here without an exception, assume success.
       
-      print("Backup save dialog completed."); // Log completion
+      // Backup save dialog completed
       return true; // Assume success if no exception was thrown
 
     } catch (e) {
-      print("Error creating backup: $e");
+
       // Check specifically for the error message we saw, though any error is a failure here.
       if (e.toString().contains('Bytes are required')) {
-          print("Internal Error: Bytes were provided but still failed?");
+
       }
       return false;
     }
@@ -96,7 +96,7 @@ class BackupService {
           backupData[key] = value;
         } else {
           // Optionally log or handle missing keys if necessary
-          print("AutoBackup: Key '$key' not found in SharedPreferences, skipping.");
+
         }
       }
 
@@ -124,13 +124,13 @@ class BackupService {
       if (files.length > _maxAutoBackups) {
         for (int i = _maxAutoBackups; i < files.length; i++) {
           await files[i].delete();
-          print("AutoBackup: Deleted old backup ${files[i].path}");
+
         }
       }
-      print("AutoBackup: Created successfully at $filePath");
+
       return true;
     } catch (e) {
-      print("Error creating auto backup: $e");
+
       return false;
     }
   }
@@ -146,7 +146,7 @@ class BackupService {
       files.sort((a, b) => b.statSync().modified.compareTo(a.statSync().modified));
       return files;
     } catch (e) {
-      print("Error listing auto backups: $e");
+
       return [];
     }
   }
@@ -165,14 +165,14 @@ class BackupService {
         );
 
         if (result == null || result.files.single.path == null) {
-          print("Restore cancelled by user.");
+
           return false; // User cancelled the picker
         }
 
         // Validate if the picked file is a .json file
         final pickedFile = result.files.single;
-        if (pickedFile.name == null || !pickedFile.name!.toLowerCase().contains('.json')) {
-          print("Invalid file type picked. Expected .json, got: ${pickedFile.name}");
+        if (!pickedFile.name.toLowerCase().contains('.json')) {
+
           // We can't show a SnackBar here, so we rely on returning false
           // and letting SettingsScreen handle the user notification.
           return false; // Indicate failure due to wrong file type
@@ -183,45 +183,44 @@ class BackupService {
       final file = File(filePath);
 
       if (!await file.exists()) {
-        print("Selected backup file does not exist: $filePath");
+
         return false;
       }
 
-      print("Attempting to restore from: $filePath");
+
 
       // Read the JSON data from the file
       final String backupJson = await file.readAsString();
-      print("Backup file size: ${backupJson.length} characters");
+
       
       // Validate JSON structure
       if (backupJson.trim().isEmpty) {
-        print("Error: Backup file is empty");
+
         return false;
       }
 
       Map<String, dynamic> backupData;
       try {
         backupData = jsonDecode(backupJson);
-        print("Successfully parsed JSON. Found ${backupData.keys.length} keys: ${backupData.keys.toList()}");
+
       } catch (e) {
-        print("Error: Invalid JSON in backup file: $e");
+
         return false;
       }
 
       if (backupData.isEmpty) {
-        print("Error: Backup file contains no data");
+
         return false;
       }
 
       final prefs = await SharedPreferences.getInstance();
       int restoredCount = 0;
-      int skippedCount = 0;
 
       // Restore data into SharedPreferences
       for (String key in backupData.keys) {
         try {
           final value = backupData[key];
-          print("Processing key: '$key', value type: ${value.runtimeType}, value: $value");
+
           
           // Check if it's a key we recognize (more flexible approach)
           bool shouldRestore = _backupKeys.contains(key) || 
@@ -239,69 +238,61 @@ class BackupService {
             if (value is String) {
               await prefs.setString(key, value);
               restoredCount++;
-              print("Restored string key: $key");
+
             } else if (value is int) {
               await prefs.setInt(key, value);
               restoredCount++;
-              print("Restored int key: $key");
+
             } else if (value is double) {
               await prefs.setDouble(key, value);
               restoredCount++;
-              print("Restored double key: $key");
+
             } else if (value is bool) {
               await prefs.setBool(key, value);
               restoredCount++;
-              print("Restored bool key: $key");
+
             } else if (value is List) {
               // Try to convert to List<String> if possible
               try {
                 final stringList = value.map((e) => e.toString()).toList();
                 await prefs.setStringList(key, stringList);
                 restoredCount++;
-                print("Restored list key: $key");
+
               } catch (e) {
-                print("Warning: Could not restore list key '$key': $e");
-                skippedCount++;
+                // Skip invalid list values
               }
-            } else if (value == null) {
-              await prefs.remove(key); // Handle null values
-              restoredCount++;
-              print("Removed null key: $key");
             } else {
-              print("Warning: Skipping unsupported type for key '$key': ${value.runtimeType}");
-              skippedCount++;
+              // Skip unsupported value type
             }
           } else {
-            print("Skipping unrecognized key: $key");
-            skippedCount++;
+            // Skip unrecognized key
           }
         } catch (e) {
-          print("Error restoring key '$key': $e");
-          skippedCount++;
+          // Skip problematic key
         }
       }
       
       // Import custom colors if present
       try {
         await ColorCustomizationService.importColors(backupData);
-        print("Custom colors imported successfully");
+
       } catch (e) {
-        print("Warning: Could not import custom colors: $e");
+        // Failed to import custom colors, continue
       }
 
-      print("Restore completed. Restored: $restoredCount, Skipped: $skippedCount");
+
       
       // Consider success if we restored at least some data
       if (restoredCount > 0) {
-        print("Restore successful from: $filePath");
+
         return true;
       } else {
-        print("Restore failed: No data was restored");
+
         return false;
       }
 
     } catch (e) {
-      print("Error restoring backup: $e");
+
       return false;
     }
   }

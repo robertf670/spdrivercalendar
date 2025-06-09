@@ -63,9 +63,9 @@ class OAuthHelper {
 
   /// Opens support documentation about Google testing restrictions
   static void openGoogleTestingHelp() async {
-    const url = 'https://support.google.com/cloud/answer/10311615';
-    if (await canLaunch(url)) {
-      await launch(url);
+    final uri = Uri.parse('https://support.google.com/cloud/answer/10311615');
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri);
     }
   }
 }

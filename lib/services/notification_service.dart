@@ -15,11 +15,11 @@ class NotificationService {
   final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
 
   Future<void> init() async {
-    print("[Notif Init Debug] Starting NotificationService.init()");
+
     try {
       // Initialize native timezone database
       tz.initializeTimeZones();
-      print("[Notif Init Debug] Timezones initialized.");
+
 
       // --- Create Android Notification Channels ---
       const AndroidNotificationChannel shiftChannel = AndroidNotificationChannel(
@@ -43,12 +43,12 @@ class NotificationService {
           .resolvePlatformSpecificImplementation<
               AndroidFlutterLocalNotificationsPlugin>()
           ?.createNotificationChannel(shiftChannel);
-      print("[Notif Init Debug] Shift notification channel created (or updated).");
+
       await flutterLocalNotificationsPluginInstance
           .resolvePlatformSpecificImplementation<
               AndroidFlutterLocalNotificationsPlugin>()
           ?.createNotificationChannel(testChannel);
-      print("[Notif Init Debug] Test notification channel created (or updated).");
+
       // --- End Create Android Notification Channels ---
 
       // Android initialization settings
@@ -74,24 +74,23 @@ class NotificationService {
         initializationSettings,
         onDidReceiveNotificationResponse: onDidReceiveNotificationResponse,
       );
-      print("[Notif Init Debug] FlutterLocalNotificationsPlugin initialized.");
+
 
     } catch (e) {
-       print("[Notif Init Debug] ERROR during NotificationService.init(): $e");
+      // Failed to initialize notifications, continue without notifications
     }
-     print("[Notif Init Debug] Finished NotificationService.init()");
+
   }
 
   // Callback for when a notification is received while the app is in the foreground (iOS legacy)
   void onDidReceiveLocalNotification(int id, String? title, String? body, String? payload) async {
-    print('Notification received while foregrounded (iOS legacy): $id, $title, $body, $payload');
+
   }
 
   // Callback for when a notification response is received (user taps on notification)
   void onDidReceiveNotificationResponse(NotificationResponse notificationResponse) async {
-    final String? payload = notificationResponse.payload;
     if (notificationResponse.payload != null) {
-      print('Notification Response Payload: $payload');
+      // Handle notification tap
     }
   }
 
@@ -127,19 +126,19 @@ class NotificationService {
   }) async {
     final now = DateTime.now();
     if (scheduledDateTime.isBefore(now)) {
-      print("[FLN Schedule] Scheduled time ${scheduledDateTime.toIso8601String()} is in the past. Notification NOT scheduled for ID: $id.");
+
       return;
     }
 
     final delay = scheduledDateTime.difference(now);
     if (delay.isNegative) {
-       print("[FLN Schedule] Calculated negative delay. Notification NOT scheduled for ID: $id.");
+
        return;
     }
 
     final tz.TZDateTime scheduledTZTime = tz.TZDateTime.now(tz.local).add(delay);
 
-    print("[FLN Schedule] Scheduling ID: $id for ${scheduledTZTime.toIso8601String()} using inexactAllowWhileIdle.");
+
 
     try {
       await flutterLocalNotificationsPlugin.zonedSchedule(
@@ -166,22 +165,22 @@ class NotificationService {
             UILocalNotificationDateInterpretation.absoluteTime,
         payload: payload,
       );
-      print("[FLN Schedule] Successfully called zonedSchedule for ID: $id.");
+
     } catch (e) {
-      print("[FLN Schedule] *** FAILED TO SCHEDULE *** for ID: $id. Error: $e");
+      // Failed to schedule notification
     }
   }
 
   // Use FLN cancel
   Future<void> cancelNotification(int id) async {
     await flutterLocalNotificationsPlugin.cancel(id);
-    print("[FLN Cancel] Cancelled flutter_local_notification with ID: $id.");
+
   }
 
   // Use FLN cancelAll
   Future<void> cancelAllNotifications() async {
     await flutterLocalNotificationsPlugin.cancelAll();
-    print("[FLN Cancel] Cancelled all flutter_local_notifications.");
+
   }
 
   // --- Keep Test Notification Method --- 
@@ -205,7 +204,7 @@ class NotificationService {
       platformChannelSpecifics,
       payload: 'test_payload',
     );
-     print("Showing test notification");
+
   }
 
   // --- Keep Pending Notifications Method (for FLN) --- 
@@ -213,10 +212,10 @@ class NotificationService {
     try {
       final List<PendingNotificationRequest> pendingRequests = 
           await flutterLocalNotificationsPlugin.pendingNotificationRequests();
-      print("[FLN Pending] Found ${pendingRequests.length} flutter_local_notifications pending requests.");
+
       return pendingRequests;
     } catch (e) {
-       print("[FLN Pending] Error fetching pending flutter_local_notifications requests: $e");
+      // Failed to get pending notifications, return empty list
        return []; 
     }
   }

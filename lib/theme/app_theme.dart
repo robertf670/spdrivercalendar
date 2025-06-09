@@ -93,9 +93,9 @@ class AppTheme {
           hintStyle: TextStyle(color: Colors.white70), // Style hint text if applicable
         ),
         menuStyle: MenuStyle(
-          backgroundColor: MaterialStateProperty.all(Colors.grey[800]), // Background color of the dropdown menu
-          surfaceTintColor: MaterialStateProperty.all(Colors.grey[800]), // Optional: blend color
-          shape: MaterialStateProperty.all(RoundedRectangleBorder( // Consistent border radius
+          backgroundColor: WidgetStateProperty.all(Colors.grey[800]), // Background color of the dropdown menu
+          surfaceTintColor: WidgetStateProperty.all(Colors.grey[800]), // Optional: blend color
+          shape: WidgetStateProperty.all(RoundedRectangleBorder( // Consistent border radius
              borderRadius: BorderRadius.circular(borderRadius / 2), // Slightly smaller radius for menu
           )),
         ),

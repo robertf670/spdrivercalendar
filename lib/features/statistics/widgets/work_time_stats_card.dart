@@ -117,7 +117,7 @@ class WorkTimeStatisticsCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(6.0),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
+              color: color.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(6.0),
             ),
             child: Icon(
@@ -139,7 +139,7 @@ class WorkTimeStatisticsCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 4.0),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
+              color: color.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12.0),
             ),
             child: Text(

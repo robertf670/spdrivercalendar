@@ -48,7 +48,7 @@ class _EditNoteScreenState extends State<EditNoteScreen> {
          Navigator.of(context).pop(true); 
       }
     } catch (e) {
-      print("Error saving note: $e");
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to save note: ${e.toString()}')),
