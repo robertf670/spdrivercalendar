@@ -1988,10 +1988,10 @@ class _EventCardState extends State<EventCard> {
                       child: Column(
                         children: [
                           Row(
-                            children: const [
-                              Icon(Icons.add_circle_outline, color: AppTheme.primaryColor, size: 20),
-                              SizedBox(width: 8),
-                              Text(
+                            children: [
+                              const Icon(Icons.add_circle_outline, color: AppTheme.primaryColor, size: 20),
+                              const SizedBox(width: 8),
+                              const Text(
                                 'Add Duty',
                                 style: TextStyle(
                                   fontSize: 16,

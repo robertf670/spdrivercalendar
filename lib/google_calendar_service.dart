@@ -265,14 +265,14 @@ class GoogleCalendarService {
             return events.items ?? [];
           } catch (retryError) {
             // Retry failed, re-throw error
-            throw retryError;
+            rethrow;
           }
         } else {
           throw Exception('Authentication refresh failed. Please sign in again.');
         }
       }
       
-      throw e;
+      rethrow;
     }
   }
 
@@ -515,7 +515,7 @@ class GoogleCalendarService {
 
           return await _refreshAuthentication();
         }
-        throw e;
+        rethrow;
       }
     } catch (e) {
 

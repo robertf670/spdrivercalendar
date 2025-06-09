@@ -14,13 +14,13 @@ import '../widgets/work_time_stats_card.dart';
 import '../widgets/break_statistics_card.dart';
 
 enum ShiftType {
-  Early,   // 04:00 - 09:59
-  Relief,  // 10:00 - 13:59
-  Late,    // 14:00 - 18:59
-  Night,   // 19:00 - 03:59
-  Bogey,   // Any duty with X suffix
-  Spare,   // Spare duties
-  UniEuro, // Duties starting with numbers/pattern
+  early,   // 04:00 - 09:59
+  relief,  // 10:00 - 13:59
+  late,    // 14:00 - 18:59
+  night,   // 19:00 - 03:59
+  bogey,   // Any duty with X suffix
+  spare,   // Spare duties
+  uniEuro, // Duties starting with numbers/pattern
 }
 
 class StatisticsScreen extends StatefulWidget {
@@ -771,10 +771,7 @@ class StatisticsScreenState extends State<StatisticsScreen>
         Duration? uniDuration = await _tryLoadUniShiftFromFile(shiftCode, primaryFileName);
         
         // If not found in primary, try fallback
-        if (uniDuration == null) {
-
-           uniDuration = await _tryLoadUniShiftFromFile(shiftCode, fallbackFileName);
-        }
+        uniDuration ??= await _tryLoadUniShiftFromFile(shiftCode, fallbackFileName);
         
         // If found in either file, return the duration
         if (uniDuration != null) {
@@ -1501,7 +1498,7 @@ class StatisticsScreenState extends State<StatisticsScreen>
     
     // Format hour as "HH:00" for display
     return Map.fromEntries(sortedEntries.map((entry) {
-      final hourString = entry.key.toString().padLeft(2, '0') + ":00";
+      final hourString = "${entry.key.toString().padLeft(2, '0')}:00";
       return MapEntry(hourString, entry.value);
     }));
   }

@@ -234,7 +234,7 @@ class UpdateService {
     
     // Limit length for dialog display
     if (formatted.length > 300) {
-      formatted = formatted.substring(0, 300) + '...';
+      formatted = "${formatted.substring(0, 300)}...";
     }
     
     return formatted;

@@ -72,7 +72,7 @@ class EditNoteScreenState extends State<EditNoteScreen> {
           // Save button - Corrected Ternary Structure
           _isSaving
             ? const Padding(
-                padding: EdgeInsets.all(16.0), // Use EdgeInsets.all for consistency
+                padding: const EdgeInsets.all(16.0), // Use EdgeInsets.all for consistency
                 child: Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))),
               )
             : IconButton(

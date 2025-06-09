@@ -46,12 +46,12 @@ class EventService {
             for (var eventData in eventsData) {
                 try {
                     monthEvents.add(Event.fromMap(eventData));
-                } catch (e_map) {
+                } catch (eventMapError) {
                     // Corrected logging for mapping error
                 }
             }
           }
-        } catch (e_parse) {
+        } catch (eventParseError) {
           // Corrected logging for parsing error
         }
       });
@@ -489,10 +489,10 @@ class EventService {
       final Map<String, dynamic> decodedData = jsonDecode(eventsJson);
       List<Event> allEvents = [];
       
-      decodedData.forEach((dateStr, eventsList) {
-        final List<dynamic> eventsData = eventsList;
+      for (final entry in decodedData.entries) {
+        final List<dynamic> eventsData = entry.value;
         allEvents.addAll(eventsData.map((eventData) => Event.fromMap(eventData)));
-      });
+      }
       
       // Filter for events with notes and sort by date
       return allEvents
@@ -522,7 +522,8 @@ class EventService {
       final Map<String, dynamic> decodedJson = jsonDecode(eventsJson);
       // decodedJson is Map<String_dateAsISO_for_event_START_DATE, List_of_eventMaps>
 
-      decodedJson.forEach((dateKeyString, eventsListDynamic) {
+      for (final entry in decodedJson.entries) {
+        final eventsListDynamic = entry.value;
         if (eventsListDynamic is List) {
           for (var eventDataMap in eventsListDynamic) {
             if (eventDataMap is Map<String, dynamic>) {
@@ -550,13 +551,15 @@ class EventService {
             }
           }
         }
-      });
+      }
       // Optional: Count and log number of events loaded for verification
-      int totalEventsInMap = 0;
-      _events.values.forEach((list) => totalEventsInMap += list.length);
       // To avoid counting same event twice if it spans days & is in two lists, count unique IDs
       Set<String> uniqueEventIds = {};
-      _events.values.forEach((list) => list.forEach((event) => uniqueEventIds.add(event.id)));
+      for (final list in _events.values) {
+        for (final event in list) {
+          uniqueEventIds.add(event.id);
+        }
+      }
 
 
     } catch (e) {

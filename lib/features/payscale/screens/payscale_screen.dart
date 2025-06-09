@@ -466,7 +466,7 @@ class HorizontalSplitTableState extends State<HorizontalSplitTable> {
                           ),
                           child: Row(
                             children: List.generate(widget.dataColumnHeaders.length, (colIndex) {
-                              return Container(
+                              return SizedBox(
                                 width: widget.dataColumnWidth,
                                 child: widget.dataCellBuilder(context, rowIndex, colIndex),
                               );
