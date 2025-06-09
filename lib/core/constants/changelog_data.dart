@@ -1,4 +1,22 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.10.1': [
+    {
+      'title': 'Enhanced Event Edit Dialog Layout',
+      'description': 'Fixed inconsistent button layouts in event edit dialogs. View Board button (Zone 4 only) now appears in its own centered row, while Notes and Break Status buttons are consistently centered together for all event types.',
+    },
+    {
+      'title': 'Premium View Board Button Design',
+      'description': 'Transformed the View Board button into an attractive elevated button with custom styling. Features the app\'s primary color, white text/icon, rounded corners, subtle shadow, and a list icon to emphasize this special Zone 4 feature.',
+    },
+    {
+      'title': 'Optimized Dialog Spacing',
+      'description': 'Removed excessive spacing in event edit dialogs that was creating large gaps between action buttons and content sections. Dialogs now have more compact, visually pleasing layouts.',
+    },
+    {
+      'title': 'Visual Polish & Consistency',
+      'description': 'Improved overall visual consistency across event edit dialogs ensuring professional appearance and better user experience with standardized button spacing and alignment.',
+    },
+  ],
   '2.10.0': [
     {
       'title': 'NEW: Zone 4 Dublin Bus Running Boards Integration',

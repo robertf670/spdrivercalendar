@@ -1220,19 +1220,15 @@ class CalendarScreenState extends State<CalendarScreen>
               const Text('What would you like to do with this event?'),
               const SizedBox(height: 8),
               // Action buttons
-              Wrap(
-                alignment: WrapAlignment.center,
-                spacing: 8.0,
-                runSpacing: 8.0,
+              Column(
                 children: [
-                  // First row for View Board button (Zone 4 only)
-                  if (event.title.contains('PZ4/'))
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 8.0),
-                      child: SizedBox(
-                        width: double.infinity,
-                        child: TextButton(
-                          onPressed: () async {
+                  // View Board button (Zone 4 only) - separate row, centered
+                  if (event.title.contains('PZ4/')) ...[
+                                         Row(
+                       mainAxisAlignment: MainAxisAlignment.center,
+                       children: [
+                         ElevatedButton.icon(
+                           onPressed: () async {
                             // Extract duty number from the title (format: PZ4/15 -> 415)
                             final dutyMatch = RegExp(r'PZ4/(\d+)').firstMatch(event.title);
                             if (dutyMatch != null) {
@@ -1505,7 +1501,7 @@ class CalendarScreenState extends State<CalendarScreen>
                                           child: const Text('Close'),
                                         ),
                                       ],
-                                        ),
+                                    ),
                                       ),
                                     ),
                                   );
@@ -1513,124 +1509,52 @@ class CalendarScreenState extends State<CalendarScreen>
                               }
                             }
                           },
-                          child: const Text('View Board'),
+                          icon: const Icon(Icons.view_list, size: 18),
+                          label: const Text('View Board'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.primaryColor,
+                            foregroundColor: Colors.white,
+                            elevation: 2,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          ),
                         ),
-                      ),
+                      ],
                     ),
-                                     // Second row for Notes and Break Status buttons
-                   TextButton(
-                     onPressed: () {
-                       // Close the current dialog first
-                       Navigator.of(context).pop();
-                       // Show the notes dialog
-                       _showNotesDialog(event);
-                     },
-                     child: const Text('Notes'),
-                   ),
-                   // Add Break Status button for eligible duties
-                   if (event.isEligibleForOvertimeTracking) 
-                     TextButton(
-                       onPressed: () {
-                         // Close the current dialog first
-                         Navigator.of(context).pop();
-                         // Show break status dialog
-                         _showBreakStatusDialog(event);
-                       },
-                       child: Text(
-                         event.hasLateBreak ? 'Edit Break Status' : 'Break Status',
-                       ),
-                     ),
-                   // Delete button
-                   TextButton(
-                     style: TextButton.styleFrom(
-                       foregroundColor: Colors.red,
-                     ),
-                     onPressed: () async {
-                       // First close the dialog to make the UI responsive
-                       Navigator.of(context).pop();
-
-                       // Capture ScaffoldMessenger BEFORE the async gap
-                       final scaffoldMessenger = ScaffoldMessenger.of(context);
-                       
-                       // Show a loading indicator that can be dismissed
-                       const snackBar = SnackBar(
-                         content: Row(
-                           children: [
-                             SizedBox(
-                               width: 20,
-                               height: 20,
-                               child: CircularProgressIndicator(
-                                 strokeWidth: 2,
-                                 valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                               ),
-                             ),
-                             SizedBox(width: 12),
-                             Text('Deleting event...'),
-                           ],
-                         ),
-                         duration: Duration(seconds: 3),
-                       );
-                       
-                       // Show the loading snackbar using the captured messenger
-                       scaffoldMessenger.showSnackBar(snackBar);
-                       
-                       // Delete the event from local storage
-                       await EventService.deleteEvent(event);
-                       
-                       // Check if Google Calendar sync is enabled and delete from Google Calendar
-                       final syncEnabled = await StorageService.getBool(AppConstants.syncToGoogleCalendarKey, defaultValue: false);
-                       final isSignedIn = await GoogleCalendarService.isSignedIn();
-                       
-                       if (syncEnabled && isSignedIn) {
-                         try {
-                           // Create a full DateTime for the event's start time
-                           final startDateTime = DateTime(
-                             event.startDate.year,
-                             event.startDate.month,
-                             event.startDate.day,
-                             event.startTime.hour,
-                             event.startTime.minute,
-                           );
-                           
-                           // Delete from Google Calendar
-                           await CalendarTestHelper.deleteEventFromCalendar(
-                             context: context,
-                             title: event.title,
-                             eventStartTime: startDateTime,
-                           );
-                         } catch (e) {
-                           print('Error deleting from Google Calendar: $e');
-                           // Don't show error - the local event was deleted successfully
-                         }
-                       }
-                       
-                       // PRELOAD month data after deletion
-                       if (_selectedDay != null) {
-                         await EventService.preloadMonth(_selectedDay!);
-                       }
-
-                       // Check if widget is still mounted AFTER async operations
-                       if (mounted) {
-                         // Update the UI state immediately after local deletion
-                         setState(() {});
-                         
-                         // Hide the loading indicator using the captured messenger
-                         scaffoldMessenger.hideCurrentSnackBar();
-                         
-                         // Show confirmation of successful local deletion using the captured messenger
-                         scaffoldMessenger.showSnackBar(
-                           const SnackBar(
-                             content: Text('Event deleted'),
-                             duration: Duration(seconds: 2),
-                           ),
-                         );
-                       }
-                     },
-                     child: const Text('Delete'),
-                   ),
-                 ],
+                    const SizedBox(height: 2),
+                  ],
+                  
+                  // Notes and Break Status buttons - always centered together
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      TextButton(
+                        onPressed: () {
+                          // Close the current dialog first
+                          Navigator.of(context).pop();
+                          // Show the notes dialog
+                          _showNotesDialog(event);
+                        },
+                        child: const Text('Notes'),
+                      ),
+                      const SizedBox(width: 16),
+                      // Add Break Status button for eligible duties
+                      if (event.isEligibleForOvertimeTracking) 
+                        TextButton(
+                          onPressed: () {
+                            // Close the current dialog first
+                            Navigator.of(context).pop();
+                            // Show break status dialog
+                            _showBreakStatusDialog(event);
+                          },
+                          child: const Text('Break Status'),
+                        ),
+                    ],
+                  ),
+                ],
               ),
-              const SizedBox(height: 8),
               // Add a divider before the bus selection section
               if (event.isWorkShift && !event.title.startsWith('BusCheck')) ...[
                 const Divider(),
@@ -2151,12 +2075,105 @@ class CalendarScreenState extends State<CalendarScreen>
               // Add Divider before Cancel
               const Divider(height: 1, thickness: 1),
               const SizedBox(height: 8), 
-              // Cancel button at the bottom
-              Center(
-                child: TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Cancel'),
-                ),
+              // Cancel and Delete buttons at the bottom
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  // Delete button (only for non-spare events)
+                  if (!event.title.startsWith('Spare'))
+                    TextButton(
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.red,
+                      ),
+                      onPressed: () async {
+                        // First close the dialog to make the UI responsive
+                        Navigator.of(context).pop();
+
+                        // Capture ScaffoldMessenger BEFORE the async gap
+                        final scaffoldMessenger = ScaffoldMessenger.of(context);
+                        
+                        // Show a loading indicator that can be dismissed
+                        const snackBar = SnackBar(
+                          content: Row(
+                            children: [
+                              SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                ),
+                              ),
+                              SizedBox(width: 12),
+                              Text('Deleting event...'),
+                            ],
+                          ),
+                          duration: Duration(seconds: 3),
+                        );
+                        
+                        // Show the loading snackbar using the captured messenger
+                        scaffoldMessenger.showSnackBar(snackBar);
+                        
+                        // Delete the event from local storage
+                        await EventService.deleteEvent(event);
+                        
+                        // Check if Google Calendar sync is enabled and delete from Google Calendar
+                        final syncEnabled = await StorageService.getBool(AppConstants.syncToGoogleCalendarKey, defaultValue: false);
+                        final isSignedIn = await GoogleCalendarService.isSignedIn();
+                        
+                        if (syncEnabled && isSignedIn) {
+                          try {
+                            // Create a full DateTime for the event's start time
+                            final startDateTime = DateTime(
+                              event.startDate.year,
+                              event.startDate.month,
+                              event.startDate.day,
+                              event.startTime.hour,
+                              event.startTime.minute,
+                            );
+                            
+                            // Delete from Google Calendar
+                            await CalendarTestHelper.deleteEventFromCalendar(
+                              context: context,
+                              title: event.title,
+                              eventStartTime: startDateTime,
+                            );
+                          } catch (e) {
+                            print('Error deleting from Google Calendar: $e');
+                            // Don't show error - the local event was deleted successfully
+                          }
+                        }
+                        
+                        // PRELOAD month data after deletion
+                        if (_selectedDay != null) {
+                          await EventService.preloadMonth(_selectedDay!);
+                        }
+
+                        // Check if widget is still mounted AFTER async operations
+                        if (mounted) {
+                          // Update the UI state immediately after local deletion
+                          setState(() {});
+                          
+                          // Hide the loading indicator using the captured messenger
+                          scaffoldMessenger.hideCurrentSnackBar();
+                          
+                          // Show confirmation of successful local deletion using the captured messenger
+                          scaffoldMessenger.showSnackBar(
+                            const SnackBar(
+                              content: Text('Event deleted'),
+                              duration: Duration(seconds: 2),
+                            ),
+                          );
+                        }
+                      },
+                      child: const Text('Delete'),
+                    ),
+                  // Cancel button
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text('Cancel'),
+                  ),
+                ],
               ),
             ],
           ),
