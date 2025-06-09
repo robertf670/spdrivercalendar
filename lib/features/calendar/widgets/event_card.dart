@@ -1883,11 +1883,11 @@ class _EventCardState extends State<EventCard> {
                       // Close the dialog
                       Navigator.of(dialogContext).pop();
                       
-                      // Load the duty details immediately
-                      await _loadAssignedDutyDetails();
-                      
-                      // Refresh the UI
+                      // Load the duty details and refresh UI safely
                       if (mounted) {
+                        await _loadAssignedDutyDetails();
+                        
+                        // Refresh the UI (widget.onEdit is safe since it's a widget callback)
                         setState(() {});
                         // Notify parent to rebuild without showing edit dialog
                         widget.onEdit(Event(
@@ -1988,12 +1988,12 @@ class _EventCardState extends State<EventCard> {
                       child: Column(
                         children: [
                           Row(
-                            children: [
-                              const Icon(Icons.add_circle_outline, color: AppTheme.primaryColor, size: 20),
-                              const SizedBox(width: 8),
+                            children: const [
+                              Icon(Icons.add_circle_outline, color: AppTheme.primaryColor, size: 20),
+                              SizedBox(width: 8),
                               Text(
                                 'Add Duty',
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w600,
                                   color: AppTheme.primaryColor,
@@ -2331,11 +2331,7 @@ class _EventCardState extends State<EventCard> {
                                    onPressed: () async {
                                      await _showDutyBusAssignmentDialog(context, duty['dutyCode'] ?? '');
                                    },
-                                 child: const Icon(
-                                   Icons.add,
-                                   size: 14,
-                                 ),
-                                 style: ElevatedButton.styleFrom(
+                                                                    style: ElevatedButton.styleFrom(
                                    backgroundColor: AppTheme.primaryColor,
                                    foregroundColor: Colors.white,
                                    padding: const EdgeInsets.all(8),
@@ -2344,6 +2340,10 @@ class _EventCardState extends State<EventCard> {
                                    shape: RoundedRectangleBorder(
                                      borderRadius: BorderRadius.circular(6),
                                    ),
+                                 ),
+                                 child: const Icon(
+                                   Icons.add,
+                                   size: 14,
                                  ),
                                ),
                              ],
@@ -2366,11 +2366,11 @@ class _EventCardState extends State<EventCard> {
                 final shouldDelete = await showDialog<bool>(
                   context: context,
                   builder: (context) => AlertDialog(
-                       title: Row(
+                       title: const Row(
                          children: [
                            Icon(Icons.warning_amber, color: Colors.red, size: 24),
-                           const SizedBox(width: 8),
-                           const Text('Delete Event'),
+                           SizedBox(width: 8),
+                           Text('Delete Event'),
                          ],
                        ),
                        content: const Text('Are you sure you want to delete this spare event? This action cannot be undone.'),
@@ -2392,11 +2392,14 @@ class _EventCardState extends State<EventCard> {
                 );
 
                 if (shouldDelete == true) {
+                  // Capture navigator before async operation
+                  final navigator = Navigator.of(context);
+                  
                   // Delete the event
                   await EventService.deleteEvent(widget.event);
                   
                   // Close the dialog
-                  Navigator.of(context).pop();
+                  navigator.pop();
                   
                   // Notify parent to rebuild
                   widget.onEdit(widget.event);
@@ -2605,8 +2608,9 @@ class _EventCardState extends State<EventCard> {
           if (widget.event.getBusForDuty(dutyCode) != null)
             TextButton(
               onPressed: () async {
+                final navigator = Navigator.of(dialogContext);
                 await _updateDutyBus(dutyCode, null);
-                Navigator.of(dialogContext).pop();
+                navigator.pop();
               },
               style: TextButton.styleFrom(foregroundColor: Colors.red),
               child: const Text('Remove Bus'),
@@ -2618,8 +2622,9 @@ class _EventCardState extends State<EventCard> {
               // Remove any spaces
               normalizedBusNumber = normalizedBusNumber?.replaceAll(' ', '');
               
+              final navigator = Navigator.of(dialogContext);
               await _updateDutyBus(dutyCode, normalizedBusNumber?.isEmpty == true ? null : normalizedBusNumber);
-              Navigator.of(dialogContext).pop();
+              navigator.pop();
             },
             child: const Text('Assign'),
           ),

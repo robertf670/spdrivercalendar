@@ -7,6 +7,9 @@ class ContactsPage extends StatelessWidget {
 
   // Helper function to launch phone calls
   Future<void> _launchPhoneCall(String phoneNumber, BuildContext context) async {
+    // Capture ScaffoldMessenger before async operations
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    
     // Remove spaces and non-digit characters for the tel: URI
     final Uri phoneUri = Uri(scheme: 'tel', path: phoneNumber.replaceAll(RegExp(r'\s+'), ''));
     try {
@@ -14,7 +17,7 @@ class ContactsPage extends StatelessWidget {
         await launchUrl(phoneUri);
       } else {
         // Show error if the phone app can't be launched
-        ScaffoldMessenger.of(context).showSnackBar(
+        scaffoldMessenger.showSnackBar(
           SnackBar(
             content: Text('Could not launch phone call to $phoneNumber'),
             backgroundColor: Colors.red,
@@ -23,7 +26,7 @@ class ContactsPage extends StatelessWidget {
       }
     } catch (e) {
       // Catch any other errors during launch
-      ScaffoldMessenger.of(context).showSnackBar(
+      scaffoldMessenger.showSnackBar(
         SnackBar(
           content: Text('Error launching phone call: $e'),
           backgroundColor: Colors.red,

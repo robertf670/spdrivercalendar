@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:intl/intl.dart';
 import 'package:spdrivercalendar/core/constants/app_constants.dart';
@@ -22,8 +23,7 @@ import 'package:spdrivercalendar/google_calendar_service.dart';
 import 'package:flutter/services.dart'; // For rootBundle
 import 'dart:math' as math;
 import 'package:spdrivercalendar/features/calendar/services/shift_service.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:convert';
+
 import 'package:spdrivercalendar/services/rest_days_service.dart'; // Added import
 import 'package:spdrivercalendar/features/contacts/contacts_page.dart'; // Add this line
 import 'package:spdrivercalendar/core/services/cache_service.dart'; // Added import
@@ -54,7 +54,6 @@ class CalendarScreenState extends State<CalendarScreen>
   DateTime? _startDate;
   int _startWeek = 0;
   int _selectedYear = DateTime.now().year; // Add this line
-  Map<DateTime, List<Event>> _events = {};
   List<BankHoliday>? _bankHolidays;
   List<Holiday> _holidays = [];
   late AnimationController _animationController;
@@ -97,7 +96,7 @@ class CalendarScreenState extends State<CalendarScreen>
     
     // Initialize with current month's events with error handling
     _initializeCurrentMonth().catchError((error) {
-      print('Error initializing current month: $error');
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -124,11 +123,11 @@ class CalendarScreenState extends State<CalendarScreen>
 
   Future<void> _checkForAutomaticUpdates() async {
     try {
-      print('[AutoUpdate] Checking for updates on calendar screen startup...');
+
       final updateInfo = await UpdateService.checkForUpdate(forceCheck: true);
       
       if (updateInfo != null && updateInfo.hasUpdate && mounted) {
-        print('[AutoUpdate] Update found: ${updateInfo.latestVersion}');
+
         
         await showDialog(
           context: context,
@@ -136,10 +135,14 @@ class CalendarScreenState extends State<CalendarScreen>
           builder: (context) => EnhancedUpdateDialog(updateInfo: updateInfo),
         );
       } else {
-        print('[AutoUpdate] No updates available');
+
       }
     } catch (e) {
-      print('[AutoUpdate] Error checking for updates on startup: $e');
+      // Silently handle update check failures - don't interrupt user experience
+      // Log error for debugging if needed in development
+      if (kDebugMode) {
+        debugPrint('Auto-update check failed: $e');
+      }
     }
   }
 
@@ -203,7 +206,7 @@ class CalendarScreenState extends State<CalendarScreen>
 
   Future<void> _loadSettings() async {
     final startDateString = await StorageService.getString(AppConstants.startDateKey);
-    final startWeek = await StorageService.getInt(AppConstants.startWeekKey) ?? 0;
+    final startWeek = await StorageService.getInt(AppConstants.startWeekKey);
     
     setState(() {
       if (startDateString != null) {
@@ -271,11 +274,14 @@ class CalendarScreenState extends State<CalendarScreen>
                         // Automatically set the start date to the Sunday of the current week
                         _startDate = RosterService.getSundayOfCurrentWeek();
                         
+                        final navigator = Navigator.of(context);
                         await _saveSettings();
-                        Navigator.of(context).pop();
+                        navigator.pop();
                         
                         // Force a rebuild to show the updated calendar
-                        this.setState(() {});
+                        if (mounted) {
+                          setState(() {});
+                        }
                       },
                       child: const Text('Save'),
                     ),
@@ -371,7 +377,7 @@ class CalendarScreenState extends State<CalendarScreen>
               Container(
                 padding: const EdgeInsets.all(10.0),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surfaceVariant.withValues(alpha: 0.5),
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
                   borderRadius: BorderRadius.circular(6.0),
                 ),
                 child: Row(
@@ -511,7 +517,7 @@ class CalendarScreenState extends State<CalendarScreen>
                     }
                   }
                 } catch (e) {
-                  print('Error loading UNI_7DAYs.csv: $e');
+          // Debug statement removed
                 }
                 
                 // On weekdays, also load from UNI_M-F.csv
@@ -530,7 +536,7 @@ class CalendarScreenState extends State<CalendarScreen>
                       }
                     }
                   } catch (e) {
-                    print('Error loading UNI_M-F.csv: $e');
+          // Debug statement removed
                   }
                 }
                 
@@ -579,7 +585,7 @@ class CalendarScreenState extends State<CalendarScreen>
                   }
                 } catch (e) {
                   shiftNumbers = [];
-                  print('Error loading shifts for Bus Check: $e');
+          // Debug statement removed
                 }
               } else if (selectedZone == 'Jamestown Road') {
                 // Only allow Monday-Friday for Jamestown Road shifts
@@ -610,7 +616,7 @@ class CalendarScreenState extends State<CalendarScreen>
                     }
                   } catch (e) {
                     shiftNumbers = [];
-                    print('Error loading shifts for Jamestown Road: $e');
+          // Debug statement removed
                   }
                 }
               } else {
@@ -640,7 +646,7 @@ class CalendarScreenState extends State<CalendarScreen>
                   }
                 } catch (e) {
                   shiftNumbers = [];
-                  print('Error loading shifts for $filename: $e');
+          // Debug statement removed
                 }
               }
               
@@ -649,7 +655,7 @@ class CalendarScreenState extends State<CalendarScreen>
                 selectedShiftNumber = shiftNumbers[0];
               }
             } catch (e) {
-              print('Error loading shift numbers: $e');
+          // Debug statement removed
               shiftNumbers = [];
             } finally {
             setState(() {
@@ -802,7 +808,7 @@ class CalendarScreenState extends State<CalendarScreen>
                       
                       // Handle potential null shiftTimes (error loading CSV etc.)
                       if (shiftTimes == null) {
-                         print('Error: Could not retrieve shift times for $selectedZone - $selectedShiftNumber');
+                         // Could not retrieve shift times
                           ScaffoldMessenger.of(dialogContext).showSnackBar(
                             const SnackBar(content: Text('Error retrieving shift times. Please try again.')),
                           );
@@ -825,8 +831,10 @@ class CalendarScreenState extends State<CalendarScreen>
                       await EventService.addEvent(event);
                       Navigator.of(dialogContext).pop();
                       
-                      // Sync to Google if enabled
-                      _checkAndSyncToGoogleCalendar(event, context);
+                      // Sync to Google if enabled (before any other async operations)
+                      if (mounted) {
+                        _checkAndSyncToGoogleCalendar(event, context);
+                      }
                       
                       // Force UI refresh immediately after adding an event
                       if (mounted) {
@@ -834,7 +842,7 @@ class CalendarScreenState extends State<CalendarScreen>
                         await EventService.preloadMonth(_focusedDay);
                         
                         // Update state to show the new event immediately
-                        this.setState(() {});
+                        setState(() {});
                       }
                     },
                 child: const Text('Add Shift'),
@@ -848,7 +856,7 @@ class CalendarScreenState extends State<CalendarScreen>
 
   // Get shift times from CSV file
   Future<Map<String, dynamic>?> _getShiftTimes(String zone, String shiftNumber, DateTime shiftDate) async { // Return type changed to nullable
-    print('Getting shift times for zone: $zone, shift: $shiftNumber, date: $shiftDate');
+          // Getting shift times
 
     // RosterService handles Bank Holidays internally by returning 'Sunday'
     final dayOfWeek = RosterService.getDayOfWeek(shiftDate);
@@ -891,7 +899,7 @@ class CalendarScreenState extends State<CalendarScreen>
       // For PZ shifts, we don't need currentDayType as we match shift code directly
     }
 
-    print('Loading CSV(s) for $zone: $csvPath (and potentially others for Uni/Euro)');
+    // Loading CSV files for zone
 
     try {
        // --- Handle Uni/Euro Separately (Needs multiple file checks) --- 
@@ -910,7 +918,7 @@ class CalendarScreenState extends State<CalendarScreen>
                     if (line.trim().isEmpty) continue;
                     final parts = line.split(',');
                     if (parts.length >= 5 && parts[0].trim() == shiftNumber) {
-                        print('Found Uni/Euro shift in $filePath');
+          // Debug statement removed
                         
                         // Include all duties for _getShiftTimes (filtering handled in dialog loading)
                         final startTimeRaw = parts[1].trim();
@@ -929,19 +937,19 @@ class CalendarScreenState extends State<CalendarScreen>
                                   'isNextDay': isNextDay,
                               };
                           } else {
-                             print('Error parsing Uni/Euro times: $startTimeRaw, $endTimeRaw');
+          // Debug statement removed
                           }
                         } else {
-                           print('Empty Uni/Euro times found for $shiftNumber in $filePath');
+          // Debug statement removed
                         }
                     }
                 }
             } catch (e) {
-                print("Error reading or parsing $filePath: $e");
+          // Debug statement removed
                 // Continue to next file if one fails
             }
          }
-         print('Uni/Euro shift $shiftNumber not found in applicable files.');
+          // Debug statement removed
          return null; // Not found after checking relevant files
        }
 
@@ -963,21 +971,21 @@ class CalendarScreenState extends State<CalendarScreen>
             final csvDayType = parts[1].trim();
             
             if (csvShiftCode == shiftNumber && csvDayType == currentDayType) {
-              print('Found matching Bus Check shift');
+          // Debug statement removed
               final startTime = _parseTimeOfDay(parts[2].trim());
               final endTime = _parseTimeOfDay(parts[3].trim());
 
               if (startTime != null && endTime != null) {
                  final isNextDay = endTime.hour < startTime.hour || 
                                    (endTime.hour == startTime.hour && endTime.minute < startTime.minute);
-                 print('Parsed Bus Check times - Start: ${startTime.hour}:${startTime.minute}, End: ${endTime.hour}:${endTime.minute}, Next Day: $isNextDay');
+          // Debug statement removed
                  return {
                    'startTime': startTime,
                    'endTime': endTime,
                    'isNextDay': isNextDay,
                  };
               } else {
-                 print('Error parsing Bus Check times for $shiftNumber: ${parts[2]}, ${parts[3]}');
+          // Debug statement removed
               }
             }
           }
@@ -989,21 +997,21 @@ class CalendarScreenState extends State<CalendarScreen>
             final csvShiftCode = parts[0].trim();
             
             if (csvShiftCode == shiftNumber) {
-              print('Found matching Jamestown Road shift');
+          // Debug statement removed
               final startTime = _parseTimeOfDay(parts[2].trim()); // Report time
               final endTime = _parseTimeOfDay(parts[10].trim()); // Finish time
 
               if (startTime != null && endTime != null) {
                  final isNextDay = endTime.hour < startTime.hour || 
                                    (endTime.hour == startTime.hour && endTime.minute < startTime.minute);
-                 print('Parsed Jamestown Road times - Start: ${startTime.hour}:${startTime.minute}, End: ${endTime.hour}:${endTime.minute}, Next Day: $isNextDay');
+          // Debug statement removed
                  return {
                    'startTime': startTime,
                    'endTime': endTime,
                    'isNextDay': isNextDay,
                  };
               } else {
-                 print('Error parsing Jamestown Road times for $shiftNumber: ${parts[2]}, ${parts[10]}');
+          // Debug statement removed
               }
             }
           }
@@ -1015,7 +1023,7 @@ class CalendarScreenState extends State<CalendarScreen>
              final csvShiftCode = parts[0].trim();
              // No need to normalize PZ codes if shiftNumber is passed correctly (e.g. PZ1/01)
              if (csvShiftCode == shiftNumber) {
-                print('Found matching PZ shift code');
+          // Debug statement removed
                 
                 // Include all duties for _getShiftTimes (filtering handled in dialog loading)
                 final startTime = _parseTimeOfDay(parts[2].trim()); // Report time
@@ -1024,26 +1032,26 @@ class CalendarScreenState extends State<CalendarScreen>
                 if (startTime != null && endTime != null) {
                     final isNextDay = endTime.hour < startTime.hour || 
                                       (endTime.hour == startTime.hour && endTime.minute < startTime.minute);
-                    print('Parsed PZ times - Start: ${startTime.hour}:${startTime.minute}, End: ${endTime.hour}:${endTime.minute}, Next Day: $isNextDay');
+          // Debug statement removed
                     return {
                       'startTime': startTime,
                       'endTime': endTime,
                       'isNextDay': isNextDay,
                     };
                       } else {
-                   print('Error parsing PZ times for $shiftNumber: ${parts[2]}, ${parts[12]}');
+          // Debug statement removed
                 }
              }
           }
         }
       }
     } catch (e) {
-      print('Error loading or parsing CSV file ($csvPath): $e');
+              // Error loading or parsing CSV file
        return null; // Return null on error
     }
 
     // No match found or error occurred
-    print('No matching shift found or error occurred for $zone / $shiftNumber, returning null');
+          // Debug statement removed
     return null; // Return null if no match found
   }
   
@@ -1060,21 +1068,29 @@ class CalendarScreenState extends State<CalendarScreen>
         }
       }
     } catch (e) {
-      print("Error parsing time string '$timeString': $e");
+          // Debug statement removed
     }
     return null;
   }
 
   // Helper to check settings and sync to Google Calendar if enabled
   Future<void> _checkAndSyncToGoogleCalendar(Event event, BuildContext context) async {
+    // Capture context dependencies before any async operations
+    final scaffoldMessenger = mounted ? ScaffoldMessenger.of(context) : null;
+    
+    // Format break times before any async operations
+    String? formattedBreakStart;
+    String? formattedBreakEnd;
+    if (event.breakStartTime != null && event.breakEndTime != null && mounted) {
+      formattedBreakStart = event.breakStartTime!.format(context);
+      formattedBreakEnd = event.breakEndTime!.format(context);
+    }
+    
     // Check if Google Calendar sync is enabled
     final syncEnabled = await StorageService.getBool(AppConstants.syncToGoogleCalendarKey, defaultValue: false);
     final isSignedIn = await GoogleCalendarService.isSignedIn();
     
-    // print('[Sync Debug] Checking sync for event: ${event.title} on ${event.startDate.toIso8601String()}'); // Debug -- Removed
-    
     if (syncEnabled && isSignedIn) {
-      // print('[Sync Debug] Sync enabled and user signed in.'); // Debug -- Removed
       try {
         // Convert to full DateTime objects for Google Calendar
         final startDateTime = DateTime(
@@ -1095,36 +1111,22 @@ class CalendarScreenState extends State<CalendarScreen>
 
         // Get break information
         final breakTime = await ShiftService.getBreakTime(event);
-        final breakStartTime = event.breakStartTime;
-        final breakEndTime = event.breakEndTime;
-        
-        print('[Sync Debug] Break time retrieved: "$breakTime"');
-        print('[Sync Debug] Event break start: $breakStartTime');
-        print('[Sync Debug] Event break end: $breakEndTime');
         
         // Build description with all break information
         String description = ''; // Initialize as empty string
         if (breakTime != null) {
           description = 'Break: $breakTime';
-          if (breakStartTime != null && breakEndTime != null) {
-            // Ensure context is still valid before using it
-            if (context.mounted) {
-              description += '\nBreak Time: ${breakStartTime.format(context)} - ${breakEndTime.format(context)}';
-            }
+          if (formattedBreakStart != null && formattedBreakEnd != null) {
+            // Use pre-formatted break times
+            description += '\nBreak Time: $formattedBreakStart - $formattedBreakEnd';
           }
         }
         
-        print('[Sync Debug] Initial description: "$description"');
-        
         // Check if it's a rest day using RosterService
-        // final normalizedDate = DateTime(event.startDate.year, event.startDate.month, event.startDate.day); // Not needed anymore
-        // final bool isRest = RestDaysService.isRestDay(normalizedDate); // Replaced with RosterService check
         final String shiftType = getShiftForDate(event.startDate); // Use existing screen method
         final bool isRest = shiftType == 'R';
-        print('[Sync Debug] Is Rest Day based on Roster ($shiftType)? $isRest');
         
         if (isRest) {
-          print('[Sync Debug] Appending rest day info.');
           if (description.isNotEmpty) {
             description += '\n(Working on Rest Day)';
           } else {
@@ -1132,12 +1134,8 @@ class CalendarScreenState extends State<CalendarScreen>
           }
         }
         
-        print('[Sync Debug] Final description before check: "$description"');
-        
         // Handle case where description might still be empty
         final finalDescription = description.isEmpty ? null : description;
-        
-        print('[Sync Debug] Final description passed to helper: "$finalDescription"');
         
         // Add to Google Calendar
         final success = await CalendarTestHelper.addWorkShiftToCalendar(
@@ -1148,14 +1146,13 @@ class CalendarScreenState extends State<CalendarScreen>
           description: finalDescription, // Use the updated description
         );
         
-        // Ensure context is still valid before showing SnackBar
-        if (success && context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
+        // Use captured messenger to show result
+        if (success && scaffoldMessenger != null) {
+          scaffoldMessenger.showSnackBar(
             const SnackBar(content: Text('Shift added to Google Calendar')),
           );
         }
       } catch (e) {
-        print('Error adding to Google Calendar: $e');
         // Don't show error - the local event was added successfully
       }
     }
@@ -1241,9 +1238,9 @@ class CalendarScreenState extends State<CalendarScreen>
                               Navigator.of(context).pop();
                               
                               // Parse and show the board data
-                              if (context.mounted) {
+                              if (mounted) {
                                 final boardData = await _parseDutyFromBoard(dutyNumber, event.startDate);
-                                if (context.mounted) {
+                                if (mounted) {
                                   showDialog(
                                     context: context,
                                     builder: (context) => Center(
@@ -1277,7 +1274,7 @@ class CalendarScreenState extends State<CalendarScreen>
                                                                                                                                                   Text(
                                                   'Information on these boards may not be accurate. The boards files sometimes have errors. This View Boards feature is currently in testing.',
                                                   style: TextStyle(
-                                                    fontSize: math.max(10, MediaQuery.of(context).textScaleFactor * 10),
+                                                    fontSize: math.max(10, MediaQuery.of(context).textScaler.scale(10)),
                                                     fontStyle: FontStyle.italic,
                                                     color: Colors.orange[700],
                                                   ),
@@ -1307,7 +1304,6 @@ class CalendarScreenState extends State<CalendarScreen>
                                                       children: boardData.asMap().entries.map((entry) {
                                                         final index = entry.key;
                                                         final section = entry.value;
-                                                        final isLast = index == boardData.length - 1;
                                                         
                                                         return Container(
                                                           margin: const EdgeInsets.only(bottom: 16),
@@ -1322,9 +1318,9 @@ class CalendarScreenState extends State<CalendarScreen>
                                                                 Container(
                                                                   width: double.infinity,
                                                                   padding: const EdgeInsets.all(16),
-                                                                  decoration: BoxDecoration(
+                                                                  decoration: const BoxDecoration(
                                                                     color: AppTheme.primaryColor,
-                                                                    borderRadius: const BorderRadius.only(
+                                                                    borderRadius: BorderRadius.only(
                                                                       topLeft: Radius.circular(12),
                                                                       topRight: Radius.circular(12),
                                                                     ),
@@ -1334,7 +1330,7 @@ class CalendarScreenState extends State<CalendarScreen>
                                                                       Container(
                                                                         padding: const EdgeInsets.all(6),
                                                                         decoration: BoxDecoration(
-                                                                          color: Colors.white.withOpacity(0.2),
+                                                                          color: Colors.white.withValues(alpha: 0.2),
                                                                           borderRadius: BorderRadius.circular(6),
                                                                         ),
                                                                         child: Text(
@@ -1390,10 +1386,10 @@ class CalendarScreenState extends State<CalendarScreen>
                                                                         margin: const EdgeInsets.only(bottom: 8),
                                                                         padding: const EdgeInsets.all(12),
                                                                         decoration: BoxDecoration(
-                                                                          color: iconColor.withOpacity(0.05),
+                                                                          color: iconColor.withValues(alpha: 0.05),
                                                                           borderRadius: BorderRadius.circular(8),
                                                                           border: Border.all(
-                                                                            color: iconColor.withOpacity(0.1),
+                                                                            color: iconColor.withValues(alpha: 0.1),
                                                                           ),
                                                                         ),
                                                                         child: Row(
@@ -1430,13 +1426,13 @@ class CalendarScreenState extends State<CalendarScreen>
                                                                     decoration: BoxDecoration(
                                                                       gradient: LinearGradient(
                                                                         colors: [
-                                                                          Colors.blue.withOpacity(0.1),
-                                                                          Colors.blue.withOpacity(0.05),
+                                                                          Colors.blue.withValues(alpha: 0.1),
+                                                                          Colors.blue.withValues(alpha: 0.05),
                                                                         ],
                                                                       ),
                                                                       borderRadius: BorderRadius.circular(8),
                                                                       border: Border.all(
-                                                                        color: Colors.blue.withOpacity(0.2),
+                                                                        color: Colors.blue.withValues(alpha: 0.2),
                                                                       ),
                                                                     ),
                                                                     child: Row(
@@ -2139,7 +2135,7 @@ class CalendarScreenState extends State<CalendarScreen>
                               eventStartTime: startDateTime,
                             );
                           } catch (e) {
-                            print('Error deleting from Google Calendar: $e');
+          // Debug statement removed
                             // Don't show error - the local event was deleted successfully
                           }
                         }
@@ -2224,7 +2220,7 @@ class CalendarScreenState extends State<CalendarScreen>
       try {
         boardContent = await rootBundle.loadString('assets/$boardFileName');
       } catch (e) {
-        print('Error loading $boardFileName: $e');
+          // Debug statement removed
         // Try to load as bytes and handle different encodings
         try {
           final bytes = await rootBundle.load('assets/$boardFileName');
@@ -2233,7 +2229,7 @@ class CalendarScreenState extends State<CalendarScreen>
           // Check for UTF-16 BOM (Byte Order Mark)
           if (byteData.length >= 2 && byteData[0] == 0xFF && byteData[1] == 0xFE) {
             // UTF-16 LE (Little Endian)
-            print('Detected UTF-16 LE encoding for $boardFileName');
+          // Debug statement removed
             final utf16Bytes = byteData.sublist(2); // Skip BOM
             final codeUnits = <int>[];
             for (int i = 0; i < utf16Bytes.length; i += 2) {
@@ -2245,7 +2241,7 @@ class CalendarScreenState extends State<CalendarScreen>
             boardContent = String.fromCharCodes(codeUnits);
           } else if (byteData.length >= 2 && byteData[0] == 0xFE && byteData[1] == 0xFF) {
             // UTF-16 BE (Big Endian)
-            print('Detected UTF-16 BE encoding for $boardFileName');
+          // Debug statement removed
             final utf16Bytes = byteData.sublist(2); // Skip BOM
             final codeUnits = <int>[];
             for (int i = 0; i < utf16Bytes.length; i += 2) {
@@ -2259,9 +2255,9 @@ class CalendarScreenState extends State<CalendarScreen>
             // Fallback to simple byte conversion for other encodings
             boardContent = String.fromCharCodes(byteData);
           }
-          print('Successfully loaded $boardFileName using encoding detection');
+          // Debug statement removed
         } catch (e2) {
-          print('Failed to load $boardFileName even with encoding detection: $e2');
+          // Debug statement removed
           return [];
         }
       }
@@ -2275,13 +2271,13 @@ class CalendarScreenState extends State<CalendarScreen>
       String? currentHeader;
       String? handoverInfo;
       
-             print('Looking for duty: $dutyNumber in $boardFileName');
-       print('Total lines in file: ${lines.length}');
+          // Debug statement removed
+          // Debug statement removed
        
        // Debug: Show first few lines to see if content is corrupted
-       print('First 10 lines of file:');
+          // Debug statement removed
        for (int i = 0; i < math.min(10, lines.length); i++) {
-         print('Line $i: "${lines[i]}"');
+          // Debug statement removed
        }
        
        // First, let's see what duties are actually in the file
@@ -2294,7 +2290,7 @@ class CalendarScreenState extends State<CalendarScreen>
            }
          }
        }
-       print('Duties found in file: ${foundDuties.toSet().toList()}');
+       // Duties found in file
        
        for (int i = 0; i < lines.length; i++) {
          final line = lines[i].trim();
@@ -2310,7 +2306,7 @@ class CalendarScreenState extends State<CalendarScreen>
          
          // Check if this line starts our duty
          if (line.startsWith('Duty $dutyNumber ')) {
-           print('Found duty $dutyNumber at line $i: $line');
+          // Debug statement removed
           // Save previous duty section if we were in one
           if (inDutySection && currentHeader != null) {
             dutyData.add({
@@ -2393,7 +2389,7 @@ class CalendarScreenState extends State<CalendarScreen>
       
       return dutyData;
     } catch (e) {
-      print('Error parsing duty from board: $e');
+          // Debug statement removed
       return [];
     }
   }
@@ -2510,10 +2506,10 @@ class CalendarScreenState extends State<CalendarScreen>
       context: context,
       builder: (context) => AlertDialog(
         title: Row(
-          children: [
+          children: const [
             Icon(Icons.access_time, color: AppTheme.primaryColor),
-            const SizedBox(width: 8),
-            const Text('Break Status'),
+            SizedBox(width: 8),
+            Text('Break Status'),
           ],
         ),
         content: Column(
@@ -2563,7 +2559,7 @@ class CalendarScreenState extends State<CalendarScreen>
             ],
             const Text(
               'Select an option for late break:',
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 14,
               ),
             ),
@@ -2715,10 +2711,10 @@ class CalendarScreenState extends State<CalendarScreen>
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
           title: Row(
-            children: [
+            children: const [
               Icon(Icons.monetization_on, color: Colors.orange),
-              const SizedBox(width: 8),
-              const Text('Select Overtime'),
+              SizedBox(width: 8),
+              Text('Select Overtime'),
             ],
           ),
           content: Column(
@@ -2727,7 +2723,7 @@ class CalendarScreenState extends State<CalendarScreen>
             children: [
               const Text(
                 'Select overtime duration:',
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 14,
                 ),
               ),
@@ -3405,9 +3401,6 @@ class CalendarScreenState extends State<CalendarScreen>
               )
             : Column(
                 children: events.map((event) {
-                  // Determine if the shift is spare
-                  final isSpareShift = event.title.startsWith('SP');
-                  
                   return EventCard(
                     event: event,
                     shiftType: getShiftForDate(event.startDate),
@@ -4102,52 +4095,7 @@ class CalendarScreenState extends State<CalendarScreen>
     setState(() {});
   }
 
-  void _showHolidayDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Add Holiday'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.ac_unit, color: Colors.blue),
-              title: const Text('Winter Holiday'),
-              subtitle: const Text('Add a week of winter holiday'),
-              onTap: () {
-                Navigator.pop(context);
-                _showWinterHolidayDateDialog();
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.wb_sunny, color: Colors.orange),
-              title: const Text('Summer Holiday'),
-              subtitle: const Text('Add two weeks of summer holiday'),
-              onTap: () {
-                Navigator.pop(context);
-                _showSummerHolidayDateDialog();
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.event, color: Colors.green),
-              title: const Text('Other Holiday'),
-              subtitle: const Text('Add a single day holiday'),
-              onTap: () {
-                Navigator.pop(context);
-                _showOtherHolidayDialog();
-              },
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-        ],
-      ),
-    );
-  }
+
 
   void _showOtherHolidayDialog() {
     DateTime selectedDate = DateTime.now();
@@ -4266,40 +4214,13 @@ class CalendarScreenState extends State<CalendarScreen>
     );
   }
 
-  void _addHoliday(Holiday holiday) {
-    setState(() {
-      _holidays.add(holiday);
-    });
-    _saveHolidays();
-  }
 
-  void _removeHoliday(Holiday holiday) {
-    setState(() {
-      _holidays.removeWhere((h) => h.id == holiday.id);
-    });
-    _saveHolidays();
-  }
 
-  void _saveHolidays() {
-    final prefs = SharedPreferences.getInstance();
-    prefs.then((prefs) {
-      final holidaysJson = _holidays.map((h) => h.toJson()).toList();
-      prefs.setString('holidays', jsonEncode(holidaysJson));
-    });
-  }
 
-  void _loadHolidays() {
-    final prefs = SharedPreferences.getInstance();
-    prefs.then((prefs) {
-      final holidaysJson = prefs.getString('holidays');
-      if (holidaysJson != null) {
-        final List<dynamic> decoded = jsonDecode(holidaysJson);
-        setState(() {
-          _holidays = decoded.map((json) => Holiday.fromJson(json)).toList();
-        });
-      }
-    });
-  }
+
+
+
+
 
   void _showContactsPage() { // Add this method
     Navigator.of(context).push(
@@ -4350,104 +4271,7 @@ class CalendarScreenState extends State<CalendarScreen>
   }
   // --- END NEW PAYSCALE FUNCTION ---
 
-  // --- ADD NEW FUNCTION TO HANDLE SPARE EVENT DELETION ---
-  Future<void> _deleteSpareEvent(Event event) async {
-    final shouldDelete = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Spare Event?'),
-        content: Text('Are you sure you want to delete the spare event "${event.title}" on ${DateFormat('dd/MM/yyyy').format(event.startDate)}?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
-    );
 
-    if (shouldDelete == true && mounted) {
-      // Capture ScaffoldMessenger BEFORE the async gap
-      final scaffoldMessenger = ScaffoldMessenger.of(context);
-      
-      // Show loading indicator
-      const snackBar = SnackBar(
-        content: Row(
-          children: [
-            SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-              ),
-            ),
-            SizedBox(width: 12),
-            Text('Deleting event...'),
-          ],
-        ),
-        duration: Duration(seconds: 3), // Adjust as needed
-      );
-      scaffoldMessenger.showSnackBar(snackBar);
-
-      try {
-        // Delete from local storage
-        await EventService.deleteEvent(event);
-
-        // Optionally delete from Google Calendar if sync enabled
-        final syncEnabled = await StorageService.getBool(AppConstants.syncToGoogleCalendarKey, defaultValue: false);
-        final isSignedIn = await GoogleCalendarService.isSignedIn();
-        if (syncEnabled && isSignedIn) {
-          try {
-            final startDateTime = DateTime(
-              event.startDate.year, event.startDate.month, event.startDate.day,
-              event.startTime.hour, event.startTime.minute,
-            );
-            // Assuming CalendarTestHelper might need context, but check its implementation.
-            // If it doesn't, remove context argument below.
-            await CalendarTestHelper.deleteEventFromCalendar(
-              context: context, // CHECK IF NEEDED
-              title: event.title,
-              eventStartTime: startDateTime,
-            );
-          } catch (e) {
-            print('Error deleting spare event from Google Calendar: $e');
-            // Optionally show a less intrusive error if Google sync fails
-          }
-        }
-        
-        // PRELOAD month data after deletion
-        if (_selectedDay != null) {
-          await EventService.preloadMonth(_selectedDay!);
-        }
-
-        // Check if widget is still mounted AFTER async operations
-        if (mounted) {
-          // Update UI
-          setState(() {});
-          scaffoldMessenger.hideCurrentSnackBar(); // Hide loading
-          scaffoldMessenger.showSnackBar(
-            const SnackBar(content: Text('Spare event deleted'), duration: Duration(seconds: 2)),
-          );
-        }
-      } catch (e) {
-        print('Error deleting spare event: $e');
-        // Check if mounted before showing error snackbar
-        if (mounted) {
-          scaffoldMessenger.hideCurrentSnackBar(); // Hide loading
-          scaffoldMessenger.showSnackBar(
-            SnackBar(content: Text('Failed to delete event: $e'), duration: Duration(seconds: 3)),
-          );
-        }
-      }
-    }
-  }
-  // --- END NEW FUNCTION ---
 
   // Add this method to handle calendar page changes
   void _onPageChanged(DateTime focusedDay) {
@@ -4461,7 +4285,7 @@ class CalendarScreenState extends State<CalendarScreen>
     try {
       EventService.preloadMonth(focusedDay);
     } catch (e) {
-      print('Error preloading month: $e');
+          // Debug statement removed
     }
     
     // Clear old cache entries periodically with error handling
@@ -4571,7 +4395,7 @@ class CalendarScreenState extends State<CalendarScreen>
                     }
                   }
                 } catch (e) {
-                  print('Error loading UNI_7DAYs.csv: $e');
+          // Debug statement removed
                 }
                 
                 // On weekdays, also load from UNI_M-F.csv
@@ -4590,7 +4414,7 @@ class CalendarScreenState extends State<CalendarScreen>
                       }
                     }
                   } catch (e) {
-                    print('Error loading UNI_M-F.csv: $e');
+          // Debug statement removed
                   }
                 }
                 
@@ -4639,7 +4463,7 @@ class CalendarScreenState extends State<CalendarScreen>
                   }
                 } catch (e) {
                   shiftNumbers = [];
-                  print('Error loading shifts for Bus Check: $e');
+          // Debug statement removed
                 }
               } else {
                 // Regular zone shifts (Zone 1, Zone 3, Zone 4)
@@ -4677,7 +4501,7 @@ class CalendarScreenState extends State<CalendarScreen>
                   }
                 } catch (e) {
                   shiftNumbers = [];
-                  print('Error loading shifts for $filename: $e');
+          // Debug statement removed
                 }
               }
               
@@ -4686,7 +4510,7 @@ class CalendarScreenState extends State<CalendarScreen>
                 selectedShiftNumber = shiftNumbers[0];
               }
             } catch (e) {
-              print('Error loading shift numbers: $e');
+          // Debug statement removed
               shiftNumbers = [];
             } finally {
             setState(() {
@@ -4770,7 +4594,6 @@ class CalendarScreenState extends State<CalendarScreen>
                 },
               ),
               TextButton(
-                child: const Text('Add Overtime Shift'),
                 onPressed: shiftNumbers.isEmpty || isLoading
                     ? null
                     : () async {
@@ -4897,7 +4720,7 @@ class CalendarScreenState extends State<CalendarScreen>
                               }
                             }
                           } catch (e) {
-                            print('Error loading break times: $e');
+          // Debug statement removed
                           }
                           
                           // Adjust times based on first half (A) or second half (B)
@@ -4999,7 +4822,7 @@ class CalendarScreenState extends State<CalendarScreen>
                               ));
                             }
                           } catch (e) {
-                            print('Error adding overtime event: $e');
+          // Debug statement removed
                             if (mounted) {
                               Navigator.of(context).pop();
                               ScaffoldMessenger.of(context).showSnackBar(
@@ -5012,6 +4835,7 @@ class CalendarScreenState extends State<CalendarScreen>
                           }
                         }
                       },
+                child: const Text('Add Overtime Shift'),
               ),
             ],
           );

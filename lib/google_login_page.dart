@@ -104,7 +104,8 @@ class _GoogleLoginPageState extends State<GoogleLoginPage> {
       }
       
       // If sign-in fails, show verification dialog
-
+      // Capture context before async operation
+      if (!mounted) return;
       final shouldContinue = await OAuthHelper.showVerificationBypassDialog(context);
       
       if (shouldContinue == true) {
@@ -142,6 +143,7 @@ class _GoogleLoginPageState extends State<GoogleLoginPage> {
         });
         
         // Show the dialog with appropriate guidance
+        if (!mounted) return;
         final shouldRetry = await OAuthHelper.showVerificationBypassDialog(context);
         if (shouldRetry == true) {
           // If user wants to try again, restart the sign-in process

@@ -295,7 +295,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text('Google Calendar'),
-              SizedBox(height: 8),
+              const SizedBox(height: 8),
               LinearProgressIndicator(),
             ],
           ),
@@ -484,11 +484,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
         trailing: ElevatedButton(
           onPressed: null, // *** Disable the button ***
-          child: const Text('Send Test'),
           style: ElevatedButton.styleFrom(
              backgroundColor: Colors.grey[300],
              foregroundColor: Colors.grey[600],
           ),
+          child: const Text('Send Test'),
         ),
       ),
     );
@@ -580,7 +580,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             CircularProgressIndicator(),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
             Text('Comparing local events with Google Calendar...'),
           ],
         ),
@@ -655,7 +655,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 CircularProgressIndicator(),
-                SizedBox(height: 16),
+                const SizedBox(height: 16),
                 Text('Uploading missing events to Google Calendar...'),
               ],
             ),

@@ -190,11 +190,14 @@ class _SplashScreenState extends State<SplashScreen> {
     final shouldShowWhatsNew = await _checkVersionUpdate();
 
     if (shouldShowWhatsNew && mounted) {
-      Navigator.pushReplacementNamed(context, AppConstants.whatsNewRoute);
+      final navigator = Navigator.of(context);
+      navigator.pushReplacementNamed(AppConstants.whatsNewRoute);
       return;
     }
 
-    await _checkOnboardingStatus();
+    if (mounted) {
+      await _checkOnboardingStatus();
+    }
   }
 
   Future<bool> _checkVersionUpdate() async {
@@ -229,7 +232,7 @@ class _SplashScreenState extends State<SplashScreen> {
     }
 
     if (mounted) {
-      Navigator.pushReplacementNamed(context, nextRoute);
+      widget.onInitializationComplete(nextRoute);
     }
   }
 

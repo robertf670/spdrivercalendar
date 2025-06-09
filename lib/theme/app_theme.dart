@@ -33,7 +33,7 @@ class AppTheme {
         secondary: secondaryColor,
         error: errorColor,
       ),
-      appBarTheme: AppBarTheme(
+      appBarTheme: const AppBarTheme(
         backgroundColor: primaryColor,
         foregroundColor: Colors.white,
         systemOverlayStyle: SystemUiOverlayStyle(
@@ -61,7 +61,7 @@ class AppTheme {
         error: errorColor,
         // Consider adding surface and background if needed for contrast
       ),
-      appBarTheme: AppBarTheme(
+      appBarTheme: const AppBarTheme(
         backgroundColor: Color(0xFF1F1F1F), // Darker AppBar for contrast
         foregroundColor: Colors.white,
         systemOverlayStyle: SystemUiOverlayStyle(
@@ -80,8 +80,8 @@ class AppTheme {
       ),
       // Add DropdownMenuTheme for dark mode styling
       dropdownMenuTheme: DropdownMenuThemeData(
-        textStyle: TextStyle(color: Colors.white), // Ensure dropdown text is white
-        inputDecorationTheme: InputDecorationTheme( // Style the dropdown button appearance if needed
+        textStyle: const TextStyle(color: Colors.white), // Ensure dropdown text is white
+        inputDecorationTheme: const InputDecorationTheme( // Style the dropdown button appearance if needed
           // Example: Add border, change fill color, etc.
           // filled: true,
           // fillColor: Colors.grey[800],
@@ -95,8 +95,8 @@ class AppTheme {
         menuStyle: MenuStyle(
           backgroundColor: WidgetStateProperty.all(Colors.grey[800]), // Background color of the dropdown menu
           surfaceTintColor: WidgetStateProperty.all(Colors.grey[800]), // Optional: blend color
-          shape: WidgetStateProperty.all(RoundedRectangleBorder( // Consistent border radius
-             borderRadius: BorderRadius.circular(borderRadius / 2), // Slightly smaller radius for menu
+          shape: WidgetStateProperty.all(RoundedRectangleBorder(
+             borderRadius: BorderRadius.circular(borderRadius / 2),
           )),
         ),
       ),

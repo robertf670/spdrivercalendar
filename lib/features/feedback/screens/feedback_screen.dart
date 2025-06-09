@@ -159,7 +159,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(AppTheme.borderRadius),
-                      borderSide: BorderSide(
+                      borderSide: const BorderSide(
                         color: AppTheme.primaryColor,
                         width: 2,
                       ),

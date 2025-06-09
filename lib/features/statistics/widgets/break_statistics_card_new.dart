@@ -144,7 +144,7 @@ class BreakStatisticsCard extends StatelessWidget {
                 child: LinearProgressIndicator(
                   value: overtime / total,
                   backgroundColor: Colors.grey[300],
-                  valueColor: AlwaysStoppedAnimation<Color>(
+                  valueColor: const AlwaysStoppedAnimation<Color>(
                     Colors.orange,
                   ),
                 ),

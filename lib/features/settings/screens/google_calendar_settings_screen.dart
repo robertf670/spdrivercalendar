@@ -158,17 +158,19 @@ class _GoogleCalendarSettingsScreenState extends State<GoogleCalendarSettingsScr
                   child: ElevatedButton(
                     onPressed: _isConnected
                         ? () async {
+                            final scaffoldMessenger = ScaffoldMessenger.of(context);
                             await GoogleCalendarService.signOut();
                             await _checkConnectionStatus();
-                            ScaffoldMessenger.of(context).showSnackBar(
+                            scaffoldMessenger.showSnackBar(
                               const SnackBar(content: Text('Disconnected from Google Calendar'))
                             );
                           }
                         : () async {
+                            final scaffoldMessenger = ScaffoldMessenger.of(context);
                             final account = await GoogleCalendarService.signInWithGoogle();
                             await _checkConnectionStatus();
                             if (account != null) {
-                              ScaffoldMessenger.of(context).showSnackBar(
+                              scaffoldMessenger.showSnackBar(
                                 const SnackBar(content: Text('Connected to Google Calendar'))
                               );
                             }

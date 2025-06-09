@@ -131,14 +131,14 @@ class TokenManager {
   // Timer logic (kept from original)
   static bool needsRefresh() {
     if (_inMemoryTokenExpiration == null) return true; // If no expiry, assume refresh needed or auth first
-    return DateTime.now().add(Duration(minutes: _refreshThresholdMinutes)).isAfter(_inMemoryTokenExpiration!);
+    return DateTime.now().add(const Duration(minutes: _refreshThresholdMinutes)).isAfter(_inMemoryTokenExpiration!);
   }
 
   static void _scheduleRefresh() {
     _refreshTimer?.cancel();
     if (_inMemoryTokenExpiration == null) return;
 
-    final timeUntilRefresh = _inMemoryTokenExpiration!.difference(DateTime.now()) - Duration(minutes: _refreshThresholdMinutes);
+    final timeUntilRefresh = _inMemoryTokenExpiration!.difference(DateTime.now()) - const Duration(minutes: _refreshThresholdMinutes);
 
     if (timeUntilRefresh.isNegative) {
 
@@ -149,7 +149,6 @@ class TokenManager {
 
 
     _refreshTimer = Timer(timeUntilRefresh, () {
-
       // This timer's role is to ensure proactive refresh.
       // The actual refresh is initiated by GoogleCalendarService when it checks token validity.
       // Or, a callback mechanism could be added here if needed.

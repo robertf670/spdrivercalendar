@@ -56,10 +56,11 @@ class _ColorCustomizationWidgetState extends State<ColorCustomizationWidget> {
             ),
             TextButton(
               onPressed: () async {
+                final navigator = Navigator.of(context);
                 await ColorCustomizationService.setShiftColor(shiftType, selectedColor);
                 _loadCurrentColors();
                 widget.onColorsChanged?.call();
-                Navigator.of(context).pop();
+                navigator.pop();
               },
               child: const Text('Save'),
             ),

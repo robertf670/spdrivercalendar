@@ -242,7 +242,7 @@ class _WhatsNewScreenState extends State<WhatsNewScreen> {
         ),
         child: Text(
           'VERSION $version',
-          style: TextStyle(
+          style: const TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 14,
             color: AppTheme.primaryColor,

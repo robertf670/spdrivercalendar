@@ -97,22 +97,22 @@ class RosterService {
     final shift = pattern[dayOfWeek];
 
     // Debug info (using normalized dates)
-    // print('Normalized Date: ${normalizedDate.toString()}, Day: ${getDayOfWeek(normalizedDate)}, dayOfWeek: $dayOfWeek');
-    // print('Normalized startDate: ${normalizedStartDate.toString()}, startWeek: $startWeek');
-    // print('daysSinceStart: $daysSinceStart');
+
+
+
     // if (daysSinceStart >= 0) {
-    //   print('weeksSinceStart: ${daysSinceStart ~/ 7}');
+
     // } else {
     //   final dateSunday = normalizedDate.subtract(Duration(days: dayOfWeek));
     //   final startDateSunday = normalizedStartDate.subtract(Duration(days: normalizedStartDate.weekday % 7));
     //   if (dateSunday == startDateSunday) {
-    //     print('In same week as start date');
+
     //   } else {
     //     final sundayDiff = startDateSunday.difference(dateSunday).inDays ~/ 7;
-    //     print('Weeks before start: $sundayDiff');
+
     //   }
     // }
-    // print('weekNumber: $weekNumber, pattern: ${pattern.join('')}, shift: $shift');
+
 
     return shift;
   }

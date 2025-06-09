@@ -48,9 +48,11 @@ class _ShiftListScreenState extends State<ShiftListScreen> {
                     trailing: IconButton(
                       icon: const Icon(Icons.calendar_today),
                       onPressed: () async {
+                        // Capture ScaffoldMessenger before async operation
+                        final scaffoldMessenger = ScaffoldMessenger.of(context);
                         final success = await shift.addToGoogleCalendar(context);
                         if (success) {
-                          ScaffoldMessenger.of(context).showSnackBar(
+                          scaffoldMessenger.showSnackBar(
                             const SnackBar(content: Text('Added to Google Calendar')),
                           );
                         }

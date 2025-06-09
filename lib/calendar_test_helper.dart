@@ -138,11 +138,6 @@ class CalendarTestHelper {
     String? description,  // Added description parameter
   }) async {
     try {
-      // Store context.mounted in a local variable to safely check throughout the method
-      final bool isContextMounted = context.mounted;
-      
-
-      
       // Get Google Sign-In status
       final isSignedIn = await GoogleCalendarService.isSignedIn();
 
@@ -221,11 +216,6 @@ class CalendarTestHelper {
     DateTime? eventStartTime,
   }) async {
     try {
-      // Store context.mounted in a local variable to safely check throughout the method
-      final bool isContextMounted = context.mounted;
-      
-
-      
       // Check if we're signed in
       final isSignedIn = await GoogleCalendarService.isSignedIn();
       if (!isSignedIn) {
@@ -296,11 +286,6 @@ class CalendarTestHelper {
     DateTime? oldEventStartTime,
   }) async {
     try {
-      // Store context.mounted in a local variable to safely check throughout the method
-      final bool isContextMounted = context.mounted;
-      
-
-      
       // Check if we're signed in
       final isSignedIn = await GoogleCalendarService.isSignedIn();
       if (!isSignedIn) {

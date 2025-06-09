@@ -11,7 +11,6 @@ mixin TextRenderingMixin<T extends StatefulWidget> on State<T> {
     }
   }
 
-  @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed && Platform.isAndroid) {
       _configureTextRendering();

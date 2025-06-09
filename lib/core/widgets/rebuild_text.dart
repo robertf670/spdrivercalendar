@@ -42,7 +42,7 @@ class _RebuildTextState extends State<RebuildText> with WidgetsBindingObserver {
         setState(() {});
       }
     } catch (e) {
-      debugPrint('Error forcing rebuild: $e');
+      // Error forcing rebuild
     }
   }
 

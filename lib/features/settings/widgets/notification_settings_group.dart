@@ -41,9 +41,9 @@ class NotificationSettingsGroup extends StatelessWidget {
             ),
           ),
           const Divider(height: 1, indent: 16, endIndent: 16),
-          SwitchListTile(
-            title: const Text('Enable Shift Notifications'),
-            subtitle: const Text('Get notified before your shift starts'),
+          const SwitchListTile(
+            title: Text('Enable Shift Notifications'),
+            subtitle: Text('Get notified before your shift starts'),
             secondary: Icon(
               Icons.notifications_off,
               color: disabledIconColor,
@@ -54,11 +54,11 @@ class NotificationSettingsGroup extends StatelessWidget {
           const Divider(height: 1, indent: 16, endIndent: 16),
           ListTile(
             enabled: !isGloballyDisabled,
-            leading: Icon(
+            leading: const Icon(
               Icons.timer_outlined,
               color: disabledIconColor,
             ),
-            title: Text(
+            title: const Text(
               'Notify Before Shift',
               style: TextStyle(color: disabledColor),
             ),
@@ -71,34 +71,34 @@ class NotificationSettingsGroup extends StatelessWidget {
                   value: value,
                   child: Text(
                     '$value hour${value > 1 ? 's' : ''}',
-                    style: TextStyle(color: disabledColor),
+                    style: const TextStyle(color: disabledColor),
                   ),
                 );
               }).toList(),
               disabledHint: Text(
                 '$notificationOffsetHours hour${notificationOffsetHours > 1 ? 's' : ''}',
-                style: TextStyle(color: disabledColor),
+                style: const TextStyle(color: disabledColor),
               ),
             ),
           ),
           const Divider(height: 1, indent: 16, endIndent: 16),
           ListTile(
             enabled: !isGloballyDisabled,
-            leading: Icon(
+            leading: const Icon(
               Icons.notification_important_outlined,
               color: disabledIconColor,
             ),
-            title: Text(
+            title: const Text(
               'Test Notification',
               style: TextStyle(color: disabledColor),
             ),
             trailing: ElevatedButton(
               onPressed: null,
-              child: const Text('Send Test'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.grey[300],
                 foregroundColor: Colors.grey[600],
               ),
+              child: const Text('Send Test'),
             ),
           ),
         ],

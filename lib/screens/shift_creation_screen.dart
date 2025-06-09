@@ -161,9 +161,14 @@ class _ShiftCreationScreenState extends State<ShiftCreationScreen> {
 
   void _saveShift() async {
     if (_formKey.currentState!.validate()) {
+      // Capture context, navigator, and messenger before async operations
+      final navigator = Navigator.of(context);
+      final scaffoldMessenger = ScaffoldMessenger.of(context);
+      final currentContext = context;
+      
       // Show loading indicator
       showDialog(
-        context: context,
+        context: currentContext,
         barrierDismissible: false,
         builder: (BuildContext context) {
           return const Center(child: CircularProgressIndicator());
@@ -185,27 +190,27 @@ class _ShiftCreationScreenState extends State<ShiftCreationScreen> {
         await ShiftService.saveShift(shift);
         
         // If the user wants to add to Google Calendar, do so
-        if (_addToGoogleCalendar) {
-          final success = await shift.addToGoogleCalendar(context);
+        if (_addToGoogleCalendar && mounted) {
+          final success = await shift.addToGoogleCalendar(currentContext);
           if (!success) {
 
           }
         }
         
         // Close the loading indicator
-        Navigator.of(context).pop();
+        navigator.pop();
         
         // Show success message and return to previous screen
-        ScaffoldMessenger.of(context).showSnackBar(
+        scaffoldMessenger.showSnackBar(
           const SnackBar(content: Text('Shift saved successfully')),
         );
-        Navigator.of(context).pop();
+        navigator.pop();
       } catch (e) {
         // Close the loading indicator
-        Navigator.of(context).pop();
+        navigator.pop();
         
         // Show error message
-        ScaffoldMessenger.of(context).showSnackBar(
+        scaffoldMessenger.showSnackBar(
           SnackBar(content: Text('Error saving shift: $e')),
         );
       }
