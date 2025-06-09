@@ -1263,7 +1263,7 @@ class CalendarScreenState extends State<CalendarScreen>
                                               children: [
                                                 Text('Duty $dutyNumber'),
                                                 Text(
-                                                  '${DateFormat('EEEE, MMM d').format(event.startDate)}',
+                                                  DateFormat('EEEE, MMM d').format(event.startDate),
                                                   style: const TextStyle(
                                                     fontSize: 12,
                                                     fontWeight: FontWeight.normal,
@@ -2559,7 +2559,7 @@ class CalendarScreenState extends State<CalendarScreen>
             ],
             const Text(
               'Select an option for late break:',
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 14,
               ),
             ),
@@ -2738,7 +2738,7 @@ class CalendarScreenState extends State<CalendarScreen>
                 items: [10, 20, 30, 40, 50, 60].map((int value) {
                   return DropdownMenuItem<int>(
                     value: value,
-                    child: Text('${value} mins'),
+                    child: Text('$value mins'),
                   );
                 }).toList(),
                 onChanged: (int? newValue) {
@@ -2857,7 +2857,7 @@ class CalendarScreenState extends State<CalendarScreen>
                 // Show confirmation
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text('Overtime (${selectedDuration} mins) saved'),
+                    content: Text('Overtime ($selectedDuration mins) saved'),
                     duration: const Duration(seconds: 2),
                   ),
                 );

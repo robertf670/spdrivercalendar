@@ -21,13 +21,8 @@ class ShiftService {
     }
   }
   
-  // Getter for bank holidays
-  static List<BankHoliday> get bankHolidays => _bankHolidays;
-  
-  // Set bank holidays (useful for tests or manual updates)
-  static set bankHolidays(List<BankHoliday> holidays) {
-    _bankHolidays = holidays;
-  }
+  // Direct access to bank holidays
+  static List<BankHoliday> bankHolidays = _bankHolidays;
 
   // Get break time information for an event
   static Future<String?> getBreakTime(Event event) async {
