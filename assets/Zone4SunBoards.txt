@@ -1,0 +1,555 @@
+SUNDAY RUNNING BOARDS - ROUTES 9 & 122
+
+=== ROUTE 9 ===
+
+Running Board 1 (Bus 1):
+Duty 405 (starts 08:22):
+- SPL: Garage → Charlestown (dep 08:30)
+- Route 9: Charlestown → Limekiln (dep 09:00)
+- Route 9: Limekiln → PSQW (dep 10:20, arr 11:10)
+[Duty 405 takes Bus 2 (Route 122) at 12:25 PSQW]
+
+Duty 455 (takes over at PSQW 11:10):
+- Route 9: PSQW → Charlestown (dep 11:10)
+- Route 9: Charlestown → Limekiln (dep 12:00)
+- Route 9: Limekiln → Charlestown (dep 13:45)
+- Route 9: Charlestown → PSQE (dep 15:30, arr 16:05)
+[Duty 455 takes Bus 4 (Route 9) at 17:20 PSQW]
+
+Duty 420 (takes over at PSQE 16:05):
+- Route 9: PSQE → Limekiln (dep 16:05)
+- Route 9: Limekiln → Charlestown (dep 17:15)
+- Route 9: Charlestown → Limekiln (dep 18:50)
+- Route 9: Limekiln → PSQW (dep 20:30, arr 21:15)
+[Finish Duty]
+
+Duty 433 (takes over at PSQW 21:15):
+- Route 9: PSQW → Charlestown (dep 21:15)
+- Route 9: Charlestown → Limekiln (dep 22:10)
+- Route 9: Limekiln → Charlestown (dep 23:30)
+- SPL: Charlestown → Garage (dep 00:40, arr 01:10)
+[Finish Duty]
+
+Running Board 2 (Bus 2):
+Duty 407 (starts 08:42):
+- SPL: Garage → Limekiln (dep 08:50)
+- Route 9: Limekiln → Charlestown (dep 09:30)
+- Route 9: Charlestown → PSQE (dep 11:00, arr 11:35)
+[Duty 407 takes Bus 3 (Route 9) at 12:55 PSQE]
+
+Duty 412 (takes over at PSQE 11:35):
+- Route 9: PSQE → Limekiln (dep 11:35)
+- Route 9: Limekiln → Charlestown (dep 12:30)
+- Route 9: Charlestown → Limekiln (dep 14:00)
+- Route 9: Limekiln → PSQW (dep 15:45, arr 16:35)
+[Duty 412 takes Bus 8 (Route 9) at 17:35 PSQW]
+
+Duty 434 (takes over at PSQW 16:35):
+- Route 9: PSQW → Charlestown (dep 16:35)
+- Route 9: Charlestown → Limekiln (dep 17:15)
+- Route 9: Limekiln → PSQW (dep 18:50, arr 19:35)
+[Duty 434 takes Bus 8 (Route 9) at 20:35 PSQW]
+
+Duty 419 (takes over at PSQW 19:35):
+- Route 9: PSQW → Charlestown (dep 19:35)
+- Route 9: Charlestown → PSQE (dep 20:30, arr 21:00)
+[Finish Duty]
+
+Duty 435 (takes over at PSQE 21:00):
+- Route 9: PSQE → Limekiln (dep 21:00)
+- Route 9: Limekiln → Charlestown (dep 22:10)
+- Route 9: Charlestown → Limekiln (dep 23:30)
+- SPL: Limekiln → Garage (dep 00:40, arr 01:10)
+[Finish Duty]
+
+Running Board 3 (Bus 3):
+Duty 409 (starts 08:47):
+- SPL: Garage → Charlestown (dep 08:55)
+- Route 9: Charlestown → Limekiln (dep 09:25)
+- Route 9: Limekiln → Charlestown (dep 10:45)
+- Route 9: Charlestown → PSQE (dep 12:15, arr 12:55)
+[Finish Duty]
+
+Duty 407 (takes over at PSQE 12:55):
+- Route 9: PSQE → Limekiln (dep 12:55)
+- Route 9: Limekiln → PSQW (dep 14:00, arr 14:55)
+[Finish Duty]
+
+Duty 424 (takes over at PSQW 14:55):
+- Route 9: PSQW → Charlestown (dep 14:55)
+- Route 9: Charlestown → Limekiln (dep 15:45)
+- Route 9: Limekiln → Charlestown (dep 17:30)
+- Route 9: Charlestown → PSQE (dep 19:10, arr 19:45)
+[Duty 424 takes Bus 14 (Route 9) at 21:20 PSQE]
+
+Duty 428 (takes over at PSQE 19:45):
+- Route 9: PSQE → Limekiln (dep 19:45)
+- Route 9: Limekiln → Charlestown (dep 20:50)
+- Route 9: Charlestown → Limekiln (dep 22:30)
+- SPL: Limekiln → Garage (dep 23:40, arr 00:10)
+[Finish Duty]
+
+Running Board 4 (Bus 4):
+Duty 410 (starts 09:07):
+- SPL: Garage → Limekiln (dep 09:15)
+- Route 9: Limekiln → Charlestown (dep 09:55)
+- Route 9: Charlestown → Limekiln (dep 11:20)
+- Route 9: Limekiln → PSQW (dep 13:00, arr 14:00)
+[Finish Duty]
+
+Duty 421 (takes over at PSQW 14:00):
+- Route 9: PSQW → Charlestown (dep 14:00)
+- Route 9: Charlestown → Limekiln (dep 14:45)
+- Route 9: Limekiln → PSQW (dep 16:30, arr 17:20)
+[Duty 421 takes Bus 1 (Route 122) at 19:00 PSQE]
+
+Duty 455 (takes over at PSQW 17:20):
+- Route 9: PSQW → Charlestown (dep 17:20)
+- SPL: Charlestown → Limekiln (dep 18:00)
+- SPL: Limekiln → Garage (dep 19:35, arr 20:15)
+[Finish Duty]
+
+Running Board 5 (Bus 5):
+Duty 411 (starts 09:12):
+- SPL: Garage → Charlestown (dep 09:20)
+- Route 9: Charlestown → Limekiln (dep 09:50)
+- Route 9: Limekiln → Charlestown (dep 11:10)
+- Route 9: Charlestown → PSQE (dep 12:45, arr 13:25)
+[Finish Duty]
+
+Duty 402 (takes over at PSQE 13:25):
+- Route 9: PSQE → Limekiln (dep 13:25)
+- Route 9: Limekiln → PSQW (dep 14:30, arr 15:25)
+[Finish Duty]
+
+Duty 427 (takes over at PSQW 15:25):
+- Route 9: PSQW → Charlestown (dep 15:25)
+- Route 9: Charlestown → PSQE (dep 16:15, arr 16:50)
+[Duty 427 takes Bus 3 (Route 122) at 19:20 PSQE]
+
+Duty 457 (takes over at PSQE 16:50):
+- Route 9: PSQE → Limekiln (dep 16:50)
+- Route 9: Limekiln → Charlestown (dep 18:00)
+- SPL: Charlestown → Garage (dep 19:30, arr 20:00)
+[Finish Duty]
+
+Running Board 6 (Bus 6):
+Duty 451 (starts 09:37):
+- SPL: Garage → Charlestown (dep 09:45)
+- Route 9: Charlestown → Limekiln (dep 10:15)
+- Route 9: Limekiln → PSQW (dep 11:35, arr 12:25)
+[Duty 451 takes Bus 14 (Route 9) at 13:37 Garage]
+
+Duty 417 (takes over at PSQW 12:25):
+- Route 9: PSQW → Charlestown (dep 12:25)
+- Route 9: Charlestown → Limekiln (dep 13:15)
+- Route 9: Limekiln → Charlestown (dep 15:00)
+- Route 9: Charlestown → PSQE (dep 16:45, arr 17:20)
+[Duty 417 takes Bus 2 (Route 122) at 18:25 PSQW]
+
+Duty 413 (takes over at PSQE 17:20):
+- Route 9: PSQE → Limekiln (dep 17:20)
+- Route 9: Limekiln → Charlestown (dep 18:15)
+- Route 9: Charlestown → PSQE (dep 19:50, arr 20:25)
+[Finish Duty]
+
+Duty 426 (takes over at PSQE 20:25):
+- Route 9: PSQE → Limekiln (dep 20:25)
+- Route 9: Limekiln → Charlestown (dep 21:30)
+- Route 9: Charlestown → Limekiln (dep 23:10)
+- SPL: Limekiln → Garage (dep 00:15, arr 00:45)
+[Finish Duty]
+
+Running Board 7 (Bus 7):
+Duty 452 (starts 10:02):
+- SPL: Garage → Charlestown (dep 10:10)
+- Route 9: Charlestown → Limekiln (dep 10:40)
+- Route 9: Limekiln → PSQW (dep 12:15, arr 13:10)
+[Duty 452 takes Bus 5 (Route 122) at 14:10 PSQW]
+
+Duty 453 (takes over at PSQW 13:10):
+- Route 9: PSQW → Charlestown (dep 13:10)
+- Route 9: Charlestown → Limekiln (dep 13:45)
+- Route 9: Limekiln → PSQW (dep 15:30, arr 16:20)
+[Finish Duty]
+
+Duty 432 (takes over at PSQW 16:20):
+- Route 9: PSQW → Charlestown (dep 16:20)
+- Route 9: Charlestown → Limekiln (dep 17:00)
+- Route 9: Limekiln → Charlestown (dep 18:30)
+- Route 9: Charlestown → PSQE (dep 20:10, arr 20:40)
+[Duty 432 takes Bus 11 (Route 9) at 21:40 PSQE]
+
+Duty 425 (takes over at PSQE 20:40):
+- Route 9: PSQE → Limekiln (dep 20:40)
+- Route 9: Limekiln → Charlestown (dep 21:50)
+- SPL: Charlestown → Garage (dep 23:20, arr 23:50)
+[Finish Duty]
+
+Running Board 8 (Bus 8):
+Duty 457 (starts 10:57):
+- SPL: Garage → Charlestown (dep 11:05)
+- Route 9: Charlestown → Limekiln (dep 11:40)
+- Route 9: Limekiln → Charlestown (dep 13:15)
+- Route 9: Charlestown → PSQE (dep 15:00, arr 15:35)
+[Duty 457 takes Bus 5 (Route 9) at 16:50 PSQE]
+
+Duty 429 (takes over at PSQE 15:35):
+- Route 9: PSQE → Limekiln (dep 15:35)
+- Route 9: Limekiln → PSQW (dep 16:45, arr 17:35)
+[Duty 429 takes Bus 7 (Route 122) at 19:40 PSQW]
+
+Duty 412 (takes over at PSQW 17:35):
+- Route 9: PSQW → Charlestown (dep 17:35)
+- Route 9: Charlestown → Limekiln (dep 18:15)
+- Route 9: Limekiln → PSQW (dep 19:50, arr 20:35)
+[Finish Duty]
+
+Duty 434 (takes over at PSQW 20:35):
+- Route 9: PSQW → Charlestown (dep 20:35)
+- Route 9: Limekiln → Charlestown (dep 21:30)
+- Route 9: Charlestown → Limekiln (dep 23:10)
+- SPL: Charlestown → Garage (dep 00:20, arr 00:50)
+[Finish Duty]
+
+Running Board 9 (Bus 9):
+Duty 458 (starts 11:07):
+- SPL: Garage → Limekiln (dep 11:15)
+- Route 9: Limekiln → PSQW (dep 12:00, arr 12:55)
+[Duty 458 takes Bus 6 (Route 122) at 14:05 PSQE]
+
+Duty 419 (takes over at PSQW 12:55):
+- Route 9: PSQW → Charlestown (dep 12:55)
+- Route 9: Charlestown → Limekiln (dep 13:30)
+- Route 9: Limekiln → Charlestown (dep 15:15)
+- SPL: Charlestown → Garage (dep 17:00, arr 17:25)
+[Duty 419 takes Bus 2 (Route 9) at 19:35 PSQW]
+
+Running Board 10 (Bus 10):
+Duty 415 (starts 11:47):
+- SPL: Garage → Charlestown (dep 11:55)
+- Route 9: Charlestown → Limekiln (dep 12:30)
+- Route 9: Limekiln → Charlestown (dep 14:15)
+- Route 9: Charlestown → PSQE (dep 16:00, arr 16:35)
+[Duty 415 takes Bus 4 (Route 122) at 17:40 PSQE]
+
+Duty 433 (takes over at PSQE 16:35):
+- Route 9: PSQE → Limekiln (dep 16:35)
+- Route 9: Limekiln → Charlestown (dep 17:45)
+- Route 9: Charlestown → PSQE (dep 19:30, arr 20:05)
+[Duty 433 takes Bus 1 (Route 9) at 21:15 PSQW]
+
+Duty 431 (takes over at PSQE 20:05):
+- Route 9: PSQE → Limekiln (dep 20:05)
+- Route 9: Limekiln → Charlestown (dep 21:10)
+- Route 9: Charlestown → Limekiln (dep 22:50)
+- SPL: Limekiln → Garage (dep 00:00, arr 00:30)
+[Finish Duty]
+
+Running Board 11 (Bus 11):
+Duty 416 (starts 11:52):
+- SPL: Garage → Limekiln (dep 12:00)
+- Route 9: Limekiln → Charlestown (dep 12:45)
+- Route 9: Charlestown → Limekiln (dep 14:30)
+- Route 9: Limekiln → PSQW (dep 16:15, arr 17:05)
+[Duty 416 takes Bus 5 (Route 122) at 18:20 PSQE]
+
+Duty 418 (takes over at PSQW 17:05):
+- Route 9: PSQW → Charlestown (dep 17:05)
+- Route 9: Charlestown → Limekiln (dep 17:45)
+- Route 9: Limekiln → Charlestown (dep 19:30)
+- Route 9: Charlestown → PSQE (dep 21:10, arr 21:40)
+[Finish Duty]
+
+Duty 432 (takes over at PSQE 21:40):
+- Route 9: PSQE → Limekiln (dep 21:40)
+- Route 9: Limekiln → Charlestown (dep 22:50)
+- SPL: Charlestown → Garage (dep 23:55, arr 00:25)
+[Finish Duty]
+
+Running Board 12 (Bus 12):
+Duty 403 (starts 12:07):
+- SPL: Garage → Charlestown (dep 12:15)
+- Route 9: Charlestown → Limekiln (dep 13:00)
+- Route 9: Limekiln → PSQW (dep 14:45, arr 15:40)
+[Finish Duty]
+
+Duty 430 (takes over at PSQW 15:40):
+- Route 9: PSQW → Charlestown (dep 15:40)
+- Route 9: Charlestown → Limekiln (dep 16:30)
+- SPL: Limekiln → Garage (dep 18:05, arr 18:40)
+[Duty 430 takes Bus 4 (Route 122) at 20:30 PSQE]
+
+Running Board 13 (Bus 13):
+Duty 418 (starts 12:32):
+- SPL: Garage → Limekiln (dep 12:40)
+- Route 9: Limekiln → Charlestown (dep 13:30)
+- Route 9: Charlestown → PSQE (dep 15:15, arr 15:50)
+[Duty 418 takes Bus 11 (Route 9) at 17:05 PSQW]
+
+Duty 431 (takes over at PSQE 15:50):
+- Route 9: PSQE → Limekiln (dep 15:50)
+- Route 9: Limekiln → Charlestown (dep 17:00)
+- Route 9: Charlestown → PSQE (dep 18:30, arr 19:05)
+[Duty 431 takes Bus 10 (Route 9) at 20:05 PSQE]
+
+Duty 422 (takes over at PSQE 19:05):
+- Route 9: PSQE → Limekiln (dep 19:05)
+- Route 9: Limekiln → Charlestown (dep 20:10)
+- Route 9: Charlestown → Limekiln (dep 21:50)
+- SPL: Limekiln → Garage (dep 23:25, arr 23:55)
+[Finish Duty]
+
+Running Board 14 (Bus 14):
+Duty 451 (starts 13:37):
+- SPL: Garage → Charlestown (dep 13:40)
+- Route 9: Charlestown → Limekiln (dep 14:15)
+- Route 9: Limekiln → PSQW (dep 16:00, arr 16:50)
+[Finish Duty]
+
+Duty 414 (takes over at PSQW 16:50):
+- Route 9: PSQW → Charlestown (dep 16:50)
+- Route 9: Charlestown → Limekiln (dep 17:30)
+- Route 9: Limekiln → Charlestown (dep 19:10)
+- Route 9: Charlestown → PSQE (dep 20:50, arr 21:20)
+[Finish Duty]
+
+Duty 424 (takes over at PSQE 21:20):
+- Route 9: PSQE → Limekiln (dep 21:20)
+- Route 9: Limekiln → Charlestown (dep 22:30)
+- SPL: Charlestown → Garage (dep 23:40, arr 00:10)
+[Finish Duty]
+
+=== ROUTE 122 ===
+
+Running Board 1 (Bus 1):
+Duty 401 (starts 07:27):
+- SPL: Garage → Drimnagh Rd (dep 07:35)
+- Route 122: Drimnagh Rd → Ashington (dep 08:00)
+- Route 122: Ashington → Drimnagh Rd (dep 09:30)
+- Route 122: Drimnagh Rd → Ashington (dep 11:00)
+- Route 122: Ashington → PSQE (dep 12:30, arr 13:00)
+[Finish Duty]
+
+Running Board 1 (Bus 1) continued:
+Duty 420 (takes over at PSQE 13:00):
+- Route 122: PSQE → Drimnagh Rd (dep 13:00)
+- Route 122: Drimnagh Rd → PSQW (dep 14:00, arr 14:50)
+[Duty 420 takes Bus 1 (Route 9) at 16:05 PSQE]
+
+Duty 423 (takes over at PSQW 14:50):
+- Route 122: PSQW → Ashington (dep 14:50)
+- Route 122: Ashington → Drimnagh Rd (dep 15:30)
+- Route 122: Drimnagh Rd → Ashington (dep 17:00)
+- Route 122: Ashington → PSQE (dep 18:30, arr 19:00)
+[Duty 423 takes Bus 6 (Route 122) at 20:00 PSQE]
+
+Duty 421 (takes over at PSQE 19:00):
+- Route 122: PSQE → Drimnagh Rd (dep 19:00)
+- Route 122: Drimnagh Rd → Ashington (dep 19:40)
+- Route 122: Ashington → Drimnagh Rd (dep 21:00)
+- SPL: Drimnagh Rd → Garage (dep 22:05, arr 22:30)
+[Finish Duty]
+
+Running Board 2 (Bus 2):
+Duty 402 (starts 07:32):
+- SPL: Garage → Ashington (dep 07:40)
+- Route 122: Ashington → Drimnagh Rd (dep 08:00)
+- Route 122: Drimnagh Rd → Ashington (dep 09:00)
+- Route 122: Ashington → Drimnagh Rd (dep 10:30)
+- Route 122: Drimnagh Rd → PSQW (dep 11:40, arr 12:25)
+[Duty 402 takes Bus 5 (Route 9) at 13:25 PSQE]
+
+Duty 405 (takes over at PSQW 12:25):
+- Route 122: PSQW → Ashington (dep 12:25)
+- Route 122: Ashington → Drimnagh Rd (dep 13:10)
+- Route 122: Drimnagh Rd → PSQW (dep 14:40, arr 15:30)
+[Finish Duty]
+
+Duty 428 (takes over at PSQW 15:30):
+- Route 122: PSQW → Ashington (dep 15:30)
+- Route 122: Ashington → Drimnagh Rd (dep 16:10)
+- Route 122: Drimnagh Rd → PSQW (dep 17:40, arr 18:25)
+[Duty 428 takes Bus 3 (Route 9) at 19:45 PSQE]
+
+Duty 417 (takes over at PSQW 18:25):
+- Route 122: PSQW → Ashington (dep 18:25)
+- Route 122: Ashington → Drimnagh Rd (dep 19:10)
+- Route 122: Drimnagh Rd → Ashington (dep 20:30)
+- SPL: Ashington → Garage (dep 21:35, arr 21:55)
+[Finish Duty]
+
+Running Board 3 (Bus 3):
+Duty 403 (starts 07:57):
+- SPL: Garage → Drimnagh Rd (dep 08:05)
+- Route 122: Drimnagh Rd → Ashington (dep 08:30)
+- Route 122: Ashington → PSQE (dep 10:00, arr 10:30)
+[Duty 403 takes Bus 12 (Route 9) at 12:07 Garage]
+
+Duty 453 (takes over at PSQE 10:30):
+- Route 122: PSQE → Drimnagh Rd (dep 10:30)
+- Route 122: Drimnagh Rd → PSQW (dep 11:20, arr 12:05)
+[Duty 453 takes Bus 7 (Route 9) at 13:10 PSQW]
+
+Duty 404 (takes over at PSQW 12:05):
+- Route 122: PSQW → Ashington (dep 12:05)
+- Route 122: Ashington → Drimnagh Rd (dep 12:50)
+- Route 122: Drimnagh Rd → PSQW (dep 14:20, arr 15:10)
+[Finish Duty]
+
+Duty 426 (takes over at PSQW 15:10):
+- Route 122: PSQW → Ashington (dep 15:10)
+- Route 122: Ashington → Drimnagh Rd (dep 15:50)
+- Route 122: Drimnagh Rd → Ashington (dep 17:20)
+- Route 122: Ashington → PSQE (dep 18:50, arr 19:20)
+[Duty 426 takes Bus 6 (Route 9) at 20:25 PSQE]
+
+Duty 427 (takes over at PSQE 19:20):
+- Route 122: PSQE → Drimnagh Rd (dep 19:20)
+- Route 122: Drimnagh Rd → Ashington (dep 20:00)
+- Route 122: Ashington → Drimnagh Rd (dep 21:30)
+- Route 122: Drimnagh Rd → Ashington (dep 22:30)
+- Route 122: Ashington → PSQE (dep 23:30cc, arr 00:00)
+- SPL: PSQE → Garage (dep 00:00, arr 00:10)
+[Finish Duty]
+
+Running Board 4 (Bus 4):
+Duty 404 (starts 08:02):
+- SPL: Garage → Ashington (dep 08:10)
+- Route 122: Ashington → Drimnagh Rd (dep 08:30)
+- Route 122: Drimnagh Rd → PSQW (dep 10:00, arr 10:40)
+[Duty 404 takes Bus 3 (Route 122) at 12:05 PSQW]
+
+Duty 454 (takes over at PSQW 10:40):
+- Route 122: PSQW → Ashington (dep 10:40)
+- Route 122: Ashington → Drimnagh Rd (dep 11:10)
+- Route 122: Drimnagh Rd → Ashington (dep 12:40)
+- Route 122: Ashington → PSQE (dep 14:10, arr 14:45)
+[Duty 454 takes Bus 9 (Route 122) at 15:45 PSQE]
+
+Running Board 4 (Bus 4) continued:
+Duty 422 (takes over at PSQE 14:45):
+- Route 122: PSQE → Drimnagh Rd (dep 14:45)
+- Route 122: Drimnagh Rd → Ashington (dep 15:40)
+- Route 122: Ashington → PSQE (dep 17:10, arr 17:40)
+[Duty 422 takes Bus 13 (Route 9) at 19:05 PSQE]
+
+Duty 415 (takes over at PSQE 17:40):
+- Route 122: PSQE → Drimnagh Rd (dep 17:40)
+- Route 122: Drimnagh Rd → Ashington (dep 18:40)
+- Route 122: Ashington → PSQE (dep 20:00, arr 20:30)
+[Finish Duty]
+
+Duty 430 (takes over at PSQE 20:30):
+- Route 122: PSQE → Drimnagh Rd (dep 20:30)
+- Route 122: Drimnagh Rd → Ashington (dep 21:30)
+- Route 122: Ashington → Drimnagh Rd (dep 22:30)
+- Route 122: Drimnagh Rd → PSQW (dep 23:30cc, arr 00:00)
+- SPL: PSQW → Garage (dep 00:00, arr 00:10)
+[Finish Duty]
+
+Running Board 5 (Bus 5):
+Duty 406 (starts 08:32):
+- SPL: Garage → Ashington (dep 08:40)
+- Route 122: Ashington → Drimnagh Rd (dep 09:00)
+- Route 122: Drimnagh Rd → Ashington (dep 10:30)
+- Route 122: Ashington → Drimnagh Rd (dep 11:50)
+- Route 122: Drimnagh Rd → PSQW (dep 13:20, arr 14:10)
+[Finish Duty]
+
+Duty 452 (takes over at PSQW 14:10):
+- Route 122: PSQW → Ashington (dep 14:10)
+- Route 122: Ashington → Drimnagh Rd (dep 14:50)
+- Route 122: Drimnagh Rd → Ashington (dep 16:20)
+- Route 122: Ashington → PSQE (dep 17:50, arr 18:20)
+[Finish Duty]
+
+Duty 416 (takes over at PSQE 18:20):
+- Route 122: PSQE → Drimnagh Rd (dep 18:20)
+- Route 122: Drimnagh Rd → Ashington (dep 19:20)
+- SPL: Ashington → Garage (dep 20:45, arr 21:05)
+[Finish Duty]
+
+Running Board 6 (Bus 6):
+Duty 408 (starts 08:47):
+- SPL: Garage → Drimnagh Rd (dep 08:55)
+- Route 122: Drimnagh Rd → Ashington (dep 09:30)
+- Route 122: Ashington → Drimnagh Rd (dep 10:50)
+- Route 122: Drimnagh Rd → Ashington (dep 12:00)
+- Route 122: Ashington → PSQE (dep 13:30, arr 14:05)
+[Finish Duty]
+
+Duty 458 (takes over at PSQE 14:05):
+- Route 122: PSQE → Drimnagh Rd (dep 14:05)
+- Route 122: Drimnagh Rd → Ashington (dep 15:00)
+- Route 122: Ashington → PSQE (dep 16:30, arr 17:00)
+[Finish Duty]
+
+Duty 435 (takes over at PSQE 17:00):
+- Route 122: PSQE → Drimnagh Rd (dep 17:00)
+- Route 122: Drimnagh Rd → Ashington (dep 18:00)
+- Route 122: Ashington → PSQE (dep 19:30, arr 20:00)
+[Duty 435 takes Bus 2 (Route 9) at 21:00 PSQE]
+
+Duty 423 (takes over at PSQE 20:00):
+- Route 122: PSQE → Drimnagh Rd (dep 20:00)
+- Route 122: Drimnagh Rd → Ashington (dep 21:00)
+- Route 122: Ashington → Drimnagh Rd (dep 22:00)
+- Route 122: Drimnagh Rd → Ashington (dep 23:00)
+- SPL: Ashington → Garage (dep 00:00, arr 00:20)
+[Finish Duty]
+
+Running Board 7 (Bus 7):
+Duty 456 (starts 10:57):
+- SPL: Garage → Ashington (dep 11:05)
+- Route 122: Ashington → Drimnagh Rd (dep 11:30)
+- Route 122: Drimnagh Rd → Ashington (dep 13:00)
+- Route 122: Ashington → PSQE (dep 14:30, arr 15:05)
+[Duty 456 takes Bus 8 (Route 122) at 16:15 PSQW]
+
+Duty 425 (takes over at PSQE 15:05):
+- Route 122: PSQE → Drimnagh Rd (dep 15:05)
+- Route 122: Drimnagh Rd → Ashington (dep 16:00)
+- Route 122: Ashington → Drimnagh Rd (dep 17:30)
+- Route 122: Drimnagh Rd → PSQW (dep 19:00, arr 19:40)
+[Duty 425 takes Bus 7 (Route 9) at 20:40 PSQE]
+
+Duty 429 (takes over at PSQW 19:40):
+- Route 122: PSQW → Ashington (dep 19:40)
+- Route 122: Ashington → Drimnagh Rd (dep 20:30)
+- Route 122: Drimnagh Rd → Ashington (dep 22:00)
+- Route 122: Ashington → Drimnagh Rd (dep 23:00)
+- SPL: Drimnagh Rd → Garage (dep 00:00, arr 00:20)
+[Finish Duty]
+
+Running Board 8 (Bus 8):
+Duty 413 (starts 11:32):
+- SPL: Garage → Drimnagh Rd (dep 11:40)
+- Route 122: Drimnagh Rd → Ashington (dep 12:20)
+- Route 122: Ashington → Drimnagh Rd (dep 13:50)
+- Route 122: Drimnagh Rd → PSQW (dep 15:20, arr 16:15)
+[Duty 413 takes Bus 6 (Route 9) at 17:20 PSQE]
+
+Duty 456 (takes over at PSQW 16:15):
+- Route 122: PSQW → Ashington (dep 16:15)
+- Route 122: Ashington → Drimnagh Rd (dep 16:50)
+- Route 122: Drimnagh Rd → Ashington (dep 18:20)
+- SPL: Ashington → Garage (dep 19:40, arr 20:05)
+[Finish Duty]
+
+Running Board 9 (Bus 9):
+Duty 414 (starts 11:37):
+- SPL: Garage → Ashington (dep 11:45)
+- Route 122: Ashington → Drimnagh Rd (dep 12:10)
+- Route 122: Drimnagh Rd → Ashington (dep 13:40)
+- Route 122: Ashington → PSQE (dep 15:10, arr 15:45)
+[Duty 414 takes Bus 14 (Route 9) at 16:50 PSQW]
+
+Duty 454 (takes over at PSQE 15:45):
+- Route 122: PSQE → Drimnagh Rd (dep 15:45)
+- Route 122: Drimnagh Rd → Ashington (dep 16:40)
+- Route 122: Ashington → Drimnagh Rd (dep 18:10)
+- SPL: Drimnagh Rd → Garage (dep 19:30, arr 20:05)
+[Finish Duty]
+
+=== END OF SUNDAY RUNNING BOARDS ===

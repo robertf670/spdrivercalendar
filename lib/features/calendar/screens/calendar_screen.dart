@@ -20,6 +20,7 @@ import 'package:spdrivercalendar/theme/app_theme.dart';
 import 'package:spdrivercalendar/calendar_test_helper.dart';
 import 'package:spdrivercalendar/google_calendar_service.dart';
 import 'package:flutter/services.dart'; // For rootBundle
+import 'dart:math' as math;
 import 'package:spdrivercalendar/features/calendar/services/shift_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
@@ -1219,168 +1220,415 @@ class CalendarScreenState extends State<CalendarScreen>
               const Text('What would you like to do with this event?'),
               const SizedBox(height: 8),
               // Action buttons
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              Wrap(
+                alignment: WrapAlignment.center,
+                spacing: 8.0,
+                runSpacing: 8.0,
                 children: [
-                  // Add View Board button for Zone 3 duties
-                  // Temporarily disabled:
-                  /*
-                  if (event.title.contains('PZ3') || event.title.contains('Zone 3'))
-                    TextButton(
-                      onPressed: () async {
-                        // Extract duty number from the title
-                        // Handles both formats:
-                        // 1. Regular duties: PZ3/01 to PZ3/10 (two digits)
-                        // 2. Bogey duties: PZ3/1X to PZ3/2X (translates to 351-352)
-                        final dutyMatch = RegExp(r'PZ3/(\d{1,2})').firstMatch(event.title);
-                        if (dutyMatch != null) {
-                          String dutyNumber = dutyMatch.group(1)!;
-                          
-                          // Convert duty numbers to their actual numbers
-                          if (dutyNumber.length == 1) {
-                            // If it's a single digit (1 or 2), it's a bogey duty
-                            dutyNumber = '35$dutyNumber';
-                          } else {
-                            // For two-digit numbers (01-10), prepend 3 to make it 301-310
-                            dutyNumber = '3$dutyNumber';
-                          }
-                          
-                          // Load board entries
-                          final entries = await BoardService.loadBoardEntries(dutyNumber, event.startDate);
-                          
-                          // Close the edit dialog
-                          Navigator.of(context).pop();
-                          
-                          // Show the board dialog
-                          if (context.mounted) {
-                            showDialog(
-                              context: context,
-                              builder: (context) => ViewBoardDialog(
-                                entries: entries,
-                                dutyNumber: dutyNumber,
-                                weekday: event.startDate.weekday,
-                                isBankHoliday: ShiftService.getBankHoliday(event.startDate, ShiftService.bankHolidays) != null,
-                              ),
-                            );
-                          }
-                        }
-                      },
-                      child: const Text('View Board'),
-                    ),
-                  */
-                  TextButton(
-                    onPressed: () {
-                      // Close the current dialog first
-                      Navigator.of(context).pop();
-                      // Show the notes dialog
-                      _showNotesDialog(event);
-                    },
-                    child: const Text('Notes'),
-                  ),
-                  // Add Break Status button for eligible duties
-                  if (event.isEligibleForOvertimeTracking) 
-                    TextButton(
-                      onPressed: () {
-                        // Close the current dialog first
-                        Navigator.of(context).pop();
-                        // Show break status dialog
-                        _showBreakStatusDialog(event);
-                      },
-                      child: Text(
-                        event.hasLateBreak ? 'Edit Break Status' : 'Break Status',
+                  // First row for View Board button (Zone 4 only)
+                  if (event.title.contains('PZ4/'))
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8.0),
+                      child: SizedBox(
+                        width: double.infinity,
+                        child: TextButton(
+                          onPressed: () async {
+                            // Extract duty number from the title (format: PZ4/15 -> 415)
+                            final dutyMatch = RegExp(r'PZ4/(\d+)').firstMatch(event.title);
+                            if (dutyMatch != null) {
+                              String dutyNumber = dutyMatch.group(1)!;
+                              
+                              // Convert PZ4/15 to duty 415
+                              dutyNumber = '4$dutyNumber';
+                              
+                              // Close the edit dialog first
+                              Navigator.of(context).pop();
+                              
+                              // Parse and show the board data
+                              if (context.mounted) {
+                                final boardData = await _parseDutyFromBoard(dutyNumber, event.startDate);
+                                if (context.mounted) {
+                                  showDialog(
+                                    context: context,
+                                    builder: (context) => Center(
+                                      child: ConstrainedBox(
+                                        constraints: BoxConstraints(
+                                          maxWidth: math.min(
+                                            MediaQuery.of(context).size.width * 0.95,
+                                            600, // Maximum width for large screens/tablets
+                                          ),
+                                          maxHeight: MediaQuery.of(context).size.height * 0.9,
+                                        ),
+                                        child: AlertDialog(
+                                      title: Row(
+                                        children: [
+                                          const SizedBox(width: 8),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Text('Duty $dutyNumber'),
+                                                Text(
+                                                  '${DateFormat('EEEE, MMM d').format(event.startDate)}',
+                                                  style: const TextStyle(
+                                                    fontSize: 12,
+                                                    fontWeight: FontWeight.normal,
+                                                    color: Colors.grey,
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 4),
+                                                                                                                                                  Text(
+                                                  'Information on these boards may not be accurate. The boards files sometimes have errors. This View Boards feature is currently in testing.',
+                                                  style: TextStyle(
+                                                    fontSize: math.max(10, MediaQuery.of(context).textScaleFactor * 10),
+                                                    fontStyle: FontStyle.italic,
+                                                    color: Colors.orange[700],
+                                                  ),
+                                                  maxLines: 3,
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      content: SizedBox(
+                                        width: double.maxFinite,
+                                        height: math.min(
+                                          MediaQuery.of(context).size.height * 0.7,
+                                          MediaQuery.of(context).size.height - 200, // Ensure minimum space for title/buttons
+                                        ),
+                                        child: boardData.isNotEmpty 
+                                          ? Column(
+                                              children: [
+                                                // Summary header
+
+                                                // Scrollable content
+                                                Expanded(
+                                                  child: SingleChildScrollView(
+                                                    child: Column(
+                                                      children: boardData.asMap().entries.map((entry) {
+                                                        final index = entry.key;
+                                                        final section = entry.value;
+                                                        final isLast = index == boardData.length - 1;
+                                                        
+                                                        return Container(
+                                                          margin: const EdgeInsets.only(bottom: 16),
+                                                          child: Card(
+                                                            elevation: 2,
+                                                            shape: RoundedRectangleBorder(
+                                                              borderRadius: BorderRadius.circular(12),
+                                                            ),
+                                                            child: Column(
+                                                              children: [
+                                                                // Section header
+                                                                Container(
+                                                                  width: double.infinity,
+                                                                  padding: const EdgeInsets.all(16),
+                                                                  decoration: BoxDecoration(
+                                                                    color: AppTheme.primaryColor,
+                                                                    borderRadius: const BorderRadius.only(
+                                                                      topLeft: Radius.circular(12),
+                                                                      topRight: Radius.circular(12),
+                                                                    ),
+                                                                  ),
+                                                                  child: Row(
+                                                                    children: [
+                                                                      Container(
+                                                                        padding: const EdgeInsets.all(6),
+                                                                        decoration: BoxDecoration(
+                                                                          color: Colors.white.withOpacity(0.2),
+                                                                          borderRadius: BorderRadius.circular(6),
+                                                                        ),
+                                                                        child: Text(
+                                                                          '${index + 1}',
+                                                                          style: const TextStyle(
+                                                                            color: Colors.white,
+                                                                            fontWeight: FontWeight.bold,
+                                                                            fontSize: 14,
+                                                                          ),
+                                                                        ),
+                                                                      ),
+                                                                      const SizedBox(width: 12),
+                                                                      Expanded(
+                                                                        child: Text(
+                                                                          section['header']!,
+                                                                          style: const TextStyle(
+                                                                            color: Colors.white,
+                                                                            fontWeight: FontWeight.bold,
+                                                                            fontSize: 14,
+                                                                          ),
+                                                                          maxLines: 2,
+                                                                          overflow: TextOverflow.ellipsis,
+                                                                        ),
+                                                                      ),
+                                                                    ],
+                                                                  ),
+                                                                ),
+                                                                // Movements
+                                                                Container(
+                                                                  width: double.infinity,
+                                                                  padding: const EdgeInsets.all(16),
+                                                                  child: Column(
+                                                                    children: section['movements']!.map<Widget>((movement) {
+                                                                      final isRoute = movement.contains('Route');
+                                                                      final isSPL = movement.contains('SPL');
+                                                                      final isGarage = movement.contains('Garage');
+                                                                      
+                                                                      IconData icon;
+                                                                      Color iconColor;
+                                                                      
+                                                                      if (isGarage || isSPL) {
+                                                                        icon = Icons.home;
+                                                                        iconColor = Colors.orange;
+                                                                      } else if (isRoute) {
+                                                                        icon = Icons.directions_bus;
+                                                                        iconColor = Colors.green;
+                                                                      } else {
+                                                                        icon = Icons.location_on;
+                                                                        iconColor = Colors.blue;
+                                                                      }
+                                                                      
+                                                                      return Container(
+                                                                        margin: const EdgeInsets.only(bottom: 8),
+                                                                        padding: const EdgeInsets.all(12),
+                                                                        decoration: BoxDecoration(
+                                                                          color: iconColor.withOpacity(0.05),
+                                                                          borderRadius: BorderRadius.circular(8),
+                                                                          border: Border.all(
+                                                                            color: iconColor.withOpacity(0.1),
+                                                                          ),
+                                                                        ),
+                                                                        child: Row(
+                                                                          children: [
+                                                                            Icon(
+                                                                              icon,
+                                                                              color: iconColor,
+                                                                              size: 16,
+                                                                            ),
+                                                                            const SizedBox(width: 12),
+                                                                            Expanded(
+                                                                              child: Text(
+                                                                                movement,
+                                                                                style: const TextStyle(
+                                                                                  fontSize: 13,
+                                                                                  height: 1.3,
+                                                                                ),
+                                                                                softWrap: true,
+                                                                                overflow: TextOverflow.visible,
+                                                                              ),
+                                                                            ),
+                                                                          ],
+                                                                        ),
+                                                                      );
+                                                                    }).toList(),
+                                                                  ),
+                                                                ),
+                                                                // Handover information
+                                                                if (section['handover'] != null)
+                                                                  Container(
+                                                                    width: double.infinity,
+                                                                    margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                                                                    padding: const EdgeInsets.all(12),
+                                                                    decoration: BoxDecoration(
+                                                                      gradient: LinearGradient(
+                                                                        colors: [
+                                                                          Colors.blue.withOpacity(0.1),
+                                                                          Colors.blue.withOpacity(0.05),
+                                                                        ],
+                                                                      ),
+                                                                      borderRadius: BorderRadius.circular(8),
+                                                                      border: Border.all(
+                                                                        color: Colors.blue.withOpacity(0.2),
+                                                                      ),
+                                                                    ),
+                                                                    child: Row(
+                                                                      children: [
+                                                                        Icon(
+                                                                          section['handover']!.contains('Finish Duty')
+                                                                            ? Icons.flag
+                                                                            : Icons.swap_horiz,
+                                                                          color: Colors.blue,
+                                                                          size: 16,
+                                                                        ),
+                                                                        const SizedBox(width: 8),
+                                                                        Expanded(
+                                                                          child: Text(
+                                                                            section['handover']!,
+                                                                            style: const TextStyle(
+                                                                              fontSize: 12,
+                                                                              fontStyle: FontStyle.italic,
+                                                                              color: Colors.blue,
+                                                                            ),
+                                                                            softWrap: true,
+                                                                            overflow: TextOverflow.visible,
+                                                                          ),
+                                                                        ),
+                                                                      ],
+                                                                    ),
+                                                                  ),
+                                                              ],
+                                                            ),
+                                                          ),
+                                                        );
+                                                      }).toList(),
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            )
+                                          : const Center(
+                                              child: Column(
+                                                mainAxisAlignment: MainAxisAlignment.center,
+                                                children: [
+                                                  Icon(
+                                                    Icons.search_off,
+                                                    size: 48,
+                                                    color: Colors.grey,
+                                                  ),
+                                                  SizedBox(height: 16),
+                                                  Text(
+                                                    'No running board data found for this duty.',
+                                                    style: TextStyle(
+                                                      fontSize: 16,
+                                                      color: Colors.grey,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                      ),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () => Navigator.of(context).pop(),
+                                          child: const Text('Close'),
+                                        ),
+                                      ],
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                }
+                              }
+                            }
+                          },
+                          child: const Text('View Board'),
+                        ),
                       ),
                     ),
-                  TextButton(
-                    style: TextButton.styleFrom(
-                      foregroundColor: Colors.red,
-                    ),
-                    onPressed: () async {
-                      // First close the dialog to make the UI responsive
-                      Navigator.of(context).pop();
+                                     // Second row for Notes and Break Status buttons
+                   TextButton(
+                     onPressed: () {
+                       // Close the current dialog first
+                       Navigator.of(context).pop();
+                       // Show the notes dialog
+                       _showNotesDialog(event);
+                     },
+                     child: const Text('Notes'),
+                   ),
+                   // Add Break Status button for eligible duties
+                   if (event.isEligibleForOvertimeTracking) 
+                     TextButton(
+                       onPressed: () {
+                         // Close the current dialog first
+                         Navigator.of(context).pop();
+                         // Show break status dialog
+                         _showBreakStatusDialog(event);
+                       },
+                       child: Text(
+                         event.hasLateBreak ? 'Edit Break Status' : 'Break Status',
+                       ),
+                     ),
+                   // Delete button
+                   TextButton(
+                     style: TextButton.styleFrom(
+                       foregroundColor: Colors.red,
+                     ),
+                     onPressed: () async {
+                       // First close the dialog to make the UI responsive
+                       Navigator.of(context).pop();
 
-                      // Capture ScaffoldMessenger BEFORE the async gap
-                      final scaffoldMessenger = ScaffoldMessenger.of(context);
-                      
-                      // Show a loading indicator that can be dismissed
-                      const snackBar = SnackBar(
-                        content: Row(
-                          children: [
-                            SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                              ),
-                            ),
-                            SizedBox(width: 12),
-                            Text('Deleting event...'),
-                          ],
-                        ),
-                        duration: Duration(seconds: 3),
-                      );
-                      
-                      // Show the loading snackbar using the captured messenger
-                      scaffoldMessenger.showSnackBar(snackBar);
-                      
-                      // Delete the event from local storage
-                      await EventService.deleteEvent(event);
-                      
-                      // Check if Google Calendar sync is enabled and delete from Google Calendar
-                      final syncEnabled = await StorageService.getBool(AppConstants.syncToGoogleCalendarKey, defaultValue: false);
-                      final isSignedIn = await GoogleCalendarService.isSignedIn();
-                      
-                      if (syncEnabled && isSignedIn) {
-                        try {
-                          // Create a full DateTime for the event's start time
-                          final startDateTime = DateTime(
-                            event.startDate.year,
-                            event.startDate.month,
-                            event.startDate.day,
-                            event.startTime.hour,
-                            event.startTime.minute,
-                          );
-                          
-                          // Delete from Google Calendar
-                          // Pass the captured context IF NEEDED by the helper, otherwise remove it.
-                          // Assuming CalendarTestHelper might need context, but check its implementation.
-                          // If it doesn't, remove context argument below.
-                          await CalendarTestHelper.deleteEventFromCalendar(
-                            context: context, // CHECK IF NEEDED
-                            title: event.title,
-                            eventStartTime: startDateTime,
-                          );
-                        } catch (e) {
-                          print('Error deleting from Google Calendar: $e');
-                          // Don't show error - the local event was deleted successfully
-                        }
-                      }
-                      
-                      // PRELOAD month data after deletion
-                      if (_selectedDay != null) {
-                        await EventService.preloadMonth(_selectedDay!);
-                      }
+                       // Capture ScaffoldMessenger BEFORE the async gap
+                       final scaffoldMessenger = ScaffoldMessenger.of(context);
+                       
+                       // Show a loading indicator that can be dismissed
+                       const snackBar = SnackBar(
+                         content: Row(
+                           children: [
+                             SizedBox(
+                               width: 20,
+                               height: 20,
+                               child: CircularProgressIndicator(
+                                 strokeWidth: 2,
+                                 valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                               ),
+                             ),
+                             SizedBox(width: 12),
+                             Text('Deleting event...'),
+                           ],
+                         ),
+                         duration: Duration(seconds: 3),
+                       );
+                       
+                       // Show the loading snackbar using the captured messenger
+                       scaffoldMessenger.showSnackBar(snackBar);
+                       
+                       // Delete the event from local storage
+                       await EventService.deleteEvent(event);
+                       
+                       // Check if Google Calendar sync is enabled and delete from Google Calendar
+                       final syncEnabled = await StorageService.getBool(AppConstants.syncToGoogleCalendarKey, defaultValue: false);
+                       final isSignedIn = await GoogleCalendarService.isSignedIn();
+                       
+                       if (syncEnabled && isSignedIn) {
+                         try {
+                           // Create a full DateTime for the event's start time
+                           final startDateTime = DateTime(
+                             event.startDate.year,
+                             event.startDate.month,
+                             event.startDate.day,
+                             event.startTime.hour,
+                             event.startTime.minute,
+                           );
+                           
+                           // Delete from Google Calendar
+                           await CalendarTestHelper.deleteEventFromCalendar(
+                             context: context,
+                             title: event.title,
+                             eventStartTime: startDateTime,
+                           );
+                         } catch (e) {
+                           print('Error deleting from Google Calendar: $e');
+                           // Don't show error - the local event was deleted successfully
+                         }
+                       }
+                       
+                       // PRELOAD month data after deletion
+                       if (_selectedDay != null) {
+                         await EventService.preloadMonth(_selectedDay!);
+                       }
 
-                      // Check if widget is still mounted AFTER async operations
-                      if (mounted) {
-                        // Update the UI state immediately after local deletion
-                        setState(() {});
-                        
-                        // Hide the loading indicator using the captured messenger
-                        scaffoldMessenger.hideCurrentSnackBar();
-                        
-                        // Show confirmation of successful local deletion using the captured messenger
-                        scaffoldMessenger.showSnackBar(
-                          const SnackBar(
-                            content: Text('Event deleted'),
-                            duration: Duration(seconds: 2),
-                          ),
-                        );
-                      }
-                    },
-                    child: const Text('Delete'),
-                  ),
-                ],
+                       // Check if widget is still mounted AFTER async operations
+                       if (mounted) {
+                         // Update the UI state immediately after local deletion
+                         setState(() {});
+                         
+                         // Hide the loading indicator using the captured messenger
+                         scaffoldMessenger.hideCurrentSnackBar();
+                         
+                         // Show confirmation of successful local deletion using the captured messenger
+                         scaffoldMessenger.showSnackBar(
+                           const SnackBar(
+                             content: Text('Event deleted'),
+                             duration: Duration(seconds: 2),
+                           ),
+                         );
+                       }
+                     },
+                     child: const Text('Delete'),
+                   ),
+                 ],
               ),
               const SizedBox(height: 8),
               // Add a divider before the bus selection section
@@ -1915,6 +2163,222 @@ class CalendarScreenState extends State<CalendarScreen>
         ),
       ),
     );
+  }
+
+  // --- Add the duty parsing function ---
+  // Helper function to extract time from duty header for sorting
+  String? _extractTimeFromHeader(String header) {
+    // Extract time from headers like:
+    // "Running Board X (Bus Y) - Starts at 08:22"
+    // "Running Board X (Bus Y) - Takes over at PSQE 15:15"
+    
+    final startsMatch = RegExp(r'Starts at (\d{2}:\d{2})').firstMatch(header);
+    if (startsMatch != null) {
+      return startsMatch.group(1);
+    }
+    
+    final takesOverMatch = RegExp(r'Takes over at .* (\d{2}:\d{2})').firstMatch(header);
+    if (takesOverMatch != null) {
+      return takesOverMatch.group(1);
+    }
+    
+    return null;
+  }
+
+  Future<List<Map<String, dynamic>>> _parseDutyFromBoard(String dutyNumber, DateTime eventDate) async {
+    try {
+      // Determine which board file to use based on the day of the week
+      String boardFileName;
+      final dayOfWeek = RosterService.getDayOfWeek(eventDate);
+      final bankHoliday = ShiftService.getBankHoliday(eventDate, ShiftService.bankHolidays);
+      
+
+      
+              if (dayOfWeek.toLowerCase() == 'sunday' || bankHoliday != null) {
+          boardFileName = 'Zone4SunBoards.txt';
+        } else if (dayOfWeek.toLowerCase() == 'saturday') {
+          boardFileName = 'Zone4SatBoards.txt';
+        } else {
+          // Monday-Friday
+          boardFileName = 'Zone4M-FBoards.txt';
+        }
+      
+      late String boardContent;
+      try {
+        boardContent = await rootBundle.loadString('assets/$boardFileName');
+      } catch (e) {
+        print('Error loading $boardFileName: $e');
+        // Try to load as bytes and handle different encodings
+        try {
+          final bytes = await rootBundle.load('assets/$boardFileName');
+          final byteData = bytes.buffer.asUint8List();
+          
+          // Check for UTF-16 BOM (Byte Order Mark)
+          if (byteData.length >= 2 && byteData[0] == 0xFF && byteData[1] == 0xFE) {
+            // UTF-16 LE (Little Endian)
+            print('Detected UTF-16 LE encoding for $boardFileName');
+            final utf16Bytes = byteData.sublist(2); // Skip BOM
+            final codeUnits = <int>[];
+            for (int i = 0; i < utf16Bytes.length; i += 2) {
+              if (i + 1 < utf16Bytes.length) {
+                int codeUnit = utf16Bytes[i] | (utf16Bytes[i + 1] << 8);
+                codeUnits.add(codeUnit);
+              }
+            }
+            boardContent = String.fromCharCodes(codeUnits);
+          } else if (byteData.length >= 2 && byteData[0] == 0xFE && byteData[1] == 0xFF) {
+            // UTF-16 BE (Big Endian)
+            print('Detected UTF-16 BE encoding for $boardFileName');
+            final utf16Bytes = byteData.sublist(2); // Skip BOM
+            final codeUnits = <int>[];
+            for (int i = 0; i < utf16Bytes.length; i += 2) {
+              if (i + 1 < utf16Bytes.length) {
+                int codeUnit = (utf16Bytes[i] << 8) | utf16Bytes[i + 1];
+                codeUnits.add(codeUnit);
+              }
+            }
+            boardContent = String.fromCharCodes(codeUnits);
+          } else {
+            // Fallback to simple byte conversion for other encodings
+            boardContent = String.fromCharCodes(byteData);
+          }
+          print('Successfully loaded $boardFileName using encoding detection');
+        } catch (e2) {
+          print('Failed to load $boardFileName even with encoding detection: $e2');
+          return [];
+        }
+      }
+      final lines = boardContent.split('\n');
+      
+      List<Map<String, dynamic>> dutyData = [];
+      String? currentRunningBoard;
+      String? currentBus;
+      bool inDutySection = false;
+      List<String> currentMovements = [];
+      String? currentHeader;
+      String? handoverInfo;
+      
+             print('Looking for duty: $dutyNumber in $boardFileName');
+       print('Total lines in file: ${lines.length}');
+       
+       // Debug: Show first few lines to see if content is corrupted
+       print('First 10 lines of file:');
+       for (int i = 0; i < math.min(10, lines.length); i++) {
+         print('Line $i: "${lines[i]}"');
+       }
+       
+       // First, let's see what duties are actually in the file
+       final foundDuties = <String>[];
+       for (final line in lines) {
+         if (line.trim().startsWith('Duty ')) {
+           final dutyMatch = RegExp(r'Duty (\d+) ').firstMatch(line.trim());
+           if (dutyMatch != null) {
+             foundDuties.add(dutyMatch.group(1)!);
+           }
+         }
+       }
+       print('Duties found in file: ${foundDuties.toSet().toList()}');
+       
+       for (int i = 0; i < lines.length; i++) {
+         final line = lines[i].trim();
+         
+         // Track current running board and bus
+         if (line.startsWith('Running Board ')) {
+           final match = RegExp(r'Running Board (\d+) \(Bus (\d+)\)').firstMatch(line);
+           if (match != null) {
+             currentRunningBoard = match.group(1);
+             currentBus = match.group(2);
+           }
+         }
+         
+         // Check if this line starts our duty
+         if (line.startsWith('Duty $dutyNumber ')) {
+           print('Found duty $dutyNumber at line $i: $line');
+          // Save previous duty section if we were in one
+          if (inDutySection && currentHeader != null) {
+            dutyData.add({
+              'header': currentHeader,
+              'movements': List<String>.from(currentMovements),
+              'handover': handoverInfo,
+            });
+          }
+          
+          // Start new duty section
+          inDutySection = true;
+          currentMovements.clear();
+          handoverInfo = null;
+          
+          // Extract the duty info (starts/takes over)
+          if (line.contains('starts ')) {
+            final timeMatch = RegExp(r'starts (\d{2}:\d{2})').firstMatch(line);
+            final startTime = timeMatch?.group(1) ?? 'unknown';
+            currentHeader = 'Running Board $currentRunningBoard (Bus $currentBus) - Starts at $startTime';
+          } else if (line.contains('takes over at ')) {
+            final locationMatch = RegExp(r'takes over at (.*?) (\d{2}:\d{2})').firstMatch(line);
+            final location = locationMatch?.group(1) ?? 'unknown location';
+            final time = locationMatch?.group(2) ?? 'unknown time';
+            currentHeader = 'Running Board $currentRunningBoard (Bus $currentBus) - Takes over at $location $time';
+          }
+        }
+        // Check if we're leaving our duty (next duty starts or we hit a handover)
+        else if (inDutySection) {
+          if (line.startsWith('Duty ') && !line.startsWith('Duty $dutyNumber')) {
+            // We've moved to a different duty, save current section
+            if (currentHeader != null) {
+              dutyData.add({
+                'header': currentHeader,
+                'movements': List<String>.from(currentMovements),
+                'handover': handoverInfo,
+              });
+            }
+            inDutySection = false;
+          } else if (line.startsWith('[') && line.endsWith(']')) {
+            // This is handover information
+            handoverInfo = line.substring(1, line.length - 1); // Remove brackets
+            
+            // If this is the end of our duty (Finish Duty or handover to another bus)
+            if (line.contains('Finish Duty') || line.contains('Duty $dutyNumber takes')) {
+              if (currentHeader != null) {
+                dutyData.add({
+                  'header': currentHeader,
+                  'movements': List<String>.from(currentMovements),
+                  'handover': handoverInfo,
+                });
+              }
+              inDutySection = false;
+            }
+          } else if (line.startsWith('- ')) {
+            // This is a movement line
+            currentMovements.add(line.substring(2)); // Remove "- " prefix
+          }
+        }
+      }
+      
+      // Handle case where duty section was at the end of file
+      if (inDutySection && currentHeader != null) {
+        dutyData.add({
+          'header': currentHeader,
+          'movements': List<String>.from(currentMovements),
+          'handover': handoverInfo,
+        });
+      }
+      
+      // Sort duty data chronologically by start time
+      dutyData.sort((a, b) {
+        final timeA = _extractTimeFromHeader(a['header'] as String);
+        final timeB = _extractTimeFromHeader(b['header'] as String);
+        
+        // If we can't parse times, maintain original order
+        if (timeA == null || timeB == null) return 0;
+        
+        return timeA.compareTo(timeB);
+      });
+      
+      return dutyData;
+    } catch (e) {
+      print('Error parsing duty from board: $e');
+      return [];
+    }
   }
 
   // --- Add the new _showNotesDialog function below ---

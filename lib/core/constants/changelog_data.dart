@@ -1,4 +1,38 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.10.0': [
+    {
+      'title': 'NEW: Zone 4 Dublin Bus Running Boards Integration',
+      'description': 'Revolutionary new feature! View detailed running board information for any Zone 4 duty by clicking "View Board" on event cards. Shows complete duty schedules across multiple buses with movements, handovers, and route information.',
+    },
+    {
+      'title': 'Smart Day-Based Board Selection',
+      'description': 'Automatically selects the correct running board file based on date: Zone4SunBoards.txt for Sundays and bank holidays, Zone4SatBoards.txt for Saturdays, and Zone4M-FBoards.txt for Monday-Friday operations.',
+    },
+    {
+      'title': 'Beautiful Running Board Dialog Design',
+      'description': 'Stunning card-based interface with numbered sections, color-coded movement icons (garage/SPL=orange, routes=green, locations=blue), gradient headers, and professional typography for maximum readability.',
+    },
+    {
+      'title': 'Robust File Encoding Support',
+      'description': 'Advanced encoding detection handles UTF-8, UTF-16 Little Endian, and UTF-16 Big Endian files with BOM detection. Automatically handles different file encodings from Dublin Bus systems ensuring reliable data loading.',
+    },
+    {
+      'title': 'Intelligent Chronological Sorting',
+      'description': 'Fixed duty 440 and other multi-section duties to display in proper chronological order (15:15 before 19:40) regardless of file order. Ensures logical schedule flow across different buses and routes.',
+    },
+    {
+      'title': 'Comprehensive Duty Parsing Engine',
+      'description': 'Sophisticated parsing system extracts duty information, movements, handovers, and transitions between buses. Handles both "starts" and "takes over" scenarios with accurate time and location tracking.',
+    },
+    {
+      'title': 'Enhanced User Experience Refinements',
+      'description': 'Simplified dialog title from "Running Board - Duty XXX" to "Duty XXX". Removed cluttered overview section. Added disclaimer: "Information on these boards may not be accurate. The boards files sometimes have errors. This View Boards feature is currently in testing."',
+    },
+    {
+      'title': 'Professional Error Handling & Fallbacks',
+      'description': 'Graceful handling of missing files, encoding issues, parsing errors, and malformed data. Clear error messages and fallback behaviors ensure app stability even with problematic source files.',
+    },
+  ],
   '2.9.1': [
     {
       'title': 'FIXED: Spare Duty Deletion UI Update',
