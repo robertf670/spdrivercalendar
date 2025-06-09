@@ -7,10 +7,10 @@ class ShiftCreationScreen extends StatefulWidget {
   const ShiftCreationScreen({super.key});
 
   @override
-  _ShiftCreationScreenState createState() => _ShiftCreationScreenState();
+  ShiftCreationScreenState createState() => ShiftCreationScreenState();
 }
 
-class _ShiftCreationScreenState extends State<ShiftCreationScreen> {
+class ShiftCreationScreenState extends State<ShiftCreationScreen> {
   final _formKey = GlobalKey<FormState>();
   
   final TextEditingController _titleController = TextEditingController();

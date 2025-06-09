@@ -10,10 +10,10 @@ class RebuildText extends StatefulWidget {
   }) : super(key: key);
 
   @override
-  _RebuildTextState createState() => _RebuildTextState();
+  RebuildTextState createState() => RebuildTextState();
 }
 
-class _RebuildTextState extends State<RebuildText> with WidgetsBindingObserver {
+class RebuildTextState extends State<RebuildText> with WidgetsBindingObserver {
   static const platform = MethodChannel('app.channel/text_rendering');
   
   @override

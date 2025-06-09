@@ -7,10 +7,10 @@ class ShiftListScreen extends StatefulWidget {
   const ShiftListScreen({super.key});
 
   @override
-  _ShiftListScreenState createState() => _ShiftListScreenState();
+  ShiftListScreenState createState() => ShiftListScreenState();
 }
 
-class _ShiftListScreenState extends State<ShiftListScreen> {
+class ShiftListScreenState extends State<ShiftListScreen> {
   late List<WorkShift> _shifts;
   final DateFormat _dateFormat = DateFormat('MMM dd, yyyy - HH:mm');
   

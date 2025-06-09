@@ -26,10 +26,10 @@ class SettingsScreen extends StatefulWidget {
   }) : super(key: key);
 
   @override
-  _SettingsScreenState createState() => _SettingsScreenState();
+  SettingsScreenState createState() => SettingsScreenState();
 }
 
-class _SettingsScreenState extends State<SettingsScreen> {
+class SettingsScreenState extends State<SettingsScreen> {
   late bool _isDarkMode;
   bool _isGoogleSignedIn = false;
   String _googleAccount = '';
@@ -295,7 +295,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text('Google Calendar'),
-              const SizedBox(height: 8),
+              SizedBox(height: 8),
               LinearProgressIndicator(),
             ],
           ),
@@ -519,6 +519,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _handleGoogleSignIn() async {
+    // Capture ScaffoldMessenger before async operations
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    
     setState(() {
       _isLoading = true;
     });
@@ -532,13 +535,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
     });
     
     if (account != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      scaffoldMessenger.showSnackBar(
         const SnackBar(content: Text('Successfully connected to Google Calendar')),
       );
     }
   }
 
   Future<void> _handleGoogleSignOut() async {
+    // Capture ScaffoldMessenger before async operations
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    
     setState(() {
       _isLoading = true;
     });
@@ -554,7 +560,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     await StorageService.saveBool(AppConstants.syncToGoogleCalendarKey, false);
     
-    ScaffoldMessenger.of(context).showSnackBar(
+    scaffoldMessenger.showSnackBar(
       const SnackBar(content: Text('Disconnected from Google Calendar')),
     );
   }
@@ -570,6 +576,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
 
   Future<void> _showSyncDialog(BuildContext context) async {
+    // Capture Navigator and ScaffoldMessenger before async operations
+    final navigator = Navigator.of(context);
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    
     // Show loading indicator
     showDialog(
       context: context,
@@ -580,7 +590,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             CircularProgressIndicator(),
-            const SizedBox(height: 16),
+            SizedBox(height: 16),
             Text('Comparing local events with Google Calendar...'),
           ],
         ),
@@ -592,7 +602,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       final syncResult = await CalendarTestHelper.checkCalendarSyncStatus();
       
       // Close loading dialog
-      Navigator.of(context).pop();
+      navigator.pop();
       
       // Show sync status with option to sync missing events
       showDialog(
@@ -614,13 +624,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.of(context).pop(),
+              onPressed: () => navigator.pop(),
               child: const Text('Close'),
             ),
             if ((syncResult['missingEvents'] ?? 0) > 0)
               TextButton(
                 onPressed: () async {
-                  Navigator.of(context).pop();
+                  navigator.pop();
                   await _syncMissingEvents(context);
                 },
                 child: const Text('Sync Missing Events'),
@@ -630,10 +640,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
       );
     } catch (e) {
       // Close loading dialog
-      Navigator.of(context).pop();
+      navigator.pop();
       
       // Show error
-      ScaffoldMessenger.of(context).showSnackBar(
+      scaffoldMessenger.showSnackBar(
         SnackBar(content: Text('Error checking sync status: $e')),
       );
     }
@@ -655,7 +665,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 CircularProgressIndicator(),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
                 Text('Uploading missing events to Google Calendar...'),
               ],
             ),

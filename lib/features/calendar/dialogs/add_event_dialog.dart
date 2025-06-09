@@ -13,10 +13,10 @@ class AddEventDialog extends StatefulWidget {
   }) : super(key: key);
 
   @override
-  _AddEventDialogState createState() => _AddEventDialogState();
+  AddEventDialogState createState() => AddEventDialogState();
 }
 
-class _AddEventDialogState extends State<AddEventDialog> {
+class AddEventDialogState extends State<AddEventDialog> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _titleController = TextEditingController();
   late DateTime _startDate;

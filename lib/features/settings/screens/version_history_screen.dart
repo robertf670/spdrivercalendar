@@ -216,12 +216,12 @@ class _VersionHistoryScreenState extends State<VersionHistoryScreen> {
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
-                          children: const [
+                          children: [
                             Icon(Icons.new_releases, size: 14, color: Colors.green),
                             SizedBox(width: 4),
                             Text(
                               'Available',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 color: Colors.green,
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
@@ -279,8 +279,12 @@ class _VersionHistoryScreenState extends State<VersionHistoryScreen> {
       final v2Parts = version2.split('.').map(int.parse).toList();
       
       // Ensure both have same number of parts
-      while (v1Parts.length < v2Parts.length) v1Parts.add(0);
-      while (v2Parts.length < v1Parts.length) v2Parts.add(0);
+      while (v1Parts.length < v2Parts.length) {
+        v1Parts.add(0);
+      }
+      while (v2Parts.length < v1Parts.length) {
+        v2Parts.add(0);
+      }
       
       for (int i = 0; i < v1Parts.length; i++) {
         if (v1Parts[i] != v2Parts[i]) {

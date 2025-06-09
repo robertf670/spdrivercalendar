@@ -2559,7 +2559,7 @@ class CalendarScreenState extends State<CalendarScreen>
             ],
             const Text(
               'Select an option for late break:',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 14,
               ),
             ),
@@ -2723,7 +2723,7 @@ class CalendarScreenState extends State<CalendarScreen>
             children: [
               const Text(
                 'Select overtime duration:',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 14,
                 ),
               ),

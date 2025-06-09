@@ -6,10 +6,10 @@ class GoogleCalendarSettingsScreen extends StatefulWidget {
   const GoogleCalendarSettingsScreen({super.key});
 
   @override
-  _GoogleCalendarSettingsScreenState createState() => _GoogleCalendarSettingsScreenState();
+  GoogleCalendarSettingsScreenState createState() => GoogleCalendarSettingsScreenState();
 }
 
-class _GoogleCalendarSettingsScreenState extends State<GoogleCalendarSettingsScreen> {
+class GoogleCalendarSettingsScreenState extends State<GoogleCalendarSettingsScreen> {
   bool _isConnected = false;
   bool _isLoading = true;
 

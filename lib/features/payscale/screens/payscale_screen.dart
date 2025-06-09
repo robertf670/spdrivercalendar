@@ -6,10 +6,10 @@ class PayscaleScreen extends StatefulWidget {
   const PayscaleScreen({Key? key}) : super(key: key);
 
   @override
-  _PayscaleScreenState createState() => _PayscaleScreenState();
+  PayscaleScreenState createState() => PayscaleScreenState();
 }
 
-class _PayscaleScreenState extends State<PayscaleScreen> {
+class PayscaleScreenState extends State<PayscaleScreen> {
   List<Map<String, dynamic>>? _payscaleData;
   bool _isLoading = true;
   String? _errorMessage;
@@ -291,10 +291,10 @@ class HorizontalSplitTable extends StatefulWidget {
   }) : super(key: key);
 
   @override
-  _HorizontalSplitTableState createState() => _HorizontalSplitTableState();
+  HorizontalSplitTableState createState() => HorizontalSplitTableState();
 }
 
-class _HorizontalSplitTableState extends State<HorizontalSplitTable> {
+class HorizontalSplitTableState extends State<HorizontalSplitTable> {
   final ScrollController _horizontalScrollController1 = ScrollController();
   final ScrollController _horizontalScrollController2 = ScrollController();
   final ScrollController _verticalScrollController1 = ScrollController();

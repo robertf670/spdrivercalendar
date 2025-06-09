@@ -7,10 +7,10 @@ class AboutScreen extends StatefulWidget {
   const AboutScreen({Key? key}) : super(key: key);
 
   @override
-  _AboutScreenState createState() => _AboutScreenState();
+  AboutScreenState createState() => AboutScreenState();
 }
 
-class _AboutScreenState extends State<AboutScreen> with TextRenderingMixin {
+class AboutScreenState extends State<AboutScreen> with TextRenderingMixin {
   @override
 
   @override

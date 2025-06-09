@@ -11,10 +11,10 @@ class GoogleLoginScreen extends StatefulWidget {
   }) : super(key: key);
   
   @override
-  _GoogleLoginScreenState createState() => _GoogleLoginScreenState();
+  GoogleLoginScreenState createState() => GoogleLoginScreenState();
 }
 
-class _GoogleLoginScreenState extends State<GoogleLoginScreen> {
+class GoogleLoginScreenState extends State<GoogleLoginScreen> {
   bool _isLoading = false;
   String _errorMessage = '';
   

@@ -2025,7 +2025,8 @@ class _EventCardState extends State<EventCard> {
                         width: double.infinity,
                         child: ElevatedButton.icon(
                 onPressed: () {
-                  Navigator.of(context).pop();
+                  final navigator = Navigator.of(context);
+                  navigator.pop();
                   _showDutySelectionDialog(context);
                 },
                           icon: const Icon(Icons.work, size: 18),
@@ -2046,7 +2047,8 @@ class _EventCardState extends State<EventCard> {
                           Expanded(
                             child: ElevatedButton.icon(
                 onPressed: () {
-                  Navigator.of(context).pop();
+                  final navigator = Navigator.of(context);
+                  navigator.pop();
                                 _showDutySelectionDialog(context, 'A');
                               },
                               icon: const Icon(Icons.schedule, size: 16),
@@ -2065,7 +2067,8 @@ class _EventCardState extends State<EventCard> {
                           Expanded(
                             child: ElevatedButton.icon(
                 onPressed: () {
-                  Navigator.of(context).pop();
+                  final navigator = Navigator.of(context);
+                  navigator.pop();
                                 _showDutySelectionDialog(context, 'B');
                               },
                               icon: const Icon(Icons.access_time, size: 16),
@@ -2176,6 +2179,10 @@ class _EventCardState extends State<EventCard> {
                       ),
                              IconButton(
                         onPressed: () async {
+                          // Capture context and navigator before async operations
+                          final currentContext = context;
+                          final navigator = Navigator.of(context);
+                          
                           // Create a copy of the old event
                           final oldEvent = Event(
                             id: widget.event.id,
@@ -2240,7 +2247,7 @@ class _EventCardState extends State<EventCard> {
                           }
                           
                           // Close the current dialog
-                          Navigator.of(context).pop();
+                          navigator.pop();
                           
                           // Force immediate refresh of the parent calendar
                           widget.onEdit(Event(
@@ -2257,7 +2264,7 @@ class _EventCardState extends State<EventCard> {
                           
                           // Reopen the spare shift dialog to show updated duties
                           if (mounted) {
-                            _showSpareShiftDialog(context);
+                            _showSpareShiftDialog(currentContext);
                           }
                         },
                                icon: const Icon(Icons.delete_outline),
@@ -2329,7 +2336,8 @@ class _EventCardState extends State<EventCard> {
                                ),
                                                                 ElevatedButton(
                                    onPressed: () async {
-                                     await _showDutyBusAssignmentDialog(context, duty['dutyCode'] ?? '');
+                                     final currentContext = context;
+                                     await _showDutyBusAssignmentDialog(currentContext, duty['dutyCode'] ?? '');
                                    },
                                                                     style: ElevatedButton.styleFrom(
                                    backgroundColor: AppTheme.primaryColor,

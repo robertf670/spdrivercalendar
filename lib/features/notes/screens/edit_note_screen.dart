@@ -9,10 +9,10 @@ class EditNoteScreen extends StatefulWidget {
   const EditNoteScreen({Key? key, required this.event}) : super(key: key);
 
   @override
-  _EditNoteScreenState createState() => _EditNoteScreenState();
+  EditNoteScreenState createState() => EditNoteScreenState();
 }
 
-class _EditNoteScreenState extends State<EditNoteScreen> {
+class EditNoteScreenState extends State<EditNoteScreen> {
   late TextEditingController _noteController;
   bool _isSaving = false;
 

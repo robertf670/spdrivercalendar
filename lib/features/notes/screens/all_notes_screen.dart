@@ -10,10 +10,10 @@ class AllNotesScreen extends StatefulWidget {
   const AllNotesScreen({Key? key}) : super(key: key);
 
   @override
-  _AllNotesScreenState createState() => _AllNotesScreenState();
+  AllNotesScreenState createState() => AllNotesScreenState();
 }
 
-class _AllNotesScreenState extends State<AllNotesScreen> {
+class AllNotesScreenState extends State<AllNotesScreen> {
   List<Event> _allNotes = []; // Holds all notes originally loaded
   Map<String, List<Event>> _groupedNotes = {}; // Map for grouped notes
   bool _isLoading = true;

@@ -56,8 +56,12 @@ class UpdateInfo {
       final latestParts = latest.split('.').map(int.parse).toList();
 
       // Ensure both have same number of parts
-      while (currentParts.length < latestParts.length) currentParts.add(0);
-      while (latestParts.length < currentParts.length) latestParts.add(0);
+      while (currentParts.length < latestParts.length) {
+        currentParts.add(0);
+      }
+      while (latestParts.length < currentParts.length) {
+        latestParts.add(0);
+      }
 
       for (int i = 0; i < currentParts.length; i++) {
         if (latestParts[i] > currentParts[i]) return true;

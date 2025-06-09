@@ -64,10 +64,10 @@ class MyApp extends StatefulWidget {
   }) : super(key: key);
 
   @override
-  _MyAppState createState() => _MyAppState();
+  MyAppState createState() => MyAppState();
 }
 
-class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
+class MyAppState extends State<MyApp> with WidgetsBindingObserver {
   late ValueNotifier<bool> _isDarkModeNotifier;
   final _rebuildKey = GlobalKey();
 
@@ -129,7 +129,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
               ),
               AppConstants.whatsNewRoute: (context) => WhatsNewScreen(
                 onContinue: () {
-                  final state = context.findAncestorStateOfType<_SplashScreenState>();
+                  final state = context.findAncestorStateOfType<SplashScreenState>();
                   if (state != null) {
                     state._checkOnboardingStatus();
                   } else {
@@ -174,10 +174,10 @@ class SplashScreen extends StatefulWidget {
   }) : super(key: key);
 
   @override
-  _SplashScreenState createState() => _SplashScreenState();
+  SplashScreenState createState() => SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> {
+class SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();

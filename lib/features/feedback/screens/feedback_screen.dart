@@ -6,10 +6,10 @@ class FeedbackScreen extends StatefulWidget {
   const FeedbackScreen({Key? key}) : super(key: key);
 
   @override
-  _FeedbackScreenState createState() => _FeedbackScreenState();
+  FeedbackScreenState createState() => FeedbackScreenState();
 }
 
-class _FeedbackScreenState extends State<FeedbackScreen> {
+class FeedbackScreenState extends State<FeedbackScreen> {
   final _feedbackController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
 

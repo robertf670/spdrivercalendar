@@ -6,10 +6,10 @@ class BillsScreen extends StatefulWidget {
   const BillsScreen({Key? key}) : super(key: key);
 
   @override
-  _BillsScreenState createState() => _BillsScreenState();
+  BillsScreenState createState() => BillsScreenState();
 }
 
-class _BillsScreenState extends State<BillsScreen> {
+class BillsScreenState extends State<BillsScreen> {
   String _selectedDayType = 'M-F';
   String _selectedZone = 'Zone 1';
   bool _isLoading = false;

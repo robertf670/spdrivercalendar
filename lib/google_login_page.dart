@@ -8,10 +8,10 @@ class GoogleLoginPage extends StatefulWidget {
   const GoogleLoginPage({Key? key, required this.onLoginComplete}) : super(key: key);
 
   @override
-  _GoogleLoginPageState createState() => _GoogleLoginPageState();
+  GoogleLoginPageState createState() => GoogleLoginPageState();
 }
 
-class _GoogleLoginPageState extends State<GoogleLoginPage> {
+class GoogleLoginPageState extends State<GoogleLoginPage> {
   bool _isLoading = false;
   String? _currentUserEmail;
   String _statusMessage = '';
