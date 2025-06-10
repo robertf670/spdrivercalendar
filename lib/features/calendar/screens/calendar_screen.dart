@@ -843,6 +843,16 @@ class CalendarScreenState extends State<CalendarScreen>
                         
                         // Update state to show the new event immediately
                         setState(() {});
+                        
+                        // Force complete refresh using the same mechanism as spare duties
+                        _editEvent(Event(
+                          id: 'refresh_trigger',
+                          title: '',
+                          startDate: _selectedDay ?? DateTime.now(),
+                          startTime: const TimeOfDay(hour: 0, minute: 0),
+                          endDate: _selectedDay ?? DateTime.now(),
+                          endTime: const TimeOfDay(hour: 0, minute: 0),
+                        ));
                       }
                     },
                 child: const Text('Add Shift'),

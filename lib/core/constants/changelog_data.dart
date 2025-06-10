@@ -1,4 +1,18 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.11.1': [
+    {
+      'title': 'FIXED: Work Shift Event List Auto-Update',
+      'description': 'Fixed critical issue where adding work shifts (PZ zones, Uni/Euro, Bus Check, Jamestown, etc.) required navigating to another day and back to see the new event in the list. Event cards now update immediately when work shifts are added using the proven refresh mechanism.',
+    },
+    {
+      'title': 'Enhanced UI Synchronization',
+      'description': 'Implemented consistent refresh trigger mechanism across all event types. Work shift addition now uses the same reliable UI update system as spare duty operations, ensuring immediate visibility of newly added events.',
+    },
+    {
+      'title': 'Improved User Experience',
+      'description': 'Eliminated the frustrating workflow interruption where users had to manually refresh the calendar view to see their newly added work shifts. All shift types now appear instantly in the event list upon creation.',
+    },
+  ],
   '2.11.0': [
     {
       'title': '🚀 MASSIVE Code Quality Revolution: 91.9% Complete!',
