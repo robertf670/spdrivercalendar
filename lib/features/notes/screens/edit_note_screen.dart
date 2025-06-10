@@ -72,7 +72,7 @@ class EditNoteScreenState extends State<EditNoteScreen> {
           // Save button - Corrected Ternary Structure
           _isSaving
             ? const Padding(
-                padding: const EdgeInsets.all(16.0), // Use EdgeInsets.all for consistency
+                padding: EdgeInsets.all(16.0), // Use EdgeInsets.all for consistency
                 child: Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))),
               )
             : IconButton(
@@ -101,10 +101,10 @@ class EditNoteScreenState extends State<EditNoteScreen> {
             // Note input field
             TextField(
               controller: _noteController,
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 labelText: 'Note',
                 hintText: 'Enter your note here...',
-                border: const OutlineInputBorder(),
+                border: OutlineInputBorder(),
                 alignLabelWithHint: true, // Better alignment for multi-line
               ),
               maxLines: null, // Allows multiple lines

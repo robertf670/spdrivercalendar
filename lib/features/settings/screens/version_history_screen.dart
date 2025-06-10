@@ -216,9 +216,9 @@ class _VersionHistoryScreenState extends State<VersionHistoryScreen> {
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.new_releases, size: 14, color: Colors.green),
-                            const SizedBox(width: 4),
+                          children: const [
+                            Icon(Icons.new_releases, size: 14, color: Colors.green),
+                            SizedBox(width: 4),
                             Text(
                               'Available',
                               style: TextStyle(

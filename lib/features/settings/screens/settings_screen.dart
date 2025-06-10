@@ -186,10 +186,10 @@ class SettingsScreenState extends State<SettingsScreen> {
                       ),
                     ),
                   ),
-                  _buildNotificationsEnabledSwitch(), // This method will be modified below
-                  _buildNotificationOffsetDropdown(), // This method will be modified below
-                  _buildTestNotificationButton(), // This method will be modified below
-                  _buildViewPendingNotificationsButton(), // This method will be modified below
+                  _buildShiftNotificationToggle(),
+                  _buildNotificationOffsetDropdown(),
+                  _buildTestNotificationButton(),
+                  _buildViewPendingNotificationsButton(),
                   // --- End Notifications Section --- 
                   
                   const Divider(height: 32),
@@ -274,7 +274,6 @@ class SettingsScreenState extends State<SettingsScreen> {
                     style: TextStyle(
                       color: Colors.orange.shade700,
                       fontSize: 12,
-                      fontWeight: FontWeight.w500,
                     ),
                   ),
                 ),
@@ -409,7 +408,7 @@ class SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _buildNotificationsEnabledSwitch() {
+  Widget _buildShiftNotificationToggle() {
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 4.0),
       shape: RoundedRectangleBorder(

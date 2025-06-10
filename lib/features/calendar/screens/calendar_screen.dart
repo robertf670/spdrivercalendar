@@ -809,9 +809,11 @@ class CalendarScreenState extends State<CalendarScreen>
                       // Handle potential null shiftTimes (error loading CSV etc.)
                       if (shiftTimes == null) {
                          // Could not retrieve shift times
+                         if (mounted) {
                           ScaffoldMessenger.of(dialogContext).showSnackBar(
                             const SnackBar(content: Text('Error retrieving shift times. Please try again.')),
                           );
+                         }
                          return; // Stop execution if times are null
                       }
                       
@@ -829,7 +831,9 @@ class CalendarScreenState extends State<CalendarScreen>
                       
                       // Add event and close dialog
                       await EventService.addEvent(event);
-                      Navigator.of(dialogContext).pop();
+                      if (mounted) {
+                        Navigator.of(dialogContext).pop();
+                      }
                       
                       // Sync to Google if enabled (before any other async operations)
                       if (mounted) {
@@ -1084,14 +1088,17 @@ class CalendarScreenState extends State<CalendarScreen>
   }
 
   // Helper to check settings and sync to Google Calendar if enabled
-  Future<void> _checkAndSyncToGoogleCalendar(Event event, BuildContext context) async {
+  Future<void> _checkAndSyncToGoogleCalendar(Event event, BuildContext? context) async {
+    // Return early if context is null or widget is not mounted
+    if (context == null || !mounted) return;
+    
     // Capture context dependencies before any async operations
-    final scaffoldMessenger = mounted ? ScaffoldMessenger.of(context) : null;
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
     
     // Format break times before any async operations
     String? formattedBreakStart;
     String? formattedBreakEnd;
-    if (event.breakStartTime != null && event.breakEndTime != null && mounted) {
+    if (event.breakStartTime != null && event.breakEndTime != null) {
       formattedBreakStart = event.breakStartTime!.format(context);
       formattedBreakEnd = event.breakEndTime!.format(context);
     }
@@ -1147,7 +1154,8 @@ class CalendarScreenState extends State<CalendarScreen>
         // Handle case where description might still be empty
         final finalDescription = description.isEmpty ? null : description;
         
-        // Add to Google Calendar
+        // Add to Google Calendar (check mounted again before async operation)
+        if (!mounted) return;
         final success = await CalendarTestHelper.addWorkShiftToCalendar(
           context: context,
           title: event.title,
@@ -1156,8 +1164,8 @@ class CalendarScreenState extends State<CalendarScreen>
           description: finalDescription, // Use the updated description
         );
         
-        // Use captured messenger to show result
-        if (success && scaffoldMessenger != null) {
+        // Use captured messenger to show result (check mounted after async)
+        if (success && mounted) {
           scaffoldMessenger.showSnackBar(
             const SnackBar(content: Text('Shift added to Google Calendar')),
           );
@@ -2515,8 +2523,8 @@ class CalendarScreenState extends State<CalendarScreen>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Row(
-          children: const [
+        title: const Row(
+          children: [
             Icon(Icons.access_time, color: AppTheme.primaryColor),
             SizedBox(width: 8),
             Text('Break Status'),
@@ -2536,9 +2544,9 @@ class CalendarScreenState extends State<CalendarScreen>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
+                    const Text(
                       'Current Status:', 
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 14,
                       ),
@@ -2720,8 +2728,8 @@ class CalendarScreenState extends State<CalendarScreen>
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
-          title: Row(
-            children: const [
+          title: const Row(
+            children: [
               Icon(Icons.monetization_on, color: Colors.orange),
               SizedBox(width: 8),
               Text('Select Overtime'),
@@ -3551,7 +3559,7 @@ class CalendarScreenState extends State<CalendarScreen>
                                         holiday.type == 'winter' ? 'Winter Holiday' : 
                                         holiday.type == 'summer' ? 'Summer Holiday' :
                                         'Other Holiday',
-                                        style: TextStyle( // Remove const
+                                        style: TextStyle( // Remove const since we use Theme.of(context)
                                           fontWeight: FontWeight.bold,
                                           color: Theme.of(context).textTheme.titleMedium?.color // Use theme text color
                                         ),
