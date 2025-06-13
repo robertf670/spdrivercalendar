@@ -1095,14 +1095,6 @@ class CalendarScreenState extends State<CalendarScreen>
     // Capture context dependencies before any async operations
     final scaffoldMessenger = ScaffoldMessenger.of(context);
     
-    // Format break times before any async operations
-    String? formattedBreakStart;
-    String? formattedBreakEnd;
-    if (event.breakStartTime != null && event.breakEndTime != null) {
-      formattedBreakStart = event.breakStartTime!.format(context);
-      formattedBreakEnd = event.breakEndTime!.format(context);
-    }
-    
     // Check if Google Calendar sync is enabled
     final syncEnabled = await StorageService.getBool(AppConstants.syncToGoogleCalendarKey, defaultValue: false);
     final isSignedIn = await GoogleCalendarService.isSignedIn();
@@ -1129,27 +1121,25 @@ class CalendarScreenState extends State<CalendarScreen>
         // Get break information
         final breakTime = await ShiftService.getBreakTime(event);
         
-        // Build description with all break information
-        String description = ''; // Initialize as empty string
-        if (breakTime != null) {
-          description = 'Break: $breakTime';
-          if (formattedBreakStart != null && formattedBreakEnd != null) {
-            // Use pre-formatted break times
-            description += '\nBreak Time: $formattedBreakStart - $formattedBreakEnd';
-          }
-        }
-        
         // Check if it's a rest day using RosterService
         final String shiftType = getShiftForDate(event.startDate); // Use existing screen method
         final bool isRest = shiftType == 'R';
         
-        if (isRest) {
-          if (description.isNotEmpty) {
-            description += '\n(Working on Rest Day)';
-          } else {
-            description = '(Working on Rest Day)';
-          }
+        // Build description with all available information
+        List<String> descriptionParts = [];
+        
+        // Add break times if available (and not a workout)
+        if (breakTime != null && !breakTime.toLowerCase().contains('workout') && breakTime.isNotEmpty) {
+          descriptionParts.add('Break Times: $breakTime');
         }
+        
+        // Add rest day indicator if applicable
+        if (isRest) {
+          descriptionParts.add('(Working on Rest Day)');
+        }
+        
+        // Combine all parts into final description
+        final description = descriptionParts.join('\n');
         
         // Handle case where description might still be empty
         final finalDescription = description.isEmpty ? null : description;

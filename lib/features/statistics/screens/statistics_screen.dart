@@ -576,8 +576,11 @@ class StatisticsScreenState extends State<StatisticsScreen>
         endDate = startDate.add(const Duration(days: 6));
         break;
       case 'Last Week':
-        startDate = now.subtract(const Duration(days: 6));
-        endDate = now;
+        // Last week (previous Sunday to Saturday) - match work time calculation logic
+        final thisWeekStart = DateTime(now.year, now.month, now.day).subtract(Duration(days: now.weekday % 7));
+        final lastWeekEnd = DateTime(thisWeekStart.year, thisWeekStart.month, thisWeekStart.day).subtract(const Duration(days: 1)); // End on previous Saturday
+        startDate = DateTime(lastWeekEnd.year, lastWeekEnd.month, lastWeekEnd.day).subtract(const Duration(days: 6)); // Start on previous Sunday
+        endDate = lastWeekEnd;
         break;
       case 'This Month':
         startDate = DateTime(now.year, now.month, 1);

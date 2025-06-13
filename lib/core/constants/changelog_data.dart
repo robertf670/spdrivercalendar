@@ -1,4 +1,30 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.11.4': [
+    {
+      'title': '🔧 FIXED: Last Week Statistics Date Range',
+      'description': 'Fixed critical issue where "Last Week" statistics were not properly following the Sunday-to-Saturday week pattern. Overtime shifts (and other shifts) occurring on Sunday of the previous week now correctly appear when "Last Week" is selected.',
+    },
+    {
+      'title': '📊 Consistent Week Calculations',
+      'description': 'Synchronized "Last Week" calculation logic between Shift Type Statistics and Work Time Statistics. Both now use the same Sunday-to-Saturday week pattern ensuring accurate and consistent results across all statistics.',
+    },
+    {
+      'title': '⚡ Improved Date Range Accuracy',
+      'description': 'Eliminated the issue where "Last Week" was calculated as "today minus 6 days" instead of the proper previous Sunday-to-Saturday week. Statistics now correctly match the established week boundaries used throughout the app.',
+    },
+    {
+      'title': '🔧 FIXED: Google Calendar Break Times',
+      'description': 'Restored break times in Google Calendar event descriptions. Work shifts now properly include break time information (e.g., "Break Times: 13:30 - 14:00") when synced to Google Calendar. Improved reliability for rest day shifts to ensure both break times and "(Working on Rest Day)" indicator appear together when applicable.',
+    },
+    {
+      'title': '🚀 ENHANCED: Google Calendar Authentication',
+      'description': 'Completely overhauled Google Calendar token management system with proactive refresh, persistent token tracking across app restarts, and intelligent startup validation. Eliminates timeout issues and manual re-authentication requirements. Tested and verified working in all scenarios including app closure and emulator environments.',
+    },
+    {
+      'title': '🧹 CODE CLEANUP: Production Ready',
+      'description': 'Removed all debug print statements from Google Calendar service and helper functions. App now operates silently in production with clean console output and professional code standards.',
+    },
+  ],
   '2.11.3': [
     {
       'title': '🔧 FIXED: Google Calendar Sync Issue',
