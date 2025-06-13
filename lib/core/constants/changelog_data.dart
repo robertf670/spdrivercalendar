@@ -1,4 +1,26 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.11.3': [
+    {
+      'title': '🔧 FIXED: Google Calendar Sync Issue',
+      'description': 'Resolved critical issue where Google Calendar sync would fail silently due to BuildContext lifecycle problems. Events were detected as "missing" but sync would abort immediately without adding them to Google Calendar.',
+    },
+    {
+      'title': '🛠️ Enhanced Sync Reliability',
+      'description': 'Fixed BuildContext unmounted error that was stopping sync operations prematurely. Google Calendar sync now completes successfully even if the user navigates away from the sync dialog.',
+    },
+    {
+      'title': '📊 Comprehensive Error Logging',
+      'description': 'Added detailed logging throughout the Google Calendar sync pipeline to help diagnose issues. Authentication, connection testing, and event creation now provide clear feedback about success or failure reasons.',
+    },
+    {
+      'title': '⚡ Improved User Experience',
+      'description': 'Eliminated the frustrating workflow where "Sync Missing Events" button would appear to work but events never actually appeared in Google Calendar. Sync operations are now robust and reliable.',
+    },
+    {
+      'title': '🎯 Better UI Feedback Control',
+      'description': 'Added smart UI feedback system that prevents notification spam during bulk sync operations while still providing clear completion status and error messages when needed.',
+    },
+  ],
   '2.11.2': [
     {
       'title': '🎯 EPIC Code Quality Achievement: 93.2% Complete!',

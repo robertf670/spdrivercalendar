@@ -283,49 +283,57 @@ class GoogleCalendarService {
   }) async {
     try {
       if (_calendarApi == null) {
+        print('GoogleCalendarService: Calendar API not initialized');
         throw Exception('Calendar API not initialized. Please sign in first.');
       }
 
       // Proactively validate authentication
+      print('GoogleCalendarService: Validating authentication...');
       final isValid = await _validateAuthentication();
       if (!isValid) {
-
+        print('GoogleCalendarService: Authentication validation failed');
         return null;
       }
 
+      print('GoogleCalendarService: Creating event "${event.summary}" from ${event.start?.dateTime} to ${event.end?.dateTime}');
       final calendar.Event createdEvent = await _calendarApi!.events.insert(
         event,
         calendarId ?? 'primary',
       );
 
-
+      print('GoogleCalendarService: Event created successfully with ID: ${createdEvent.id}');
       return createdEvent;
     } catch (e) {
       // Failed to create event, handle authentication errors
+      print('GoogleCalendarService: Error creating event: $e');
       
       // If authentication error, try to refresh
       if (e.toString().contains('401') || e.toString().contains('403')) {
-
+        print('GoogleCalendarService: Authentication error detected, attempting to refresh...');
         final refreshSuccess = await _refreshAuthentication();
         
         if (refreshSuccess && _calendarApi != null) {
           // Retry once with refreshed authentication
           try {
+            print('GoogleCalendarService: Retrying event creation after authentication refresh...');
             final calendar.Event createdEvent = await _calendarApi!.events.insert(
               event,
               calendarId ?? 'primary',
             );
+            print('GoogleCalendarService: Event created successfully on retry with ID: ${createdEvent.id}');
             return createdEvent;
           } catch (retryError) {
             // Retry failed, return null
+            print('GoogleCalendarService: Retry failed: $retryError');
             return null;
           }
         } else {
-
+          print('GoogleCalendarService: Failed to refresh authentication');
           return null;
         }
       }
       
+      print('GoogleCalendarService: Non-authentication error, returning null');
       return null;
     }
   }
@@ -487,13 +495,17 @@ class GoogleCalendarService {
   static Future<List<calendar.CalendarListEntry>> getCalendars() async {
     try {
       if (_calendarApi == null) {
+        print('GoogleCalendarService: getCalendars failed - Calendar API not initialized');
         throw Exception('Calendar API not initialized. Please sign in first.');
       }
 
+      print('GoogleCalendarService: Fetching calendar list...');
       final calendar.CalendarList calendarList = await _calendarApi!.calendarList.list();
-      return calendarList.items ?? [];
+      final calendars = calendarList.items ?? [];
+      print('GoogleCalendarService: Found ${calendars.length} calendars');
+      return calendars;
     } catch (e) {
-
+      print('GoogleCalendarService: Error getting calendars: $e');
       return [];
     }
   }
@@ -502,23 +514,26 @@ class GoogleCalendarService {
   static Future<bool> _validateAuthentication() async {
     try {
       if (_currentUser == null || _calendarApi == null) {
-
+        print('GoogleCalendarService: Validation failed - currentUser: ${_currentUser != null}, calendarApi: ${_calendarApi != null}');
         return false;
       }
 
       // Quick test to validate current authentication
       try {
+        print('GoogleCalendarService: Testing authentication with calendar list...');
         await _calendarApi!.calendarList.list(maxResults: 1);
+        print('GoogleCalendarService: Authentication test successful');
         return true;
       } catch (e) {
         if (e.toString().contains('401') || e.toString().contains('403')) {
-
+          print('GoogleCalendarService: Authentication test failed with auth error: $e');
           return await _refreshAuthentication();
         }
+        print('GoogleCalendarService: Authentication test failed with non-auth error: $e');
         rethrow;
       }
     } catch (e) {
-
+      print('GoogleCalendarService: Validation error: $e');
       return false;
     }
   }
@@ -526,18 +541,20 @@ class GoogleCalendarService {
   /// Test calendar connection
   static Future<bool> testConnection() async {
     try {
-
+      print('GoogleCalendarService: Starting testConnection');
       
       if (_calendarApi == null) {
-
+        print('GoogleCalendarService: testConnection failed - calendarApi is null');
         return false;
       }
 
       // Try to list calendars as a simple test
+      print('GoogleCalendarService: Testing connection by getting calendars...');
       await getCalendars();
+      print('GoogleCalendarService: testConnection successful');
       return true;
     } catch (e) {
-
+      print('GoogleCalendarService: testConnection failed with error: $e');
       return false;
     }
   }

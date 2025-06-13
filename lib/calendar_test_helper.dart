@@ -136,29 +136,38 @@ class CalendarTestHelper {
     required DateTime startTime,
     required DateTime endTime,
     String? description,  // Added description parameter
+    bool showUIFeedback = true,  // Control UI feedback
   }) async {
     try {
+      print('CalendarTestHelper: Starting addWorkShiftToCalendar for "$title"');
+      
       // Get Google Sign-In status
       final isSignedIn = await GoogleCalendarService.isSignedIn();
+      print('CalendarTestHelper: Google Sign-In status: $isSignedIn');
 
       
       if (!isSignedIn) {
-        if (context.mounted) {
+        print('CalendarTestHelper: Not signed in to Google Calendar');
+        if (context.mounted && showUIFeedback) {
           _showSnackBar(context, 'Please sign in to Google Calendar first');
         }
         return false;
       }
       
       // Test connection
+      print('CalendarTestHelper: Testing Google Calendar connection...');
       final hasConnection = await GoogleCalendarService.testConnection();
+      print('CalendarTestHelper: Connection test result: $hasConnection');
       if (!hasConnection) {
-        if (context.mounted) {
+        print('CalendarTestHelper: Failed to authenticate with Google');
+        if (context.mounted && showUIFeedback) {
           _showSnackBar(context, 'Failed to authenticate with Google');
         }
         return false;
       }
       
       // Create a new event
+      print('CalendarTestHelper: Creating calendar event object...');
       final event = cal.Event();
       event.summary = title;
       event.description = description;  // Set the description if provided
@@ -184,14 +193,15 @@ class CalendarTestHelper {
       // Set color based on shift type
       event.colorId = _getColorIdForShift(title);
       
+      print('CalendarTestHelper: Calling GoogleCalendarService.createEvent...');
       // Use the new createEvent method
       final createdEvent = await GoogleCalendarService.createEvent(event: event);
 
       if (createdEvent != null) {
-
+        print('CalendarTestHelper: Event created successfully');
         
-        // Only show SnackBar if context is still valid
-        if (context.mounted) {
+        // Only show SnackBar if context is still valid and UI feedback is enabled
+        if (context.mounted && showUIFeedback) {
           _showSnackBar(
             context, 
             'Work shift added to your Google Calendar',
@@ -200,11 +210,11 @@ class CalendarTestHelper {
         
         return true;
       } else {
-
+        print('CalendarTestHelper: Event creation returned null');
         return false;
       }
     } catch (e) {
-
+      print('CalendarTestHelper: Exception in addWorkShiftToCalendar: $e');
       return false;
     }
   }
@@ -745,41 +755,49 @@ class CalendarTestHelper {
   /// Sync missing events to Google Calendar
   static Future<Map<String, dynamic>> syncMissingEventsToGoogleCalendar(BuildContext context) async {
     try {
-
+      print('CalendarTestHelper: Starting syncMissingEventsToGoogleCalendar');
       
       // First get the sync status to find missing events
       final syncStatus = await checkCalendarSyncStatus(context: context);
       final missingSyncEvents = syncStatus['missingSyncEvents'] as List<Map<String, dynamic>>? ?? [];
-      
-
+      print('CalendarTestHelper: Found ${missingSyncEvents.length} missing events to sync');
       
       int successCount = 0;
       
       for (final eventData in missingSyncEvents) {
-        // Check if context is still valid before processing each event
-        if (!context.mounted) break;
+        final eventTitle = eventData['title'] as String? ?? 'Work Shift';
+        print('CalendarTestHelper: Syncing event "$eventTitle"...');
         
         final success = await addWorkShiftToCalendar(
           context: context,
-          title: eventData['title'] as String? ?? 'Work Shift',
+          title: eventTitle,
           startTime: eventData['startTime'] as DateTime? ?? DateTime.now(),
           endTime: eventData['endTime'] as DateTime? ?? DateTime.now().add(const Duration(hours: 8)),
           description: eventData['description'] as String?,
+          showUIFeedback: false,  // Don't show individual feedback during bulk sync
         );
         
         if (success) {
           successCount++;
+          print('CalendarTestHelper: Successfully synced "$eventTitle" ($successCount/${missingSyncEvents.length})');
+        } else {
+          print('CalendarTestHelper: Failed to sync "$eventTitle"');
         }
         
         // Small delay to avoid hitting rate limits
         await Future.delayed(const Duration(milliseconds: 500));
       }
       
+      print('CalendarTestHelper: Sync completed - $successCount of ${missingSyncEvents.length} events synced');
+      
+      // Only show UI feedback if context is still valid
       if (context.mounted) {
         _showSnackBar(
           context,
           'Synced $successCount of ${missingSyncEvents.length} events to Google Calendar',
         );
+      } else {
+        print('CalendarTestHelper: Context unmounted, skipping UI feedback but sync completed successfully');
       }
       
       return {
@@ -789,6 +807,7 @@ class CalendarTestHelper {
       };
       
     } catch (e) {
+      print('CalendarTestHelper: Error in syncMissingEventsToGoogleCalendar: $e');
       if (context.mounted) {
         _showSnackBar(context, 'Error syncing events: $e');
       }
