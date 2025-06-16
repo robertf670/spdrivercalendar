@@ -33,7 +33,12 @@ class Holiday {
 
   // Check if a date falls within this holiday period
   bool containsDate(DateTime date) {
-    return date.isAfter(startDate.subtract(const Duration(days: 1))) && 
-           date.isBefore(endDate.add(const Duration(days: 1)));
+    // Normalize dates to midnight to avoid time component issues
+    final normalizedDate = DateTime(date.year, date.month, date.day);
+    final normalizedStart = DateTime(startDate.year, startDate.month, startDate.day);
+    final normalizedEnd = DateTime(endDate.year, endDate.month, endDate.day);
+    
+    // Check if the date falls within the holiday range (inclusive)
+    return !normalizedDate.isBefore(normalizedStart) && !normalizedDate.isAfter(normalizedEnd);
   }
 } 

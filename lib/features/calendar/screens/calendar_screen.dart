@@ -37,6 +37,32 @@ import 'package:uuid/uuid.dart';
 import 'package:spdrivercalendar/services/update_service.dart';
 import 'package:spdrivercalendar/core/widgets/enhanced_update_dialog.dart';
 import 'package:spdrivercalendar/services/color_customization_service.dart';
+import '../../../widgets/live_updates_banner.dart';
+import '../../../screens/live_updates_details_screen.dart';
+import '../../../services/live_updates_service.dart';
+import '../../../models/live_update.dart';
+
+// Add this new widget class before the CalendarScreen class
+class _StableLiveUpdatesBanner extends StatefulWidget {
+  final VoidCallback onTap;
+
+  const _StableLiveUpdatesBanner({
+    Key? key,
+    required this.onTap,
+  }) : super(key: key);
+
+  @override
+  _StableLiveUpdatesBannerState createState() => _StableLiveUpdatesBannerState();
+}
+
+class _StableLiveUpdatesBannerState extends State<_StableLiveUpdatesBanner> {
+  @override
+  Widget build(BuildContext context) {
+    return LiveUpdatesBanner(
+      onTap: widget.onTap,
+    );
+  }
+}
 
 class CalendarScreen extends StatefulWidget {
   final ValueNotifier<bool> isDarkModeNotifier;
@@ -47,17 +73,19 @@ class CalendarScreen extends StatefulWidget {
   CalendarScreenState createState() => CalendarScreenState();
 }
 
-class CalendarScreenState extends State<CalendarScreen> 
-    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
-  DateTime _focusedDay = DateTime.now();
+class CalendarScreenState extends State<CalendarScreen> with TickerProviderStateMixin, WidgetsBindingObserver {
   DateTime? _selectedDay;
+  DateTime _focusedDay = DateTime.now();
   DateTime? _startDate;
   int _startWeek = 0;
-  int _selectedYear = DateTime.now().year; // Add this line
+  int _selectedYear = DateTime.now().year;
   List<BankHoliday>? _bankHolidays;
   List<Holiday> _holidays = [];
   late AnimationController _animationController;
   bool _hasCheckedForUpdatesOnStartup = false;
+  
+  // GlobalKey to prevent banner from rebuilding
+  final GlobalKey _bannerKey = GlobalKey();
   
   late Map<String, ShiftInfo> _shiftInfoMap;
 
@@ -1234,12 +1262,18 @@ class CalendarScreenState extends State<CalendarScreen>
                        children: [
                          ElevatedButton.icon(
                            onPressed: () async {
-                            // Extract duty number from the title (format: PZ4/15 -> 415)
-                            final dutyMatch = RegExp(r'PZ4/(\d+)').firstMatch(event.title);
+                            // Extract duty number from the title (format: PZ4/15 -> 415, PZ4/1X -> 451)
+                            final dutyMatch = RegExp(r'PZ4/(\d+X?)').firstMatch(event.title);
                             if (dutyMatch != null) {
                               String dutyNumber = dutyMatch.group(1)!;
                               
-                              // Convert PZ4/15 to duty 415
+                              // Convert PZ4/15 to duty 415, PZ4/1X to duty 451, PZ4/13X to duty 463
+                              if (dutyNumber.endsWith('X')) {
+                                // X represents 50 + the number before it
+                                final numberPart = dutyNumber.substring(0, dutyNumber.length - 1);
+                                final baseNumber = int.parse(numberPart);
+                                dutyNumber = (50 + baseNumber).toString();
+                              }
                               dutyNumber = '4$dutyNumber';
                               
                               // Close the edit dialog first
@@ -2964,39 +2998,64 @@ class CalendarScreenState extends State<CalendarScreen>
           ),
         ],
       ),
-      body: Column( // Removed SafeArea wrapper
-        children: [
-          // TableCalendar stays fixed at the top
-          _buildCalendar(),
-          // The rest of the content becomes scrollable
-          Expanded(
-            child: SingleChildScrollView(
-              child: Column(
-                children: [
-                  const SizedBox(height: 16),
-                  if (_selectedDay != null && _startDate != null)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
-                      child: ShiftDetailsCard(
-                        date: _selectedDay!,
-                        shift: getShiftForDate(_selectedDay!),
-                        shiftInfoMap: _shiftInfoMap,
-                        bankHoliday: getBankHoliday(_selectedDay!),
+      body: StreamBuilder<List<LiveUpdate>>(
+        stream: LiveUpdatesService.getActiveUpdatesStream(),
+        builder: (context, bannerSnapshot) {
+          // Check if there are active updates
+          final updates = bannerSnapshot.data ?? [];
+          final hasActiveUpdates = updates.any((update) => update.isActive);
+          
+          return Stack(
+            children: [
+              // Main content with dynamic padding based on banner presence
+              Padding(
+                padding: EdgeInsets.only(top: hasActiveUpdates ? 90 : 0),
+                child: Column(
+                  children: [
+                    // TableCalendar stays fixed at the top
+                    _buildCalendar(),
+                    // The rest of the content becomes scrollable
+                    Expanded(
+                      child: SingleChildScrollView(
+                        child: Column(
+                          children: [
+                            const SizedBox(height: 16),
+                            if (_selectedDay != null && _startDate != null)
+                              Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+                                child: ShiftDetailsCard(
+                                  date: _selectedDay!,
+                                  shift: getShiftForDate(_selectedDay!),
+                                  shiftInfoMap: _shiftInfoMap,
+                                  bankHoliday: getBankHoliday(_selectedDay!),
+                                ),
+                              ),
+                            if (_selectedDay != null)
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                                child: _buildEventsList(),
+                              ),
+                            // Add some padding at the bottom to ensure the last item is fully visible
+                            // Consider wrapping this inner Column/ScrollView in SafeArea if needed for bottom intrusions
+                            const SizedBox(height: 24),
+                          ],
+                        ),
                       ),
                     ),
-                  if (_selectedDay != null)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                      child: _buildEventsList(),
-                    ),
-                  // Add some padding at the bottom to ensure the last item is fully visible
-                  // Consider wrapping this inner Column/ScrollView in SafeArea if needed for bottom intrusions
-                  const SizedBox(height: 24),
-                ],
+                  ],
+                ),
               ),
-            ),
-          ),
-        ],
+              // Live Updates Banner - only show when there are active updates
+              if (hasActiveUpdates)
+                const Positioned(
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  child: _StaticLiveUpdatesBanner(),
+                ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -4849,6 +4908,25 @@ class CalendarScreenState extends State<CalendarScreen>
           );
         },
       ),
+    );
+  }
+}
+
+// Static banner widget that doesn't rebuild
+class _StaticLiveUpdatesBanner extends StatelessWidget {
+  const _StaticLiveUpdatesBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    return LiveUpdatesBanner(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const LiveUpdatesDetailsScreen(),
+          ),
+        );
+      },
     );
   }
 }

@@ -1,67 +1,107 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.12.0': [
+    {
+      'title': 'NEW: Live Updates Banner System',
+      'description': 'Introduced dynamic live updates banner that appears at the top of the calendar when admin posts important announcements. Real-time notifications keep all drivers informed of urgent updates, schedule changes, and important information.',
+    },
+    {
+      'title': 'SECURITY: Production Password Protection',
+      'description': 'Implemented secure admin password system using GitHub secrets. Admin password is no longer hardcoded and visible in the repository. Production builds use encrypted environment variables for maximum security.',
+    },
+    {
+      'title': 'Polished Live Updates UI Experience',
+      'description': 'Perfected banner behavior with smooth appearance/disappearance, consistent 80px height, and responsive design. Eliminated UI jumping and flashing when navigating calendar days/months for seamless user experience.',
+    },
+    {
+      'title': 'Enhanced Environment Configuration',
+      'description': 'Created AppConfig system for secure environment variable management. Development builds use fallback password while production leverages GitHub CI/CD secrets for deployment security.',
+    },
+    {
+      'title': 'Improved Calendar Performance',
+      'description': 'Optimized calendar rendering with better state management and reduced unnecessary rebuilds. Live updates integration now works seamlessly without impacting calendar interaction performance.',
+    },
+  ],
+  '2.11.5': [
+    {
+      'title': 'FIXED: Holiday Display Issue',
+      'description': 'Fixed critical issue where singular "Other" holidays appeared on both the correct day and the previous day. Holiday events now display only on the selected date as intended.',
+    },
+    {
+      'title': 'Improved Date Range Logic',
+      'description': 'Enhanced holiday date comparison logic to properly handle single-day holidays. Fixed inclusive date range checking that was incorrectly including adjacent dates.',
+    },
+    {
+      'title': 'FIXED: Zone 4 Bogey Duties Board Parsing',
+      'description': 'Fixed Zone 4 running boards parsing for bogey duties ending in "X" (e.g., PZ4/1X, PZ4/13X). These duties now correctly map to their corresponding board entries (1X→451, 13X→463) and display proper running board information when using the View Board feature.',
+    },
+    {
+      'title': 'Enhanced Duty Number Conversion Logic',
+      'description': 'Improved duty parsing algorithm to properly handle the Zone 4 numbering system where "X" represents 50 plus the base number. This ensures accurate board lookups for all Zone 4 duty types.',
+    },
+  ],
   '2.11.4': [
     {
-      'title': '🔧 FIXED: Last Week Statistics Date Range',
+      'title': 'FIXED: Last Week Statistics Date Range',
       'description': 'Fixed critical issue where "Last Week" statistics were not properly following the Sunday-to-Saturday week pattern. Overtime shifts (and other shifts) occurring on Sunday of the previous week now correctly appear when "Last Week" is selected.',
     },
     {
-      'title': '📊 Consistent Week Calculations',
+      'title': 'Consistent Week Calculations',
       'description': 'Synchronized "Last Week" calculation logic between Shift Type Statistics and Work Time Statistics. Both now use the same Sunday-to-Saturday week pattern ensuring accurate and consistent results across all statistics.',
     },
     {
-      'title': '⚡ Improved Date Range Accuracy',
+      'title': 'Improved Date Range Accuracy',
       'description': 'Eliminated the issue where "Last Week" was calculated as "today minus 6 days" instead of the proper previous Sunday-to-Saturday week. Statistics now correctly match the established week boundaries used throughout the app.',
     },
     {
-      'title': '🔧 FIXED: Google Calendar Break Times',
+      'title': 'FIXED: Google Calendar Break Times',
       'description': 'Restored break times in Google Calendar event descriptions. Work shifts now properly include break time information (e.g., "Break Times: 13:30 - 14:00") when synced to Google Calendar. Improved reliability for rest day shifts to ensure both break times and "(Working on Rest Day)" indicator appear together when applicable.',
     },
     {
-      'title': '🚀 ENHANCED: Google Calendar Authentication',
+      'title': 'ENHANCED: Google Calendar Authentication',
       'description': 'Completely overhauled Google Calendar token management system with proactive refresh, persistent token tracking across app restarts, and intelligent startup validation. Eliminates timeout issues and manual re-authentication requirements. Tested and verified working in all scenarios including app closure and emulator environments.',
     },
     {
-      'title': '🧹 CODE CLEANUP: Production Ready',
+      'title': 'CODE CLEANUP: Production Ready',
       'description': 'Removed all debug print statements from Google Calendar service and helper functions. App now operates silently in production with clean console output and professional code standards.',
     },
   ],
   '2.11.3': [
     {
-      'title': '🔧 FIXED: Google Calendar Sync Issue',
+      'title': 'FIXED: Google Calendar Sync Issue',
       'description': 'Resolved critical issue where Google Calendar sync would fail silently due to BuildContext lifecycle problems. Events were detected as "missing" but sync would abort immediately without adding them to Google Calendar.',
     },
     {
-      'title': '🛠️ Enhanced Sync Reliability',
+      'title': 'Enhanced Sync Reliability',
       'description': 'Fixed BuildContext unmounted error that was stopping sync operations prematurely. Google Calendar sync now completes successfully even if the user navigates away from the sync dialog.',
     },
     {
-      'title': '📊 Comprehensive Error Logging',
+      'title': 'Comprehensive Error Logging',
       'description': 'Added detailed logging throughout the Google Calendar sync pipeline to help diagnose issues. Authentication, connection testing, and event creation now provide clear feedback about success or failure reasons.',
     },
     {
-      'title': '⚡ Improved User Experience',
+      'title': 'Improved User Experience',
       'description': 'Eliminated the frustrating workflow where "Sync Missing Events" button would appear to work but events never actually appeared in Google Calendar. Sync operations are now robust and reliable.',
     },
     {
-      'title': '🎯 Better UI Feedback Control',
+      'title': 'Better UI Feedback Control',
       'description': 'Added smart UI feedback system that prevents notification spam during bulk sync operations while still providing clear completion status and error messages when needed.',
     },
   ],
   '2.11.2': [
     {
-      'title': '🎯 EPIC Code Quality Achievement: 93.2% Complete!',
+      'title': 'EPIC Code Quality Achievement: 93.2% Complete!',
       'description': 'Massive improvement from 818 issues to just 56 issues! Advanced BuildContext async safety fixes preventing app crashes during navigation and async operations. Eliminated critical UI synchronization issues and improved error handling patterns.',
     },
     {
-      'title': '🛡️ Enhanced App Stability & Crash Prevention',
+      'title': 'Enhanced App Stability & Crash Prevention',
       'description': 'Fixed BuildContext usage across async gaps in calendar operations, Google Calendar sync, and event management. Added proper mounted checks and context safety patterns to prevent widget disposal crashes.',
     },
     {
-      'title': '⚡ Continued Code Excellence Foundation',
+      'title': 'Continued Code Excellence Foundation',
       'description': 'Building on the revolutionary 91.9% achievement from v2.11.0, pushed code quality even higher to 93.2%. This establishes an exceptional foundation for rapid feature development and maximum app reliability.',
     },
     {
-      'title': '🔧 AsyncContext Safety Implementation',
+      'title': 'AsyncContext Safety Implementation',
       'description': 'Implemented proper async BuildContext patterns throughout calendar screen, event creation, and Google Calendar integration. These changes ensure stable app behavior during complex async workflows and prevent potential crashes.',
     },
   ],
@@ -81,35 +121,35 @@ final Map<String, List<Map<String, String>>> changelogData = {
   ],
   '2.11.0': [
     {
-      'title': '🚀 MASSIVE Code Quality Revolution: 91.9% Complete!',
+      'title': 'MASSIVE Code Quality Revolution: 91.9% Complete!',
       'description': 'Transformed code quality from 818 issues to just 66 issues! Fixed 752 code quality issues achieving 91.9% completion. This represents one of the largest code improvement initiatives in the app\'s history.',
     },
     {
-      'title': '⚡ Performance & Stability Mega-Fix',
+      'title': 'Performance & Stability Mega-Fix',
       'description': 'CLEARED all 19 library_private_types_in_public_api issues, fixed 36+ BuildContext async gaps preventing crashes, eliminated 9 naming convention violations, and optimized 6 forEach performance bottlenecks.',
     },
     {
-      'title': '🎯 Exception Handling & String Optimization',
+      'title': 'Exception Handling & String Optimization',
       'description': 'Fixed 6 exception handling issues using rethrow for better stack traces, eliminated 5 string interpolation inefficiencies, and removed unnecessary const keywords and getter/setter wrappers for cleaner code.',
     },
     {
-      'title': '🛡️ Enhanced App Reliability',
+      'title': 'Enhanced App Reliability',
       'description': 'Fixed BuildContext synchronization issues that could cause app crashes during navigation, improved error handling throughout the codebase, and established robust patterns for async operations.',
     },
     {
-      'title': '🔧 Constructor & Widget Optimizations',
+      'title': 'Constructor & Widget Optimizations',
       'description': 'Applied const optimizations to 4+ constructors improving render performance, fixed EdgeInsets declarations, and standardized widget creation patterns across the entire application.',
     },
     {
-      'title': '📈 Developer Experience Improvements',
+      'title': 'Developer Experience Improvements',
       'description': 'Implemented lowerCamelCase naming conventions, eliminated unnecessary code patterns, reduced cognitive complexity, and established consistent code style throughout the 50+ source files.',
     },
     {
-      'title': '✨ Zero Breaking Changes Guarantee',
+      'title': 'Zero Breaking Changes Guarantee',
       'description': 'All 752 fixes completed with ZERO functional changes or visual modifications. Every feature works exactly as before while the underlying code is now significantly more maintainable and performant.',
     },
     {
-      'title': '🎉 Foundation for Future Development',
+      'title': 'Foundation for Future Development',
       'description': 'With 91.9% code quality, the app is now positioned for rapid feature development, easier maintenance, improved performance, and enhanced stability for all future updates.',
     },
   ],
@@ -321,201 +361,201 @@ final Map<String, List<Map<String, String>>> changelogData = {
   ],
   '2.8.55': [
     {
-      'title': '🎯 TARGET VERSION - Testing Instant Detection!',
-      'description': 'This is the target update that v2.8.54 should detect INSTANTLY! If you\'re seeing this dialog immediately as the calendar screen loads (no delay), then instant automatic detection is WORKING PERFECTLY! 🎉',
+      'title': 'TARGET VERSION - Testing Instant Detection!',
+      'description': 'This is the target update that v2.8.54 should detect INSTANTLY! If you\'re seeing this dialog immediately as the calendar screen loads (no delay), then instant automatic detection is WORKING PERFECTLY!',
     },
     {
-      'title': '⚡ Lightning Speed Validation Complete',
+      'title': 'Lightning Speed Validation Complete',
       'description': 'If this appeared instantly without any perceptible wait time, then we have achieved the ultimate update experience - immediate detection the moment the app loads!',
     },
     {
-      'title': '🏆 INSTANT UPDATE SYSTEM - MISSION ACCOMPLISHED!',
-      'description': 'Instant detection + Smart Download = Revolutionary update experience! No more waiting, no more delays - just seamless, lightning-fast updates! The system is now perfect! ⚡🚀',
+      'title': 'INSTANT UPDATE SYSTEM - MISSION ACCOMPLISHED!',
+      'description': 'Instant detection + Smart Download = Revolutionary update experience! No more waiting, no more delays - just seamless, lightning-fast updates! The system is now perfect!',
     },
   ],
   '2.8.54': [
     {
-      'title': '⚡ INSTANT UPDATE DETECTION - Zero Delay Test!',
-      'description': 'Testing INSTANT automatic update detection with NO delay! If you\'re seeing this dialog immediately as the calendar screen loads (within milliseconds), then instant detection is working perfectly! 🚀',
+      'title': 'INSTANT UPDATE DETECTION - Zero Delay Test!',
+      'description': 'Testing INSTANT automatic update detection with NO delay! If you\'re seeing this dialog immediately as the calendar screen loads (within milliseconds), then instant detection is working perfectly!',
     },
     {
-      'title': '🎯 Lightning-Fast Response Validation',
+      'title': 'Lightning-Fast Response Validation',
       'description': 'Removed all delays - updates now appear instantly when the calendar screen is shown. This provides immediate notification the moment an update is available, making the experience truly seamless!',
     },
     {
-      'title': '⚡ INSTANT Revolutionary Update System!',
-      'description': 'If this appeared instantly without any perceptible delay, both automatic detection AND instant timing are working flawlessly. The update experience is now truly instantaneous! ⚡',
+      'title': 'INSTANT Revolutionary Update System!',
+      'description': 'If this appeared instantly without any perceptible delay, both automatic detection AND instant timing are working flawlessly. The update experience is now truly instantaneous!',
     },
   ],
   '2.8.53': [
     {
-      'title': '⏰ TIMING TEST - Automatic Update Detection',
-      'description': 'This is a test version to validate the 2-second automatic update detection timing. If you\'re seeing this dialog automatically without clicking anything, the rapid detection is working perfectly! 🎯',
+      'title': 'TIMING TEST - Automatic Update Detection',
+      'description': 'This is a test version to validate the 2-second automatic update detection timing. If you\'re seeing this dialog automatically without clicking anything, the rapid detection is working perfectly!',
     },
     {
-      'title': '🧪 Quick Response Validation',
+      'title': 'Quick Response Validation',
       'description': 'Testing the optimized timing where updates appear within 2 seconds of app startup instead of the previous 10-second delay. This ensures immediate notification without being intrusive.',
     },
     {
-      'title': '✅ Revolutionary Update System - Timing Perfect!',
-      'description': 'If this appeared quickly and automatically, both automatic detection AND timing optimization are working flawlessly. The update experience is now truly seamless! 🚀',
+      'title': 'REVOLUTIONARY UPDATE SYSTEM - Timing Perfect!',
+      'description': 'If this appeared quickly and automatically, both automatic detection AND timing optimization are working flawlessly. The update experience is now truly seamless!',
     },
   ],
   '2.8.52': [
     {
-      'title': '🎉 REVOLUTIONARY UPDATE SYSTEM COMPLETE!',
-      'description': 'Perfect automatic detection (2-second delay) + Smart Download with progress tracking! Transforms update experience from manual browser downloads to seamless app-store-like updates! 🚀',
+      'title': 'REVOLUTIONARY UPDATE SYSTEM COMPLETE!',
+      'description': 'Perfect automatic detection (2-second delay) + Smart Download with progress tracking! Transforms update experience from manual browser downloads to seamless app-store-like updates!',
     },
     {
-      'title': '⚡ Optimized User Experience',
+      'title': 'Optimized User Experience',
       'description': 'Reduced automatic update check delay to 2 seconds for immediate notification. Removed debug messages for clean, polished experience. Updates appear quickly without interrupting initial app use.',
     },
     {
-      'title': '✅ Mission Accomplished',
-      'description': 'Both critical fixes working perfectly: forceCheck bypasses API limitations, Smart Download provides 80% of app store convenience while maintaining GitHub independence. Update adoption will skyrocket! 🎯',
+      'title': 'Mission Accomplished',
+      'description': 'Both critical fixes working perfectly: forceCheck bypasses API limitations, Smart Download provides 80% of app store convenience while maintaining GitHub independence. Update adoption will skyrocket!',
     },
   ],
   '2.8.51': [
     {
-      'title': '🎉 SUCCESS! Automatic Detection is WORKING!',
-      'description': 'If you\'re seeing this dialog automatically (without clicking anything), then our forceCheck fix WORKED! Automatic update detection is finally functioning perfectly! 🚀',
+      'title': 'SUCCESS! Automatic Detection is WORKING!',
+      'description': 'If you\'re seeing this dialog automatically (without clicking anything), then our forceCheck fix WORKED! Automatic update detection is finally functioning perfectly!',
     },
     {
-      'title': '📱 Final Smart Download Test',
+      'title': 'Final Smart Download Test',
       'description': 'Now test "Smart Download (Recommended)" to validate the complete revolutionary update system: automatic detection + in-app downloads with progress tracking!',
     },
     {
-      'title': '✅ Revolutionary Update System COMPLETE!',
-      'description': 'Both critical fixes are working: automatic detection bypasses frequency controls, and Smart Download provides app-store-like experience. Mission accomplished! 🎯',
+      'title': 'REVOLUTIONARY UPDATE SYSTEM COMPLETE!',
+      'description': 'Both critical fixes are working: automatic detection bypasses frequency controls, and Smart Download provides app-store-like experience. Mission accomplished!',
     },
   ],
   '2.8.50': [
     {
-      'title': '🔧 FORCE CHECK FIX - Bypass Frequency Controls!',
+      'title': 'FORCE CHECK FIX - Bypass Frequency Controls!',
       'description': 'Fixed automatic update detection by adding forceCheck: true to bypass frequency controls and API caching that was preventing automatic checks from finding available updates!',
     },
     {
-      'title': '⚡ Guaranteed Update Detection',
+      'title': 'Guaranteed Update Detection',
       'description': 'Automatic checks now use the same force parameters as manual checks, ensuring consistent behavior. This should solve the "random timing" issue where automatic checks missed updates!',
     },
     {
-      'title': '🎯 FINAL FIX TEST',
-      'description': 'If this appears automatically when v2.8.48 restarts, our automatic detection is FINALLY working! Then test Smart Download to complete the revolutionary update system! 🚀',
+      'title': 'FINAL FIX TEST',
+      'description': 'If this appears automatically when v2.8.48 restarts, our automatic detection is FINALLY working! Then test Smart Download to complete the revolutionary update system!',
     },
   ],
   '2.8.49': [
     {
-      'title': '🎯 TARGET UPDATE - Automatic Detection Test!',
-      'description': 'This is the target update that v2.8.48 should automatically detect! If you\'re seeing this dialog automatically (without clicking anything), SUCCESS! 🎉',
+      'title': 'TARGET UPDATE - Automatic Detection Test!',
+      'description': 'This is the target update that v2.8.48 should automatically detect! If you\'re seeing this dialog automatically (without clicking anything), SUCCESS!',
     },
     {
-      'title': '📱 Smart Download Final Validation',
+      'title': 'Smart Download Final Validation',
       'description': 'Now test "Smart Download (Recommended)" to confirm it downloads in-app with progress instead of opening browser. This validates both fixes working together!',
     },
     {
-      'title': '✅ Revolutionary Update System - FINAL TEST',
+      'title': 'REVOLUTIONARY UPDATE SYSTEM - FINAL TEST',
       'description': 'If both automatic detection AND Smart Download work, our transformation is complete: from manual browser downloads to seamless app-store-like updates!',
     },
   ],
   '2.8.48': [
     {
-      'title': '🔧 ENHANCED AUTO-DETECTION - Debug Mode!',
+      'title': 'ENHANCED AUTO-DETECTION - Debug Mode!',
       'description': 'Improved automatic update detection with longer delays (10 seconds), retry attempts, and temporary debug messages. You should see snackbar messages indicating update check status!',
     },
     {
-      'title': '🕒 Extended Timing & Retries',
+      'title': 'Extended Timing & Retries',
       'description': 'Automatic checks now wait 10 seconds for full app load, then retry after another 10 seconds if no update found. This should catch any timing issues.',
     },
     {
-      'title': '📱 Debug Messages Added',
+      'title': 'Debug Messages Added',
       'description': 'Temporary snackbar messages will show update check results so we can see what\'s happening without debug logs. This helps diagnose the detection issue!',
     },
   ],
   '2.8.47': [
     {
-      'title': '🧪 FINAL VALIDATION TEST - Success Confirmation!',
-      'description': 'If you\'re seeing this dialog AUTOMATICALLY (without clicking anything), then automatic update detection is WORKING! This validates our CalendarScreen context fix is successful! 🎉',
+      'title': 'FINAL VALIDATION TEST - Success Confirmation!',
+      'description': 'If you\'re seeing this dialog AUTOMATICALLY (without clicking anything), then automatic update detection is WORKING! This validates our CalendarScreen context fix is successful!',
     },
     {
-      'title': '📱 Smart Download Final Test',
-      'description': 'Now click "Smart Download (Recommended)" to test if it downloads in-app with progress tracking. If it works instead of opening browser, both fixes are COMPLETE! 🚀',
+      'title': 'Smart Download Final Test',
+      'description': 'Now click "Smart Download (Recommended)" to test if it downloads in-app with progress tracking. If it works instead of opening browser, both fixes are COMPLETE!',
     },
     {
-      'title': '✅ Revolutionary Update System VALIDATED',
+      'title': 'REVOLUTIONARY UPDATE SYSTEM VALIDATED',
       'description': 'This test confirms the complete transformation: automatic detection + in-app downloads. Your update experience is now seamless and app-store-like while maintaining GitHub independence!',
     },
   ],
   '2.8.46': [
     {
-      'title': '🎯 FINAL TEST - Automatic Update Detection Fixed!',
-      'description': 'This should appear AUTOMATICALLY without clicking anything! We moved the update check to CalendarScreen with proper dialog context. If you\'re seeing this automatically, both fixes are COMPLETE! 🚀',
+      'title': 'FINAL TEST - Automatic Update Detection Fixed!',
+      'description': 'This should appear AUTOMATICALLY without clicking anything! We moved the update check to CalendarScreen with proper dialog context. If you\'re seeing this automatically, both fixes are COMPLETE!',
     },
     {
-      'title': '✅ Context Fix Applied',
+      'title': 'Context Fix Applied',
       'description': 'Moved automatic update detection from MyApp to CalendarScreen where the context is guaranteed to work for showing update dialogs. No more disposal issues!',
     },
     {
-      'title': '🔥 Revolutionary Update System COMPLETE',
+      'title': 'REVOLUTIONARY UPDATE SYSTEM COMPLETE',
       'description': 'Both automatic detection AND Smart Download now work perfectly. Your update experience is transformed from manual browser downloads to seamless in-app updates!',
     },
   ],
   '2.8.45': [
     {
-      'title': '🧪 TESTING THE CRITICAL FIXES!',
-      'description': 'This is a test update to validate our critical fixes! If you\'re seeing this dialog automatically (without manually clicking), then automatic update detection is WORKING! 🎉',
+      'title': 'TESTING THE CRITICAL FIXES!',
+      'description': 'This is a test update to validate our critical fixes! If you\'re seeing this dialog automatically (without manually clicking), then automatic update detection is WORKING!',
     },
     {
-      'title': '📱 Smart Download Validation Test',
+      'title': 'Smart Download Validation Test',
       'description': 'Use "Smart Download (Recommended)" to test if it actually downloads in-app with permission requests and progress tracking, instead of opening the browser.',
     },
     {
-      'title': '🔧 What We Fixed in v2.8.44',
+      'title': 'What We Fixed in v2.8.44',
       'description': 'Fixed broken automatic updates (context disposal) and Smart Download permissions (always fell back to browser). This test validates both fixes work perfectly!',
     },
   ],
   '2.8.44': [
     {
-      'title': '🔧 CRITICAL FIXES: Update System Overhaul',
+      'title': 'CRITICAL FIXES: Update System Overhaul',
       'description': 'Fixed automatic update detection that was broken due to context disposal issues. Updates will now properly appear on app startup when available!',
     },
     {
-      'title': '🛠️ Smart Download Permission Fix',
+      'title': 'Smart Download Permission Fix',
       'description': 'Fixed Smart Download immediately falling back to browser. Now properly requests storage and install permissions, with detailed progress tracking and error messages.',
     },
     {
-      'title': '📱 Enhanced Error Handling',
+      'title': 'Enhanced Error Handling',
       'description': 'Added comprehensive error handling with descriptive messages for download failures, permission issues, network timeouts, and installation problems.',
     },
     {
-      'title': '🔍 Improved Debugging',
+      'title': 'Improved Debugging',
       'description': 'Added detailed logging for troubleshooting update detection, permission requests, downloads, and installations. Better Android version detection.',
     },
   ],
   '2.8.43': [
     {
-      'title': '🧪 Testing the Revolutionary Update System',
+      'title': 'TESTING THE REVOLUTIONARY UPDATE SYSTEM',
       'description': 'This is a test update to demonstrate the new in-app APK download functionality! If you\'re seeing this, the smart download system is working perfectly.',
     },
     {
-      'title': '✨ New Update Experience Validation',
+      'title': 'New Update Experience Validation',
       'description': 'Testing real-time progress tracking, automatic installation, and the beautiful new update dialog. This validates the complete transformation from browser-based to in-app updates.',
     },
   ],
   '2.8.42': [
     {
-      'title': '🚀 Revolutionary In-App Update Experience',
+      'title': 'REVOLUTIONARY IN-APP UPDATE EXPERIENCE',
       'description': 'Introducing smart APK downloads! No more switching to browser and navigating through folders. Updates now download directly in-app with real-time progress tracking and automatic installation.',
     },
     {
-      'title': '📱 Enhanced Update Dialog',
+      'title': 'Enhanced Update Dialog',
       'description': 'Beautiful new update dialog with two options: "Smart Download (Recommended)" for seamless in-app updates, or "Browser Download" for traditional method. Shows download progress with MB transferred and percentage completion.',
     },
     {
-      'title': '⚡ Streamlined User Experience',
+      'title': 'Streamlined User Experience',
       'description': 'Transforms update flow from: App → Browser → Downloads folder → Manual install, to simply: App → Download → Install → Done. Significantly improves update adoption rates.',
     },
     {
-      'title': '🔧 Technical Infrastructure',
+      'title': 'Technical Infrastructure',
       'description': 'New APK Download Manager with smart permissions handling, automatic fallbacks, and comprehensive error handling. Provides 80% of app store convenience while maintaining independence from Google Play.',
     },
   ],

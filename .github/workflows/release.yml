@@ -172,7 +172,9 @@ jobs:
         echo "============================================="
 
     - name: Build APK
-      run: flutter build apk --release
+      env:
+        ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+      run: flutter build apk --release --dart-define=ADMIN_PASSWORD=${ADMIN_PASSWORD}
     
     - name: Rename APK with version
       run: |

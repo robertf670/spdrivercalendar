@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; // Import for SystemChrome
+import 'package:firebase_core/firebase_core.dart';
 import 'package:spdrivercalendar/core/constants/app_constants.dart';
 import 'package:spdrivercalendar/core/services/storage_service.dart';
 import 'package:spdrivercalendar/features/calendar/services/shift_service.dart';
@@ -29,6 +30,9 @@ Future<void> main() async {
 
   // Initialize cache service first
   final cacheService = CacheService();
+  
+  // Initialize Firebase first
+  await Firebase.initializeApp();
   
   // Run independent initializations in parallel
   await Future.wait([

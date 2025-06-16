@@ -3,6 +3,7 @@ import 'package:spdrivercalendar/core/constants/app_constants.dart';
 import 'package:spdrivercalendar/core/services/storage_service.dart';
 import 'package:spdrivercalendar/google_calendar_service.dart';
 import 'package:spdrivercalendar/features/settings/screens/google_calendar_settings_screen.dart';
+import 'package:spdrivercalendar/features/settings/screens/admin_panel_screen.dart';
 import 'package:spdrivercalendar/theme/app_theme.dart';
 import 'package:spdrivercalendar/calendar_test_helper.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -10,6 +11,7 @@ import 'package:spdrivercalendar/services/backup_service.dart';
 import 'dart:io'; // For File type in auto-backup list
 import 'package:intl/intl.dart'; // For DateFormat
 import 'package:spdrivercalendar/features/settings/widgets/color_customization_widget.dart';
+import '../../../config/app_config.dart';
 
 // Define Preference Keys for Notifications (Consider moving to AppConstants if not already there)
 const String kNotificationsEnabledKey = 'notificationsEnabled';
@@ -211,6 +213,9 @@ class SettingsScreenState extends State<SettingsScreen> {
                   _buildSectionHeader('App'),
                   _buildShowWelcomePageButton(),
                   _buildVersionHistoryButton(),
+                  
+                  const Divider(height: 32),
+                  _buildAdminPanelButton(),
                 ],
               ),
             ),
@@ -990,6 +995,119 @@ class SettingsScreenState extends State<SettingsScreen> {
             '/version-history', 
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildAdminPanelButton() {
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 4.0),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppTheme.borderRadius),
+      ),
+      child: ListTile(
+        leading: Icon(
+          Icons.admin_panel_settings,
+          color: Colors.red.shade600,
+        ),
+        title: const Text('Admin Panel'),
+        subtitle: const Text('Manage live updates and diversions'),
+        onTap: _showAdminPasswordDialog,
+      ),
+    );
+  }
+
+  void _showAdminPasswordDialog() {
+    final passwordController = TextEditingController();
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.lock, color: Colors.red.shade600),
+            const SizedBox(width: 8),
+            const Text('Admin Access'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Enter admin password to access the control panel:'),
+            const SizedBox(height: 16),
+            TextField(
+              controller: passwordController,
+              obscureText: true,
+              decoration: const InputDecoration(
+                labelText: 'Password',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.lock_outline),
+              ),
+              onSubmitted: (value) {
+                                  if (AppConfig.isValidAdminPassword(value)) {
+                  Navigator.pop(context);
+                  _navigateToAdminPanel();
+                } else {
+                  Navigator.pop(context);
+                  _showIncorrectPasswordDialog();
+                }
+              },
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+                              if (AppConfig.isValidAdminPassword(passwordController.text)) {
+                Navigator.pop(context);
+                _navigateToAdminPanel();
+              } else {
+                Navigator.pop(context);
+                _showIncorrectPasswordDialog();
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red.shade600,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Access'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showIncorrectPasswordDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.error, color: Colors.red.shade600),
+            const SizedBox(width: 8),
+            const Text('Access Denied'),
+          ],
+        ),
+        content: const Text('Incorrect password. Admin access is restricted.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _navigateToAdminPanel() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const AdminPanelScreen(),
       ),
     );
   }
