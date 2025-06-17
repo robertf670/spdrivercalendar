@@ -12,8 +12,6 @@ class AboutScreen extends StatefulWidget {
 
 class AboutScreenState extends State<AboutScreen> with TextRenderingMixin {
   @override
-
-  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
@@ -23,109 +21,394 @@ class AboutScreenState extends State<AboutScreen> with TextRenderingMixin {
       body: SingleChildScrollView(
               padding: const EdgeInsets.all(16.0),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
+            // App Header
+            _buildAppHeader(),
+            const SizedBox(height: 24),
+            
+            // Description
+            _buildDescriptionCard(),
+            const SizedBox(height: 24),
+            
+            // Key Features Overview
+            _buildFeaturesOverview(),
+            const SizedBox(height: 24),
+            
+            // Detailed Features
+            _buildDetailedFeatures(),
                   const SizedBox(height: 16),
-                  CircleAvatar(
-                    radius: 50,
-                    backgroundColor: Colors.transparent,
-                    child: Image.asset(
-                      'assets/appiconwhitebg.png', // Path to your app icon
-                      width: 60,
-                      height: 60,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    AppConstants.appName,
-                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 32),
-                  _buildInfoSection('App Description', _buildDescriptionContent()),
-                  _buildInfoSection('Features', _buildFeaturesContent()),
-                  _buildInfoSection('How to Use', _buildHowToUseContent()),
-                  // Removed the Support section
-                ],
-              ),
-            ),
-    );
-  }
-
-  Widget _buildInfoSection(String title, Widget content) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppTheme.borderRadius),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: AppTheme.primaryColor,
-              ),
-            ),
-            const Divider(),
-            const SizedBox(height: 8),
-            content,
           ],
         ),
       ),
     );
   }
 
-  Widget _buildDescriptionContent() {
-    return const Column(
+  Widget _buildAppHeader() {
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          children: [
+                  CircleAvatar(
+              radius: 40,
+                    backgroundColor: Colors.transparent,
+                    child: Image.asset(
+                'assets/appiconwhitebg.png',
+                width: 80,
+                height: 80,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    AppConstants.appName,
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                color: AppTheme.primaryColor,
+                        ),
+                    textAlign: TextAlign.center,
+                  ),
+            const SizedBox(height: 8),
+            Text(
+              'Your comprehensive shift management toolkit',
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                color: Colors.grey[600],
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+              ),
+            ),
+    );
+  }
+
+  Widget _buildDescriptionCard() {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.description,
+                  color: AppTheme.primaryColor,
+                  size: 24,
+                ),
+                const SizedBox(width: 8),
+            Text(
+                  'About This App',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: AppTheme.primaryColor,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Spare Driver Calendar is a comprehensive shift management solution designed specifically for public transport drivers. More than just a calendar, it\'s your complete toolkit for managing rotating shift patterns, staying informed with real-time updates, and accessing essential driver resources.',
+              style: TextStyle(fontSize: 15, height: 1.5),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Built with deep understanding of driver workflows, the app seamlessly integrates shift scheduling, running board information, communication systems, and productivity tools into one powerful platform.',
+              style: TextStyle(fontSize: 15, height: 1.5),
+            ),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFeaturesOverview() {
+    final features = [
+      {
+        'icon': Icons.notifications_active,
+        'title': 'Live Updates',
+        'color': Colors.orange,
+      },
+      {
+        'icon': Icons.calendar_today,
+        'title': 'Smart Scheduling',
+        'color': Colors.blue,
+      },
+      {
+        'icon': Icons.directions_bus,
+        'title': 'Zone 4 Boards',
+        'color': Colors.green,
+      },
+      {
+        'icon': Icons.sync,
+        'title': 'Google Sync',
+        'color': Colors.purple,
+      },
+      {
+        'icon': Icons.analytics,
+        'title': 'Analytics',
+        'color': Colors.teal,
+      },
+      {
+        'icon': Icons.palette,
+        'title': 'Customization',
+        'color': Colors.pink,
+      },
+    ];
+
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Spare Driver Calendar is a specialized calendar application designed for spare drivers to manage their shift patterns, work schedules, and important events.',
+          'Key Features',
+          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
         ),
-        SizedBox(height: 8),
-        Text(
-          'The app is built specifically for drivers who work on rotating shift patterns and need to track their work schedule alongside personal events.',
+        const SizedBox(height: 16),
+        GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 3,
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+            childAspectRatio: 1.0,
+          ),
+          itemCount: features.length,
+          itemBuilder: (context, index) {
+            final feature = features[index];
+            return _buildFeatureOverviewCard(
+              feature['icon'] as IconData,
+              feature['title'] as String,
+              feature['color'] as Color,
+            );
+          },
         ),
       ],
     );
   }
 
-  Widget _buildFeaturesContent() {
+  Widget _buildFeatureOverviewCard(IconData icon, String title, Color color) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              size: 28,
+              color: color,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              title,
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 12,
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDetailedFeatures() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildFeatureItem('Shift Pattern Management',
-            'Configure your unique rest day pattern, and the app will automatically calculate your entire rotating shift schedule. Easily visualize your upcoming shifts and plan accordingly.'),
-        _buildFeatureItem('Zone Types',
-            'The app supports the different Zones, Spare, and Uni/Euros.'),
-        _buildFeatureItem('Work Shift Tracking',
-            'Log your work shifts with specific details such as zone, shift number, start and end times, and break durations. This uses current bill information provided in the depot.'),
-        _buildFeatureItem('Google Calendar Integration',
-            'Seamlessly synchronize your work shifts with your Google Calendar. Access your schedule from any device, receive reminders, and share your availability with others.'),
-        _buildFeatureItem('Dark Mode Support',
-            'Enjoy a comfortable viewing experience in any lighting conditions with the option to switch between light and dark themes. Dark mode reduces eye strain and conserves battery life.'),
-        _buildFeatureItem('Statistics',
-            'Gain insights into your work patterns with comprehensive statistics. Track the frequency of different shift types, analyze your work-rest balance, and identify trends in your schedule.'),
-        _buildFeatureItem('Holiday Tracking',
-            'Add and track your given holidays, and any personal holidays alongside your shifts. Keep your holiday schedule organized in one place.'),
-        _buildFeatureItem('Boards',
-            'Access Zone 3 boards. (Note: This feature is currently disabled). View detailed shift information and plan your routes effectively.'),
-        _buildFeatureItem('Bus Tracking',
-            'Add the bus you drove, keep track of buses driven in case you need to note them.'),
-        _buildFeatureItem('Event Notes',
-            'Add specific notes or reminders to any shift or event directly via the event card.'),
-        _buildFeatureItem('Contacts Page',
-            'Store and quickly access important phone numbers and contact details.'),
-        _buildFeatureItem('Feedback',
-            'Share your suggestions, report bugs, or provide general feedback directly through the app menu to help improve the application.'),
+        Text(
+          'Detailed Features',
+          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 16),
+        _buildFeatureCategory(
+          'Communication & Updates',
+          Icons.campaign,
+          Colors.orange,
+          [
+            {
+              'title': 'Live Updates Banner',
+              'description': 'Stay informed with real-time announcements, service updates, and important notices. Critical information appears instantly at the top of your calendar with priority indicators for different urgency levels.'
+            },
+          ],
+        ),
+        _buildFeatureCategory(
+          'Shift Management',
+          Icons.schedule,
+          Colors.blue,
+          [
+            {
+              'title': 'Intelligent Shift Patterns',
+              'description': 'Configure your unique rest day pattern and the app automatically calculates your entire rotating shift schedule. Visualize upcoming shifts weeks in advance with accurate pattern prediction.'
+            },
+            {
+              'title': 'Comprehensive Shift Tracking',
+              'description': 'Log work shifts with detailed information including zone assignments, shift numbers, precise start and end times, break durations, and bus assignments. All integrated with current depot bill information.'
+            },
+            {
+              'title': 'Zone Support',
+              'description': 'Full support for all zone types including Zone 1-4, Spare duties, and Uni/Euro routes. Each zone type handled with appropriate scheduling and tracking capabilities.'
+            },
+          ],
+        ),
+        _buildFeatureCategory(
+          'Running Boards & Operations',
+          Icons.directions_bus,
+          Colors.green,
+          [
+            {
+              'title': 'Zone 4 Running Boards',
+              'description': 'Access detailed running board information for Zone 4 duties. View complete duty schedules across multiple buses, including movements, handovers, route transitions, and operational timing. Automatically selects correct board files based on day type.'
+            },
+            {
+              'title': 'Smart Board Navigation',
+              'description': 'Advanced chronological sorting ensures duty information displays in proper time order. Handles complex multi-section duties with accurate progression across different routes and locations.'
+            },
+          ],
+        ),
+        _buildFeatureCategory(
+          'Driver Resources',
+          Icons.work,
+          Colors.purple,
+          [
+            {
+              'title': 'Pay Scales & Rates',
+              'description': 'Access comprehensive pay scale information with rates for different years of service and payment types. Essential reference for understanding compensation structure.'
+            },
+            
+            {
+              'title': 'Vehicle Tracking',
+              'description': 'Record and track the buses you\'ve driven. Maintain a complete log for reference, reporting, or personal records.'
+            },
+                         {
+               'title': 'Important Contacts',
+               'description': 'Quick access to essential phone numbers and contact information for depot and controllers.'
+             },
+          ],
+        ),
+        _buildFeatureCategory(
+          'Integration & Synchronization',
+          Icons.sync,
+          Colors.teal,
+          [
+            {
+              'title': 'Google Calendar Sync',
+              'description': 'Seamlessly synchronize your work shifts with Google Calendar. Access your schedule from any device, receive automatic reminders, and share your availability with family or friends.'
+            },
+            {
+              'title': 'Intelligent Backup System',
+              'description': 'Automatic and manual backup options protect your data. Custom preferences, shift colors, and settings are preserved when restoring from backup across devices.'
+            },
+            {
+              'title': 'Smart Updates',
+              'description': 'In-app update system with real-time progress tracking and automatic installation. No need to switch to browser or navigate through download folders.'
+            },
+          ],
+        ),
+        _buildFeatureCategory(
+          'Analytics & Insights',
+          Icons.analytics,
+          Colors.indigo,
+          [
+            {
+              'title': 'Work Pattern Analytics',
+              'description': 'Comprehensive statistics showing shift frequency patterns, work-rest balance analysis, and trend identification. Track overtime shifts separately from regular duties.'
+            },
+                         {
+               'title': 'Time Tracking',
+               'description': 'Detailed work time calculations with proper handling of shifts spanning midnight and rostered hour tracking.'
+             },
+            {
+              'title': 'Holiday Management',
+              'description': 'Organize both allocated holidays and personal time off. Integrated holiday tracking ensures complete schedule visibility and prevents scheduling conflicts.'
+            },
+          ],
+        ),
+        _buildFeatureCategory(
+          'Customization & Productivity',
+          Icons.palette,
+          Colors.pink,
+          [
+            {
+              'title': 'Custom Shift Colors',
+              'description': 'Personalize your calendar with custom colors for Early, Late, Middle, and Rest shifts. Intuitive color picker with real-time preview and instant updates across the entire app.'
+            },
+            {
+              'title': 'Event Notes & Reminders',
+              'description': 'Add detailed notes or reminders to any shift or event. Access notes directly from event cards with full editing capabilities for important information storage.'
+            },
+            {
+              'title': 'Dark Mode Support',
+              'description': 'Comfortable viewing in any lighting condition with full dark theme support. Reduces eye strain during night shifts and conserves battery life on mobile devices.'
+            },
+            {
+              'title': 'Feedback Integration',
+              'description': 'Direct feedback channel for suggestions, bug reports, or feature requests. Your input drives continuous improvement and feature development.'
+            },
+          ],
+        ),
       ],
+    );
+  }
+
+  Widget _buildFeatureCategory(String title, IconData icon, Color color, List<Map<String, String>> features) {
+    return Card(
+      elevation: 1,
+      margin: const EdgeInsets.only(bottom: 16),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  icon,
+                  color: color,
+                  size: 20,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: color,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            ...features.map((feature) => _buildFeatureItem(
+              feature['title']!,
+              feature['description']!,
+            )).toList(),
+          ],
+        ),
+      ),
     );
   }
 
@@ -135,7 +418,7 @@ class AboutScreenState extends State<AboutScreen> with TextRenderingMixin {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.check_circle, color: AppTheme.successColor, size: 20),
+          const Icon(Icons.check_circle, color: AppTheme.successColor, size: 18),
           const SizedBox(width: 8),
           Expanded(
             child: Column(
@@ -143,61 +426,22 @@ class AboutScreenState extends State<AboutScreen> with TextRenderingMixin {
               children: [
                 Text(
                   title,
-                  style: const TextStyle(fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
                 ),
+                const SizedBox(height: 2),
                 Text(
                   description,
-                  style: const TextStyle(fontSize: 14),
+                  style: const TextStyle(
+                    fontSize: 13,
+                    height: 1.4,
+                  ),
                 ),
               ],
             ),
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildHowToUseContent() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildHowToItem('1. Initial Setup',
-            'Set your rest days pattern when first using the app. This configures your shift pattern.'),
-        _buildHowToItem('2. Add Work Shifts',
-            'Tap the + button to add work shifts. Select your zone and shift number.'),
-        _buildHowToItem('3. Spare Duties',
-            'If you receive a duty on a spare shift, you can add it by tapping the event.'),
-        _buildHowToItem('4. Google Calendar',
-            'Connect to Google Calendar in Settings to sync your shifts across devices.'),
-        _buildHowToItem('5. View Statistics',
-            'Check your work patterns and work time in the Statistics screen.'),
-        _buildHowToItem('6. Add Holidays',
-            'Add your given holidays, and any personal holidays through the Holidays menu to keep track of your time off.'),
-        _buildHowToItem('7. View Boards',
-            'Access Zone 3 boards by clicking on a Zone 3 duty in your event list. (Note: This feature is currently disabled).'),
-        _buildHowToItem('8. Customize',
-            'Adjust app settings including dark mode in the Settings screen.'),
-        _buildHowToItem('9. Add Notes',
-            'Tap an event card and use the "Notes" button to view or edit notes for that specific event.'),
-        _buildHowToItem('10. Use Contacts',
-            'Access the Contacts page from the side menu to manage your important numbers.'),
-        _buildHowToItem('11. Submit Feedback',
-            'Use the "Feedback" option in the top-right menu to send your thoughts or report issues directly to the developer.'),
-      ],
-    );
-  }
-
-  Widget _buildHowToItem(String title, String description) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          ),
-          Text(description),
         ],
       ),
     );

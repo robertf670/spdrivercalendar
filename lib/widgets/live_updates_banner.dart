@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import '../models/live_update.dart';
 import '../services/live_updates_service.dart';
-import '../theme/app_theme.dart';
 import 'dart:async';
-import 'package:flutter/rendering.dart';
 
 class LiveUpdatesBanner extends StatefulWidget {
   final VoidCallback? onTap;
@@ -20,7 +17,6 @@ class LiveUpdatesBanner extends StatefulWidget {
 }
 
 class LiveUpdatesBannerState extends State<LiveUpdatesBanner> {
-  List<LiveUpdate> _activeUpdates = [];
 
   @override
   Widget build(BuildContext context) {
@@ -202,7 +198,6 @@ class LiveUpdatesBannerDisplayState extends State<LiveUpdatesBannerDisplay> {
           ),
           padding: const EdgeInsets.all(6),
           child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               // Priority icon
               Container(
@@ -225,42 +220,18 @@ class LiveUpdatesBannerDisplayState extends State<LiveUpdatesBannerDisplay> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Title and priority
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            currentUpdate.title,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 14,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        Flexible(
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: _getPriorityColor(currentUpdate.priority).withValues(alpha: 0.2),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              currentUpdate.priority.toUpperCase(),
-                              style: TextStyle(
-                                color: _getPriorityColor(currentUpdate.priority),
-                                fontSize: 10,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
+                    // Title
+                    Text(
+                      currentUpdate.title,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 2),
-                    // Hardcoded description
+                    // Description
                     Text(
                       'Tap to view details',
                       style: TextStyle(
@@ -270,6 +241,27 @@ class LiveUpdatesBannerDisplayState extends State<LiveUpdatesBannerDisplay> {
                       ),
                     ),
                   ],
+                ),
+              ),
+              // Priority badge - moved outside content column for better positioning
+              Container(
+                margin: const EdgeInsets.only(left: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: _getPriorityColor(currentUpdate.priority).withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: _getPriorityColor(currentUpdate.priority).withValues(alpha: 0.4),
+                    width: 1,
+                  ),
+                ),
+                child: Text(
+                  currentUpdate.priority.toUpperCase(),
+                  style: TextStyle(
+                    color: _getPriorityColor(currentUpdate.priority),
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
               const SizedBox(width: 8),

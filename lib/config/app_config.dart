@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'dart:convert';
 import 'package:crypto/crypto.dart';
 
@@ -13,7 +12,7 @@ class AppConfig {
     }
     
     // Fallback for development/debug builds
-    return 'dev_admin_2024'; // Change this for your dev environment
+    return 'qqrxi'; // Change this for your dev environment
   }
   
   // Safety check - validate password against multiple options

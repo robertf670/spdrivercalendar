@@ -9,6 +9,7 @@ class LiveUpdate {
   final DateTime startTime;
   final DateTime endTime;
   final List<String> routesAffected;
+  final bool forceVisible; // Show immediately regardless of start time
 
   LiveUpdate({
     required this.id,
@@ -18,6 +19,7 @@ class LiveUpdate {
     required this.startTime,
     required this.endTime,
     required this.routesAffected,
+    this.forceVisible = false,
   });
 
   LiveUpdate copyWith({
@@ -28,6 +30,7 @@ class LiveUpdate {
     DateTime? startTime,
     DateTime? endTime,
     List<String>? routesAffected,
+    bool? forceVisible,
   }) {
     return LiveUpdate(
       id: id ?? this.id,
@@ -37,6 +40,7 @@ class LiveUpdate {
       startTime: startTime ?? this.startTime,
       endTime: endTime ?? this.endTime,
       routesAffected: routesAffected ?? this.routesAffected,
+      forceVisible: forceVisible ?? this.forceVisible,
     );
   }
 
@@ -50,6 +54,7 @@ class LiveUpdate {
       'startTime': startTime.toIso8601String(),
       'endTime': endTime.toIso8601String(),
       'routesAffected': routesAffected,
+      'forceVisible': forceVisible,
     };
   }
 
@@ -63,6 +68,7 @@ class LiveUpdate {
       startTime: DateTime.parse(json['startTime']),
       endTime: DateTime.parse(json['endTime']),
       routesAffected: List<String>.from(json['routesAffected'] ?? []),
+      forceVisible: json['forceVisible'] ?? false,
     );
   }
 
@@ -76,6 +82,7 @@ class LiveUpdate {
       startTime: (data['startTime'] as Timestamp).toDate(),
       endTime: (data['endTime'] as Timestamp).toDate(),
       routesAffected: List<String>.from(data['routesAffected'] ?? []),
+      forceVisible: data['forceVisible'] ?? false,
     );
   }
 
@@ -88,6 +95,7 @@ class LiveUpdate {
       'startTime': Timestamp.fromDate(startTime),
       'endTime': Timestamp.fromDate(endTime),
       'routesAffected': routesAffected,
+      'forceVisible': forceVisible,
       'createdAt': Timestamp.fromDate(DateTime.now()),
     };
   }
@@ -95,7 +103,9 @@ class LiveUpdate {
   /// Check if this update is currently active
   bool get isActive {
     final now = DateTime.now();
-    return now.isAfter(startTime) && now.isBefore(endTime);
+    // Show if force visible is enabled and before end time, OR during normal time window
+    return (forceVisible && now.isBefore(endTime)) ||
+           (now.isAfter(startTime) && now.isBefore(endTime));
   }
 
   /// Check if this update is scheduled for the future

@@ -1,4 +1,10 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.13.0': [
+    {
+      'title': 'FIXED: Live Updates Banner Layout Issues',
+      'description': 'Resolved positioning problems with priority indicators (WARNING, CRITICAL, INFO) in the live updates banner. Text alignment is now consistent across all device sizes and screen orientations.',
+    },
+  ],
   '2.12.0': [
     {
       'title': 'NEW: Live Updates Banner System',

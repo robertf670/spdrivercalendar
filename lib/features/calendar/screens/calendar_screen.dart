@@ -84,9 +84,6 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
   late AnimationController _animationController;
   bool _hasCheckedForUpdatesOnStartup = false;
   
-  // GlobalKey to prevent banner from rebuilding
-  final GlobalKey _bannerKey = GlobalKey();
-  
   late Map<String, ShiftInfo> _shiftInfoMap;
 
   // Add holiday color constant

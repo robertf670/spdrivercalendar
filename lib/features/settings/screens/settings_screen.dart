@@ -4,6 +4,7 @@ import 'package:spdrivercalendar/core/services/storage_service.dart';
 import 'package:spdrivercalendar/google_calendar_service.dart';
 import 'package:spdrivercalendar/features/settings/screens/google_calendar_settings_screen.dart';
 import 'package:spdrivercalendar/features/settings/screens/admin_panel_screen.dart';
+import 'package:spdrivercalendar/features/settings/screens/live_updates_preferences_screen.dart';
 import 'package:spdrivercalendar/theme/app_theme.dart';
 import 'package:spdrivercalendar/calendar_test_helper.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -215,6 +216,7 @@ class SettingsScreenState extends State<SettingsScreen> {
                   _buildVersionHistoryButton(),
                   
                   const Divider(height: 32),
+                  _buildLiveUpdatesPreferencesButton(),
                   _buildAdminPanelButton(),
                 ],
               ),
@@ -993,6 +995,28 @@ class SettingsScreenState extends State<SettingsScreen> {
           Navigator.pushNamed(
             context,
             '/version-history', 
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildLiveUpdatesPreferencesButton() {
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 4.0),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppTheme.borderRadius),
+      ),
+      child: ListTile(
+        leading: const Icon(Icons.tune),
+        title: const Text('Live Updates Preferences'),
+        subtitle: const Text('Configure your preferred routes and notifications'),
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const LiveUpdatesPreferencesScreen(),
+            ),
           );
         },
       ),

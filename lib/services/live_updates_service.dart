@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/live_update.dart';
+import 'user_preferences_service.dart';
 
 class LiveUpdatesService {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -28,14 +29,40 @@ class LiveUpdatesService {
         .where('endTime', isGreaterThan: Timestamp.fromDate(now))
         .orderBy('endTime')
         .snapshots()
-        .map((snapshot) {
-      return snapshot.docs.map((doc) {
+        .asyncMap((snapshot) async {
+      final allUpdates = snapshot.docs.map((doc) {
         final data = doc.data();
         return LiveUpdate.fromFirestore(doc.id, data);
       }).where((update) {
         // Filter in memory for active updates
         return update.isActive;
       }).toList();
+      
+      // Filter by user preferences
+      return await UserPreferencesService.filterUpdatesByPreference<LiveUpdate>(
+        allUpdates,
+        (update) => update.routesAffected,
+      );
+    });
+  }
+
+  /// Get filtered updates based on user preferences for relevance
+  static Stream<List<LiveUpdate>> getRelevantUpdatesStream() {
+    return _firestore
+        .collection(_collection)
+        .orderBy('startTime', descending: false)
+        .snapshots()
+        .asyncMap((snapshot) async {
+      final allUpdates = snapshot.docs.map((doc) {
+        final data = doc.data();
+        return LiveUpdate.fromFirestore(doc.id, data);
+      }).toList();
+      
+      // Filter by user preferences
+      return await UserPreferencesService.filterUpdatesByPreference<LiveUpdate>(
+        allUpdates,
+        (update) => update.routesAffected,
+      );
     });
   }
 
@@ -49,6 +76,7 @@ class LiveUpdatesService {
         'startTime': Timestamp.fromDate(update.startTime),
         'endTime': Timestamp.fromDate(update.endTime),
         'routesAffected': update.routesAffected,
+        'forceVisible': update.forceVisible,
         'createdAt': Timestamp.fromDate(DateTime.now()),
       });
       return docRef.id;
@@ -67,6 +95,7 @@ class LiveUpdatesService {
         'startTime': Timestamp.fromDate(update.startTime),
         'endTime': Timestamp.fromDate(update.endTime),
         'routesAffected': update.routesAffected,
+        'forceVisible': update.forceVisible,
         'updatedAt': Timestamp.fromDate(DateTime.now()),
       });
     } catch (e) {
