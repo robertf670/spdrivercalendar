@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:package_info_plus/package_info_plus.dart';
 import 'package:spdrivercalendar/services/update_service.dart';
 
 class UpdateDialog extends StatefulWidget {
@@ -12,23 +11,10 @@ class UpdateDialog extends StatefulWidget {
 }
 
 class _UpdateDialogState extends State<UpdateDialog> {
-  String? _currentVersion;
 
   @override
   void initState() {
     super.initState();
-    _loadCurrentVersion();
-  }
-
-  Future<void> _loadCurrentVersion() async {
-    try {
-      final packageInfo = await PackageInfo.fromPlatform();
-      setState(() {
-        _currentVersion = packageInfo.version;
-      });
-    } catch (e) {
-      // Ignore error, will use fallback in changelog method
-    }
   }
 
   @override

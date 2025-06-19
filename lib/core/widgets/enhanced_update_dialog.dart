@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:package_info_plus/package_info_plus.dart';
 import 'package:spdrivercalendar/services/update_service.dart';
 import 'package:spdrivercalendar/services/apk_download_manager.dart';
 
@@ -17,13 +16,11 @@ class _EnhancedUpdateDialogState extends State<EnhancedUpdateDialog> {
   bool _useInAppDownload = true;
   DownloadProgress? _progress;
   String? _downloadPath;
-  String? _currentVersion;
 
   @override
   void initState() {
     super.initState();
     _loadDownloadPath();
-    _loadCurrentVersion();
   }
 
   Future<void> _loadDownloadPath() async {
@@ -37,16 +34,7 @@ class _EnhancedUpdateDialogState extends State<EnhancedUpdateDialog> {
     }
   }
 
-  Future<void> _loadCurrentVersion() async {
-    try {
-      final packageInfo = await PackageInfo.fromPlatform();
-      setState(() {
-        _currentVersion = packageInfo.version;
-      });
-    } catch (e) {
-      // Ignore error, will use fallback in changelog method
-    }
-  }
+
 
   @override
   Widget build(BuildContext context) {

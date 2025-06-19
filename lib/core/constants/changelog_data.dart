@@ -1,4 +1,14 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.13.2': [
+    {
+      'title': 'CODE CLEANUP: Unused Code Elimination',
+      'description': 'Removed unused fields, methods, and imports across update dialog components. Eliminated 4 code quality issues including unused _currentVersion fields and package_info_plus imports, improving code maintainability and reducing bundle size.',
+    },
+    {
+      'title': 'Enhanced Code Quality',
+      'description': 'Reduced total analyzer issues from 90 to 88 through systematic unused code removal. Cleaned up redundant initialization methods and streamlined dialog component architecture for better performance.',
+    },
+  ],
   '2.13.1': [
     {
       'title': 'ENHANCED: Streamlined Update Dialog Experience',
