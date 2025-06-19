@@ -1,5 +1,5 @@
 final Map<String, List<Map<String, String>>> changelogData = {
-  '2.14.0': [
+  '2.13.1': [
     {
       'title': 'ENHANCED: Streamlined Update Dialog Experience',
       'description': 'Removed redundant "What\'s New" section from update dialogs that always showed generic placeholder text. Users will see the actual What\'s New screen after updating, making this section unnecessary. Update dialogs are now cleaner and more focused on the update action.',
