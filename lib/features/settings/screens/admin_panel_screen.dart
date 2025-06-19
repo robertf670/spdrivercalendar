@@ -173,7 +173,7 @@ class AdminPanelScreenState extends State<AdminPanelScreen> {
       statusText = 'Active';
       statusIcon = Icons.live_tv;
       
-      // Add force visible indicator if applicable
+      // Add indicators for special states
       if (isForceVisible && !isInTimeWindow) {
         additionalBadge = Container(
           margin: const EdgeInsets.only(left: 4),
@@ -192,6 +192,56 @@ class AdminPanelScreenState extends State<AdminPanelScreen> {
                 'FORCED',
                 style: TextStyle(
                   color: Colors.purple,
+                  fontSize: 9,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        );
+      } else if (update.isScheduledForEarlyVisibility) {
+        additionalBadge = Container(
+          margin: const EdgeInsets.only(left: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+          decoration: BoxDecoration(
+            color: Colors.blue.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.schedule, size: 10, color: Colors.blue),
+              const SizedBox(width: 2),
+              Text(
+                'EARLY',
+                style: TextStyle(
+                  color: Colors.blue,
+                  fontSize: 9,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        );
+      } else if (update.enableScheduledVisibility && update.hoursBeforeStart > 0) {
+        additionalBadge = Container(
+          margin: const EdgeInsets.only(left: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+          decoration: BoxDecoration(
+            color: Colors.orange.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.schedule, size: 10, color: Colors.orange),
+              const SizedBox(width: 2),
+              Text(
+                '${update.hoursBeforeStart}H',
+                style: TextStyle(
+                  color: Colors.orange,
                   fontSize: 9,
                   fontWeight: FontWeight.w600,
                 ),
@@ -336,17 +386,39 @@ class AdminPanelScreenState extends State<AdminPanelScreen> {
             ),
             const SizedBox(height: 12),
             // Time info
-            Row(
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(Icons.schedule, size: 16, color: Colors.grey.shade600),
-                const SizedBox(width: 4),
-                Text(
-                  '${DateFormat('MMM d, HH:mm').format(update.startTime)} - ${DateFormat('MMM d, HH:mm').format(update.endTime)}',
-                  style: TextStyle(
-                    color: Colors.grey.shade600,
-                    fontSize: 12,
-                  ),
+                Row(
+                  children: [
+                    Icon(Icons.schedule, size: 16, color: Colors.grey.shade600),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${DateFormat('MMM d, HH:mm').format(update.startTime)} - ${DateFormat('MMM d, HH:mm').format(update.endTime)}',
+                      style: TextStyle(
+                        color: Colors.grey.shade600,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
                 ),
+                if (update.enableScheduledVisibility && update.hoursBeforeStart > 0) ...[
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Icon(Icons.visibility, size: 16, color: Colors.blue.shade600),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Visible from ${DateFormat('MMM d, HH:mm').format(update.effectiveStartTime)}',
+                        style: TextStyle(
+                          color: Colors.blue.shade700,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ],
             ),
             // Routes affected (if any)
@@ -568,6 +640,8 @@ class UpdateDialogState extends State<UpdateDialog> {
   DateTime _startTime = DateTime.now();
   DateTime _endTime = DateTime.now().add(const Duration(hours: 2));
   bool _forceVisible = false;
+  bool _enableScheduledVisibility = true;
+  int _hoursBeforeStart = 2;
 
   @override
   void initState() {
@@ -581,6 +655,8 @@ class UpdateDialogState extends State<UpdateDialog> {
       _startTime = update.startTime;
       _endTime = update.endTime;
       _forceVisible = update.forceVisible;
+      _enableScheduledVisibility = update.enableScheduledVisibility;
+      _hoursBeforeStart = update.hoursBeforeStart;
     }
   }
 
@@ -721,12 +797,105 @@ class UpdateDialogState extends State<UpdateDialog> {
                           onChanged: (bool value) {
                             setState(() {
                               _forceVisible = value;
+                              // Disable scheduled visibility if force visible is enabled
+                              if (value) {
+                                _enableScheduledVisibility = false;
+                              }
                             });
                           },
                           secondary: Icon(
                             _forceVisible ? Icons.visibility : Icons.visibility_off,
                             color: _forceVisible ? Colors.green : Colors.grey,
                           ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      // Scheduled Visibility Toggle
+                      Container(
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey.shade300),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Column(
+                          children: [
+                            SwitchListTile(
+                              title: const Text('Scheduled Visibility'),
+                              subtitle: Text(
+                                _enableScheduledVisibility
+                                    ? 'Update will become visible $_hoursBeforeStart hour${_hoursBeforeStart == 1 ? '' : 's'} before start time'
+                                    : 'Display update at a scheduled time before start time',
+                                style: const TextStyle(fontSize: 12),
+                              ),
+                              value: _enableScheduledVisibility,
+                              onChanged: _forceVisible ? null : (bool value) {
+                                setState(() {
+                                  _enableScheduledVisibility = value;
+                                });
+                              },
+                              secondary: Icon(
+                                _enableScheduledVisibility ? Icons.schedule : Icons.schedule_outlined,
+                                color: _enableScheduledVisibility && !_forceVisible ? Colors.blue : Colors.grey,
+                              ),
+                            ),
+                            if (_enableScheduledVisibility && !_forceVisible) ...[
+                              const Divider(height: 1),
+                              Padding(
+                                padding: const EdgeInsets.all(16.0),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      'Hours before start time:',
+                                      style: TextStyle(fontWeight: FontWeight.w500),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Wrap(
+                                      spacing: 8,
+                                      children: [
+                                        for (int hours in [1, 2, 4, 8])
+                                          ChoiceChip(
+                                            label: Text('${hours}h'),
+                                            selected: _hoursBeforeStart == hours,
+                                            onSelected: (selected) {
+                                              if (selected) {
+                                                setState(() {
+                                                  _hoursBeforeStart = hours;
+                                                });
+                                              }
+                                            },
+                                          ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 8),
+                                    if (_enableScheduledVisibility) ...[
+                                      Container(
+                                        padding: const EdgeInsets.all(8),
+                                        decoration: BoxDecoration(
+                                          color: Colors.blue.shade50,
+                                          borderRadius: BorderRadius.circular(6),
+                                        ),
+                                        child: Row(
+                                          children: [
+                                            Icon(Icons.info_outline, size: 16, color: Colors.blue.shade600),
+                                            const SizedBox(width: 8),
+                                            Expanded(
+                                              child: Text(
+                                                'Will become visible at ${DateFormat('MMM d, HH:mm').format(_startTime.subtract(Duration(hours: _hoursBeforeStart)))}',
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  color: Colors.blue.shade700,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ],
                         ),
                       ),
                       const SizedBox(height: 16),
@@ -1107,6 +1276,8 @@ class UpdateDialogState extends State<UpdateDialog> {
         endTime: _endTime,
         routesAffected: routes,
         forceVisible: _forceVisible,
+        enableScheduledVisibility: _enableScheduledVisibility && !_forceVisible,
+        hoursBeforeStart: _enableScheduledVisibility && !_forceVisible ? _hoursBeforeStart : 0,
       );
 
       widget.onSave(update);

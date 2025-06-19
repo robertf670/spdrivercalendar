@@ -10,6 +10,8 @@ class LiveUpdate {
   final DateTime endTime;
   final List<String> routesAffected;
   final bool forceVisible; // Show immediately regardless of start time
+  final bool enableScheduledVisibility; // Enable scheduled visibility feature
+  final int hoursBeforeStart; // Hours before startTime to display (0 = at start time)
 
   LiveUpdate({
     required this.id,
@@ -20,6 +22,8 @@ class LiveUpdate {
     required this.endTime,
     required this.routesAffected,
     this.forceVisible = false,
+    this.enableScheduledVisibility = false,
+    this.hoursBeforeStart = 0,
   });
 
   LiveUpdate copyWith({
@@ -31,6 +35,8 @@ class LiveUpdate {
     DateTime? endTime,
     List<String>? routesAffected,
     bool? forceVisible,
+    bool? enableScheduledVisibility,
+    int? hoursBeforeStart,
   }) {
     return LiveUpdate(
       id: id ?? this.id,
@@ -41,6 +47,8 @@ class LiveUpdate {
       endTime: endTime ?? this.endTime,
       routesAffected: routesAffected ?? this.routesAffected,
       forceVisible: forceVisible ?? this.forceVisible,
+      enableScheduledVisibility: enableScheduledVisibility ?? this.enableScheduledVisibility,
+      hoursBeforeStart: hoursBeforeStart ?? this.hoursBeforeStart,
     );
   }
 
@@ -55,6 +63,8 @@ class LiveUpdate {
       'endTime': endTime.toIso8601String(),
       'routesAffected': routesAffected,
       'forceVisible': forceVisible,
+      'enableScheduledVisibility': enableScheduledVisibility,
+      'hoursBeforeStart': hoursBeforeStart,
     };
   }
 
@@ -69,6 +79,8 @@ class LiveUpdate {
       endTime: DateTime.parse(json['endTime']),
       routesAffected: List<String>.from(json['routesAffected'] ?? []),
       forceVisible: json['forceVisible'] ?? false,
+      enableScheduledVisibility: json['enableScheduledVisibility'] ?? false,
+      hoursBeforeStart: json['hoursBeforeStart'] ?? 0,
     );
   }
 
@@ -83,6 +95,8 @@ class LiveUpdate {
       endTime: (data['endTime'] as Timestamp).toDate(),
       routesAffected: List<String>.from(data['routesAffected'] ?? []),
       forceVisible: data['forceVisible'] ?? false,
+      enableScheduledVisibility: data['enableScheduledVisibility'] ?? false,
+      hoursBeforeStart: data['hoursBeforeStart'] ?? 0,
     );
   }
 
@@ -96,6 +110,8 @@ class LiveUpdate {
       'endTime': Timestamp.fromDate(endTime),
       'routesAffected': routesAffected,
       'forceVisible': forceVisible,
+      'enableScheduledVisibility': enableScheduledVisibility,
+      'hoursBeforeStart': hoursBeforeStart,
       'createdAt': Timestamp.fromDate(DateTime.now()),
     };
   }
@@ -103,9 +119,17 @@ class LiveUpdate {
   /// Check if this update is currently active
   bool get isActive {
     final now = DateTime.now();
-    // Show if force visible is enabled and before end time, OR during normal time window
+    
+    // Calculate scheduled visibility time if enabled
+    DateTime effectiveStartTime = startTime;
+    if (enableScheduledVisibility && hoursBeforeStart > 0) {
+      effectiveStartTime = startTime.subtract(Duration(hours: hoursBeforeStart));
+    }
+    
+    // Show if force visible is enabled and before end time, OR 
+    // during scheduled time window (which may be before actual start time)
     return (forceVisible && now.isBefore(endTime)) ||
-           (now.isAfter(startTime) && now.isBefore(endTime));
+           (now.isAfter(effectiveStartTime) && now.isBefore(endTime));
   }
 
   /// Check if this update is scheduled for the future
@@ -123,5 +147,21 @@ class LiveUpdate {
     if (isActive) return 'Active';
     if (isScheduled) return 'Scheduled';
     return 'Expired';
+  }
+
+  /// Get the effective visibility start time (considering scheduled visibility)
+  DateTime get effectiveStartTime {
+    if (enableScheduledVisibility && hoursBeforeStart > 0) {
+      return startTime.subtract(Duration(hours: hoursBeforeStart));
+    }
+    return startTime;
+  }
+
+  /// Check if this update is in scheduled visibility mode
+  bool get isScheduledForEarlyVisibility {
+    return enableScheduledVisibility && 
+           hoursBeforeStart > 0 && 
+           DateTime.now().isBefore(startTime) && 
+           DateTime.now().isAfter(effectiveStartTime);
   }
 } 

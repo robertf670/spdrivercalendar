@@ -3,6 +3,7 @@ import 'package:spdrivercalendar/core/constants/app_constants.dart';
 import 'package:spdrivercalendar/core/services/storage_service.dart';
 import 'package:spdrivercalendar/google_calendar_service.dart';
 import 'package:spdrivercalendar/features/settings/screens/google_calendar_settings_screen.dart';
+import 'package:spdrivercalendar/features/settings/screens/google_calendar_help_screen.dart';
 import 'package:spdrivercalendar/features/settings/screens/admin_panel_screen.dart';
 import 'package:spdrivercalendar/features/settings/screens/live_updates_preferences_screen.dart';
 import 'package:spdrivercalendar/theme/app_theme.dart';
@@ -174,6 +175,7 @@ class SettingsScreenState extends State<SettingsScreen> {
                   _buildGoogleAccountSection(),
                   _buildGoogleSyncOption(),
                   _buildManualSyncOption(),
+                  _buildGoogleCalendarHelpButton(),
                   
                   // --- Modify Notifications Section --- 
                   const Divider(height: 32),
@@ -375,6 +377,31 @@ class SettingsScreenState extends State<SettingsScreen> {
         trailing: _isGoogleSignedIn ? const Icon(Icons.chevron_right) : null,
         enabled: _isGoogleSignedIn,
         onTap: _isGoogleSignedIn ? () => _showSyncDialog(context) : null,
+      ),
+    );
+  }
+
+  Widget _buildGoogleCalendarHelpButton() {
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 4.0),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppTheme.borderRadius),
+      ),
+      child: ListTile(
+        leading: const Icon(Icons.help_outline, color: AppTheme.primaryColor),
+        title: const Text('How to Share Google Calendar'),
+        subtitle: const Text('Learn how to share your work schedule with family'),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: () => _showGoogleCalendarHelpScreen(context),
+      ),
+    );
+  }
+
+  void _showGoogleCalendarHelpScreen(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const GoogleCalendarHelpScreen(),
       ),
     );
   }

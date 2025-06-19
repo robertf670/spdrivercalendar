@@ -77,6 +77,8 @@ class LiveUpdatesService {
         'endTime': Timestamp.fromDate(update.endTime),
         'routesAffected': update.routesAffected,
         'forceVisible': update.forceVisible,
+        'enableScheduledVisibility': update.enableScheduledVisibility,
+        'hoursBeforeStart': update.hoursBeforeStart,
         'createdAt': Timestamp.fromDate(DateTime.now()),
       });
       return docRef.id;
@@ -96,6 +98,8 @@ class LiveUpdatesService {
         'endTime': Timestamp.fromDate(update.endTime),
         'routesAffected': update.routesAffected,
         'forceVisible': update.forceVisible,
+        'enableScheduledVisibility': update.enableScheduledVisibility,
+        'hoursBeforeStart': update.hoursBeforeStart,
         'updatedAt': Timestamp.fromDate(DateTime.now()),
       });
     } catch (e) {

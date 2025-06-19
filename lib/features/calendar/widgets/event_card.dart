@@ -1180,12 +1180,19 @@ class _EventCardState extends State<EventCard> {
                       if (widget.event.notes != null && widget.event.notes!.isNotEmpty)
                         Padding(
                           padding: const EdgeInsets.only(left: 8.0),
-                          child: Icon(
-                            Icons.notes,
-                            size: 18,
-                            color: Theme.of(context).brightness == Brightness.dark
-                                ? Colors.white70
-                                : Colors.black54,
+                          child: InkWell(
+                            onTap: () => widget.onShowNotes(widget.event),
+                            borderRadius: BorderRadius.circular(12),
+                            child: Padding(
+                              padding: const EdgeInsets.all(4.0),
+                              child: Icon(
+                                Icons.notes,
+                                size: 18,
+                                color: Theme.of(context).brightness == Brightness.dark
+                                    ? Colors.white70
+                                    : Colors.black54,
+                              ),
+                            ),
                           ),
                         ),
                       // Rest day badge

@@ -1,5 +1,15 @@
 final Map<String, List<Map<String, String>>> changelogData = {
-  '2.13.0': [
+  '2.12.2': [
+    {
+      'title': 'NEW: Clickable Notes Icon',
+      'description': 'Notes icon on event cards is now directly clickable! Tap the notes icon to instantly open the notes dialog for that event, eliminating the need to open the event details first. Provides faster, more intuitive access to your shift notes.',
+    },
+    {
+      'title': 'NEW: Google Calendar Sharing Guide',
+      'description': 'Added comprehensive help guide in Settings showing exactly how to share your work schedule with family and friends. Includes step-by-step instructions for calendar sharing, creating dedicated work calendars, and privacy options. Access via "How to Share Google Calendar" in Settings.',
+    },
+  ],
+  '2.12.1': [
     {
       'title': 'FIXED: Live Updates Banner Layout Issues',
       'description': 'Resolved positioning problems with priority indicators (WARNING, CRITICAL, INFO) in the live updates banner. Text alignment is now consistent across all device sizes and screen orientations.',
