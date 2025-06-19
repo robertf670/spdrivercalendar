@@ -1,4 +1,18 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.14.0': [
+    {
+      'title': 'ENHANCED: Streamlined Update Dialog Experience',
+      'description': 'Removed redundant "What\'s New" section from update dialogs that always showed generic placeholder text. Users will see the actual What\'s New screen after updating, making this section unnecessary. Update dialogs are now cleaner and more focused on the update action.',
+    },
+    {
+      'title': 'Improved Update UI Flow',
+      'description': 'Eliminated the confusing "Bug fixes and performance improvements / Check the What\'s New screen for detailed information" placeholder text. Update dialogs now show only essential information: version number and download options.',
+    },
+    {
+      'title': 'Code Cleanup & Optimization',
+      'description': 'Removed unused changelog parsing methods and imports from update dialogs, reducing code complexity and improving maintainability. Update dialog components are now more lightweight and efficient.',
+    },
+  ],
   '2.13.0': [
     {
       'title': 'FIXED: Dark Mode Across Major Screens',
