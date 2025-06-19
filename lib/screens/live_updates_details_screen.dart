@@ -123,7 +123,7 @@ class LiveUpdatesDetailsScreenState extends State<LiveUpdatesDetailsScreen> {
                   Icon(
                     Icons.error_outline,
                     size: 64,
-                    color: Colors.red.shade400,
+                    color: Theme.of(context).colorScheme.error,
                   ),
                   const SizedBox(height: 16),
                   Text(
@@ -131,14 +131,14 @@ class LiveUpdatesDetailsScreenState extends State<LiveUpdatesDetailsScreen> {
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w600,
-                      color: Colors.grey.shade600,
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     '${snapshot.error}',
                     style: TextStyle(
-                      color: Colors.grey.shade500,
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                     ),
                     textAlign: TextAlign.center,
                   ),
@@ -157,16 +157,16 @@ class LiveUpdatesDetailsScreenState extends State<LiveUpdatesDetailsScreen> {
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(12),
-                  color: Colors.amber.shade50,
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
                   child: Row(
                     children: [
-                      Icon(Icons.filter_list, color: Colors.amber.shade700, size: 20),
+                      Icon(Icons.filter_list, color: Theme.of(context).colorScheme.primary, size: 20),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           'Filtered for your preferred routes (${_preferredRoutes.length} routes)',
                           style: TextStyle(
-                            color: Colors.amber.shade700,
+                            color: Theme.of(context).colorScheme.onSurface,
                             fontWeight: FontWeight.w500,
                             fontSize: 13,
                           ),
@@ -180,7 +180,7 @@ class LiveUpdatesDetailsScreenState extends State<LiveUpdatesDetailsScreen> {
                         child: Text(
                           'Show All',
                           style: TextStyle(
-                            color: Colors.amber.shade700,
+                            color: Theme.of(context).colorScheme.primary,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -209,7 +209,7 @@ class LiveUpdatesDetailsScreenState extends State<LiveUpdatesDetailsScreen> {
             Icon(
               Icons.check_circle_outline,
               size: 64,
-              color: Colors.green.shade400,
+              color: Theme.of(context).colorScheme.primary,
             ),
             const SizedBox(height: 16),
             Text(
@@ -217,7 +217,7 @@ class LiveUpdatesDetailsScreenState extends State<LiveUpdatesDetailsScreen> {
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
-                color: Colors.grey.shade600,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
             const SizedBox(height: 8),
@@ -226,7 +226,7 @@ class LiveUpdatesDetailsScreenState extends State<LiveUpdatesDetailsScreen> {
                 ? 'All clear! No diversions or service updates at this time.'
                 : 'No updates for your preferred routes. Tap "Show All" to see all updates.',
               style: TextStyle(
-                color: Colors.grey.shade500,
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
               ),
               textAlign: TextAlign.center,
             ),
@@ -252,14 +252,14 @@ class LiveUpdatesDetailsScreenState extends State<LiveUpdatesDetailsScreen> {
           child: Container(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(12),
-              gradient: LinearGradient(
-                colors: [
-                  _getPriorityColor(update.priority).withValues(alpha: 0.05),
-                  Colors.white,
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
+                          gradient: LinearGradient(
+              colors: [
+                _getPriorityColor(update.priority).withValues(alpha: 0.05),
+                Theme.of(context).colorScheme.surface,
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
             ),
             child: Padding(
               padding: const EdgeInsets.all(16),
@@ -288,9 +288,10 @@ class LiveUpdatesDetailsScreenState extends State<LiveUpdatesDetailsScreen> {
                           children: [
                             Text(
                               update.title,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
+                                color: Theme.of(context).colorScheme.onSurface,
                               ),
                             ),
                             const SizedBox(height: 2),
@@ -315,7 +316,7 @@ class LiveUpdatesDetailsScreenState extends State<LiveUpdatesDetailsScreen> {
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                   decoration: BoxDecoration(
-                                    color: Colors.green.withValues(alpha: 0.1),
+                                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                   child: Row(
@@ -324,13 +325,13 @@ class LiveUpdatesDetailsScreenState extends State<LiveUpdatesDetailsScreen> {
                                       Icon(
                                         Icons.live_tv,
                                         size: 10,
-                                        color: Colors.green.shade700,
+                                        color: Theme.of(context).colorScheme.primary,
                                       ),
                                       const SizedBox(width: 2),
                                       Text(
                                         'ACTIVE',
                                         style: TextStyle(
-                                          color: Colors.green.shade700,
+                                          color: Theme.of(context).colorScheme.primary,
                                           fontSize: 10,
                                           fontWeight: FontWeight.w600,
                                         ),
@@ -353,7 +354,7 @@ class LiveUpdatesDetailsScreenState extends State<LiveUpdatesDetailsScreen> {
                     update.description,
                     style: TextStyle(
                       fontSize: 14,
-                      color: Colors.grey.shade700,
+                      color: Theme.of(context).colorScheme.onSurface,
                       height: 1.4,
                     ),
                   ),
@@ -364,16 +365,16 @@ class LiveUpdatesDetailsScreenState extends State<LiveUpdatesDetailsScreen> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: Colors.grey.shade50,
+                      color: Theme.of(context).colorScheme.surfaceContainerLow,
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.grey.shade200),
+                      border: Border.all(color: Theme.of(context).colorScheme.outline),
                     ),
                     child: Row(
                       children: [
                         Icon(
                           Icons.schedule,
                           size: 16,
-                          color: Colors.grey.shade600,
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                         ),
                         const SizedBox(width: 8),
                         Expanded(
@@ -381,7 +382,7 @@ class LiveUpdatesDetailsScreenState extends State<LiveUpdatesDetailsScreen> {
                             _formatTimeRange(update.startTime, update.endTime),
                             style: TextStyle(
                               fontSize: 12,
-                              color: Colors.grey.shade700,
+                              color: Theme.of(context).colorScheme.onSurface,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
@@ -401,7 +402,7 @@ class LiveUpdatesDetailsScreenState extends State<LiveUpdatesDetailsScreen> {
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
-                            color: Colors.grey.shade600,
+                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
                           ),
                         ),
                         const SizedBox(height: 8),

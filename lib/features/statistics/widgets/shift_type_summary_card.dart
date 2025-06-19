@@ -38,7 +38,7 @@ class ShiftTypeSummaryCard extends StatelessWidget {
               'Rest Days not included in calculation',
               style: TextStyle(
                 fontSize: 12,
-                color: Colors.grey[600],
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                 fontStyle: FontStyle.italic,
               ),
             ),

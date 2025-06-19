@@ -295,11 +295,11 @@ class BillsScreenState extends State<BillsScreen> {
               // Dropdowns Container
               Container(
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.surface,
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.grey.withValues(alpha: 0.1),
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08),
                       spreadRadius: 2,
                       blurRadius: 10,
                       offset: const Offset(0, 4),
@@ -311,19 +311,19 @@ class BillsScreenState extends State<BillsScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Day Type Dropdown
-                    const Text(
+                    Text(
                       'Day Type',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: Colors.black87,
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
                     const SizedBox(height: 8),
                     Container(
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: Colors.grey.shade300),
+                        border: Border.all(color: Theme.of(context).colorScheme.outline),
                       ),
                       child: DropdownButtonHideUnderline(
                         child: DropdownButton<String>(
@@ -367,19 +367,19 @@ class BillsScreenState extends State<BillsScreen> {
                     const SizedBox(height: 24),
                     
                     // Zone Dropdown
-                    const Text(
+                    Text(
                       'Zone',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: Colors.black87,
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
                     const SizedBox(height: 8),
                     Container(
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: Colors.grey.shade300),
+                        border: Border.all(color: Theme.of(context).colorScheme.outline),
                       ),
                       child: DropdownButtonHideUnderline(
                         child: DropdownButton<String>(
@@ -449,7 +449,7 @@ class BillsScreenState extends State<BillsScreen> {
             Text(
               'Loading data...',
               style: TextStyle(
-                color: Colors.grey.shade600,
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                 fontSize: 16,
               ),
             ),
@@ -463,16 +463,16 @@ class BillsScreenState extends State<BillsScreen> {
         child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.red.shade50,
+            color: Theme.of(context).colorScheme.errorContainer,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.red.shade300),
+            border: Border.all(color: Theme.of(context).colorScheme.error),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(
                 Icons.error_outline,
-                color: Colors.red.shade800,
+                color: Theme.of(context).colorScheme.error,
                 size: 40,
               ),
               const SizedBox(height: 16),
@@ -480,15 +480,15 @@ class BillsScreenState extends State<BillsScreen> {
                 _errorMessage!,
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: Colors.red.shade800,
+                  color: Theme.of(context).colorScheme.onErrorContainer,
                 ),
               ),
               const SizedBox(height: 16),
               ElevatedButton(
                 onPressed: _loadCsvData,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red.shade100,
-                  foregroundColor: Colors.red.shade800,
+                  backgroundColor: Theme.of(context).colorScheme.error,
+                  foregroundColor: Theme.of(context).colorScheme.onError,
                 ),
                 child: const Text('Retry'),
               ),
@@ -503,7 +503,7 @@ class BillsScreenState extends State<BillsScreen> {
         child: Text(
           'No data available',
           style: TextStyle(
-            color: Colors.grey.shade600,
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
             fontSize: 16,
           ),
         ),
@@ -563,14 +563,15 @@ class BillsScreenState extends State<BillsScreen> {
                 // Fixed shift column header
                 Container(
                   width: fixedColumnWidth,
-                  color: Colors.grey.shade200,
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
                   padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 4),
                   child: Center(
                     child: Text(
                       _shiftColumnHeader,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 12,
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                       textAlign: TextAlign.center,
                     ),
@@ -580,12 +581,12 @@ class BillsScreenState extends State<BillsScreen> {
                 Container(
                   width: 1,
                   height: headerHeight,
-                  color: Colors.grey.shade300,
+                  color: Theme.of(context).colorScheme.outline,
                 ),
                 // Scrollable headers
                 Expanded(
                   child: Container(
-                    color: Colors.grey.shade200,
+                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
                     child: SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
                       controller: _headerScrollController,
@@ -599,9 +600,10 @@ class BillsScreenState extends State<BillsScreen> {
                             child: Center(
                               child: Text(
                                 header,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 10,  // Reduced from 11 to 10 for better fit
+                                  color: Theme.of(context).colorScheme.onSurface,
                                 ),
                                 textAlign: TextAlign.center,
                                 maxLines: 4,  // Increased from 3 to 4 lines
@@ -632,14 +634,14 @@ class BillsScreenState extends State<BillsScreen> {
                       return Container(
                         width: fixedColumnWidth,
                         height: rowHeight,  // Fixed height for alignment
-                        color: isEvenRow ? Colors.white : Colors.grey.shade50,
+                        color: isEvenRow ? Theme.of(context).colorScheme.surface : Theme.of(context).colorScheme.surfaceContainerLow,
                         padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
                         child: Center(
                           child: Text(
                             _shiftColumnData[index].toLowerCase() == "nan" ? "W/O" : _shiftColumnData[index],
                             style: TextStyle(
                               fontWeight: FontWeight.w500, // Make shift column slightly bolder
-                              color: Colors.grey.shade800,
+                              color: Theme.of(context).colorScheme.onSurface,
                               fontSize: 12,
                             ),
                             textAlign: TextAlign.center,
@@ -654,7 +656,7 @@ class BillsScreenState extends State<BillsScreen> {
                 // Divider between fixed and scrollable columns
                 Container(
                   width: 1,
-                  color: Colors.grey.shade300,
+                  color: Theme.of(context).colorScheme.outline,
                 ),
                 
                 // Scrollable data section
@@ -676,7 +678,7 @@ class BillsScreenState extends State<BillsScreen> {
                             
                             return Container(
                               height: rowHeight,  // Fixed height for alignment
-                              color: isEvenRow ? Colors.white : Colors.grey.shade50,
+                              color: isEvenRow ? Theme.of(context).colorScheme.surface : Theme.of(context).colorScheme.surfaceContainerLow,
                               child: Row(
                                 children: List.generate(
                                   _scrollableHeaders.length,
@@ -688,7 +690,7 @@ class BillsScreenState extends State<BillsScreen> {
                                       child: Text(
                                         colIndex < row.length ? (row[colIndex].toLowerCase() == "nan" ? "W/O" : row[colIndex]) : '',
                                         style: TextStyle(
-                                          color: Colors.grey.shade800,
+                                          color: Theme.of(context).colorScheme.onSurface,
                                           fontSize: 11,  // Reduced from 12 to 11 to fit more content
                                         ),
                                         textAlign: TextAlign.center,
@@ -714,7 +716,7 @@ class BillsScreenState extends State<BillsScreen> {
           Container(
             padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
             decoration: BoxDecoration(
-              color: Colors.grey.shade50,
+              color: Theme.of(context).colorScheme.surfaceContainerLow,
               borderRadius: const BorderRadius.only(
                 bottomLeft: Radius.circular(16),
                 bottomRight: Radius.circular(16),
@@ -726,7 +728,7 @@ class BillsScreenState extends State<BillsScreen> {
                 Text(
                   '${_rows.length} rows',
                   style: TextStyle(
-                    color: Colors.grey.shade600,
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
                   ),

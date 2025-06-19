@@ -30,16 +30,16 @@ class LiveUpdatesBannerState extends State<LiveUpdatesBanner> {
         if (snapshot.hasError) {
           return Container(
             padding: const EdgeInsets.all(8),
-            color: Colors.red.shade100,
+            color: Theme.of(context).colorScheme.errorContainer,
             child: Row(
               children: [
-                Icon(Icons.error, color: Colors.red.shade600, size: 16),
+                Icon(Icons.error, color: Theme.of(context).colorScheme.error, size: 16),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     'Error loading updates',
                     style: TextStyle(
-                      color: Colors.red.shade700,
+                      color: Theme.of(context).colorScheme.onErrorContainer,
                       fontSize: 12,
                     ),
                   ),
@@ -128,7 +128,7 @@ class LiveUpdatesBannerDisplayState extends State<LiveUpdatesBannerDisplay> {
       case 'info':
         return Colors.blue;
       default:
-        return Colors.grey;
+        return Theme.of(context).colorScheme.outline;
     }
   }
 
@@ -152,6 +152,7 @@ class LiveUpdatesBannerDisplayState extends State<LiveUpdatesBannerDisplay> {
     }
 
     final currentUpdate = widget.updates[_currentIndex];
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return GestureDetector(
       onTap: widget.onTap,
@@ -166,15 +167,14 @@ class LiveUpdatesBannerDisplayState extends State<LiveUpdatesBannerDisplay> {
           vertical: 10,
         ),
         decoration: BoxDecoration(
-          color: Colors.grey.shade50,
+          color: isDark ? Theme.of(context).colorScheme.surfaceContainerHighest : Theme.of(context).colorScheme.surfaceContainerLow,
+          // Subtle bottom border only for separation
           border: Border(
-            left: BorderSide(
-              color: Colors.grey.shade300,
-              width: 4,
-            ),
             bottom: BorderSide(
-              color: Colors.grey.shade200,
-              width: 1,
+              color: isDark 
+                ? Theme.of(context).colorScheme.outline.withValues(alpha: 0.2) 
+                : Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.3),
+              width: 0.5,
             ),
           ),
         ),
@@ -220,86 +220,84 @@ class LiveUpdatesBannerDisplayState extends State<LiveUpdatesBannerDisplay> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Title
-                    Text(
-                      currentUpdate.title,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 14,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 2),
-                    // Description
-                    Text(
-                      'Tap to view details',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey.shade600,
-                        fontStyle: FontStyle.italic,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              // Priority badge - moved outside content column for better positioning
-              Container(
-                margin: const EdgeInsets.only(left: 8),
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: _getPriorityColor(currentUpdate.priority).withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: _getPriorityColor(currentUpdate.priority).withValues(alpha: 0.4),
-                    width: 1,
-                  ),
-                ),
-                child: Text(
-                  currentUpdate.priority.toUpperCase(),
-                  style: TextStyle(
-                    color: _getPriorityColor(currentUpdate.priority),
-                    fontSize: 10,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              // Indicators - only show if not too narrow
-              if (MediaQuery.of(context).size.width > 350) ...[
-                Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Multiple updates indicator
-                    if (widget.updates.length > 1) ...[
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: List.generate(widget.updates.length, (index) {
-                          return Container(
-                            margin: const EdgeInsets.symmetric(horizontal: 1),
-                            width: 6,
-                            height: 6,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: index == _currentIndex
-                                  ? _getPriorityColor(currentUpdate.priority)
-                                  : Colors.grey.shade400,
+                    // Title with priority indicator
+                    Flexible(
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              currentUpdate.title,
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: Theme.of(context).colorScheme.onSurface,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
-                          );
-                        }),
+                          ),
+                          Container(
+                            margin: const EdgeInsets.only(left: 4),
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: _getPriorityColor(currentUpdate.priority).withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: _getPriorityColor(currentUpdate.priority).withValues(alpha: 0.4),
+                                width: 1,
+                              ),
+                            ),
+                            child: Text(
+                              currentUpdate.priority.toUpperCase(),
+                              style: TextStyle(
+                                color: _getPriorityColor(currentUpdate.priority),
+                                fontSize: 9,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                          // Indicators - only show if not too narrow
+                          if (MediaQuery.of(context).size.width > 350 && widget.updates.length > 1) ...[
+                            const SizedBox(width: 4),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                '${_currentIndex + 1}/${widget.updates.length}',
+                                style: TextStyle(
+                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
-                      const SizedBox(height: 2),
-                    ],
-                    // Arrow icon
-                    Icon(
-                      Icons.chevron_right,
-                      size: 16,
-                      color: Colors.grey.shade600,
                     ),
+                    
+                    // Message preview - only if there's enough space
+                    if (currentUpdate.description.isNotEmpty)
+                      Flexible(
+                        child: Padding(
+                          padding: const EdgeInsets.only(top: 1),
+                          child: Text(
+                            currentUpdate.description,
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ),
                   ],
                 ),
-              ],
+              ),
             ],
           ),
         ),

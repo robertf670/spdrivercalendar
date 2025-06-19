@@ -1,4 +1,10 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.13.0': [
+    {
+      'title': 'FIXED: Dark Mode Across Major Screens',
+      'description': 'Fixed hardcoded colors throughout the app including Bills Screen, Statistics, Live Updates, Google Login, and Enhanced Update Dialog. Dark mode now works properly across all major features with excellent readability and visual consistency.',
+    },
+  ],
   '2.12.2': [
     {
       'title': 'NEW: Clickable Notes Icon',

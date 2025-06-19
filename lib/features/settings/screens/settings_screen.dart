@@ -109,10 +109,10 @@ class SettingsScreenState extends State<SettingsScreen> {
     
     // Show a snackbar to confirm the change
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Shift colors updated successfully'),
-        backgroundColor: Colors.green,
-        duration: Duration(seconds: 2),
+      SnackBar(
+        content: const Text('Shift colors updated successfully'),
+        backgroundColor: Theme.of(context).colorScheme.primary,
+        duration: const Duration(seconds: 2),
       ),
     );
   }
@@ -244,52 +244,15 @@ class SettingsScreenState extends State<SettingsScreen> {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppTheme.borderRadius),
       ),
-      child: Column(
-        children: [
-          SwitchListTile(
-            title: const Text('Dark Mode'),
-            subtitle: const Text('Toggle dark mode theme'),
-            secondary: Icon(
-              _isDarkMode ? Icons.dark_mode : Icons.light_mode,
-              color: _isDarkMode ? Colors.amber : Colors.blueGrey,
-            ),
-            value: _isDarkMode,
-            onChanged: _toggleDarkMode,
-          ),
-          // Add disclaimer
-          Container(
-            width: double.infinity,
-            margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-            padding: const EdgeInsets.all(8.0),
-            decoration: BoxDecoration(
-              color: Colors.orange.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(6.0),
-              border: Border.all(
-                color: Colors.orange.withValues(alpha: 0.3),
-                width: 1,
-              ),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.warning_amber_outlined,
-                  color: Colors.orange.shade700,
-                  size: 16,
-                ),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Text(
-                    'Dark mode is not fully implemented yet. Some dialogs and screens may not display correctly.',
-                    style: TextStyle(
-                      color: Colors.orange.shade700,
-                      fontSize: 12,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
+      child: SwitchListTile(
+        title: const Text('Dark Mode'),
+        subtitle: const Text('Toggle dark mode theme'),
+        secondary: Icon(
+          _isDarkMode ? Icons.dark_mode : Icons.light_mode,
+          color: _isDarkMode ? Colors.amber : Colors.blueGrey,
+        ),
+        value: _isDarkMode,
+        onChanged: _toggleDarkMode,
       ),
     );
   }

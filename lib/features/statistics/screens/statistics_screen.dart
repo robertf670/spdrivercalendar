@@ -149,9 +149,9 @@ class StatisticsScreenState extends State<StatisticsScreen>
         // Add TabBar to the bottom of the AppBar
         bottom: TabBar(
           controller: _tabController!, // Use null assertion
-          indicatorColor: Colors.white, // Highlight selected tab indicator
-          labelColor: Colors.white, // Color for selected tab label
-          unselectedLabelColor: Colors.white70, // Slightly dimmer for unselected
+          indicatorColor: Theme.of(context).colorScheme.onPrimary, // Highlight selected tab indicator
+          labelColor: Theme.of(context).colorScheme.onPrimary, // Color for selected tab label
+          unselectedLabelColor: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.7), // Slightly dimmer for unselected
           // Update tabs
           tabs: const [
             Tab(text: 'Work Time'),
@@ -208,7 +208,7 @@ class StatisticsScreenState extends State<StatisticsScreen>
                     'Break times and Rest Days not included in calculation',
                     style: TextStyle(
                       fontSize: 12,
-                      color: Colors.grey[600],
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                       fontStyle: FontStyle.italic,
                     ),
                   ),
@@ -240,16 +240,16 @@ class StatisticsScreenState extends State<StatisticsScreen>
                     'Sum of hours worked on specific rostered Late & Early Sundays (Max 14h 30m)',
                     style: TextStyle(
                       fontSize: 12,
-                      color: Colors.grey[600],
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                       fontStyle: FontStyle.italic,
                     ),
                   ),
                   const SizedBox(height: 4),
-                  Text(
+                                      Text(
                     'Entitled to overtime if time is more than 14h 30m. If the second Sunday has not happened yet, and the time is more than 14h 30m, you have the right to finish in the garage',
                      style: TextStyle(
                       fontSize: 12,
-                      color: Colors.grey[600],
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                       fontStyle: FontStyle.italic,
                     ),
                   ),
@@ -276,7 +276,7 @@ class StatisticsScreenState extends State<StatisticsScreen>
                       ),
                       leading: _currentBlockLimitExceeded 
                         ? Icon(Icons.warning_amber_rounded, color: Theme.of(context).colorScheme.error) 
-                        : const Icon(Icons.check_circle_outline, color: Colors.green),
+                        : Icon(Icons.check_circle_outline, color: Theme.of(context).colorScheme.primary),
                       // Move shift details into the subtitle
                       subtitle: _currentBlockSundayShifts.isNotEmpty
                           ? Padding(
@@ -305,7 +305,7 @@ class StatisticsScreenState extends State<StatisticsScreen>
                       ),
                       leading: _previousBlockLimitExceeded 
                         ? Icon(Icons.warning_amber_rounded, color: Theme.of(context).colorScheme.error) 
-                        : const Icon(Icons.check_circle_outline, color: Colors.green),
+                        : Icon(Icons.check_circle_outline, color: Theme.of(context).colorScheme.primary),
                       // Move shift details into the subtitle
                       subtitle: _previousBlockSundayShifts.isNotEmpty
                           ? Padding(
@@ -391,14 +391,14 @@ class StatisticsScreenState extends State<StatisticsScreen>
                     DropdownButton<int>(
                       value: _numberOfShiftsToShow,
                       // Add styling for dark mode
-                      style: const TextStyle(color: Colors.white), // Style for selected item text
-                      iconEnabledColor: Colors.white70, // Arrow color
-                      dropdownColor: Colors.grey[800], // Menu background color
+                      style: TextStyle(color: Theme.of(context).colorScheme.onSurface), // Style for selected item text
+                      iconEnabledColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7), // Arrow color
+                      dropdownColor: Theme.of(context).colorScheme.surface, // Menu background color
                       items: _shiftNumberOptions.map((int value) {
                         return DropdownMenuItem<int>(
                           value: value,
                           // Ensure item text is readable
-                          child: Text('Top $value', style: const TextStyle(color: Colors.white)),
+                          child: Text('Top $value', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
                         );
                       }).toList(),
                       onChanged: (int? newValue) {
@@ -435,14 +435,14 @@ class StatisticsScreenState extends State<StatisticsScreen>
                     DropdownButton<int>(
                       value: _numberOfBusesToShow,
                       // Add styling for dark mode
-                      style: const TextStyle(color: Colors.white), // Style for selected item text
-                      iconEnabledColor: Colors.white70, // Arrow color
-                      dropdownColor: Colors.grey[800], // Menu background color
+                      style: TextStyle(color: Theme.of(context).colorScheme.onSurface), // Style for selected item text
+                      iconEnabledColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7), // Arrow color
+                      dropdownColor: Theme.of(context).colorScheme.surface, // Menu background color
                       items: _busNumberOptions.map((int value) {
                         return DropdownMenuItem<int>(
                           value: value,
                           // Ensure item text is readable
-                          child: Text('Top $value', style: const TextStyle(color: Colors.white)),
+                          child: Text('Top $value', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
                         );
                       }).toList(),
                       onChanged: (int? newValue) {
@@ -479,14 +479,14 @@ class StatisticsScreenState extends State<StatisticsScreen>
                     DropdownButton<int>(
                       value: _numberOfStartHoursToShow,
                       // Add styling for dark mode
-                      style: const TextStyle(color: Colors.white), // Style for selected item text
-                      iconEnabledColor: Colors.white70, // Arrow color
-                      dropdownColor: Colors.grey[800], // Menu background color
+                      style: TextStyle(color: Theme.of(context).colorScheme.onSurface), // Style for selected item text
+                      iconEnabledColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7), // Arrow color
+                      dropdownColor: Theme.of(context).colorScheme.surface, // Menu background color
                       items: _startHourNumberOptions.map((int value) {
                         return DropdownMenuItem<int>(
                           value: value,
                           // Ensure item text is readable
-                          child: Text('Top $value', style: const TextStyle(color: Colors.white)),
+                          child: Text('Top $value', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
                         );
                       }).toList(),
                       onChanged: (int? newValue) {
@@ -507,7 +507,7 @@ class StatisticsScreenState extends State<StatisticsScreen>
                   'Groups logged work shifts by their starting hour (e.g., 06:00-06:59).', // Updated explanation
                   style: TextStyle(
                     fontSize: 12,
-                    color: Colors.grey[600],
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                     fontStyle: FontStyle.italic,
                   ),
                 ),
@@ -1473,7 +1473,7 @@ class StatisticsScreenState extends State<StatisticsScreen>
         padding: const EdgeInsets.only(top: 2.0), // Small spacing between lines
         child: Text(
           "${dateFormatter.format(date)}: $title (${formatDuration(duration)})",
-          style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+                          style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7)),
         ),
       );
     }).toList();

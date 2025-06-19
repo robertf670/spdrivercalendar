@@ -98,9 +98,9 @@ class _ColorCustomizationWidgetState extends State<ColorCustomizationWidget> {
       
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Colors reset to defaults'),
-            backgroundColor: Colors.green,
+          SnackBar(
+            content: const Text('Colors reset to defaults'),
+            backgroundColor: Theme.of(context).colorScheme.primary,
           ),
         );
       }
@@ -169,7 +169,7 @@ class _ColorCustomizationWidgetState extends State<ColorCustomizationWidget> {
                 Text(
                   'Tap any color to customize it. Changes will be applied immediately to all your events.',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Colors.grey[600],
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                   ),
                 ),
               ],

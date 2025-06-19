@@ -240,16 +240,16 @@ class GoogleLoginPageState extends State<GoogleLoginPage> {
               
               // Google icon
               Center(
-                child: Container(
+                child:                 Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    color: Colors.blue.shade50,
+                    color: Theme.of(context).colorScheme.primaryContainer,
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Icon(
                     Icons.calendar_today,
                     size: 60,
-                    color: Colors.blue.shade600,
+                    color: Theme.of(context).colorScheme.primary,
                   ),
                 ),
               ),
@@ -260,14 +260,14 @@ class GoogleLoginPageState extends State<GoogleLoginPage> {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.blue.shade50,
+                    color: Theme.of(context).colorScheme.primaryContainer,
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.blue.shade200),
+                    border: Border.all(color: Theme.of(context).colorScheme.primary),
                   ),
                   child: Text(
                     _statusMessage,
                     style: TextStyle(
-                      color: Colors.blue.shade800,
+                      color: Theme.of(context).colorScheme.onPrimaryContainer,
                       fontWeight: FontWeight.w500,
                     ),
                     textAlign: TextAlign.center,
@@ -280,14 +280,14 @@ class GoogleLoginPageState extends State<GoogleLoginPage> {
                   margin: const EdgeInsets.only(top: 10),
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.red.shade50,
+                    color: Theme.of(context).colorScheme.errorContainer,
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.red.shade200),
+                    border: Border.all(color: Theme.of(context).colorScheme.error),
                   ),
                   child: Text(
                     _errorMessage,
                     style: TextStyle(
-                      color: Colors.red.shade800,
+                      color: Theme.of(context).colorScheme.onErrorContainer,
                       fontWeight: FontWeight.w500,
                     ),
                     textAlign: TextAlign.center,
@@ -300,16 +300,16 @@ class GoogleLoginPageState extends State<GoogleLoginPage> {
                   margin: const EdgeInsets.only(top: 10),
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.orange.shade50,
+                    color: Theme.of(context).colorScheme.tertiaryContainer,
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.orange.shade200),
+                    border: Border.all(color: Theme.of(context).colorScheme.tertiary),
                   ),
                   child: Column(
                     children: [
                       Text(
                         'App in Testing Mode',
                         style: TextStyle(
-                          color: Colors.orange.shade800,
+                          color: Theme.of(context).colorScheme.onTertiaryContainer,
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
                         ),
@@ -318,7 +318,7 @@ class GoogleLoginPageState extends State<GoogleLoginPage> {
                       Text(
                         'This Google Calendar integration is currently in testing mode. Contact the developer to be added as a test user, or try a different Google account.',
                         style: TextStyle(
-                          color: Colors.orange.shade700,
+                          color: Theme.of(context).colorScheme.onTertiaryContainer,
                         ),
                         textAlign: TextAlign.center,
                       ),
@@ -333,22 +333,22 @@ class GoogleLoginPageState extends State<GoogleLoginPage> {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.green.shade50,
+                    color: Theme.of(context).colorScheme.primaryContainer,
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.green.shade200),
+                    border: Border.all(color: Theme.of(context).colorScheme.primary),
                   ),
                   child: Column(
                     children: [
                       Icon(
                         Icons.check_circle,
-                        color: Colors.green.shade600,
+                        color: Theme.of(context).colorScheme.primary,
                         size: 32,
                       ),
                       const SizedBox(height: 8),
                       Text(
                         'Connected to Google Calendar',
                         style: TextStyle(
-                          color: Colors.green.shade800,
+                          color: Theme.of(context).colorScheme.onPrimaryContainer,
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
                         ),
@@ -357,7 +357,7 @@ class GoogleLoginPageState extends State<GoogleLoginPage> {
                       Text(
                         _currentUserEmail!,
                         style: TextStyle(
-                          color: Colors.green.shade700,
+                          color: Theme.of(context).colorScheme.onPrimaryContainer,
                           fontSize: 14,
                         ),
                       ),
@@ -382,8 +382,8 @@ class GoogleLoginPageState extends State<GoogleLoginPage> {
                   label: Text(_isLoading ? 'Signing in...' : 'Sign in with Google'),
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    backgroundColor: Colors.blue.shade600,
-                    foregroundColor: Colors.white,
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -405,8 +405,8 @@ class GoogleLoginPageState extends State<GoogleLoginPage> {
                   label: const Text('Continue'),
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    backgroundColor: Colors.green.shade600,
-                    foregroundColor: Colors.white,
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -434,7 +434,7 @@ class GoogleLoginPageState extends State<GoogleLoginPage> {
               Text(
                 'Your Google account information is only used for calendar integration and is not stored on external servers.',
                 style: TextStyle(
-                  color: Colors.grey.shade600,
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                   fontSize: 12,
                 ),
                 textAlign: TextAlign.center,

@@ -63,7 +63,7 @@ class FrequencyChart extends StatelessWidget {
                                 Container(
                                   height: 24,
                                   decoration: BoxDecoration(
-                                    color: Colors.grey[300],
+                                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                 ),
@@ -84,9 +84,9 @@ class FrequencyChart extends StatelessWidget {
                                       padding: const EdgeInsets.only(right: 8.0),
                                       child: Text(
                                         '${entry.value}',
-                                        style: const TextStyle(
+                                        style: TextStyle(
                                           fontWeight: FontWeight.bold,
-                                          color: Colors.black54, // Adjust for contrast
+                                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
                                         ),
                                       ),
                                     ),

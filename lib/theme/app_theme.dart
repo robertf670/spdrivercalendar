@@ -55,11 +55,20 @@ class AppTheme {
   static ThemeData darkTheme() {
     return ThemeData(
       useMaterial3: true,
+      brightness: Brightness.dark,
       colorScheme: const ColorScheme.dark(
         primary: primaryColor,
         secondary: secondaryColor,
         error: errorColor,
-        // Consider adding surface and background if needed for contrast
+        surface: Color(0xFF121212),
+        surfaceContainerLow: Color(0xFF1A1A1A),
+        surfaceContainer: Color(0xFF1E1E1E),
+        surfaceContainerHigh: Color(0xFF232323),
+        surfaceContainerHighest: Color(0xFF2A2A2A),
+        onSurface: Colors.white,
+        onSurfaceVariant: Color(0xFFB0B0B0),
+        outline: Color(0xFF555555),
+        outlineVariant: Color(0xFF333333),
       ),
       appBarTheme: const AppBarTheme(
         backgroundColor: Color(0xFF1F1F1F), // Darker AppBar for contrast
@@ -73,7 +82,7 @@ class AppTheme {
       ),
       cardTheme: CardTheme(
         // Ensure card color provides contrast with background in dark mode
-        color: Colors.grey[850], // Example: Slightly lighter dark grey
+        color: const Color(0xFF1E1E1E), // Better dark card color
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(borderRadius),
         ),
@@ -82,23 +91,50 @@ class AppTheme {
       dropdownMenuTheme: DropdownMenuThemeData(
         textStyle: const TextStyle(color: Colors.white), // Ensure dropdown text is white
         inputDecorationTheme: const InputDecorationTheme( // Style the dropdown button appearance if needed
-          // Example: Add border, change fill color, etc.
-          // filled: true,
-          // fillColor: Colors.grey[800],
-          // border: OutlineInputBorder(
-          //   borderRadius: BorderRadius.circular(borderRadius),
-          //   borderSide: BorderSide.none,
-          // ),
           labelStyle: TextStyle(color: Colors.white70), // Style label if applicable
           hintStyle: TextStyle(color: Colors.white70), // Style hint text if applicable
         ),
         menuStyle: MenuStyle(
-          backgroundColor: WidgetStateProperty.all(Colors.grey[800]), // Background color of the dropdown menu
-          surfaceTintColor: WidgetStateProperty.all(Colors.grey[800]), // Optional: blend color
+          backgroundColor: WidgetStateProperty.all(const Color(0xFF2A2A2A)), // Better dark menu background
+          surfaceTintColor: WidgetStateProperty.all(const Color(0xFF2A2A2A)), // Optional: blend color
           shape: WidgetStateProperty.all(RoundedRectangleBorder(
              borderRadius: BorderRadius.circular(borderRadius / 2),
           )),
         ),
+      ),
+      // Add snackbar theme for dark mode
+      snackBarTheme: SnackBarThemeData(
+        backgroundColor: const Color(0xFF2A2A2A),
+        contentTextStyle: const TextStyle(color: Colors.white),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(borderRadius / 2),
+        ),
+      ),
+      // Add dialog theme for dark mode
+      dialogTheme: DialogTheme(
+        backgroundColor: const Color(0xFF1E1E1E),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(borderRadius),
+        ),
+      ),
+      // Add input decoration theme for dark mode
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: const Color(0xFF2A2A2A),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(borderRadius / 2),
+          borderSide: const BorderSide(color: Color(0xFF555555)),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(borderRadius / 2),
+          borderSide: const BorderSide(color: Color(0xFF555555)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(borderRadius / 2),
+          borderSide: const BorderSide(color: primaryColor),
+        ),
+        labelStyle: const TextStyle(color: Colors.white70),
+        hintStyle: const TextStyle(color: Colors.white54),
       ),
     );
   }

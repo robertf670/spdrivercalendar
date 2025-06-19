@@ -163,13 +163,13 @@ class _EnhancedUpdateDialogState extends State<EnhancedUpdateDialog> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
-              color: Colors.green,
+              color: theme.colorScheme.primary,
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Text(
+            child: Text(
               'NEW',
               style: TextStyle(
-                color: Colors.white,
+                color: theme.colorScheme.onPrimary,
                 fontSize: 10,
                 fontWeight: FontWeight.bold,
               ),
