@@ -1,4 +1,22 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.13.3': [
+    {
+      'title': 'ENHANCED: Always-Visible Notes Icon with Smart Indicators',
+      'description': 'Notes icon now appears on every event card for instant access! Visual indicators clearly show note status: filled icon with dot badge when notes exist, outlined muted icon when empty. No more hunting for the notes feature - it\'s always one tap away on any event.',
+    },
+    {
+      'title': 'Improved Notes Discoverability & Design',
+      'description': 'Consistent notes access across all event types including work shifts, spare duties, overtime, and holidays. Enhanced with theme-aware neutral colors that blend seamlessly with different shift backgrounds for a polished, professional appearance.',
+    },
+    {
+      'title': 'Enhanced Notes Dialog Size',
+      'description': 'Significantly expanded notes dialog for comfortable note-taking! Increased width to 90% of screen and height to 40% of screen, providing much more space for detailed shift notes. Text area now expands to fill available space with top-aligned input for better writing experience.',
+    },
+    {
+      'title': 'IMPROVED: Streamlined Settings Page Organization',
+      'description': 'Complete reorganization of the Settings page for better user experience. Moved Feedback to App section from dropdown menu, relocated Live Updates Preferences to App section, and reordered sections for optimal flow: Appearance → App → Google Calendar → Backup & Restore → Notifications → Admin. Eliminated unnecessary section headers for cleaner navigation.',
+    },
+  ],
   '2.13.2': [
     {
       'title': 'CODE CLEANUP: Unused Code Elimination',

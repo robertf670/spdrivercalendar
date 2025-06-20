@@ -2454,15 +2454,19 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
         content: StatefulBuilder( // Keep StatefulBuilder for controller management
           builder: (BuildContext context, StateSetter setState) {
             final screenWidth = MediaQuery.of(context).size.width;
+            final screenHeight = MediaQuery.of(context).size.height;
             return SizedBox(
-              width: screenWidth * 0.8, 
+              width: screenWidth * 0.9,  // Increased from 0.8 to 0.9 for wider dialog
+              height: screenHeight * 0.4, // Added height constraint for taller dialog
               // 3. Add Padding around TextField
               child: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 8.0),
-                child: TextField(
-                  controller: notesController,
-                  maxLines: 5, 
-                  minLines: 3, 
+                                  child: TextField(
+                    controller: notesController,
+                    maxLines: null,  // Must be null when expands is true
+                    minLines: null,  // Must be null when expands is true
+                    expands: true,   // Expand to fill available space
+                    textAlignVertical: TextAlignVertical.top, // Start text at top
                   decoration: InputDecoration(
                     hintText: 'Add notes here...',
                     border: const OutlineInputBorder(),
@@ -2960,11 +2964,6 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                 value: 'payscale', // Added payscale value
                 child: Text('Pay Scale'), // Added payscale label
               ),
-              // Add Feedback Item
-              PopupMenuItem(
-                value: 'feedback',
-                child: Text('Feedback'),
-              ),
               PopupMenuItem(
                 value: 'settings',
                 child: Text('Settings'),
@@ -2985,9 +2984,6 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                 _showContactsPage();
               } else if (value == 'notes') { // Added condition for notes
                 _navigateToAllNotesScreen(); // Call the new navigation method
-              } else if (value == 'feedback') {
-                // Navigate to Feedback Screen
-                _showFeedbackPage();
               } else if (value == 'payscale') { // Added condition for payscale
                 _showPayscalePage(); // Call the new navigation method
               }

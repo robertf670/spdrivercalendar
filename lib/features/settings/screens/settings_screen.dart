@@ -6,6 +6,7 @@ import 'package:spdrivercalendar/features/settings/screens/google_calendar_setti
 import 'package:spdrivercalendar/features/settings/screens/google_calendar_help_screen.dart';
 import 'package:spdrivercalendar/features/settings/screens/admin_panel_screen.dart';
 import 'package:spdrivercalendar/features/settings/screens/live_updates_preferences_screen.dart';
+import 'package:spdrivercalendar/features/feedback/screens/feedback_screen.dart';
 import 'package:spdrivercalendar/theme/app_theme.dart';
 import 'package:spdrivercalendar/calendar_test_helper.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -141,6 +142,14 @@ class SettingsScreenState extends State<SettingsScreen> {
                   ),
                   
                   const Divider(height: 32),
+                  _buildSectionHeader('App'),
+                  _buildFeedbackButton(),
+                  _buildLiveUpdatesPreferencesButton(),
+                  _buildVersionHistoryButton(),
+                  _buildResetRestDaysButton(),
+                  _buildShowWelcomePageButton(),
+                  
+                  const Divider(height: 32),
                   _buildSectionHeader('Google Calendar'),
                   // Add disclaimer about Google Calendar access
                   Padding(
@@ -177,6 +186,15 @@ class SettingsScreenState extends State<SettingsScreen> {
                   _buildManualSyncOption(),
                   _buildGoogleCalendarHelpButton(),
                   
+                  // --- Restore Backup & Restore section to original position ---
+                  const Divider(height: 32),
+                  _buildSectionHeader('Backup & Restore'),
+                  _buildBackupButton(),
+                  _buildRestoreButton(),
+                  _buildAutoBackupToggle(),
+                  _buildRestoreFromAutoBackupButton(),
+                  // --- End Restored Section ---
+                  
                   // --- Modify Notifications Section --- 
                   const Divider(height: 32),
                   _buildSectionHeader('Notifications'),
@@ -195,30 +213,12 @@ class SettingsScreenState extends State<SettingsScreen> {
                   _buildNotificationOffsetDropdown(),
                   _buildTestNotificationButton(),
                   _buildViewPendingNotificationsButton(),
-                  // --- End Notifications Section --- 
-                  
-                  const Divider(height: 32),
-                  _buildSectionHeader('Schedule'),
-                  _buildResetRestDaysButton(),
-                  
-                  // --- Restore Backup & Restore section to original position ---
-                  const Divider(height: 32),
-                  _buildSectionHeader('Backup & Restore'),
-                  _buildBackupButton(),
-                  _buildRestoreButton(),
-                  _buildAutoBackupToggle(),
-                  _buildRestoreFromAutoBackupButton(),
-                  // --- End Restored Section ---
+                  // --- End Notifications Section ---
                   
                             // Driver Resources section removed and moved to dropdown menu
                   
                   const Divider(height: 32),
-                  _buildSectionHeader('App'),
-                  _buildShowWelcomePageButton(),
-                  _buildVersionHistoryButton(),
-                  
-                  const Divider(height: 32),
-                  _buildLiveUpdatesPreferencesButton(),
+                  _buildSectionHeader('Admin'),
                   _buildAdminPanelButton(),
                 ],
               ),
@@ -402,6 +402,28 @@ class SettingsScreenState extends State<SettingsScreen> {
           );
         },
       ),
+    );
+  }
+
+  Widget _buildFeedbackButton() {
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 4.0),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppTheme.borderRadius),
+      ),
+      child: ListTile(
+        leading: const Icon(Icons.feedback_outlined),
+        title: const Text('Submit Feedback'),
+        subtitle: const Text('Share suggestions or report issues'),
+        onTap: _showFeedbackPage,
+      ),
+    );
+  }
+
+  void _showFeedbackPage() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const FeedbackScreen()),
     );
   }
 

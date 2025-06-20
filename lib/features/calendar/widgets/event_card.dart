@@ -1095,6 +1095,49 @@ class _EventCardState extends State<EventCard> {
                   ),
                 ),
               ),
+              // Always show notes icon for holiday events too
+              Padding(
+                padding: const EdgeInsets.only(left: 8.0),
+                child: InkWell(
+                  onTap: () => widget.onShowNotes(widget.event),
+                  borderRadius: BorderRadius.circular(12),
+                  child: Padding(
+                    padding: const EdgeInsets.all(4.0),
+                    child: Stack(
+                      children: [
+                        Icon(
+                          // Use filled icon when notes exist, outlined when empty
+                          (widget.event.notes != null && widget.event.notes!.isNotEmpty)
+                              ? Icons.notes
+                              : Icons.notes_outlined,
+                          size: 18,
+                          color: (widget.event.notes != null && widget.event.notes!.isNotEmpty)
+                              ? (Theme.of(context).brightness == Brightness.dark
+                                  ? Colors.white.withValues(alpha: 0.9)  // High contrast for dark mode
+                                  : Colors.black.withValues(alpha: 0.8))  // High contrast for light mode
+                              : holidayColor[400],     // Muted holiday color for no notes
+                        ),
+                        // Add small dot indicator for existing notes
+                        if (widget.event.notes != null && widget.event.notes!.isNotEmpty)
+                          Positioned(
+                            right: 0,
+                            top: 0,
+                            child: Container(
+                              width: 6,
+                              height: 6,
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).brightness == Brightness.dark
+                                    ? Colors.white
+                                    : Colors.black.withValues(alpha: 0.7),
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
             ],
           ),
         ),
@@ -1177,24 +1220,51 @@ class _EventCardState extends State<EventCard> {
                           ),
                         ),
                       ],
-                      if (widget.event.notes != null && widget.event.notes!.isNotEmpty)
-                        Padding(
-                          padding: const EdgeInsets.only(left: 8.0),
-                          child: InkWell(
-                            onTap: () => widget.onShowNotes(widget.event),
-                            borderRadius: BorderRadius.circular(12),
-                            child: Padding(
-                              padding: const EdgeInsets.all(4.0),
-                              child: Icon(
-                                Icons.notes,
-                                size: 18,
-                                color: Theme.of(context).brightness == Brightness.dark
-                                    ? Colors.white70
-                                    : Colors.black54,
-                              ),
+                      // Always show notes icon with visual indicator for existing notes
+                      Padding(
+                        padding: const EdgeInsets.only(left: 8.0),
+                        child: InkWell(
+                          onTap: () => widget.onShowNotes(widget.event),
+                          borderRadius: BorderRadius.circular(12),
+                          child: Padding(
+                            padding: const EdgeInsets.all(4.0),
+                            child: Stack(
+                              children: [
+                                Icon(
+                                  // Use filled icon when notes exist, outlined when empty
+                                  (widget.event.notes != null && widget.event.notes!.isNotEmpty)
+                                      ? Icons.notes
+                                      : Icons.notes_outlined,
+                                  size: 18,
+                                  color: (widget.event.notes != null && widget.event.notes!.isNotEmpty)
+                                      ? (Theme.of(context).brightness == Brightness.dark
+                                          ? Colors.white.withValues(alpha: 0.9)  // High contrast white for dark mode
+                                          : Colors.black.withValues(alpha: 0.8))  // High contrast dark for light mode
+                                      : (Theme.of(context).brightness == Brightness.dark
+                                          ? Colors.white54        // Muted color for no notes in dark mode
+                                          : Colors.black38),      // Muted color for no notes in light mode
+                                ),
+                                // Add small dot indicator for existing notes
+                                if (widget.event.notes != null && widget.event.notes!.isNotEmpty)
+                                  Positioned(
+                                    right: 0,
+                                    top: 0,
+                                    child: Container(
+                                      width: 6,
+                                      height: 6,
+                                      decoration: BoxDecoration(
+                                        color: Theme.of(context).brightness == Brightness.dark
+                                            ? Colors.white
+                                            : Colors.black.withValues(alpha: 0.7),
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                  ),
+                              ],
                             ),
                           ),
                         ),
+                      ),
                       // Rest day badge
                       if (widget.isRestDay && widget.event.isWorkShift)
                         Container(
