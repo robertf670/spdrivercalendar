@@ -1,4 +1,18 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.14.0': [
+    {
+      'title': 'NEW: Bus Tracking Integration',
+      'description': 'Added real-time bus tracking feature with direct integration to bustimes.org! First, add your assigned bus number (EW132, PA155, etc.) to your shift, then track it on-the-go by tapping the location pin icon. Perfect for picking up buses mid-service - instantly see where your bus currently is.',
+    },
+    {
+      'title': 'Driver-Friendly Workflow',
+      'description': 'Simple 3-step process: check on bustimes.org for your bus, add the bus number to your shift in the app, then track it live when needed. Especially useful for afternoon shifts when picking up buses already in service.',
+    },
+    {
+      'title': 'Compact UI Integration',
+      'description': 'Bus tracking seamlessly integrated into existing event cards with compact icons and minimal spacing. Loading indicators show search progress. Clear error messages when buses aren\'t found - no unwanted browser windows opened for missing vehicles.',
+    },
+  ],
   '2.13.3': [
     {
       'title': 'ENHANCED: Always-Visible Notes Icon with Smart Indicators',

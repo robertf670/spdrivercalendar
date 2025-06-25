@@ -8,6 +8,7 @@ import 'package:spdrivercalendar/core/utils/location_utils.dart';
 import 'package:flutter/services.dart';
 import 'package:spdrivercalendar/features/calendar/services/roster_service.dart';
 import 'package:spdrivercalendar/features/calendar/services/event_service.dart';
+import 'package:spdrivercalendar/services/bus_tracking_service.dart';
 
 class EventCard extends StatefulWidget {
   final Event event;
@@ -45,6 +46,7 @@ class _EventCardState extends State<EventCard> {
   String? _finishTimeStr;
   bool isLoading = true;
   List<Map<String, String?>> _allDutyDetails = [];
+  final Map<String, bool> _busTrackingLoading = {};
 
   @override
   void initState() {
@@ -1625,22 +1627,129 @@ class _EventCardState extends State<EventCard> {
                           final isOvertimeShift = widget.event.title.contains('(OT)');
                           final isWorkoutOrOvertime = isWorkout || isOvertimeShift;
                           
-                          return Text(
-                            isWorkoutOrOvertime
-                                ? 'Assigned Bus: ${widget.event.firstHalfBus}'
-                                : [
-                                    if (widget.event.firstHalfBus != null)
-                                      'First Half: ${widget.event.firstHalfBus}',
-                                    if (widget.event.secondHalfBus != null)
-                                      'Second Half: ${widget.event.secondHalfBus}',
-                                  ].join(' | '),
-                            style: TextStyle(
-                              color: Theme.of(context).brightness == Brightness.dark
-                                  ? Colors.white
-                                  : Colors.black,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w400, // Lighter weight for administrative info (bus assignment)
-                            ),
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              if (isWorkoutOrOvertime)
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Row(
+                                        children: [
+                                          Text(
+                                            'Assigned Bus: ${widget.event.firstHalfBus}',
+                                            style: TextStyle(
+                                              color: Theme.of(context).brightness == Brightness.dark
+                                                  ? Colors.white
+                                                  : Colors.black,
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w400,
+                                            ),
+                                          ),
+                                          // Compact track button for assigned bus
+                                          InkWell(
+                                            onTap: _busTrackingLoading['tracking_${widget.event.firstHalfBus}'] == true
+                                                ? null
+                                                : () => _trackBus(widget.event.firstHalfBus!),
+                                            child: Padding(
+                                              padding: const EdgeInsets.only(left: 4.0),
+                                              child: _busTrackingLoading['tracking_${widget.event.firstHalfBus}'] == true
+                                                  ? const SizedBox(
+                                                      width: 12,
+                                                      height: 12,
+                                                      child: CircularProgressIndicator(strokeWidth: 1.5),
+                                                    )
+                                                  : const Icon(Icons.location_on, size: 14, color: Colors.blue),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                )
+                              else ...[
+                                // Compact single-line format for both buses
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Row(
+                                        children: [
+                                          // First Half Bus
+                                          if (widget.event.firstHalfBus != null) ...[
+                                            Text(
+                                              'First Half: ${widget.event.firstHalfBus}',
+                                              style: TextStyle(
+                                                color: Theme.of(context).brightness == Brightness.dark
+                                                    ? Colors.white
+                                                    : Colors.black,
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w400,
+                                              ),
+                                            ),
+                                            // Compact track button for first half
+                                            InkWell(
+                                              onTap: _busTrackingLoading['tracking_${widget.event.firstHalfBus}'] == true
+                                                  ? null
+                                                  : () => _trackBus(widget.event.firstHalfBus!),
+                                              child: Padding(
+                                                padding: const EdgeInsets.only(left: 4.0),
+                                                child: _busTrackingLoading['tracking_${widget.event.firstHalfBus}'] == true
+                                                    ? const SizedBox(
+                                                        width: 12,
+                                                        height: 12,
+                                                        child: CircularProgressIndicator(strokeWidth: 1.5),
+                                                      )
+                                                    : const Icon(Icons.location_on, size: 14, color: Colors.blue),
+                                              ),
+                                            ),
+                                          ],
+                                          // Separator and Second Half Bus
+                                          if (widget.event.firstHalfBus != null && widget.event.secondHalfBus != null)
+                                            Text(
+                                              ' | ',
+                                              style: TextStyle(
+                                                color: Theme.of(context).brightness == Brightness.dark
+                                                    ? Colors.white
+                                                    : Colors.black,
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w400,
+                                              ),
+                                            ),
+                                          if (widget.event.secondHalfBus != null) ...[
+                                            Text(
+                                              'Second Half: ${widget.event.secondHalfBus}',
+                                              style: TextStyle(
+                                                color: Theme.of(context).brightness == Brightness.dark
+                                                    ? Colors.white
+                                                    : Colors.black,
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w400,
+                                              ),
+                                            ),
+                                            // Compact track button for second half
+                                            InkWell(
+                                              onTap: _busTrackingLoading['tracking_${widget.event.secondHalfBus}'] == true
+                                                  ? null
+                                                  : () => _trackBus(widget.event.secondHalfBus!),
+                                              child: Padding(
+                                                padding: const EdgeInsets.only(left: 4.0),
+                                                child: _busTrackingLoading['tracking_${widget.event.secondHalfBus}'] == true
+                                                    ? const SizedBox(
+                                                        width: 12,
+                                                        height: 12,
+                                                        child: CircularProgressIndicator(strokeWidth: 1.5),
+                                                      )
+                                                    : const Icon(Icons.location_on, size: 14, color: Colors.blue),
+                                              ),
+                                            ),
+                                          ],
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ],
                           );
                         },
                       ),
@@ -2411,6 +2520,21 @@ class _EventCardState extends State<EventCard> {
                                    ],
                                  ),
                                ),
+                               // Track button for duty bus (only show if bus is assigned)
+                               if (widget.event.getBusForDuty(duty['dutyCode'] ?? '') != null) 
+                                 IconButton(
+                                   icon: _busTrackingLoading['tracking_${widget.event.getBusForDuty(duty['dutyCode'] ?? '')}'] == true
+                                       ? const SizedBox(
+                                           width: 16,
+                                           height: 16,
+                                           child: CircularProgressIndicator(strokeWidth: 2),
+                                         )
+                                       : const Icon(Icons.location_on, size: 18, color: Colors.blue),
+                                   onPressed: _busTrackingLoading['tracking_${widget.event.getBusForDuty(duty['dutyCode'] ?? '')}'] == true
+                                       ? null
+                                       : () => _trackBus(widget.event.getBusForDuty(duty['dutyCode'] ?? '')!),
+                                   tooltip: 'Track ${widget.event.getBusForDuty(duty['dutyCode'] ?? '')}',
+                                 ),
                                                                 ElevatedButton(
                                    onPressed: () async {
                                      final currentContext = context;
@@ -2781,6 +2905,60 @@ class _EventCardState extends State<EventCard> {
       // Ignore parsing errors
     }
     return timeStr;
+  }
+
+  /// Track a bus using bustimes.org
+  Future<void> _trackBus(String busNumber) async {
+    final trackingKey = 'tracking_$busNumber';
+    
+    if (_busTrackingLoading[trackingKey] == true) return; // Already tracking
+    
+    setState(() {
+      _busTrackingLoading[trackingKey] = true;
+    });
+
+    try {
+      final success = await BusTrackingService.trackBus(busNumber);
+      
+      if (mounted) {
+        setState(() {
+          _busTrackingLoading[trackingKey] = false;
+        });
+
+        // Show appropriate message based on success
+        if (success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Opening tracking for bus $busNumber'),
+              backgroundColor: Colors.green,
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Bus $busNumber not found in the tracking system'),
+              backgroundColor: Colors.orange,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _busTrackingLoading[trackingKey] = false;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error tracking bus $busNumber'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    }
   }
 
   // Method to build the appropriate time display based on shift type

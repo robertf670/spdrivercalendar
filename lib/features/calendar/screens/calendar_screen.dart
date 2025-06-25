@@ -41,6 +41,7 @@ import '../../../widgets/live_updates_banner.dart';
 import '../../../screens/live_updates_details_screen.dart';
 import '../../../services/live_updates_service.dart';
 import '../../../models/live_update.dart';
+import '../../../services/bus_tracking_service.dart';
 
 // Add this new widget class before the CalendarScreen class
 class _StableLiveUpdatesBanner extends StatefulWidget {
@@ -83,6 +84,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
   List<Holiday> _holidays = [];
   late AnimationController _animationController;
   bool _hasCheckedForUpdatesOnStartup = false;
+  final Map<String, bool> _busTrackingLoading = {};
   
   late Map<String, ShiftInfo> _shiftInfoMap;
 
@@ -102,6 +104,60 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
   void refreshShiftColors() {
     _initializeShiftColors();
     setState(() {});
+  }
+
+  /// Track a bus using bustimes.org
+  Future<void> _trackBus(String busNumber) async {
+    final trackingKey = 'tracking_$busNumber';
+    
+    if (_busTrackingLoading[trackingKey] == true) return; // Already tracking
+    
+    setState(() {
+      _busTrackingLoading[trackingKey] = true;
+    });
+
+    try {
+      final success = await BusTrackingService.trackBus(busNumber);
+      
+      if (mounted) {
+        setState(() {
+          _busTrackingLoading[trackingKey] = false;
+        });
+
+        // Show appropriate message based on success
+        if (success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Opening tracking for bus $busNumber'),
+              backgroundColor: Colors.green,
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Bus $busNumber not found in the tracking system'),
+              backgroundColor: Colors.orange,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _busTrackingLoading[trackingKey] = false;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error tracking bus $busNumber'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -1641,6 +1697,20 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                                         style: const TextStyle(fontSize: 14),
                                       ),
                                     ),
+                                    // Track button for first half bus
+                                    IconButton(
+                                      icon: _busTrackingLoading['tracking_${event.firstHalfBus}'] == true
+                                          ? const SizedBox(
+                                              width: 16,
+                                              height: 16,
+                                              child: CircularProgressIndicator(strokeWidth: 2),
+                                            )
+                                          : const Icon(Icons.location_on, size: 18, color: Colors.blue),
+                                      onPressed: _busTrackingLoading['tracking_${event.firstHalfBus}'] == true
+                                          ? null
+                                          : () => _trackBus(event.firstHalfBus!),
+                                      tooltip: 'Track ${event.firstHalfBus}',
+                                    ),
                                     IconButton(
                                       icon: const Icon(Icons.remove_circle_outline, size: 18, color: Colors.red),
                                       onPressed: () async {
@@ -1719,6 +1789,20 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                                         (isWorkout || event.title.contains('(OT)')) ? 'Assigned Bus: ${event.secondHalfBus}' : 'Second Half: ${event.secondHalfBus}',
                                         style: const TextStyle(fontSize: 14),
                                       ),
+                                    ),
+                                    // Track button for second half bus
+                                    IconButton(
+                                      icon: _busTrackingLoading['tracking_${event.secondHalfBus}'] == true
+                                          ? const SizedBox(
+                                              width: 16,
+                                              height: 16,
+                                              child: CircularProgressIndicator(strokeWidth: 2),
+                                            )
+                                          : const Icon(Icons.location_on, size: 18, color: Colors.blue),
+                                      onPressed: _busTrackingLoading['tracking_${event.secondHalfBus}'] == true
+                                          ? null
+                                          : () => _trackBus(event.secondHalfBus!),
+                                      tooltip: 'Track ${event.secondHalfBus}',
                                     ),
                                     IconButton(
                                       icon: const Icon(Icons.remove_circle_outline, size: 18, color: Colors.red),

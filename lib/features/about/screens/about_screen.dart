@@ -143,8 +143,8 @@ class AboutScreenState extends State<AboutScreen> with TextRenderingMixin {
         'color': Colors.blue,
       },
       {
-        'icon': Icons.directions_bus,
-        'title': 'Zone 4 Boards',
+        'icon': Icons.location_on,
+        'title': 'Bus Tracking',
         'color': Colors.green,
       },
       {
@@ -297,7 +297,11 @@ class AboutScreenState extends State<AboutScreen> with TextRenderingMixin {
             },
             
             {
-              'title': 'Vehicle Tracking',
+              'title': 'Real-Time Bus Tracking',
+              'description': 'Track your assigned buses in real-time with direct integration to bustimes.org. Add your bus number to your shift, then tap the location icon to see where it currently is. Perfect for picking up buses mid-service during afternoon shifts.'
+            },
+            {
+              'title': 'Vehicle Assignment Tracking',
               'description': 'Record and track the buses you\'ve driven. Maintain a complete log for reference, reporting, or personal records.'
             },
                          {
