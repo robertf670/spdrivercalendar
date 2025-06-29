@@ -4,7 +4,7 @@ import 'package:spdrivercalendar/core/services/storage_service.dart';
 import 'package:spdrivercalendar/google_calendar_service.dart';
 import 'package:spdrivercalendar/features/settings/screens/google_calendar_settings_screen.dart';
 import 'package:spdrivercalendar/features/settings/screens/google_calendar_help_screen.dart';
-import 'package:spdrivercalendar/features/settings/screens/admin_panel_screen.dart';
+import 'package:spdrivercalendar/features/settings/screens/admin_dashboard_screen.dart';
 import 'package:spdrivercalendar/features/settings/screens/live_updates_preferences_screen.dart';
 import 'package:spdrivercalendar/features/feedback/screens/feedback_screen.dart';
 import 'package:spdrivercalendar/theme/app_theme.dart';
@@ -1143,7 +1143,7 @@ class SettingsScreenState extends State<SettingsScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => const AdminPanelScreen(),
+        builder: (context) => const AdminDashboardScreen(),
       ),
     );
   }

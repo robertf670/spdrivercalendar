@@ -6,7 +6,7 @@ final Map<String, List<Map<String, String>>> changelogData = {
     },
     {
       'title': 'Additional Important Contacts',
-      'description': 'Added two new essential contact numbers to the Important Contacts page: Clerical Office (John) - 01 703 3244 and CMO - 01 703 1308. Both contacts are positioned logically after Lost Property but before the route controllers for better organization.',
+      'description': 'Added two new contact numbers to the Important Contacts page.',
     },
     {
       'title': 'Google Calendar Event Deletion',

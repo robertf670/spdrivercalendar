@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; // Import for SystemChrome
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:spdrivercalendar/core/constants/app_constants.dart';
 import 'package:spdrivercalendar/core/services/storage_service.dart';
 import 'package:spdrivercalendar/features/calendar/services/shift_service.dart';
@@ -22,6 +23,10 @@ import 'package:spdrivercalendar/features/calendar/services/event_service.dart';
 import 'package:spdrivercalendar/features/settings/screens/version_history_screen.dart';
 import 'package:spdrivercalendar/services/color_customization_service.dart';
 
+// Global Firebase Analytics instance
+late FirebaseAnalytics analytics;
+late FirebaseAnalyticsObserver observer;
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
@@ -33,6 +38,10 @@ Future<void> main() async {
   
   // Initialize Firebase first
   await Firebase.initializeApp();
+  
+  // Initialize Firebase Analytics
+  analytics = FirebaseAnalytics.instance;
+  observer = FirebaseAnalyticsObserver(analytics: analytics);
   
   // Run independent initializations in parallel
   await Future.wait([
@@ -123,6 +132,7 @@ class MyAppState extends State<MyApp> with WidgetsBindingObserver {
             theme: AppTheme.lightTheme(),
             darkTheme: AppTheme.darkTheme(),
             themeMode: isDarkMode ? ThemeMode.dark : ThemeMode.light,
+            navigatorObservers: [observer],
             initialRoute: AppConstants.splashRoute,
             routes: {
               AppConstants.splashRoute: (context) => SplashScreen(
