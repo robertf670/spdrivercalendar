@@ -1,7 +1,21 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.14.1': [
+    {
+      'title': 'Manual Scrolling for Live Updates Banner',
+      'description': 'Live updates banner now supports manual swiping when multiple updates are active! Swipe left/right to instantly navigate between banners while automatic 4-second cycling continues. Auto-cycling intelligently pauses for 8 seconds when you manually scroll, then resumes seamlessly. Single banners work exactly as before.',
+    },
+    {
+      'title': 'Additional Important Contacts',
+      'description': 'Added two new essential contact numbers to the Important Contacts page: Clerical Office (John) - 01 703 3244 and CMO - 01 703 1308. Both contacts are positioned logically after Lost Property but before the route controllers for better organization.',
+    },
+    {
+      'title': 'Google Calendar Event Deletion',
+      'description': 'Resolved critical issue where deleting events from the app would not remove them from Google Calendar. Fixed timezone mismatch problem in event matching - events are now properly identified and deleted from Google Calendar when removed locally.',
+    },
+  ],
   '2.14.0': [
     {
-      'title': 'NEW: Bus Tracking Integration',
+      'title': 'Bus Tracking Integration',
       'description': 'Added real-time bus tracking feature with direct integration to bustimes.org! First, add your assigned bus number (EW132, PA155, etc.) to your shift, then track it on-the-go by tapping the location pin icon. Perfect for picking up buses mid-service - instantly see where your bus currently is.',
     },
     {
@@ -15,7 +29,7 @@ final Map<String, List<Map<String, String>>> changelogData = {
   ],
   '2.13.3': [
     {
-      'title': 'ENHANCED: Always-Visible Notes Icon with Smart Indicators',
+      'title': 'Always-Visible Notes Icon with Smart Indicators',
       'description': 'Notes icon now appears on every event card for instant access! Visual indicators clearly show note status: filled icon with dot badge when notes exist, outlined muted icon when empty. No more hunting for the notes feature - it\'s always one tap away on any event.',
     },
     {
@@ -27,19 +41,19 @@ final Map<String, List<Map<String, String>>> changelogData = {
       'description': 'Significantly expanded notes dialog for comfortable note-taking! Increased width to 90% of screen and height to 40% of screen, providing much more space for detailed shift notes. Text area now expands to fill available space with top-aligned input for better writing experience.',
     },
     {
-      'title': 'IMPROVED: Streamlined Settings Page Organization',
+      'title': 'Streamlined Settings Page Organization',
       'description': 'Complete reorganization of the Settings page for better user experience. Moved Feedback to App section from dropdown menu, relocated Live Updates Preferences to App section, and reordered sections for optimal flow: Appearance → App → Google Calendar → Backup & Restore → Notifications → Admin. Eliminated unnecessary section headers for cleaner navigation.',
     },
   ],
   '2.13.2': [
     {
-      'title': 'CODE CLEANUP: Unused Code Elimination',
+      'title': 'Unused Code Elimination',
       'description': 'Removed unused fields, methods, and imports across update dialog components. Eliminated 4 code quality issues including unused _currentVersion fields and package_info_plus imports, improving code maintainability and reducing bundle size.',
     },
   ],
   '2.13.1': [
     {
-      'title': 'ENHANCED: Streamlined Update Dialog Experience',
+      'title': 'Streamlined Update Dialog Experience',
       'description': 'Removed redundant "What\'s New" section from update dialogs that always showed generic placeholder text. Users will see the actual What\'s New screen after updating, making this section unnecessary. Update dialogs are now cleaner and more focused on the update action.',
     },
     {
@@ -53,17 +67,17 @@ final Map<String, List<Map<String, String>>> changelogData = {
   ],
   '2.13.0': [
     {
-      'title': 'FIXED: Dark Mode Across Major Screens',
+      'title': 'Dark Mode Across Major Screens',
       'description': 'Fixed hardcoded colors throughout the app including Bills Screen, Statistics, Live Updates, Google Login, and Enhanced Update Dialog. Dark mode now works properly across all major features with excellent readability and visual consistency.',
     },
   ],
   '2.12.2': [
     {
-      'title': 'NEW: Clickable Notes Icon',
+      'title': 'Clickable Notes Icon',
       'description': 'Notes icon on event cards is now directly clickable! Tap the notes icon to instantly open the notes dialog for that event, eliminating the need to open the event details first. Provides faster, more intuitive access to your shift notes.',
     },
     {
-      'title': 'NEW: Google Calendar Sharing Guide',
+      'title': 'Google Calendar Sharing Guide',
       'description': 'Added comprehensive help guide in Settings showing exactly how to share your work schedule with family and friends. Includes step-by-step instructions for calendar sharing, creating dedicated work calendars, and privacy options. Access via "How to Share Google Calendar" in Settings.',
     },
   ],

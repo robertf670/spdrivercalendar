@@ -310,19 +310,9 @@ class BusTrackingService {
     }
   }
 
-  /// Generate only exact match patterns for the bus number
-  static List<String> _generateSearchPatterns(String busNumber) {
-    // Removed - now using _searchForExactMatch instead
-    // This method is kept for backward compatibility but not used
-    return [busNumber];
-  }
 
-  /// Enhanced vehicle ID extraction with better context search
-  static String? _extractVehicleId(String htmlContent, String pattern, String busNumber) {
-    // Removed - now using _extractVehicleIdFromExactMatch instead
-    // This method is kept for backward compatibility but not used
-    return null;
-  }
+
+
 
   /// Search for bus number in table structure (HTML tables are common for vehicle lists)
   static String? _searchInTableStructure(String htmlContent, String busNumber) {

@@ -229,10 +229,10 @@ class CalendarTestHelper {
       cal.Event? targetEvent;
       for (final event in events) {
         if (event.summary == title) {
-          // If start time is provided, also check that
+          // If start time is provided, match by title and date (more reliable than exact time)
           if (eventStartTime != null) {
-            final eventStart = event.start?.dateTime;
-            if (eventStart != null && _isSameDateTime(eventStart, eventStartTime)) {
+            final eventStart = event.start?.dateTime ?? event.start?.date;
+            if (eventStart != null && _isSameDate(eventStart, eventStartTime)) {
               targetEvent = event;
               break;
             }
@@ -299,10 +299,10 @@ class CalendarTestHelper {
       cal.Event? targetEvent;
       for (final event in events) {
         if (event.summary == oldTitle) {
-          // If start time is provided, also check that
+          // If start time is provided, match by title and date (more reliable than exact time)
           if (oldEventStartTime != null) {
-            final eventStart = event.start?.dateTime;
-            if (eventStart != null && _isSameDateTime(eventStart, oldEventStartTime)) {
+            final eventStart = event.start?.dateTime ?? event.start?.date;
+            if (eventStart != null && _isSameDate(eventStart, oldEventStartTime)) {
               targetEvent = event;
               break;
             }
@@ -502,6 +502,13 @@ class CalendarTestHelper {
   static bool _isSameDateTime(DateTime dt1, DateTime dt2) {
     final difference = dt1.difference(dt2).abs();
     return difference.inMinutes <= 1;
+  }
+
+  /// Helper to check if two DateTime objects represent the same date (ignoring time)
+  static bool _isSameDate(DateTime dt1, DateTime dt2) {
+    return dt1.year == dt2.year &&
+           dt1.month == dt2.month &&
+           dt1.day == dt2.day;
   }
 
   /// Add a holiday to Google Calendar

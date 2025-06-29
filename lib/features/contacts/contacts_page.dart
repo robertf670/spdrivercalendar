@@ -101,6 +101,54 @@ class ContactsPage extends StatelessWidget {
             ),
             child: ListTile(
               leading: CircleAvatar(
+                backgroundColor: Colors.orange.withValues(alpha: 0.1),
+                child: const Icon(Icons.admin_panel_settings, color: Colors.orange), // Icon for clerical office
+              ),
+              title: const Text(
+                'Clerical Office (John)',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              subtitle: const Text('01 703 3244'),
+              trailing: IconButton(
+                icon: const Icon(Icons.phone, color: AppTheme.primaryColor),
+                tooltip: 'Call Clerical Office',
+                onPressed: () => _launchPhoneCall('017033244', context),
+              ),
+              onTap: () => _launchPhoneCall('017033244', context),
+            ),
+          ),
+          const SizedBox(height: 8), // Spacer between cards
+          Card(
+            elevation: 2,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppTheme.borderRadius),
+            ),
+            child: ListTile(
+              leading: CircleAvatar(
+                backgroundColor: Colors.purple.withValues(alpha: 0.1),
+                child: const Icon(Icons.medical_services, color: Colors.purple), // Icon for CMO
+              ),
+              title: const Text(
+                'CMO',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              subtitle: const Text('01 703 1308'),
+              trailing: IconButton(
+                icon: const Icon(Icons.phone, color: AppTheme.primaryColor),
+                tooltip: 'Call CMO',
+                onPressed: () => _launchPhoneCall('017031308', context),
+              ),
+              onTap: () => _launchPhoneCall('017031308', context),
+            ),
+          ),
+          const SizedBox(height: 8), // Spacer between cards
+          Card(
+            elevation: 2,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppTheme.borderRadius),
+            ),
+            child: ListTile(
+              leading: CircleAvatar(
                 backgroundColor: Colors.teal.withValues(alpha: 0.1),
                 child: const Icon(Icons.support_agent, color: Colors.teal), // Icon for controller
               ),
@@ -165,22 +213,6 @@ class ContactsPage extends StatelessWidget {
               onTap: () => _launchPhoneCall('017031136', context),
             ),
           ),
-          /*
-          const SizedBox(height: 8), // Spacer between cards
-          Card(
-            elevation: 2,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppTheme.borderRadius),
-            ),
-            child: ListTile(
-              leading: CircleAvatar(...),
-              title: const Text('Another Contact'),
-              subtitle: const Text('Phone Number'),
-              trailing: IconButton(...),
-              onTap: () => _launchPhoneCall('PhoneNumber', context),
-            ),
-          ),
-          */
         ],
       ),
     );

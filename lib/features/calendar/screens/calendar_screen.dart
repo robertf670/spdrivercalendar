@@ -4382,21 +4382,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
     ); // Removed the erroneous .then block
   }
 
-  // Placeholder for Feedback navigation
-  void _showFeedbackPage() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const FeedbackScreen()), // Navigate to FeedbackScreen
-    );
-    // print('Feedback selected - Navigation pending'); // Removed placeholder print
-    // // Show a temporary snackbar to indicate it's not implemented yet // Removed placeholder snackbar
-    // ScaffoldMessenger.of(context).showSnackBar(
-    //   const SnackBar(
-    //     content: Text('Feedback page not yet implemented.'),
-    //     duration: Duration(seconds: 2),
-    //   ),
-    // );
-  }
+
 
   // Method to navigate to Bills page
   void _showBillsPage() {

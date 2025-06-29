@@ -84,10 +84,16 @@ class LiveUpdatesBannerDisplay extends StatefulWidget {
 class LiveUpdatesBannerDisplayState extends State<LiveUpdatesBannerDisplay> {
   int _currentIndex = 0;
   Timer? _autoScrollTimer;
+  Timer? _resumeTimer;
+  PageController? _pageController;
+  bool _userIsScrolling = false;
 
   @override
   void initState() {
     super.initState();
+    if (widget.updates.length > 1) {
+      _pageController = PageController();
+    }
     _startAutoScroll();
   }
 
@@ -96,6 +102,15 @@ class LiveUpdatesBannerDisplayState extends State<LiveUpdatesBannerDisplay> {
     super.didUpdateWidget(oldWidget);
     if (widget.updates.length != oldWidget.updates.length) {
       _currentIndex = 0;
+      
+      // Handle PageController for multiple vs single banners
+      if (widget.updates.length > 1 && _pageController == null) {
+        _pageController = PageController();
+      } else if (widget.updates.length <= 1 && _pageController != null) {
+        _pageController?.dispose();
+        _pageController = null;
+      }
+      
       _startAutoScroll();
     }
   }
@@ -103,6 +118,8 @@ class LiveUpdatesBannerDisplayState extends State<LiveUpdatesBannerDisplay> {
   @override
   void dispose() {
     _autoScrollTimer?.cancel();
+    _resumeTimer?.cancel();
+    _pageController?.dispose();
     super.dispose();
   }
 
@@ -111,12 +128,35 @@ class LiveUpdatesBannerDisplayState extends State<LiveUpdatesBannerDisplay> {
     if (widget.updates.length <= 1) return;
     
     _autoScrollTimer = Timer.periodic(const Duration(seconds: 4), (timer) {
-      if (mounted) {
-        setState(() {
-          _currentIndex = (_currentIndex + 1) % widget.updates.length;
-        });
+      if (mounted && !_userIsScrolling && _pageController != null) {
+        final nextIndex = (_currentIndex + 1) % widget.updates.length;
+        _pageController!.animateToPage(
+          nextIndex,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+        );
       }
     });
+  }
+
+  void _onUserScroll() {
+    _userIsScrolling = true;
+    _resumeTimer?.cancel();
+    
+    // Resume auto-scrolling after 8 seconds of no user interaction
+    _resumeTimer = Timer(const Duration(seconds: 8), () {
+      if (mounted) {
+        _userIsScrolling = false;
+      }
+    });
+  }
+
+  void _onPageChanged(int index) {
+    if (mounted) {
+      setState(() {
+        _currentIndex = index;
+      });
+    }
   }
 
   Color _getPriorityColor(String priority) {
@@ -151,11 +191,40 @@ class LiveUpdatesBannerDisplayState extends State<LiveUpdatesBannerDisplay> {
       return const SizedBox.shrink();
     }
 
-    final currentUpdate = widget.updates[_currentIndex];
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
+    // For single banner, use the original simple approach
+    if (widget.updates.length == 1) {
+      return _buildSingleBanner(widget.updates[0], isDark);
+    }
+
+    // For multiple banners, use PageView for scrolling
+    return Container(
+      width: double.infinity,
+      constraints: const BoxConstraints(
+        minHeight: 70,
+        maxHeight: 90,
+      ),
+      child: PageView.builder(
+        controller: _pageController,
+        onPageChanged: _onPageChanged,
+        itemCount: widget.updates.length,
+        itemBuilder: (context, index) {
+          return _buildSingleBanner(widget.updates[index], isDark);
+        },
+      ),
+    );
+  }
+
+  Widget _buildSingleBanner(LiveUpdate update, bool isDark) {
     return GestureDetector(
-      onTap: widget.onTap,
+      onTap: () {
+        if (widget.updates.length > 1) {
+          _onUserScroll(); // Pause auto-scrolling when user taps
+        }
+        widget.onTap?.call();
+      },
+      onPanStart: widget.updates.length > 1 ? (_) => _onUserScroll() : null,
       child: Container(
         width: double.infinity,
         constraints: const BoxConstraints(
@@ -182,8 +251,8 @@ class LiveUpdatesBannerDisplayState extends State<LiveUpdatesBannerDisplay> {
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [
-                _getPriorityColor(currentUpdate.priority).withValues(alpha: 0.1),
-                _getPriorityColor(currentUpdate.priority).withValues(alpha: 0.05),
+                _getPriorityColor(update.priority).withValues(alpha: 0.1),
+                _getPriorityColor(update.priority).withValues(alpha: 0.05),
               ],
               begin: Alignment.centerLeft,
               end: Alignment.centerRight,
@@ -191,7 +260,7 @@ class LiveUpdatesBannerDisplayState extends State<LiveUpdatesBannerDisplay> {
             borderRadius: BorderRadius.circular(6),
             border: Border(
               left: BorderSide(
-                color: _getPriorityColor(currentUpdate.priority),
+                color: _getPriorityColor(update.priority),
                 width: 3,
               ),
             ),
@@ -203,12 +272,12 @@ class LiveUpdatesBannerDisplayState extends State<LiveUpdatesBannerDisplay> {
               Container(
                 padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
-                  color: _getPriorityColor(currentUpdate.priority).withValues(alpha: 0.2),
+                  color: _getPriorityColor(update.priority).withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(
-                  _getPriorityIcon(currentUpdate.priority),
-                  color: _getPriorityColor(currentUpdate.priority),
+                  _getPriorityIcon(update.priority),
+                  color: _getPriorityColor(update.priority),
                   size: 16,
                 ),
               ),
@@ -226,7 +295,7 @@ class LiveUpdatesBannerDisplayState extends State<LiveUpdatesBannerDisplay> {
                         children: [
                           Expanded(
                             child: Text(
-                              currentUpdate.title,
+                              update.title,
                               style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w600,
@@ -240,23 +309,23 @@ class LiveUpdatesBannerDisplayState extends State<LiveUpdatesBannerDisplay> {
                             margin: const EdgeInsets.only(left: 4),
                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
-                              color: _getPriorityColor(currentUpdate.priority).withValues(alpha: 0.2),
+                              color: _getPriorityColor(update.priority).withValues(alpha: 0.2),
                               borderRadius: BorderRadius.circular(8),
                               border: Border.all(
-                                color: _getPriorityColor(currentUpdate.priority).withValues(alpha: 0.4),
+                                color: _getPriorityColor(update.priority).withValues(alpha: 0.4),
                                 width: 1,
                               ),
                             ),
                             child: Text(
-                              currentUpdate.priority.toUpperCase(),
+                              update.priority.toUpperCase(),
                               style: TextStyle(
-                                color: _getPriorityColor(currentUpdate.priority),
+                                color: _getPriorityColor(update.priority),
                                 fontSize: 9,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
                           ),
-                          // Indicators - only show if not too narrow
+                          // Indicators - only show if not too narrow and multiple banners
                           if (MediaQuery.of(context).size.width > 350 && widget.updates.length > 1) ...[
                             const SizedBox(width: 4),
                             Container(
@@ -280,12 +349,12 @@ class LiveUpdatesBannerDisplayState extends State<LiveUpdatesBannerDisplay> {
                     ),
                     
                     // Message preview - only if there's enough space
-                    if (currentUpdate.description.isNotEmpty)
+                    if (update.description.isNotEmpty)
                       Flexible(
                         child: Padding(
                           padding: const EdgeInsets.only(top: 1),
                           child: Text(
-                            currentUpdate.description,
+                            update.description,
                             style: TextStyle(
                               fontSize: 11,
                               color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
