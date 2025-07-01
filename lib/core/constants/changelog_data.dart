@@ -1,12 +1,16 @@
 final Map<String, List<Map<String, String>>> changelogData = {
   '2.14.6': [
     {
-      'title': 'GitHub Actions Memory Fix',
-      'description': 'Resolved Java heap space errors during APK builds by increasing Gradle memory allocation to 3GB. Fixed build failures that prevented automatic APK generation in GitHub Actions workflow.',
+      'title': 'FIXED: GitHub CI Build Compatibility',
+      'description': 'Resolved critical Kotlin version compatibility issues that were preventing GitHub CI builds from completing successfully. Updated Kotlin from 1.8.22 to 2.2.0 to meet Firebase library requirements (2.1.0+).',
     },
     {
-      'title': 'Update Checker Stability Improvements',
-      'description': 'Added missing changelog entries to ensure proper version tracking and eliminate persistent update prompts. Improved version comparison logic consistency across all app components.',
+      'title': 'Enhanced CI Build Performance',
+      'description': 'Increased Gradle heap size from 1536M to 4096M to prevent Java heap space errors during automated builds. GitHub Actions now has sufficient memory allocation for complex Firebase and Google services compilation.',
+    },
+    {
+      'title': 'Build System Stability',
+      'description': 'Fixed compatibility matrix between Kotlin 2.2.0, Firebase libraries, and Google Play Services. All build environments (local, CI/CD) now use consistent versions ensuring reliable automated releases.',
     },
   ],
   '2.14.5': [
