@@ -1,4 +1,26 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.14.2': [
+    {
+      'title': 'Enhanced Spare Duty Bus Assignment UI',
+      'description': 'Improved bus assignment button to clearly show current status: blue "Add" button when no bus assigned, orange "Edit" button when bus already assigned. Makes it much easier to see if a bus is assigned and modify bus assignments without deleting the entire spare duty.',
+    },
+    {
+      'title': 'Removed Redundant "Assigned:" Text',
+      'description': 'Cleaned up spare duty event cards by removing unnecessary "Assigned:" prefix from duty descriptions. Displays cleaner format: "PZ1/50A | 11:47 to 16:15 | Bus: SG292" instead of "Assigned: PZ1/50A | 11:47 to 16:15 | Bus: SG292".',
+    },
+    {
+      'title': 'Normal Event Creation Overflow',
+      'description': 'Resolved RenderFlex overflow issue in Add Event dialog where time selection dropdowns caused 1.6px overflow with red warning stripes. Shortened labels from "Hour/Minute" to "H/M" and optimized spacing for all screen sizes.',
+    },
+    {
+      'title': 'Enhanced Normal Event Display',
+      'description': 'Normal events (non-work shifts) now display clean, simple time information without work-specific details like break times, route information, or board data. Streamlined interface shows only relevant information for personal appointments and events.',
+    },
+    {
+      'title': 'Compatibility & Stability Updates',
+      'description': 'Updated Kotlin compiler to version 2.2.0 and desugar_jdk_libs to 2.1.4 for compatibility with latest Flutter packages. Fixed Google Sign-In API breaking changes by maintaining version 6.3.0 compatibility and resolved notification service updates.',
+    },
+  ],
   '2.14.1': [
     {
       'title': 'Manual Scrolling for Live Updates Banner',

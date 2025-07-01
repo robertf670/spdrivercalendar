@@ -93,8 +93,9 @@ class AddEventDialogState extends State<AddEventDialog> {
                         Expanded(
                           child: DropdownButtonFormField<int>(
                             decoration: const InputDecoration(
-                              labelText: 'Hour',
+                              labelText: 'H',
                               border: OutlineInputBorder(),
+                              contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                             ),
                             value: _startTime.hour,
                             items: List.generate(24, (index) => index).map((hour) {
@@ -112,12 +113,13 @@ class AddEventDialogState extends State<AddEventDialog> {
                             },
                           ),
                         ),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: 4),
                         Expanded(
                           child: DropdownButtonFormField<int>(
                             decoration: const InputDecoration(
-                              labelText: 'Minute',
+                              labelText: 'M',
                               border: OutlineInputBorder(),
+                              contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                             ),
                             value: _startTime.minute,
                             items: List.generate(60, (index) => index).map((minute) {
@@ -169,8 +171,9 @@ class AddEventDialogState extends State<AddEventDialog> {
                         Expanded(
                           child: DropdownButtonFormField<int>(
                             decoration: const InputDecoration(
-                              labelText: 'Hour',
+                              labelText: 'H',
                               border: OutlineInputBorder(),
+                              contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                             ),
                             value: _endTime.hour,
                             items: List.generate(24, (index) => index).map((hour) {
@@ -188,12 +191,13 @@ class AddEventDialogState extends State<AddEventDialog> {
                             },
                           ),
                         ),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: 4),
                         Expanded(
                           child: DropdownButtonFormField<int>(
                             decoration: const InputDecoration(
-                              labelText: 'Minute',
+                              labelText: 'M',
                               border: OutlineInputBorder(),
+                              contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                             ),
                             value: _endTime.minute,
                             items: List.generate(60, (index) => index).map((minute) {

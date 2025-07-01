@@ -61,7 +61,6 @@ class NotificationService {
         requestAlertPermission: false,
         requestBadgePermission: false,
         requestSoundPermission: false,
-        onDidReceiveLocalNotification: onDidReceiveLocalNotification,
       );
 
       final InitializationSettings initializationSettings = InitializationSettings(
@@ -161,8 +160,6 @@ class NotificationService {
           ),
         ),
         androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle, 
-        uiLocalNotificationDateInterpretation:
-            UILocalNotificationDateInterpretation.absoluteTime,
         payload: payload,
       );
 

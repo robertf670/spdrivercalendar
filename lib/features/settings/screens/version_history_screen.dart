@@ -266,7 +266,7 @@ class _VersionHistoryScreenState extends State<VersionHistoryScreen> {
                     ],
                   ),
                 );
-              }).toList(),
+              }),
           ],
         ),
       ),

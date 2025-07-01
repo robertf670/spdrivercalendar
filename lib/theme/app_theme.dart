@@ -43,7 +43,7 @@ class AppTheme {
           systemNavigationBarIconBrightness: Brightness.dark,
         ),
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(borderRadius),
         ),
@@ -80,7 +80,7 @@ class AppTheme {
           systemNavigationBarIconBrightness: Brightness.light,
         ),
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         // Ensure card color provides contrast with background in dark mode
         color: const Color(0xFF1E1E1E), // Better dark card color
         shape: RoundedRectangleBorder(
@@ -111,7 +111,7 @@ class AppTheme {
         ),
       ),
       // Add dialog theme for dark mode
-      dialogTheme: DialogTheme(
+      dialogTheme: DialogThemeData(
         backgroundColor: const Color(0xFF1E1E1E),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(borderRadius),

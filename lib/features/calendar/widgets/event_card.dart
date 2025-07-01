@@ -110,6 +110,17 @@ class _EventCardState extends State<EventCard> {
   }
 
   Future<void> _loadBreakTime() async {
+    // Only load break time for work shifts
+    if (!widget.event.isWorkShift) {
+      if (mounted) {
+        setState(() {
+          breakTime = null;
+          isLoading = false;
+        });
+      }
+      return;
+    }
+    
     try {
       final breakTimeStr = await ShiftService.getBreakTime(widget.event);
       if (mounted) {
@@ -130,6 +141,19 @@ class _EventCardState extends State<EventCard> {
   }
 
   Future<void> _loadLocationData() async {
+    // Only load location data for work shifts
+    if (!widget.event.isWorkShift) {
+      setState(() {
+        startLocation = null;
+        finishLocation = null;
+        startBreakLocation = null;
+        finishBreakLocation = null;
+        workTime = null;
+        routeInfo = null;
+      });
+      return;
+    }
+    
     try {
       // Extract the shift code
       String shiftCode;
@@ -1154,6 +1178,9 @@ class _EventCardState extends State<EventCard> {
       } else {
         cardColor = shiftInfo?.color.withValues(alpha: 0.2) ?? Colors.blue.withValues(alpha: 0.2);
       }
+    } else {
+      // For normal events (non-work shifts), use the shift color for the day they're on
+      cardColor = shiftInfo?.color.withValues(alpha: 0.1) ?? Colors.grey.withValues(alpha: 0.1);
     }
     
     // In dark mode, adjust card colors
@@ -1165,7 +1192,8 @@ class _EventCardState extends State<EventCard> {
           cardColor = shiftInfo?.color.withValues(alpha: 0.2) ?? Colors.blueGrey.withValues(alpha: 0.2);
         }
       } else {
-        cardColor = Colors.grey.shade800;
+        // For normal events in dark mode, use the shift color for the day they're on
+        cardColor = shiftInfo?.color.withValues(alpha: 0.2) ?? Colors.grey.withValues(alpha: 0.2);
       }
     }
     
@@ -1308,6 +1336,35 @@ class _EventCardState extends State<EventCard> {
                 ],
               ),
               const SizedBox(height: 8.0), // Slightly larger gap after title
+              
+              // For normal events (non-work shifts), show simple time display
+              if (!widget.event.isWorkShift) ...[
+                Row(
+                  children: [
+                    Icon(
+                      Icons.access_time,
+                      size: 16,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white
+                          : Colors.black,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        '${widget.event.formattedStartTime} - ${widget.event.formattedEndTime}',
+                        style: TextStyle(
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.white
+                              : Colors.black,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8.0),
+              ],
               
               // NEW: Report - Sign Off line (for PZ shifts and UNI overtime shifts)
               if (widget.event.title.startsWith('PZ') || widget.event.title.startsWith('811/') || (widget.event.title.contains('(OT)') && RegExp(r'^\d{2,3}/').hasMatch(widget.event.title.replaceAll(RegExp(r'[AB]? \(OT\)$'), ''))))
@@ -1462,8 +1519,8 @@ class _EventCardState extends State<EventCard> {
               ],
               
               // MODIFIED: Depart - Finish time with locations (PZ) or Start-End time (others)
-              // Don't show this row for overtime shifts
-              if (!widget.event.title.contains('(OT)')) ...[
+              // Don't show this row for overtime shifts, and only show for work shifts
+              if (!widget.event.title.contains('(OT)') && widget.event.isWorkShift) ...[
                 Row(
                   children: [
                     Icon(
@@ -1492,8 +1549,8 @@ class _EventCardState extends State<EventCard> {
                 ),
                 const SizedBox(height: 3.0), // Reduced gap - route/location and breaks are related
               ],
-              // MODIFIED: Break times row (if available AND NOT BusCheck)
-              if (breakTime != null && !isBusCheckShift && !widget.event.title.contains('(OT)')) ...[
+              // MODIFIED: Break times row (if available AND NOT BusCheck AND is work shift)
+              if (breakTime != null && !isBusCheckShift && !widget.event.title.contains('(OT)') && widget.event.isWorkShift) ...[
                 Row(
                   children: [
                     Icon(
@@ -2353,7 +2410,7 @@ class _EventCardState extends State<EventCard> {
                     children: [
                       Expanded(
                         child: Text(
-                          'Assigned: ${duty['dutyCode']} | ${_formatTimeString(duty['startTime'])} to ${_formatTimeString(duty['endTime'])}',
+                          '${duty['dutyCode']} | ${_formatTimeString(duty['startTime'])} to ${_formatTimeString(duty['endTime'])}',
                           style: TextStyle(
                             color: Theme.of(context).brightness == Brightness.dark
                                 ? Colors.white
@@ -2541,18 +2598,34 @@ class _EventCardState extends State<EventCard> {
                                      await _showDutyBusAssignmentDialog(currentContext, duty['dutyCode'] ?? '');
                                    },
                                                                     style: ElevatedButton.styleFrom(
-                                   backgroundColor: AppTheme.primaryColor,
+                                   backgroundColor: widget.event.getBusForDuty(duty['dutyCode'] ?? '') != null 
+                                       ? Colors.orange 
+                                       : AppTheme.primaryColor,
                                    foregroundColor: Colors.white,
-                                   padding: const EdgeInsets.all(8),
+                                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                    minimumSize: Size.zero,
                                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                                    shape: RoundedRectangleBorder(
                                      borderRadius: BorderRadius.circular(6),
                                    ),
                                  ),
-                                 child: const Icon(
-                                   Icons.add,
-                                   size: 14,
+                                 child: Row(
+                                   mainAxisSize: MainAxisSize.min,
+                                   children: [
+                                     Icon(
+                                       widget.event.getBusForDuty(duty['dutyCode'] ?? '') != null 
+                                           ? Icons.edit 
+                                           : Icons.add,
+                                       size: 12,
+                                     ),
+                                     const SizedBox(width: 4),
+                                     Text(
+                                       widget.event.getBusForDuty(duty['dutyCode'] ?? '') != null 
+                                           ? 'Edit' 
+                                           : 'Add',
+                                       style: const TextStyle(fontSize: 11),
+                                     ),
+                                   ],
                                  ),
                                ),
                              ],
@@ -2723,7 +2796,7 @@ class _EventCardState extends State<EventCard> {
                   children: [
                     Expanded(
                       child: Text(
-                          'Assigned: $displayDutyCode | '
+                          '$displayDutyCode | '
                             '${_formatTimeString(duty['startTime'])} to '
                           '${_formatTimeString(duty['endTime'])}'
                           '${widget.event.getBusForDuty(duty['dutyCode'] ?? '') != null ? ' | Bus: ${widget.event.getBusForDuty(duty['dutyCode'] ?? '')}' : ''}',

@@ -219,7 +219,7 @@ class GoogleCalendarHelpScreen extends StatelessWidget {
                   ),
                 ],
               ),
-            )).toList(),
+            )),
           ],
         ),
       ),

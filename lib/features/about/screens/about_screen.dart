@@ -409,7 +409,7 @@ class AboutScreenState extends State<AboutScreen> with TextRenderingMixin {
             ...features.map((feature) => _buildFeatureItem(
               feature['title']!,
               feature['description']!,
-            )).toList(),
+            )),
           ],
         ),
       ),

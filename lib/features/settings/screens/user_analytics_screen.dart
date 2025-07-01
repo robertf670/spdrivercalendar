@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:spdrivercalendar/theme/app_theme.dart';
 import '../../../main.dart';
 
 class UserAnalyticsScreen extends StatefulWidget {
