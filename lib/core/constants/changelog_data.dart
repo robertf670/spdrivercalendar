@@ -1,8 +1,24 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.14.6': [
+    {
+      'title': 'GitHub Actions Memory Fix',
+      'description': 'Resolved Java heap space errors during APK builds by increasing Gradle memory allocation to 3GB. Fixed build failures that prevented automatic APK generation in GitHub Actions workflow.',
+    },
+    {
+      'title': 'Update Checker Stability Improvements',
+      'description': 'Added missing changelog entries to ensure proper version tracking and eliminate persistent update prompts. Improved version comparison logic consistency across all app components.',
+    },
+  ],
   '2.14.5': [
     {
       'title': 'Fixed Assigned Duty Disappearing Issue',
       'description': 'Resolved intermittent issue where assigned duties on spare shifts would occasionally disappear from the UI but remain saved in storage. Improved cache synchronization between in-memory data and persistent storage to ensure assigned duties and their bus assignments always display correctly after being set.',
+    },
+  ],
+  '2.14.4': [
+    {
+      'title': 'GitHub Actions CI/CD Improvements',
+      'description': 'Updated Flutter version in GitHub Actions to 3.32.5 to match local development environment. Resolved build environment consistency issues and improved automated APK generation reliability.',
     },
   ],
   '2.14.3': [
