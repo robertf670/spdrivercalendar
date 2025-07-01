@@ -158,6 +158,22 @@ class EventService {
     });
   }
   
+  // Force refresh cache for a specific month (for fixing bus assignment cache issues)
+  static Future<void> refreshMonthCache(DateTime date) async {
+    final monthKey = '${date.year}-${date.month}';
+    
+    // Remove from monthly cache to force reload
+    _monthlyCache.remove(monthKey);
+    
+    // Clear events for this month from _events cache
+    _events.removeWhere((eventDate, _) => 
+      eventDate.year == date.year && eventDate.month == date.month);
+    
+    // Reload the month
+    await _loadEventsForMonth(date);
+    _populateEventsFromCache(date);
+  }
+  
   // Add a new event (maintains same interface)
   static Future<void> addEvent(Event event) async {
     // Ensure event has an ID

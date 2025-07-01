@@ -2935,14 +2935,12 @@ class _EventCardState extends State<EventCard> {
     // Save the updated event
     await EventService.updateEvent(oldEvent, widget.event);
     
-    // Refresh the UI
+    // Force refresh the cache to ensure UI shows updated data
+    await EventService.refreshMonthCache(widget.event.startDate);
+    
+    // Refresh the UI - just setState, no dialog reopening
     if (mounted) {
       setState(() {});
-      // Also close and reopen the spare shift dialog to show the updated bus assignment
-      Navigator.of(context).pop();
-      Future.delayed(const Duration(milliseconds: 100), () {
-        if (mounted) _showSpareShiftDialog(context);
-      });
     }
   }
 
