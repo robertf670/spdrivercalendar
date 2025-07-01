@@ -1,4 +1,10 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.14.5': [
+    {
+      'title': 'Fixed Assigned Duty Disappearing Issue',
+      'description': 'Resolved intermittent issue where assigned duties on spare shifts would occasionally disappear from the UI but remain saved in storage. Improved cache synchronization between in-memory data and persistent storage to ensure assigned duties and their bus assignments always display correctly after being set.',
+    },
+  ],
   '2.14.3': [
     {
       'title': 'Delete Button Missing for Normal Events',
