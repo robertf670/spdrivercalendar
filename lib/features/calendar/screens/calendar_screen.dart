@@ -2198,8 +2198,9 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  // Delete button (only for non-spare events)
-                  if (!event.title.startsWith('Spare'))
+                  // Delete button (only for non-spare duty events)
+                  // Real spare duties start with "SP" and use their own dialog with delete button
+                  if (!(event.isWorkShift && event.title.startsWith('SP')))
                     TextButton(
                       style: TextButton.styleFrom(
                         foregroundColor: Colors.red,

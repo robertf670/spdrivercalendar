@@ -1,4 +1,10 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.14.3': [
+    {
+      'title': 'Delete Button Missing for Normal Events',
+      'description': 'Fixed issue where normal events with "Spare" in the title were incorrectly treated as spare duty shifts and lost their delete button. Delete button now appears correctly for all normal events regardless of title content.',
+    },
+  ],
   '2.14.2': [
     {
       'title': 'Enhanced Spare Duty Bus Assignment UI',
