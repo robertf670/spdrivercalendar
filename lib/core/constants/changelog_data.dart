@@ -1,4 +1,10 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.14.8': [
+    {
+      'title': 'Admin Panel Improvements',
+      'description': 'Enhanced administrative features and backend system optimizations for better app management.',
+    },
+  ],
   '2.14.7': [
     {
       'title': 'What\'s New Screen Version Ordering',

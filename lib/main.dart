@@ -22,6 +22,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:spdrivercalendar/features/calendar/services/event_service.dart';
 import 'package:spdrivercalendar/features/settings/screens/version_history_screen.dart';
 import 'package:spdrivercalendar/services/color_customization_service.dart';
+import 'package:spdrivercalendar/services/user_activity_service.dart';
 
 // Global Firebase Analytics instance
 late FirebaseAnalytics analytics;
@@ -56,6 +57,9 @@ Future<void> main() async {
 
   // Initialize EventService AFTER StorageService is ready (as it reads from SharedPreferences)
   await EventService.initializeService();
+
+  // Track user activity for analytics (after StorageService is ready)
+  UserActivityService.trackUserActivity();
 
   // Get initial dark mode setting after StorageService is initialized
   final isDarkMode = await StorageService.getBool(AppConstants.isDarkModeKey, defaultValue: false);
@@ -116,6 +120,8 @@ class MyAppState extends State<MyApp> with WidgetsBindingObserver {
         }
       }
     } else if (state == AppLifecycleState.resumed) {
+      // Track user activity when app resumes
+      UserActivityService.trackUserActivity();
       setState(() {});
     }
   }

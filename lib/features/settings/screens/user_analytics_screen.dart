@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../main.dart';
+import '../../../services/user_activity_service.dart';
 
 class UserAnalyticsScreen extends StatefulWidget {
   const UserAnalyticsScreen({Key? key}) : super(key: key);
@@ -10,9 +11,13 @@ class UserAnalyticsScreen extends StatefulWidget {
 }
 
 class UserAnalyticsScreenState extends State<UserAnalyticsScreen> {
+  Map<String, int>? _analyticsStats;
+  bool _isLoading = true;
+
   @override
   void initState() {
     super.initState();
+    _loadAnalyticsStats();
     // Log analytics event for admin viewing analytics
     analytics.logEvent(
       name: 'admin_view_analytics',
@@ -20,6 +25,25 @@ class UserAnalyticsScreenState extends State<UserAnalyticsScreen> {
         'timestamp': DateTime.now().millisecondsSinceEpoch,
       },
     );
+  }
+
+  Future<void> _loadAnalyticsStats() async {
+    try {
+      final stats = await UserActivityService.getAnalyticsStats();
+      if (mounted) {
+        setState(() {
+          _analyticsStats = stats;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _analyticsStats = {'activeToday': 0, 'activeThisWeek': 0};
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   @override
@@ -48,50 +72,44 @@ class UserAnalyticsScreenState extends State<UserAnalyticsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Header card
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
+                // Header
+                Card(
+                  elevation: 2,
+                  shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.grey.withValues(alpha: 0.1),
-                        blurRadius: 4,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.analytics,
-                            color: Colors.green.shade600,
-                            size: 28,
-                          ),
-                          const SizedBox(width: 12),
-                          const Text(
-                            'User Analytics',
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.analytics,
+                              color: Colors.green.shade600,
+                              size: 28,
                             ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Track app usage and user engagement anonymously',
-                        style: TextStyle(
-                          color: Colors.grey.shade600,
-                          fontSize: 14,
+                            const SizedBox(width: 12),
+                            const Text(
+                              'User Analytics',
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
-                    ],
+                        const SizedBox(height: 8),
+                        Text(
+                          'Track app usage and user engagement anonymously',
+                          style: TextStyle(
+                            color: Colors.grey.shade600,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
                 const SizedBox(height: 24),
@@ -99,7 +117,7 @@ class UserAnalyticsScreenState extends State<UserAnalyticsScreen> {
                 _buildStatusCard(),
                 const SizedBox(height: 16),
                 
-                // Quick stats placeholder (these would need Firebase Admin SDK for real data)
+                // Quick stats with real data
                 _buildQuickStatsCard(),
                 const SizedBox(height: 16),
                 
@@ -129,6 +147,22 @@ class UserAnalyticsScreenState extends State<UserAnalyticsScreen> {
                         icon: Icons.bug_report,
                         color: Colors.purple,
                         onTap: _sendTestEvent,
+                      ),
+                      const SizedBox(height: 12),
+                      _buildActionCard(
+                        title: 'Refresh Stats',
+                        subtitle: 'Reload current analytics data',
+                        icon: Icons.refresh,
+                        color: Colors.teal,
+                        onTap: _refreshStats,
+                      ),
+                      const SizedBox(height: 12),
+                      _buildActionCard(
+                        title: 'Clear Analytics Data',
+                        subtitle: 'Reset all analytics data (for testing)',
+                        icon: Icons.clear_all,
+                        color: Colors.red,
+                        onTap: _clearAnalyticsData,
                       ),
                     ],
                   ),
@@ -202,12 +236,23 @@ class UserAnalyticsScreenState extends State<UserAnalyticsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Quick Stats',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-              ),
+            Row(
+              children: [
+                const Text(
+                  'Quick Stats',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+                const Spacer(),
+                if (_isLoading)
+                  const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+              ],
             ),
             const SizedBox(height: 12),
             Row(
@@ -215,7 +260,9 @@ class UserAnalyticsScreenState extends State<UserAnalyticsScreen> {
                 Expanded(
                   child: _buildStatItem(
                     'Active Today',
-                    '---',
+                    _isLoading 
+                        ? '...' 
+                        : '${_analyticsStats?['activeToday'] ?? 0}',
                     Icons.today,
                     Colors.blue,
                   ),
@@ -223,7 +270,9 @@ class UserAnalyticsScreenState extends State<UserAnalyticsScreen> {
                 Expanded(
                   child: _buildStatItem(
                     'This Week',
-                    '---',
+                    _isLoading 
+                        ? '...' 
+                        : '${_analyticsStats?['activeThisWeek'] ?? 0}',
                     Icons.calendar_view_week,
                     Colors.green,
                   ),
@@ -232,7 +281,9 @@ class UserAnalyticsScreenState extends State<UserAnalyticsScreen> {
             ),
             const SizedBox(height: 12),
             Text(
-              'Note: Detailed stats require Firebase Admin SDK integration',
+              _isLoading 
+                  ? 'Loading real-time analytics data...'
+                  : 'Real-time data from Firestore analytics tracking',
               style: TextStyle(
                 color: Colors.grey.shade500,
                 fontSize: 12,
@@ -339,6 +390,70 @@ class UserAnalyticsScreenState extends State<UserAnalyticsScreen> {
         ),
       ),
     );
+  }
+
+  void _refreshStats() async {
+    setState(() {
+      _isLoading = true;
+    });
+    await _loadAnalyticsStats();
+  }
+
+  void _clearAnalyticsData() async {
+    // Show confirmation dialog
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.warning, color: Colors.red),
+            SizedBox(width: 8),
+            Text('Clear Analytics Data'),
+          ],
+        ),
+        content: const Text(
+          'This will permanently delete all analytics data for testing purposes. Are you sure you want to continue?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Clear Data'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        await UserActivityService.clearAllData();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Row(
+                children: [
+                  Icon(Icons.check_circle, color: Colors.white),
+                  SizedBox(width: 8),
+                  Text('Analytics data cleared successfully'),
+                ],
+              ),
+              backgroundColor: Colors.green,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+          // Refresh stats to show the cleared data
+          _refreshStats();
+        }
+      } catch (e) {
+        if (mounted) {
+          _showErrorDialog('Error', 'Failed to clear analytics data: $e');
+        }
+      }
+    }
   }
 
   void _openFirebaseConsole() async {
