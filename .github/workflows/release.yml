@@ -93,11 +93,6 @@ jobs:
     
     - name: Get dependencies
       run: flutter pub get
-      
-    - name: Clean build cache
-      run: |
-        flutter clean
-        cd android && chmod +x gradlew && ./gradlew clean && cd ..
 
     - name: Setup Release Keystore
       env:
