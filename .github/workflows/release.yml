@@ -97,7 +97,7 @@ jobs:
     - name: Clean build cache
       run: |
         flutter clean
-        cd android && ./gradlew clean && cd ..
+        cd android && chmod +x gradlew && ./gradlew clean && cd ..
 
     - name: Setup Release Keystore
       env:
