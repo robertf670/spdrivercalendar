@@ -174,7 +174,6 @@ jobs:
     - name: Build APK
       env:
         ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
-        GRADLE_OPTS: "-Xmx6144m -XX:MaxMetaspaceSize=1024m -XX:+HeapDumpOnOutOfMemoryError"
       run: flutter build apk --release --dart-define=ADMIN_PASSWORD=${ADMIN_PASSWORD}
     
     - name: Rename APK with version
