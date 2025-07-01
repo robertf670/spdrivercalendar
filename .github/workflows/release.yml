@@ -93,6 +93,11 @@ jobs:
     
     - name: Get dependencies
       run: flutter pub get
+      
+    - name: Clean build cache
+      run: |
+        flutter clean
+        cd android && ./gradlew clean && cd ..
 
     - name: Setup Release Keystore
       env:
@@ -174,7 +179,7 @@ jobs:
     - name: Build APK
       env:
         ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
-        GRADLE_OPTS: "-Xmx3072m -XX:+HeapDumpOnOutOfMemoryError"
+        GRADLE_OPTS: "-Xmx4096m -XX:MaxMetaspaceSize=512m -XX:+HeapDumpOnOutOfMemoryError"
       run: flutter build apk --release --dart-define=ADMIN_PASSWORD=${ADMIN_PASSWORD}
     
     - name: Rename APK with version
