@@ -80,7 +80,7 @@ class _WhatsNewScreenState extends State<WhatsNewScreen> {
     if (_lastSeenVersion == null) return [_currentVersion];
     
     final allVersions = changelogData.keys.toList()
-      ..sort((a, b) => _compareVersions(a, b)); // Ascending order
+      ..sort((a, b) => _compareVersions(b, a)); // Descending order (newest first)
     
     return allVersions.where((version) {
       return _compareVersions(version, _lastSeenVersion!) > 0 && 

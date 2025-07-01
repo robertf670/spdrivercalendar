@@ -1,7 +1,17 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.14.7': [
+    {
+      'title': 'What\'s New Screen Version Ordering',
+      'description': 'Fixed What\'s New screen to display updates in proper chronological order with newest versions first. Previously showed oldest updates at the top, which was confusing when catching up on multiple missed versions.',
+    },
+    {
+      'title': 'Improved Update Experience Consistency',
+      'description': 'What\'s New screen now matches Version History screen ordering (newest first) for consistent user experience. Users now see the most recent and relevant changes immediately at the top.',
+    },
+  ],
   '2.14.6': [
     {
-      'title': 'FIXED: GitHub CI Build Compatibility',
+      'title': 'GitHub CI Build Compatibility',
       'description': 'Resolved critical Kotlin version compatibility issues that were preventing GitHub CI builds from completing successfully. Updated Kotlin from 1.8.22 to 2.2.0 to meet Firebase library requirements (2.1.0+).',
     },
     {
