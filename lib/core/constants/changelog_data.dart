@@ -1,4 +1,10 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.14.9': [
+    {
+      'title': 'Fixed Overtime Shift Time Display',
+      'description': 'Resolved critical issue where overtime shifts displayed report time instead of start time. Overtime 1/57A now correctly shows "12:45 B Walk" (start time) instead of "12:22 B Walk" (report time). Regular shifts continue to display report time as intended.',
+    },
+  ],
   '2.14.8': [
     {
       'title': 'Admin Panel Improvements',
