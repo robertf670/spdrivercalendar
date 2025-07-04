@@ -950,7 +950,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
   }
 
   // Get shift times from CSV file
-  Future<Map<String, dynamic>?> _getShiftTimes(String zone, String shiftNumber, DateTime shiftDate) async { // Return type changed to nullable
+  Future<Map<String, dynamic>?> _getShiftTimes(String zone, String shiftNumber, DateTime shiftDate, {bool isOvertimeShift = false}) async { // Return type changed to nullable
           // Getting shift times
 
     // RosterService handles Bank Holidays internally by returning 'Sunday'
@@ -1093,7 +1093,10 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
             
             if (csvShiftCode == shiftNumber) {
           // Debug statement removed
-              final startTime = _parseTimeOfDay(parts[2].trim()); // Report time
+              // For overtime shifts, use start time (depart time) instead of report time
+              final startTime = isOvertimeShift 
+                  ? _parseTimeOfDay(parts[3].trim()) // Depart time for overtime
+                  : _parseTimeOfDay(parts[2].trim()); // Report time for regular shifts
               final endTime = _parseTimeOfDay(parts[10].trim()); // Finish time
 
               if (startTime != null && endTime != null) {
@@ -1113,15 +1116,17 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
         }
         // === Handle Regular Zone CSV format ===
         else {
-          // Expecting PZ format (index 0 is shift, 2 is report, 12 is signOff)
+          // Expecting PZ format (index 0 is shift, 2 is report, 3 is depart, 12 is signOff)
           if (parts.length >= 13) { 
              final csvShiftCode = parts[0].trim();
              // No need to normalize PZ codes if shiftNumber is passed correctly (e.g. PZ1/01)
              if (csvShiftCode == shiftNumber) {
           // Debug statement removed
                 
-                // Include all duties for _getShiftTimes (filtering handled in dialog loading)
-                final startTime = _parseTimeOfDay(parts[2].trim()); // Report time
+                // For overtime shifts, use start time (depart time) instead of report time
+                final startTime = isOvertimeShift 
+                    ? _parseTimeOfDay(parts[3].trim()) // Depart time for overtime
+                    : _parseTimeOfDay(parts[2].trim()); // Report time for regular shifts
                 final endTime = _parseTimeOfDay(parts[12].trim()); // SignOff time
 
                 if (startTime != null && endTime != null) {
@@ -4747,12 +4752,13 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                             'startTime': startTime,
                             'endTime': endTime,
                           };
-    } else {
+                            } else {
                           // For regular shifts, look up times from CSV
                           shiftTimes = await _getShiftTimes(
                             selectedZone.replaceAll('Zone ', ''),
                             selectedShiftNumber,
                             shiftDate,
+                            isOvertimeShift: true, // Pass overtime flag
                           );
                         }
                         
