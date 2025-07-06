@@ -1,4 +1,10 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.14.10': [
+    {
+      'title': 'Added Depot Administrator Contact',
+      'description': 'Added Ed Moyles (ed.moyles@dublinbus.ie) as Depot Administrator to the Important Contacts page. Email contact appears right after the Phibsboro Depot phone number with dedicated email functionality for administrative inquiries.',
+    },
+  ],
   '2.14.9': [
     {
       'title': 'Fixed Overtime Shift Time Display',
