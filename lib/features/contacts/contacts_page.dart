@@ -35,6 +35,35 @@ class ContactsPage extends StatelessWidget {
     }
   }
 
+  // Helper function to launch email
+  Future<void> _launchEmail(String email, BuildContext context) async {
+    // Capture ScaffoldMessenger before async operations
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    
+    final Uri emailUri = Uri(scheme: 'mailto', path: email);
+    try {
+      if (await canLaunchUrl(emailUri)) {
+        await launchUrl(emailUri);
+      } else {
+        // Show error if the email app can't be launched
+        scaffoldMessenger.showSnackBar(
+          SnackBar(
+            content: Text('Could not launch email to $email'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      // Catch any other errors during launch
+      scaffoldMessenger.showSnackBar(
+        SnackBar(
+          content: Text('Error launching email: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -66,6 +95,30 @@ class ContactsPage extends StatelessWidget {
                 onPressed: () => _launchPhoneCall('017033462', context),
               ),
               onTap: () => _launchPhoneCall('017033462', context), // Allow tapping anywhere on the tile
+            ),
+          ),
+          const SizedBox(height: 8), // Spacer between cards
+          Card(
+            elevation: 2,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppTheme.borderRadius),
+            ),
+            child: ListTile(
+              leading: CircleAvatar(
+                backgroundColor: Colors.blue.withValues(alpha: 0.1),
+                child: const Icon(Icons.admin_panel_settings, color: Colors.blue),
+              ),
+              title: const Text(
+                'Depot Administrator',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              subtitle: const Text('ed.moyles@dublinbus.ie'),
+              trailing: IconButton(
+                icon: const Icon(Icons.email, color: AppTheme.primaryColor),
+                tooltip: 'Email Depot Administrator',
+                onPressed: () => _launchEmail('ed.moyles@dublinbus.ie', context),
+              ),
+              onTap: () => _launchEmail('ed.moyles@dublinbus.ie', context), // Allow tapping anywhere on the tile
             ),
           ),
           // Add more contacts here using the same Card/ListTile structure
