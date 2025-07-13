@@ -47,10 +47,18 @@ class _EventCardState extends State<EventCard> {
   bool isLoading = true;
   List<Map<String, String?>> _allDutyDetails = [];
   final Map<String, bool> _busTrackingLoading = {};
+  
+  // Explicit state tracking for bus assignments
+  String? _firstHalfBus;
+  String? _secondHalfBus;
 
   @override
   void initState() {
     super.initState();
+    // Initialize bus assignment state
+    _firstHalfBus = widget.event.firstHalfBus;
+    _secondHalfBus = widget.event.secondHalfBus;
+    
     _loadBreakTime();
     _loadLocationData();
     if (widget.event.assignedDuties != null && widget.event.assignedDuties!.isNotEmpty) {
@@ -93,6 +101,10 @@ class _EventCardState extends State<EventCard> {
   @override
   void didUpdateWidget(EventCard oldWidget) {
     super.didUpdateWidget(oldWidget);
+    // Update bus assignment state variables
+    _firstHalfBus = widget.event.firstHalfBus;
+    _secondHalfBus = widget.event.secondHalfBus;
+    
     // Reload data if the event or assigned duties have changed
     if (oldWidget.event != widget.event || 
         oldWidget.event.assignedDuties != widget.event.assignedDuties) {
@@ -901,8 +913,8 @@ class _EventCardState extends State<EventCard> {
           
           // Determine the filename based on the day of the week and zone
           final filename = bankHoliday != null ? 'SUN_DUTIES_PZ$zone.csv' :
-                         dayOfWeek == 'saturday' ? 'SAT_DUTIES_PZ$zone.csv' :
-                         dayOfWeek == 'sunday' ? 'SUN_DUTIES_PZ$zone.csv' :
+                         dayOfWeek == 'Saturday' ? 'SAT_DUTIES_PZ$zone.csv' :
+                         dayOfWeek == 'Sunday' ? 'SUN_DUTIES_PZ$zone.csv' :
                          'M-F_DUTIES_PZ$zone.csv';
           
 
@@ -2120,6 +2132,13 @@ class _EventCardState extends State<EventCard> {
                         widget.event.assignedDuties!.add(newDuty);
                       }
                       
+                      // Clear bus assignments when duties change (to prevent persistence issue)
+                      if (!selectedDuty.endsWith('A') && !selectedDuty.endsWith('B')) {
+                        // This is a full duty - clear any existing bus assignments
+                        widget.event.firstHalfBus = null;
+                        widget.event.secondHalfBus = null;
+                      }
+                      
                       // Save the updated event
                       await EventService.updateEvent(oldEvent, widget.event);
                       
@@ -2130,8 +2149,12 @@ class _EventCardState extends State<EventCard> {
                       if (mounted) {
                         await _loadAssignedDutyDetails();
                         
-                        // Refresh the UI (widget.onEdit is safe since it's a widget callback)
-                        setState(() {});
+                        // Refresh the UI and update state variables
+                        setState(() {
+                          // Update state variables to reflect cleared bus assignments
+                          _firstHalfBus = widget.event.firstHalfBus;
+                          _secondHalfBus = widget.event.secondHalfBus;
+                        });
                         // Notify parent to rebuild without showing edit dialog
                         widget.onEdit(Event(
                           id: 'refresh_trigger',
@@ -2155,7 +2178,8 @@ class _EventCardState extends State<EventCard> {
   void _showSpareShiftDialog(BuildContext context) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => StatefulBuilder(
+        builder: (context, dialogSetState) => AlertDialog(
         title: Row(
           children: [
             Container(
@@ -2389,6 +2413,11 @@ class _EventCardState extends State<EventCard> {
                 ),
               ),
               const SizedBox(height: 8),
+              
+              // Check if this has full duties - if so, show regular bus assignment UI
+              if (_spareShiftHasFullDuties()) ...[
+                _buildFullDutyBusAssignmentUI(dialogSetState),
+              ] else ...[
               // Create a sorted list of duties
               ...(() {
                 final sortedDuties = widget.event.assignedDuties!.map((dutyCode) {
@@ -2595,7 +2624,7 @@ class _EventCardState extends State<EventCard> {
                                                                 ElevatedButton(
                                    onPressed: () async {
                                      final currentContext = context;
-                                     await _showDutyBusAssignmentDialog(currentContext, duty['dutyCode'] ?? '');
+                                     await _showDutyBusAssignmentDialog(currentContext, duty['dutyCode'] ?? '', dialogSetState);
                                    },
                                                                     style: ElevatedButton.styleFrom(
                                    backgroundColor: widget.event.getBusForDuty(duty['dutyCode'] ?? '') != null 
@@ -2635,6 +2664,7 @@ class _EventCardState extends State<EventCard> {
                   ),
                 )).toList();
               })(),
+              ],
               const SizedBox(height: 16),
             ],
             
@@ -2717,6 +2747,7 @@ class _EventCardState extends State<EventCard> {
             child: const Text('Close'),
           ),
         ],
+        ),
       ),
     );
   }
@@ -2866,7 +2897,7 @@ class _EventCardState extends State<EventCard> {
 
 
   // Show bus assignment dialog for a specific duty
-  Future<void> _showDutyBusAssignmentDialog(BuildContext context, String dutyCode) async {
+  Future<void> _showDutyBusAssignmentDialog(BuildContext context, String dutyCode, [StateSetter? refreshDialog]) async {
     String? busNumber = widget.event.getBusForDuty(dutyCode);
     
     showDialog(
@@ -2890,9 +2921,9 @@ class _EventCardState extends State<EventCard> {
           if (widget.event.getBusForDuty(dutyCode) != null)
             TextButton(
               onPressed: () async {
-                final navigator = Navigator.of(dialogContext);
-                await _updateDutyBus(dutyCode, null);
-                navigator.pop();
+                              final navigator = Navigator.of(dialogContext);
+              await _updateDutyBus(dutyCode, null, refreshDialog);
+              navigator.pop();
               },
               style: TextButton.styleFrom(foregroundColor: Colors.red),
               child: const Text('Remove Bus'),
@@ -2905,7 +2936,7 @@ class _EventCardState extends State<EventCard> {
               normalizedBusNumber = normalizedBusNumber?.replaceAll(' ', '');
               
               final navigator = Navigator.of(dialogContext);
-              await _updateDutyBus(dutyCode, normalizedBusNumber?.isEmpty == true ? null : normalizedBusNumber);
+              await _updateDutyBus(dutyCode, normalizedBusNumber?.isEmpty == true ? null : normalizedBusNumber, refreshDialog);
               navigator.pop();
             },
             child: const Text('Assign'),
@@ -2916,32 +2947,92 @@ class _EventCardState extends State<EventCard> {
   }
 
   // Update duty bus assignment
-  Future<void> _updateDutyBus(String dutyCode, String? newBus) async {
-    // Create a copy of the old event
-    final oldEvent = Event(
-      id: widget.event.id,
-      title: widget.event.title,
-      startDate: widget.event.startDate,
-      startTime: widget.event.startTime,
-      endDate: widget.event.endDate,
-      endTime: widget.event.endTime,
-      assignedDuties: widget.event.assignedDuties,
-      busAssignments: widget.event.busAssignments,
-    );
-    
-    // Update the bus assignment
-    widget.event.setBusForDuty(dutyCode, newBus);
-    
-    // Save the updated event
-    await EventService.updateEvent(oldEvent, widget.event);
-    
-    // Force refresh the cache to ensure UI shows updated data
-    await EventService.refreshMonthCache(widget.event.startDate);
-    
-    // Refresh the UI - just setState, no dialog reopening
-    if (mounted) {
-      setState(() {});
+  Future<void> _updateDutyBus(String dutyCode, String? newBus, [StateSetter? refreshDialog]) async {
+    try {
+      // Create a copy of the old event
+      final oldEvent = Event(
+        id: widget.event.id,
+        title: widget.event.title,
+        startDate: widget.event.startDate,
+        startTime: widget.event.startTime,
+        endDate: widget.event.endDate,
+        endTime: widget.event.endTime,
+        assignedDuties: widget.event.assignedDuties,
+        busAssignments: widget.event.busAssignments,
+      );
+      
+      // Update the bus assignment
+      widget.event.setBusForDuty(dutyCode, newBus);
+      
+      // Debug: Print the current bus assignments
+      print('DEBUG: Updated bus assignments: ${widget.event.busAssignments}');
+      print('DEBUG: Assigned duties: ${widget.event.assignedDuties}');
+      
+      // Save the updated event
+      await EventService.updateEvent(oldEvent, widget.event);
+      
+      // Force refresh the cache to ensure UI shows updated data
+      await EventService.refreshMonthCache(widget.event.startDate);
+      
+      // Refresh the UI
+      if (mounted) {
+        setState(() {});
+        
+        // Force refresh the parent calendar
+        widget.onEdit(Event(
+          id: 'refresh_trigger',
+          title: '',
+          startDate: widget.event.startDate,
+          startTime: widget.event.startTime,
+          endDate: widget.event.endDate,
+          endTime: widget.event.endTime,
+        ));
+        
+        // Use callback to refresh dialog if provided
+        if (refreshDialog != null) {
+          refreshDialog(() {});
+        }
+      }
+    } catch (e) {
+      print('ERROR in _updateDutyBus: $e');
+      rethrow;
     }
+  }
+
+  // Show bus assignment dialog for full duties
+  Future<String?> _showBusAssignmentDialog(BuildContext context, String halfType) async {
+    final controller = TextEditingController();
+    
+    return showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Add $halfType Bus'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(
+            hintText: 'Enter bus number (e.g. PA155)',
+            labelText: 'Bus Number',
+          ),
+          textCapitalization: TextCapitalization.characters,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              String busNumber = controller.text.trim().toUpperCase();
+              busNumber = busNumber.replaceAll(' ', '');
+              if (busNumber.isNotEmpty) {
+                Navigator.of(context).pop(busNumber);
+              }
+            },
+            child: const Text('Add'),
+          ),
+        ],
+      ),
+    );
   }
 
   // Add helper function to format the title
@@ -3030,6 +3121,361 @@ class _EventCardState extends State<EventCard> {
         );
       }
     }
+  }
+
+  // Helper method to check if spare shift has full duties
+  bool _spareShiftHasFullDuties() {
+    if (!widget.event.title.startsWith('SP') || 
+        widget.event.assignedDuties == null || 
+        widget.event.assignedDuties!.isEmpty) {
+      return false;
+    }
+    
+    // Check if any duty is a full duty (doesn't end with A or B)
+    for (String duty in widget.event.assignedDuties!) {
+      String dutyCode = duty.startsWith('UNI:') ? duty.substring(4) : duty;
+      if (!dutyCode.endsWith('A') && !dutyCode.endsWith('B')) {
+        return true; // Found a full duty
+      }
+    }
+    return false;
+  }
+
+  // Build the bus assignment UI for spare shifts with full duties
+  Widget _buildFullDutyBusAssignmentUI(StateSetter dialogSetState) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.blue.shade50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.blue.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Show duty info
+          ...widget.event.assignedDuties!.map((dutyCode) {
+            final dutyDetails = _allDutyDetails.firstWhere(
+              (d) => d['dutyCode'] == dutyCode,
+              orElse: () => {'startTime': '00:00:00', 'dutyCode': dutyCode},
+            );
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          dutyCode,
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                        ),
+                        Text(
+                          '${_formatTimeWithoutSeconds(dutyDetails['startTime'] ?? '')} - ${_formatTimeWithoutSeconds(dutyDetails['endTime'] ?? '')}',
+                          style: const TextStyle(fontSize: 14),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
+                    onPressed: () async {
+                      // Remove duty and clear bus assignments
+                      final oldEvent = Event(
+                        id: widget.event.id,
+                        title: widget.event.title,
+                        startDate: widget.event.startDate,
+                        startTime: widget.event.startTime,
+                        endDate: widget.event.endDate,
+                        endTime: widget.event.endTime,
+                        assignedDuties: widget.event.assignedDuties,
+                        firstHalfBus: widget.event.firstHalfBus,
+                        secondHalfBus: widget.event.secondHalfBus,
+                      );
+
+                      final updatedEvent = Event(
+                        id: widget.event.id,
+                        title: widget.event.title,
+                        startDate: widget.event.startDate,
+                        startTime: widget.event.startTime,
+                        endDate: widget.event.endDate,
+                        endTime: widget.event.endTime,
+                        assignedDuties: widget.event.assignedDuties?.where((d) => d != dutyCode).toList(),
+                        firstHalfBus: null, // Clear bus assignments when removing full duty
+                        secondHalfBus: null,
+                      );
+
+                      await EventService.updateEvent(oldEvent, updatedEvent);
+                      widget.event.assignedDuties = updatedEvent.assignedDuties;
+                      widget.event.firstHalfBus = null;
+                      widget.event.secondHalfBus = null;
+
+                      if (mounted) {
+                        await _loadAssignedDutyDetails();
+                        setState(() {
+                          // Update state variables
+                          _firstHalfBus = null;
+                          _secondHalfBus = null;
+                        });
+                        widget.onEdit(Event(
+                          id: 'refresh_trigger',
+                          title: '',
+                          startDate: widget.event.startDate,
+                          startTime: widget.event.startTime,
+                          endDate: widget.event.endDate,
+                          endTime: widget.event.endTime,
+                        ));
+                        
+                        // Close and reopen the dialog to show updated state
+                        Navigator.of(context).pop(); // Close current dialog
+                        Future.delayed(const Duration(milliseconds: 100), () {
+                          if (mounted) {
+                            _showSpareShiftDialog(context); // Reopen dialog
+                          }
+                        });
+                      }
+                    },
+                    tooltip: 'Remove duty',
+                  ),
+                ],
+              ),
+            );
+          }).toList(),
+          
+          const Divider(),
+          const SizedBox(height: 8),
+          
+          // Bus assignment section for full duties
+          const Row(
+            children: [
+              Icon(Icons.directions_bus, size: 20, color: AppTheme.primaryColor),
+              SizedBox(width: 8),
+              Text(
+                'Bus Assignment',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          
+          // Show current bus assignments if any
+          if (_firstHalfBus != null || _secondHalfBus != null) ...[
+            // DEBUG: Print bus assignment status
+            Builder(
+              builder: (context) {
+                print('DEBUG: Showing bus assignments - First: $_firstHalfBus, Second: $_secondHalfBus');
+                return const SizedBox.shrink();
+              },
+            ),
+            
+            // Current bus assignments display
+            if (_firstHalfBus != null)
+              Container(
+                padding: const EdgeInsets.all(8),
+                margin: const EdgeInsets.only(bottom: 8),
+                decoration: BoxDecoration(
+                  color: Colors.green.shade50,
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: Colors.green.shade200),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'First Half Bus',
+                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                        ),
+                        Text(
+                          _firstHalfBus!,
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.remove_circle_outline, size: 18, color: Colors.red),
+                      onPressed: () async {
+                        final oldEvent = Event(
+                          id: widget.event.id,
+                          title: widget.event.title,
+                          startDate: widget.event.startDate,
+                          startTime: widget.event.startTime,
+                          endDate: widget.event.endDate,
+                          endTime: widget.event.endTime,
+                          assignedDuties: widget.event.assignedDuties,
+                          firstHalfBus: widget.event.firstHalfBus,
+                          secondHalfBus: widget.event.secondHalfBus,
+                        );
+                        
+                        widget.event.firstHalfBus = null;
+                        await EventService.updateEvent(oldEvent, widget.event);
+                        
+                        if (mounted) {
+                          setState(() {
+                            _firstHalfBus = null;
+                          });
+                          // Also refresh the dialog
+                          dialogSetState(() {});
+                        }
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            if (_secondHalfBus != null)
+              Container(
+                padding: const EdgeInsets.all(8),
+                margin: const EdgeInsets.only(bottom: 8),
+                decoration: BoxDecoration(
+                  color: Colors.green.shade50,
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: Colors.green.shade200),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Second Half Bus',
+                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                        ),
+                        Text(
+                          _secondHalfBus!,
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.remove_circle_outline, size: 18, color: Colors.red),
+                      onPressed: () async {
+                        final oldEvent = Event(
+                          id: widget.event.id,
+                          title: widget.event.title,
+                          startDate: widget.event.startDate,
+                          startTime: widget.event.startTime,
+                          endDate: widget.event.endDate,
+                          endTime: widget.event.endTime,
+                          assignedDuties: widget.event.assignedDuties,
+                          firstHalfBus: widget.event.firstHalfBus,
+                          secondHalfBus: widget.event.secondHalfBus,
+                        );
+                        
+                        widget.event.secondHalfBus = null;
+                        await EventService.updateEvent(oldEvent, widget.event);
+                        
+                        if (mounted) {
+                          setState(() {
+                            _secondHalfBus = null;
+                          });
+                          // Also refresh the dialog
+                          dialogSetState(() {});
+                        }
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            const SizedBox(height: 8),
+          ],
+          
+          // Bus assignment buttons
+          Row(
+            children: [
+              // First half bus button
+              if (_firstHalfBus == null)
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () async {
+                      final result = await _showBusAssignmentDialog(context, 'First Half');
+                      if (result != null) {
+                        final oldEvent = Event(
+                          id: widget.event.id,
+                          title: widget.event.title,
+                          startDate: widget.event.startDate,
+                          startTime: widget.event.startTime,
+                          endDate: widget.event.endDate,
+                          endTime: widget.event.endTime,
+                          assignedDuties: widget.event.assignedDuties,
+                          firstHalfBus: widget.event.firstHalfBus,
+                          secondHalfBus: widget.event.secondHalfBus,
+                        );
+                        
+                        widget.event.firstHalfBus = result;
+                        await EventService.updateEvent(oldEvent, widget.event);
+                        
+                        if (mounted) {
+                          setState(() {
+                            // Update state variable to force rebuild
+                            _firstHalfBus = result;
+                            print('DEBUG: First half bus assigned: $_firstHalfBus');
+                          });
+                          // Also refresh the dialog
+                          dialogSetState(() {});
+                        }
+                      }
+                    },
+                    icon: const Icon(Icons.directions_bus, size: 18),
+                    label: const Text('1st Half'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primaryColor,
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                ),
+              if (_firstHalfBus == null && _secondHalfBus == null)
+                const SizedBox(width: 8),
+              
+              // Second half bus button
+              if (_secondHalfBus == null)
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () async {
+                      final result = await _showBusAssignmentDialog(context, 'Second Half');
+                      if (result != null) {
+                        final oldEvent = Event(
+                          id: widget.event.id,
+                          title: widget.event.title,
+                          startDate: widget.event.startDate,
+                          startTime: widget.event.startTime,
+                          endDate: widget.event.endDate,
+                          endTime: widget.event.endTime,
+                          assignedDuties: widget.event.assignedDuties,
+                          firstHalfBus: widget.event.firstHalfBus,
+                          secondHalfBus: widget.event.secondHalfBus,
+                        );
+                        
+                        widget.event.secondHalfBus = result;
+                        await EventService.updateEvent(oldEvent, widget.event);
+                        
+                        if (mounted) {
+                          setState(() {
+                            // Update state variable to force rebuild
+                            _secondHalfBus = result;
+                            print('DEBUG: Second half bus assigned: $_secondHalfBus');
+                          });
+                          // Also refresh the dialog
+                          dialogSetState(() {});
+                        }
+                      }
+                    },
+                    icon: const Icon(Icons.directions_bus, size: 18),
+                    label: const Text('2nd Half'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primaryColor,
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
   }
 
   // Method to build the appropriate time display based on shift type

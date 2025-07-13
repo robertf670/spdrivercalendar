@@ -1,7 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:uuid/uuid.dart';
 import '../core/services/storage_service.dart';
-import '../core/constants/app_constants.dart';
 
 class UserActivityService {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;

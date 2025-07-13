@@ -1652,7 +1652,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                 ],
               ),
               // Add a divider before the bus selection section
-              if (event.isWorkShift && !event.title.startsWith('BusCheck')) ...[
+              if ((event.isWorkShift && !event.title.startsWith('BusCheck')) || _spareShiftHasFullDuties(event)) ...[
                 const Divider(),
                 const SizedBox(height: 8),
                 Container(
@@ -1872,6 +1872,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                           final isWorkout = snapshot.data?.toLowerCase().contains('workout') ?? false;
                           final isOvertimeShift = event.title.contains('(OT)');
                           final isWorkoutOrOvertime = isWorkout || isOvertimeShift;
+                          final isSpareWithFullDuties = _spareShiftHasFullDuties(event);
                           
                           if (isWorkoutOrOvertime) {
                             // Single button for workout and overtime shifts - only show if no bus is assigned
@@ -1966,7 +1967,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                             }
                             return const SizedBox.shrink(); // Return empty widget if bus is already assigned
                           } else {
-                            // Two buttons for regular shifts
+                            // Two buttons for regular shifts OR spare shifts with full duties
                             return Row(
                               children: [
                                 if (event.firstHalfBus == null)
@@ -2205,7 +2206,8 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                 children: [
                   // Delete button (only for non-spare duty events)
                   // Real spare duties start with "SP" and use their own dialog with delete button
-                  if (!(event.isWorkShift && event.title.startsWith('SP')))
+                  // Exception: spare shifts with full duties should use regular delete logic
+                  if (!(event.isWorkShift && event.title.startsWith('SP')) || _spareShiftHasFullDuties(event))
                     TextButton(
                       style: TextButton.styleFrom(
                         foregroundColor: Colors.red,
@@ -4979,6 +4981,24 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
         },
       ),
     );
+  }
+
+  // Helper method to check if spare shift has full duties (should use firstHalfBus/secondHalfBus)
+  bool _spareShiftHasFullDuties(Event event) {
+    if (!event.title.startsWith('SP') || 
+        event.assignedDuties == null || 
+        event.assignedDuties!.isEmpty) {
+      return false;
+    }
+    
+    // Check if any duty is a full duty (doesn't end with A or B)
+    for (String duty in event.assignedDuties!) {
+      String dutyCode = duty.startsWith('UNI:') ? duty.substring(4) : duty;
+      if (!dutyCode.endsWith('A') && !dutyCode.endsWith('B')) {
+        return true; // Found a full duty
+      }
+    }
+    return false;
   }
 }
 

@@ -22,12 +22,14 @@ class AdminPanelScreenState extends State<AdminPanelScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    
     return Scaffold(
       appBar: AppBar(
         title: const Text('Admin Panel - Live Updates'),
         elevation: 0,
-        backgroundColor: Colors.red.shade600,
-        foregroundColor: Colors.white,
+        backgroundColor: theme.colorScheme.primary,
+        foregroundColor: theme.colorScheme.onPrimary,
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -37,16 +39,19 @@ class AdminPanelScreenState extends State<AdminPanelScreen> {
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(12),
-                  color: Colors.red.shade50,
+                  color: theme.colorScheme.errorContainer,
                   child: Row(
                     children: [
-                      Icon(Icons.admin_panel_settings, color: Colors.red.shade600),
+                      Icon(
+                        Icons.admin_panel_settings, 
+                        color: theme.colorScheme.onErrorContainer,
+                      ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           'Admin Mode - Changes will be visible to all app users',
                           style: TextStyle(
-                            color: Colors.red.shade700,
+                            color: theme.colorScheme.onErrorContainer,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -68,9 +73,16 @@ class AdminPanelScreenState extends State<AdminPanelScreen> {
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(Icons.error_outline, size: 64, color: Colors.red.shade400),
+                              Icon(
+                                Icons.error_outline, 
+                                size: 64, 
+                                color: theme.colorScheme.error,
+                              ),
                               const SizedBox(height: 16),
-                              Text('Error loading updates: ${snapshot.error}'),
+                              Text(
+                                'Error loading updates: ${snapshot.error}',
+                                style: TextStyle(color: theme.colorScheme.error),
+                              ),
                             ],
                           ),
                         );
@@ -94,8 +106,8 @@ class AdminPanelScreenState extends State<AdminPanelScreen> {
             ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _showAddUpdateDialog,
-        backgroundColor: AppTheme.primaryColor,
-        foregroundColor: Colors.white,
+        backgroundColor: theme.colorScheme.primary,
+        foregroundColor: theme.colorScheme.onPrimary,
         icon: const Icon(Icons.add),
         label: const Text('Add Update'),
       ),
@@ -111,7 +123,7 @@ class AdminPanelScreenState extends State<AdminPanelScreen> {
                 icon: const Icon(Icons.science),
                 label: const Text('Create Demo Update'),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: AppTheme.primaryColor,
+                  foregroundColor: theme.colorScheme.primary,
                 ),
               ),
             ),
@@ -122,29 +134,29 @@ class AdminPanelScreenState extends State<AdminPanelScreen> {
   }
 
   Widget _buildEmptyState() {
+    final theme = Theme.of(context);
+    
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(
-            Icons.info_outline,
+            Icons.campaign_outlined,
             size: 64,
-            color: Colors.grey.shade400,
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
           ),
           const SizedBox(height: 16),
           Text(
-            'No Active Updates',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              color: Colors.grey.shade600,
+            'No live updates yet',
+            style: theme.textTheme.headlineSmall?.copyWith(
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
             ),
           ),
           const SizedBox(height: 8),
           Text(
-            'Tap the + button to add a new diversion or update',
-            style: TextStyle(
-              color: Colors.grey.shade500,
+            'Create your first update to keep users informed',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
             ),
             textAlign: TextAlign.center,
           ),
@@ -662,6 +674,8 @@ class UpdateDialogState extends State<UpdateDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    
     return Dialog(
       child: Container(
         constraints: const BoxConstraints(maxWidth: 500, maxHeight: 600),
@@ -673,7 +687,7 @@ class UpdateDialogState extends State<UpdateDialog> {
               width: double.infinity,
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: AppTheme.primaryColor,
+                color: theme.colorScheme.primary,
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(12),
                   topRight: Radius.circular(12),
@@ -681,12 +695,12 @@ class UpdateDialogState extends State<UpdateDialog> {
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.edit, color: Colors.white),
+                  Icon(Icons.edit, color: theme.colorScheme.onPrimary),
                   const SizedBox(width: 8),
                   Text(
                     widget.existingUpdate != null ? 'Edit Update' : 'Add New Update',
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: theme.colorScheme.onPrimary,
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
                     ),
@@ -694,7 +708,7 @@ class UpdateDialogState extends State<UpdateDialog> {
                   const Spacer(),
                   IconButton(
                     onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.close, color: Colors.white),
+                    icon: Icon(Icons.close, color: theme.colorScheme.onPrimary),
                   ),
                 ],
               ),
@@ -784,7 +798,7 @@ class UpdateDialogState extends State<UpdateDialog> {
                       // Force Visible Toggle
                       Container(
                         decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey.shade300),
+                          border: Border.all(color: theme.colorScheme.outline),
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: SwitchListTile(
@@ -805,7 +819,7 @@ class UpdateDialogState extends State<UpdateDialog> {
                           },
                           secondary: Icon(
                             _forceVisible ? Icons.visibility : Icons.visibility_off,
-                            color: _forceVisible ? Colors.green : Colors.grey,
+                            color: _forceVisible ? Colors.green : theme.colorScheme.onSurface.withValues(alpha: 0.6),
                           ),
                         ),
                       ),
@@ -813,7 +827,7 @@ class UpdateDialogState extends State<UpdateDialog> {
                       // Scheduled Visibility Toggle
                       Container(
                         decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey.shade300),
+                          border: Border.all(color: theme.colorScheme.outline),
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: Column(
@@ -834,7 +848,7 @@ class UpdateDialogState extends State<UpdateDialog> {
                               },
                               secondary: Icon(
                                 _enableScheduledVisibility ? Icons.schedule : Icons.schedule_outlined,
-                                color: _enableScheduledVisibility && !_forceVisible ? Colors.blue : Colors.grey,
+                                color: _enableScheduledVisibility && !_forceVisible ? Colors.blue : theme.colorScheme.onSurface.withValues(alpha: 0.6),
                               ),
                             ),
                             if (_enableScheduledVisibility && !_forceVisible) ...[
@@ -932,7 +946,7 @@ class UpdateDialogState extends State<UpdateDialog> {
                   ElevatedButton(
                     onPressed: _saveUpdate,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.primaryColor,
+                      backgroundColor: theme.colorScheme.primary,
                       foregroundColor: Colors.white,
                     ),
                     child: Text(widget.existingUpdate != null ? 'Update' : 'Create'),

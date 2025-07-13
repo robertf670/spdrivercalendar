@@ -1,4 +1,26 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.14.11': [
+    {
+      'title': 'Fixed Spare Duty Bus Assignment Issues',
+      'description': 'Resolved critical issue where adding or removing buses from spare duties would cause the duty to disappear entirely. Bus assignments now work reliably without deleting the assigned duty. Fixed race conditions in dialog refresh mechanisms that were causing data loss.',
+    },
+    {
+      'title': 'Enhanced Bus Assignment UI Updates',
+      'description': 'Fixed "No Bus Assigned" status not updating after adding a bus to half duties (e.g., PZ1/26A). The dialog now properly refreshes to show "Assigned Bus" with the bus number immediately after assignment. All bus assignment status displays now update correctly in real-time.',
+    },
+    {
+      'title': 'Improved Full Duty Bus Assignment',
+      'description': 'Enhanced bus assignment interface for full duties (non-A/B suffix) to properly support both first and second half bus assignments. Fixed bus removal buttons to only clear the bus assignment without affecting the duty itself. Bus assignments now persist correctly when duties are changed.',
+    },
+    {
+      'title': 'Comprehensive Data Loss Prevention',
+      'description': 'Implemented enhanced error handling, automatic backup mechanisms, and data validation to prevent spare duties and holidays from disappearing. Added robust save operation synchronization and corruption detection to ensure all user data remains safe and accessible.',
+    },
+    {
+      'title': 'Real-Time Full Duty Bus Assignment Updates',
+      'description': 'Fixed dialog refresh issue where "1st Half" and "2nd Half" bus assignment buttons would remain visible even after successfully assigning buses. The dialog now updates immediately to show assigned bus information and removal options, providing instant visual feedback for all full duty bus assignment actions.',
+    },
+  ],
   '2.14.10': [
     {
       'title': 'Added Depot Administrator Contact',

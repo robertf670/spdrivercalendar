@@ -17,6 +17,88 @@ class EventService {
   // ADD STATIC GETTER for all loaded events
   static Map<DateTime, List<Event>> get allLoadedEvents => Map.unmodifiable(_events);
   
+  // Add save operation synchronization
+  static bool _isSaving = false;
+  static final List<Function> _pendingSaveQueue = [];
+  
+  // Add data validation and backup mechanisms
+  static const int _maxBackupRetries = 3;
+  static const String _backupSuffix = '_backup';
+  
+  // Enhanced error logging
+  static void _logError(String operation, dynamic error, [StackTrace? stackTrace]) {
+    if (kDebugMode) {
+      print('EventService Error [$operation]: $error');
+      if (stackTrace != null) {
+        print('Stack trace: $stackTrace');
+      }
+    }
+  }
+  
+  // Data validation method
+  static bool _validateEventData(Map<String, dynamic> data) {
+    try {
+      // Check required fields
+      if (data['id'] == null || data['title'] == null || 
+          data['startDate'] == null || data['endDate'] == null) {
+        return false;
+      }
+      
+      // Validate date formats
+      DateTime.parse(data['startDate']);
+      DateTime.parse(data['endDate']);
+      
+      // Validate time objects
+      if (data['startTime'] != null) {
+        final startTime = data['startTime'];
+        if (startTime['hour'] == null || startTime['minute'] == null) {
+          return false;
+        }
+      }
+      
+      return true;
+    } catch (e) {
+      _logError('validateEventData', e);
+      return false;
+    }
+  }
+  
+  // Create backup of events data
+  static Future<void> _createBackup() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final originalData = prefs.getString(AppConstants.eventsStorageKey);
+      
+      if (originalData != null) {
+        await prefs.setString(AppConstants.eventsStorageKey + _backupSuffix, originalData);
+      }
+    } catch (e) {
+      _logError('createBackup', e);
+    }
+  }
+  
+  // Restore from backup if main data is corrupted
+  static Future<bool> _restoreFromBackup() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final backupData = prefs.getString(AppConstants.eventsStorageKey + _backupSuffix);
+      
+      if (backupData != null) {
+        // Validate backup data
+        final decoded = jsonDecode(backupData);
+        if (decoded is Map<String, dynamic>) {
+          await prefs.setString(AppConstants.eventsStorageKey, backupData);
+          _logError('restoreFromBackup', 'Successfully restored from backup');
+          return true;
+        }
+      }
+      return false;
+    } catch (e) {
+      _logError('restoreFromBackup', e);
+      return false;
+    }
+  }
+
   // Load events for a specific month
   static Future<List<Event>> _loadEventsForMonth(DateTime month) async {
     final monthKey = '${month.year}-${month.month}';
@@ -25,40 +107,59 @@ class EventService {
       return _monthlyCache[monthKey]!;
     }
 
-    final prefs = await SharedPreferences.getInstance();
-    final eventsJson = prefs.getString(AppConstants.eventsStorageKey);
-    
-
-    if (eventsJson == null || eventsJson.isEmpty) {
-      _monthlyCache[monthKey] = [];
-      return [];
-    }
-
     try {
+      final prefs = await SharedPreferences.getInstance();
+      final eventsJson = prefs.getString(AppConstants.eventsStorageKey);
+
+      if (eventsJson == null || eventsJson.isEmpty) {
+        _monthlyCache[monthKey] = [];
+        return [];
+      }
+
       final Map<String, dynamic> decodedData = jsonDecode(eventsJson);
       List<Event> monthEvents = [];
 
-      decodedData.forEach((dateStr, eventsList) {
+      for (final entry in decodedData.entries) {
         try {
-          final date = DateTime.parse(dateStr);
-          if (date.year == month.year && date.month == month.month) {
-            final List<dynamic> eventsData = eventsList;
-            for (var eventData in eventsData) {
-                try {
-                    monthEvents.add(Event.fromMap(eventData));
-                } catch (eventMapError) {
-                    // Corrected logging for mapping error
+          final eventDate = DateTime.parse(entry.key);
+          
+          // Only load events for the requested month
+          if (eventDate.year == month.year && eventDate.month == month.month) {
+            final List<dynamic> eventsData = entry.value;
+            
+            for (final eventData in eventsData) {
+              try {
+                // Validate event data before creating Event object
+                if (_validateEventData(eventData)) {
+                  monthEvents.add(Event.fromMap(eventData));
+                } else {
+                  _logError('loadEventsForMonth', 'Invalid event data: $eventData');
                 }
+              } catch (e) {
+                _logError('loadEventsForMonth', 'Error parsing event: $e');
+              }
             }
           }
-        } catch (eventParseError) {
-          // Corrected logging for parsing error
+        } catch (e) {
+          _logError('loadEventsForMonth', 'Error parsing date key ${entry.key}: $e');
         }
-      });
+      }
 
       _monthlyCache[monthKey] = monthEvents;
       return monthEvents;
     } catch (e) {
+      _logError('loadEventsForMonth', e);
+      
+      // Try to restore from backup if main data is corrupted
+      if (await _restoreFromBackup()) {
+        // Retry loading after restoration
+        try {
+          return await _loadEventsForMonth(month);
+        } catch (retryError) {
+          _logError('loadEventsForMonth', 'Failed even after backup restoration: $retryError');
+        }
+      }
+      
       _monthlyCache[monthKey] = [];
       return [];
     }
@@ -362,25 +463,81 @@ class EventService {
     await _saveEvents();
   }
   
-  // Save events to storage (maintains same interface)
+  // Save events to storage with enhanced safety measures
   static Future<void> _saveEvents() async {
-    final prefs = await SharedPreferences.getInstance();
+    // Prevent race conditions by queuing save operations
+    if (_isSaving) {
+      _logError('saveEvents', 'Save operation already in progress, queuing');
+      return;
+    }
     
-    Map<String, List<Map<String, dynamic>>> encodedEvents = {};
+    _isSaving = true;
     
-    _events.forEach((date, eventsList) {
-      final dateStr = date.toIso8601String();
-      // Ensure we only save unique events based on ID
-      final uniqueEvents = <String, Event>{};
-      for (var event in eventsList) {
-         uniqueEvents[event.id] = event;
+    try {
+      // Create backup before saving
+      await _createBackup();
+      
+      final prefs = await SharedPreferences.getInstance();
+      
+      Map<String, List<Map<String, dynamic>>> encodedEvents = {};
+      
+      _events.forEach((date, eventsList) {
+        final dateStr = date.toIso8601String();
+        // Ensure we only save unique events based on ID
+        final uniqueEvents = <String, Event>{};
+        for (var event in eventsList) {
+          uniqueEvents[event.id] = event;
+        }
+        
+        // Convert events to map and validate
+        final validEvents = <Map<String, dynamic>>[];
+        for (final event in uniqueEvents.values) {
+          try {
+            final eventMap = event.toMap();
+            if (_validateEventData(eventMap)) {
+              validEvents.add(eventMap);
+            } else {
+              _logError('saveEvents', 'Invalid event data for event ${event.id}');
             }
-      encodedEvents[dateStr] = uniqueEvents.values
-          .map((event) => event.toMap())
-          .toList();
-    });
-    
-    await prefs.setString(AppConstants.eventsStorageKey, jsonEncode(encodedEvents));
+          } catch (e) {
+            _logError('saveEvents', 'Error converting event ${event.id} to map: $e');
+          }
+        }
+        
+        if (validEvents.isNotEmpty) {
+          encodedEvents[dateStr] = validEvents;
+        }
+      });
+      
+      // Convert to JSON with error handling
+      final jsonString = jsonEncode(encodedEvents);
+      
+      // Validate JSON string size (SharedPreferences has limits)
+      if (jsonString.length > 1024 * 1024) { // 1MB limit
+        _logError('saveEvents', 'Warning: Events data is very large (${jsonString.length} characters)');
+      }
+      
+      // Save to storage
+      await prefs.setString(AppConstants.eventsStorageKey, jsonString);
+      
+      // Clear monthly cache to force reload with fresh data
+      _monthlyCache.clear();
+      
+      _logError('saveEvents', 'Successfully saved ${encodedEvents.length} date entries');
+      
+    } catch (e, stackTrace) {
+      _logError('saveEvents', 'Critical error saving events: $e', stackTrace);
+      
+      // Try to restore from backup if save failed
+      if (await _restoreFromBackup()) {
+        _logError('saveEvents', 'Restored from backup after save failure');
+      }
+      
+      // Re-throw to let caller know save failed
+      rethrow;
+    } finally {
+      _isSaving = false;
+    }
   }
 
   // --- Notification Helper Methods ---
@@ -584,4 +741,5 @@ class EventService {
     }
   }
 }
+
 

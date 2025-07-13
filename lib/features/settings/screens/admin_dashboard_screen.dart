@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:spdrivercalendar/theme/app_theme.dart';
 import 'admin_panel_screen.dart';
 import 'user_analytics_screen.dart';
 
@@ -7,12 +8,15 @@ class AdminDashboardScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDarkMode = theme.brightness == Brightness.dark;
+    
     return Scaffold(
       appBar: AppBar(
         title: const Text('Admin Dashboard'),
         elevation: 0,
-        backgroundColor: Colors.red.shade600,
-        foregroundColor: Colors.white,
+        backgroundColor: theme.colorScheme.primary,
+        foregroundColor: theme.colorScheme.onPrimary,
       ),
       body: Container(
         decoration: BoxDecoration(
@@ -20,8 +24,8 @@ class AdminDashboardScreen extends StatelessWidget {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              Colors.red.shade50,
-              Colors.white,
+              theme.colorScheme.primary.withValues(alpha: 0.05),
+              theme.colorScheme.surface,
             ],
           ),
         ),
@@ -36,11 +40,11 @@ class AdminDashboardScreen extends StatelessWidget {
                   width: double.infinity,
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: theme.cardColor,
                     borderRadius: BorderRadius.circular(12),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.grey.withValues(alpha: 0.1),
+                        color: theme.shadowColor.withValues(alpha: 0.1),
                         blurRadius: 4,
                         offset: const Offset(0, 2),
                       ),
@@ -53,14 +57,13 @@ class AdminDashboardScreen extends StatelessWidget {
                         children: [
                           Icon(
                             Icons.admin_panel_settings,
-                            color: Colors.red.shade600,
+                            color: theme.colorScheme.primary,
                             size: 28,
                           ),
                           const SizedBox(width: 12),
-                          const Text(
+                          Text(
                             'Admin Dashboard',
-                            style: TextStyle(
-                              fontSize: 20,
+                            style: theme.textTheme.headlineSmall?.copyWith(
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -69,9 +72,8 @@ class AdminDashboardScreen extends StatelessWidget {
                       const SizedBox(height: 8),
                       Text(
                         'Manage app features and monitor system health',
-                        style: TextStyle(
-                          color: Colors.grey.shade600,
-                          fontSize: 14,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
                         ),
                       ),
                     ],
@@ -137,6 +139,8 @@ class AdminDashboardScreen extends StatelessWidget {
     required Color color,
     required VoidCallback onTap,
   }) {
+    final theme = Theme.of(context);
+    
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(
@@ -165,18 +169,16 @@ class AdminDashboardScreen extends StatelessWidget {
               const SizedBox(height: 12),
               Text(
                 title,
-                style: const TextStyle(
+                style: theme.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.bold,
-                  fontSize: 16,
                 ),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 4),
               Text(
                 subtitle,
-                style: TextStyle(
-                  color: Colors.grey.shade600,
-                  fontSize: 12,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -206,11 +208,25 @@ class AdminDashboardScreen extends StatelessWidget {
   }
 
   void _showComingSoon(BuildContext context, String feature) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('$feature - Coming Soon!'),
-        backgroundColor: Colors.blue,
-        behavior: SnackBarBehavior.floating,
+    final theme = Theme.of(context);
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.construction, color: theme.colorScheme.primary),
+            const SizedBox(width: 8),
+            const Text('Coming Soon'),
+          ],
+        ),
+        content: Text('$feature functionality will be available in a future update.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
       ),
     );
   }

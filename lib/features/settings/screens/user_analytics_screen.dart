@@ -48,12 +48,14 @@ class UserAnalyticsScreenState extends State<UserAnalyticsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    
     return Scaffold(
       appBar: AppBar(
         title: const Text('User Analytics'),
         elevation: 0,
-        backgroundColor: Colors.green.shade600,
-        foregroundColor: Colors.white,
+        backgroundColor: theme.colorScheme.primary,
+        foregroundColor: theme.colorScheme.onPrimary,
       ),
       body: Container(
         decoration: BoxDecoration(
@@ -61,8 +63,8 @@ class UserAnalyticsScreenState extends State<UserAnalyticsScreen> {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              Colors.green.shade50,
-              Colors.white,
+              theme.colorScheme.primary.withValues(alpha: 0.05),
+              theme.colorScheme.surface,
             ],
           ),
         ),
@@ -87,14 +89,13 @@ class UserAnalyticsScreenState extends State<UserAnalyticsScreen> {
                           children: [
                             Icon(
                               Icons.analytics,
-                              color: Colors.green.shade600,
+                              color: theme.colorScheme.primary,
                               size: 28,
                             ),
                             const SizedBox(width: 12),
-                            const Text(
+                            Text(
                               'User Analytics',
-                              style: TextStyle(
-                                fontSize: 20,
+                              style: theme.textTheme.headlineSmall?.copyWith(
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -103,9 +104,8 @@ class UserAnalyticsScreenState extends State<UserAnalyticsScreen> {
                         const SizedBox(height: 8),
                         Text(
                           'Track app usage and user engagement anonymously',
-                          style: TextStyle(
-                            color: Colors.grey.shade600,
-                            fontSize: 14,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
                           ),
                         ),
                       ],
@@ -176,6 +176,8 @@ class UserAnalyticsScreenState extends State<UserAnalyticsScreen> {
   }
 
   Widget _buildStatusCard() {
+    final theme = Theme.of(context);
+    
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(
@@ -188,12 +190,12 @@ class UserAnalyticsScreenState extends State<UserAnalyticsScreen> {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: Colors.green.withValues(alpha: 0.1),
+                color: theme.colorScheme.primary.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Icon(
                 Icons.check_circle,
-                color: Colors.green,
+                color: theme.colorScheme.primary,
                 size: 24,
               ),
             ),
@@ -202,18 +204,16 @@ class UserAnalyticsScreenState extends State<UserAnalyticsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     'Analytics Active',
-                    style: TextStyle(
+                    style: theme.textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.bold,
-                      fontSize: 16,
                     ),
                   ),
                   Text(
                     'User analytics are being collected anonymously',
-                    style: TextStyle(
-                      color: Colors.grey.shade600,
-                      fontSize: 12,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                     ),
                   ),
                 ],
@@ -226,6 +226,8 @@ class UserAnalyticsScreenState extends State<UserAnalyticsScreen> {
   }
 
   Widget _buildQuickStatsCard() {
+    final theme = Theme.of(context);
+    
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(
@@ -238,11 +240,10 @@ class UserAnalyticsScreenState extends State<UserAnalyticsScreen> {
           children: [
             Row(
               children: [
-                const Text(
+                Text(
                   'Quick Stats',
-                  style: TextStyle(
+                  style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
-                    fontSize: 16,
                   ),
                 ),
                 const Spacer(),
@@ -284,9 +285,8 @@ class UserAnalyticsScreenState extends State<UserAnalyticsScreen> {
               _isLoading 
                   ? 'Loading real-time analytics data...'
                   : 'Real-time data from Firestore analytics tracking',
-              style: TextStyle(
-                color: Colors.grey.shade500,
-                fontSize: 12,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
                 fontStyle: FontStyle.italic,
               ),
             ),
@@ -297,6 +297,8 @@ class UserAnalyticsScreenState extends State<UserAnalyticsScreen> {
   }
 
   Widget _buildStatItem(String label, String value, IconData icon, Color color) {
+    final theme = Theme.of(context);
+    
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -317,9 +319,8 @@ class UserAnalyticsScreenState extends State<UserAnalyticsScreen> {
           ),
           Text(
             label,
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey.shade600,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
             ),
           ),
         ],
@@ -334,6 +335,8 @@ class UserAnalyticsScreenState extends State<UserAnalyticsScreen> {
     required Color color,
     required VoidCallback onTap,
   }) {
+    final theme = Theme.of(context);
+    
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(
@@ -365,16 +368,14 @@ class UserAnalyticsScreenState extends State<UserAnalyticsScreen> {
                   children: [
                     Text(
                       title,
-                      style: const TextStyle(
+                      style: theme.textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
-                        fontSize: 16,
                       ),
                     ),
                     Text(
                       subtitle,
-                      style: TextStyle(
-                        color: Colors.grey.shade600,
-                        fontSize: 12,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                       ),
                     ),
                   ],
@@ -382,7 +383,7 @@ class UserAnalyticsScreenState extends State<UserAnalyticsScreen> {
               ),
               Icon(
                 Icons.arrow_forward_ios,
-                color: Colors.grey.shade400,
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
                 size: 16,
               ),
             ],
@@ -400,15 +401,17 @@ class UserAnalyticsScreenState extends State<UserAnalyticsScreen> {
   }
 
   void _clearAnalyticsData() async {
+    final theme = Theme.of(context);
+    
     // Show confirmation dialog
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.warning, color: Colors.red),
-            SizedBox(width: 8),
-            Text('Clear Analytics Data'),
+            Icon(Icons.warning, color: theme.colorScheme.error),
+            const SizedBox(width: 8),
+            const Text('Clear Analytics Data'),
           ],
         ),
         content: const Text(
@@ -421,7 +424,7 @@ class UserAnalyticsScreenState extends State<UserAnalyticsScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            style: TextButton.styleFrom(foregroundColor: theme.colorScheme.error),
             child: const Text('Clear Data'),
           ),
         ],
@@ -433,15 +436,15 @@ class UserAnalyticsScreenState extends State<UserAnalyticsScreen> {
         await UserActivityService.clearAllData();
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
+            SnackBar(
               content: Row(
                 children: [
-                  Icon(Icons.check_circle, color: Colors.white),
-                  SizedBox(width: 8),
-                  Text('Analytics data cleared successfully'),
+                  Icon(Icons.check_circle, color: theme.colorScheme.onPrimary),
+                  const SizedBox(width: 8),
+                  const Text('Analytics data cleared successfully'),
                 ],
               ),
-              backgroundColor: Colors.green,
+              backgroundColor: theme.colorScheme.primary,
               behavior: SnackBarBehavior.floating,
             ),
           );
@@ -482,14 +485,16 @@ class UserAnalyticsScreenState extends State<UserAnalyticsScreen> {
   }
 
   void _showPrivacyInfo() {
+    final theme = Theme.of(context);
+    
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Row(
+        title: Row(
           children: [
             Icon(Icons.privacy_tip, color: Colors.orange),
-            SizedBox(width: 8),
-            Text('Privacy Information'),
+            const SizedBox(width: 8),
+            const Text('Privacy Information'),
           ],
         ),
         content: SingleChildScrollView(
@@ -497,27 +502,27 @@ class UserAnalyticsScreenState extends State<UserAnalyticsScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
+              Text(
                 'Firebase Analytics Privacy:',
-                style: TextStyle(fontWeight: FontWeight.bold),
+                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
-              const Text('• No personal information is collected'),
-              const Text('• Anonymous user IDs are generated automatically'),
-              const Text('• Users can opt out of analytics'),
-              const Text('• Data is aggregated and anonymized'),
-              const Text('• GDPR compliant'),
+              Text('• No personal information is collected', style: theme.textTheme.bodyMedium),
+              Text('• Anonymous user IDs are generated automatically', style: theme.textTheme.bodyMedium),
+              Text('• Users can opt out of analytics', style: theme.textTheme.bodyMedium),
+              Text('• Data is aggregated and anonymized', style: theme.textTheme.bodyMedium),
+              Text('• GDPR compliant', style: theme.textTheme.bodyMedium),
               const SizedBox(height: 16),
-              const Text(
+              Text(
                 'Data Collected:',
-                style: TextStyle(fontWeight: FontWeight.bold),
+                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
-              const Text('• App launches and sessions'),
-              const Text('• Screen views and navigation patterns'),
-              const Text('• Device type and OS version'),
-              const Text('• Geographic region (country level)'),
-              const Text('• App crashes (for debugging)'),
+              Text('• App launches and sessions', style: theme.textTheme.bodyMedium),
+              Text('• Screen views and navigation patterns', style: theme.textTheme.bodyMedium),
+              Text('• Device type and OS version', style: theme.textTheme.bodyMedium),
+              Text('• Geographic region (country level)', style: theme.textTheme.bodyMedium),
+              Text('• App crashes (for debugging)', style: theme.textTheme.bodyMedium),
             ],
           ),
         ),
@@ -532,6 +537,8 @@ class UserAnalyticsScreenState extends State<UserAnalyticsScreen> {
   }
 
   void _sendTestEvent() async {
+    final theme = Theme.of(context);
+    
     try {
       await analytics.logEvent(
         name: 'admin_test_event',
@@ -545,14 +552,14 @@ class UserAnalyticsScreenState extends State<UserAnalyticsScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Row(
+            content: Row(
               children: [
-                Icon(Icons.check_circle, color: Colors.white),
-                SizedBox(width: 8),
-                Text('Test event sent successfully!'),
+                Icon(Icons.check_circle, color: theme.colorScheme.onPrimary),
+                const SizedBox(width: 8),
+                const Text('Test event sent successfully!'),
               ],
             ),
-            backgroundColor: Colors.green,
+            backgroundColor: theme.colorScheme.primary,
             behavior: SnackBarBehavior.floating,
           ),
         );
