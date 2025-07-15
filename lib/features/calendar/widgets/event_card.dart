@@ -51,6 +51,7 @@ class _EventCardState extends State<EventCard> {
   // Explicit state tracking for bus assignments
   String? _firstHalfBus;
   String? _secondHalfBus;
+  bool _isUpdatingBus = false;
 
   @override
   void initState() {
@@ -2109,6 +2110,7 @@ class _EventCardState extends State<EventCard> {
                         breakStartTime: widget.event.breakStartTime,
                         breakEndTime: widget.event.breakEndTime,
                         assignedDuties: widget.event.assignedDuties,
+                        busAssignments: widget.event.busAssignments, // CRITICAL: Preserve bus assignments
                       );
                       
                       // Add the half indicator if this is a half duty
@@ -2163,6 +2165,7 @@ class _EventCardState extends State<EventCard> {
                           startTime: widget.event.startTime,
                           endDate: widget.event.endDate,
                           endTime: widget.event.endTime,
+                          busAssignments: {},
                         ));
                       }
                     },
@@ -2518,25 +2521,26 @@ class _EventCardState extends State<EventCard> {
                             setState(() {}); // Force rebuild with new duty details
                           }
                           
-                          // Close the current dialog
-                          navigator.pop();
-                          
                           // Force immediate refresh of the parent calendar
                           widget.onEdit(Event(
-                            id: 'refresh_trigger',
+                            id: 'refresh_trigger_${DateTime.now().millisecondsSinceEpoch}',
                             title: '',
                             startDate: widget.event.startDate,
                             startTime: widget.event.startTime,
                             endDate: widget.event.endDate,
                             endTime: widget.event.endTime,
+                            busAssignments: {},
                           ));
                           
-                          // Small delay to ensure calendar state is updated, then reopen dialog
-                          await Future.delayed(const Duration(milliseconds: 200));
-                          
-                          // Reopen the spare shift dialog to show updated duties
-                          if (mounted) {
-                            _showSpareShiftDialog(currentContext);
+                          // Refresh the current dialog state instead of closing/reopening
+                          try {
+                            dialogSetState(() {
+                              // Force dialog to rebuild with updated data
+                            });
+                            print('DEBUG: Dialog state refreshed successfully after duty removal');
+                          } catch (refreshError) {
+                            print('WARNING: Dialog refresh failed, closing dialog: $refreshError');
+                            navigator.pop();
                           }
                         },
                                icon: const Icon(Icons.delete_outline),
@@ -2900,12 +2904,47 @@ class _EventCardState extends State<EventCard> {
   Future<void> _showDutyBusAssignmentDialog(BuildContext context, String dutyCode, [StateSetter? refreshDialog]) async {
     String? busNumber = widget.event.getBusForDuty(dutyCode);
     
+    print('🚌 DIALOG OPEN: $dutyCode | duties: ${widget.event.assignedDuties} | buses: ${widget.event.busAssignments}');
+    
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: Text('Assign Bus to $dutyCode'),
         content: TextField(
-          onChanged: (value) => busNumber = value.isEmpty ? null : value,
+          onChanged: (value) {
+            busNumber = value.isEmpty ? null : value;
+            print('DEBUG: Bus number changed to: $busNumber');
+          },
+          onSubmitted: (value) {
+            print('⌨️ ENTER: "$value" -> $dutyCode | duties=${widget.event.assignedDuties}, buses=${widget.event.busAssignments}');
+            
+            try {
+              String? normalizedBusNumber = value.trim().toUpperCase().replaceAll(' ', '');
+              busNumber = normalizedBusNumber.isEmpty ? null : normalizedBusNumber;
+              
+              Navigator.of(dialogContext).pop();
+              
+              _updateDutyBus(dutyCode, busNumber, refreshDialog).then((_) {
+                print('✅ ENTER SUCCESS: $dutyCode -> $busNumber');
+              }).catchError((error) {
+                print('❌ ENTER ERROR: $error');
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Failed to assign bus: ${error.toString()}'),
+                      backgroundColor: Colors.red,
+                      duration: const Duration(seconds: 3),
+                    ),
+                  );
+                }
+              });
+              
+            } catch (error) {
+              print('ERROR: Failed to process Enter key: $error');
+              // Still close the dialog even if there's an error
+              Navigator.of(dialogContext).pop();
+            }
+          },
           controller: TextEditingController(text: widget.event.getBusForDuty(dutyCode) ?? ''),
           decoration: const InputDecoration(
             labelText: 'Bus Number',
@@ -2921,23 +2960,62 @@ class _EventCardState extends State<EventCard> {
           if (widget.event.getBusForDuty(dutyCode) != null)
             TextButton(
               onPressed: () async {
-                              final navigator = Navigator.of(dialogContext);
-              await _updateDutyBus(dutyCode, null, refreshDialog);
-              navigator.pop();
+                try {
+                  final navigator = Navigator.of(dialogContext);
+                  await _updateDutyBus(dutyCode, null, refreshDialog);
+                  navigator.pop();
+                } catch (error) {
+                  print('ERROR: Failed to remove bus: $error');
+                  // Show error to user but don't close dialog
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Failed to remove bus: ${error.toString()}'),
+                        backgroundColor: Colors.red,
+                        duration: const Duration(seconds: 3),
+                      ),
+                    );
+                  }
+                }
               },
               style: TextButton.styleFrom(foregroundColor: Colors.red),
               child: const Text('Remove Bus'),
             ),
           TextButton(
             onPressed: () async {
-              // Normalize the bus number like other duties
-              String? normalizedBusNumber = busNumber?.trim().toUpperCase();
-              // Remove any spaces
-              normalizedBusNumber = normalizedBusNumber?.replaceAll(' ', '');
+              print('=== ASSIGN BUTTON PRESSED ===');
+              print('DEBUG: Assign button pressed with busNumber: "$busNumber"');
+              print('DEBUG: Current event state before Assign button processing:');
+              print('  - Assigned duties: ${widget.event.assignedDuties}');
+              print('  - Bus assignments: ${widget.event.busAssignments}');
               
-              final navigator = Navigator.of(dialogContext);
-              await _updateDutyBus(dutyCode, normalizedBusNumber?.isEmpty == true ? null : normalizedBusNumber, refreshDialog);
-              navigator.pop();
+              try {
+                // Normalize the bus number like other duties
+                String? normalizedBusNumber = busNumber?.trim().toUpperCase();
+                // Remove any spaces
+                normalizedBusNumber = normalizedBusNumber?.replaceAll(' ', '');
+                
+                print('DEBUG: Normalized bus number (Assign button): "$normalizedBusNumber"');
+                
+                final navigator = Navigator.of(dialogContext);
+                print('DEBUG: About to call _updateDutyBus from Assign button...');
+                await _updateDutyBus(dutyCode, normalizedBusNumber?.isEmpty == true ? null : normalizedBusNumber, refreshDialog);
+                print('DEBUG: _updateDutyBus completed successfully from Assign button');
+                navigator.pop();
+                print('=== ASSIGN BUTTON PROCESSING COMPLETE ===');
+              } catch (error) {
+                print('ERROR: Failed to assign bus: $error');
+                // Show error to user but don't close dialog
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Failed to assign bus: ${error.toString()}'),
+                      backgroundColor: Colors.red,
+                      duration: const Duration(seconds: 3),
+                    ),
+                  );
+                }
+              }
             },
             child: const Text('Assign'),
           ),
@@ -2948,55 +3026,181 @@ class _EventCardState extends State<EventCard> {
 
   // Update duty bus assignment
   Future<void> _updateDutyBus(String dutyCode, String? newBus, [StateSetter? refreshDialog]) async {
+    print('🚌 BUS UPDATE: ${widget.event.title} ($dutyCode -> $newBus)');
+
+    // Create a snapshot of the original event for safety and rollback
+    final oldEvent = Event(
+      id: widget.event.id,
+      title: widget.event.title,
+      startDate: widget.event.startDate,
+      startTime: widget.event.startTime,
+      endDate: widget.event.endDate,
+      endTime: widget.event.endTime,
+      workTime: widget.event.workTime,
+      breakStartTime: widget.event.breakStartTime,
+      breakEndTime: widget.event.breakEndTime,
+      assignedDuties: widget.event.assignedDuties?.map((d) => d).toList(),
+      enhancedAssignedDuties: widget.event.enhancedAssignedDuties?.map((d) => d.copyWith()).toList(),
+      firstHalfBus: widget.event.firstHalfBus,
+      secondHalfBus: widget.event.secondHalfBus,
+      busAssignments: widget.event.busAssignments?.map((k, v) => MapEntry(k, v)),
+      isHoliday: widget.event.isHoliday,
+      holidayType: widget.event.holidayType,
+      notes: widget.event.notes,
+      hasLateBreak: widget.event.hasLateBreak,
+      tookFullBreak: widget.event.tookFullBreak,
+      overtimeDuration: widget.event.overtimeDuration,
+    );
+    
+    print('DEBUG: Created oldEvent snapshot with duties: ${oldEvent.assignedDuties} and buses: ${oldEvent.busAssignments}');
+    
+    // Validate that we can modify this duty
+    if (widget.event.assignedDuties == null) {
+      print('ERROR: Cannot assign bus - no duties assigned to this event');
+      return;
+    }
+    
+    if (widget.event.assignedDuties != null && 
+        !widget.event.assignedDuties!.contains(dutyCode)) {
+      print('ERROR: Duty $dutyCode no longer exists in assigned duties');
+      return;
+    }
+    
+    print('DEBUG: Validation passed - duty $dutyCode exists in ${widget.event.assignedDuties}');
+    
+    // Update the bus assignment in a controlled way
+    if (newBus == null || newBus.trim().isEmpty) {
+      // Remove bus assignment
+      widget.event.busAssignments?.remove(dutyCode);
+      if (widget.event.busAssignments?.isEmpty == true) {
+        widget.event.busAssignments = null;
+      }
+      print('DEBUG: Removed bus assignment for duty $dutyCode');
+    } else {
+      // Add/update bus assignment
+      widget.event.busAssignments ??= {};
+      widget.event.busAssignments![dutyCode] = newBus.trim();
+      print('DEBUG: Set bus $newBus for duty $dutyCode');
+    }
+    
+    print('DEBUG: Bus assignment update completed');
+    print('DEBUG: Updated event state AFTER bus assignment:');
+    print('  - Assigned duties: ${widget.event.assignedDuties}');
+    print('  - Bus assignments: ${widget.event.busAssignments}');
+    print('  - First half bus: ${widget.event.firstHalfBus}');
+    print('  - Second half bus: ${widget.event.secondHalfBus}');
+    
+    // Save the updated event with enhanced error handling
     try {
-      // Create a copy of the old event
-      final oldEvent = Event(
-        id: widget.event.id,
-        title: widget.event.title,
-        startDate: widget.event.startDate,
-        startTime: widget.event.startTime,
-        endDate: widget.event.endDate,
-        endTime: widget.event.endTime,
-        assignedDuties: widget.event.assignedDuties,
-        busAssignments: widget.event.busAssignments,
-      );
+      print('DEBUG: About to call EventService.updateEvent...');
+      print('DEBUG: oldEvent for update - duties: ${oldEvent.assignedDuties}, buses: ${oldEvent.busAssignments}');
+      print('DEBUG: newEvent for update - duties: ${widget.event.assignedDuties}, buses: ${widget.event.busAssignments}');
       
-      // Update the bus assignment
-      widget.event.setBusForDuty(dutyCode, newBus);
-      
-      // Debug: Print the current bus assignments
-      print('DEBUG: Updated bus assignments: ${widget.event.busAssignments}');
-      print('DEBUG: Assigned duties: ${widget.event.assignedDuties}');
-      
-      // Save the updated event
       await EventService.updateEvent(oldEvent, widget.event);
+      print('DEBUG: EventService.updateEvent completed successfully');
       
-      // Force refresh the cache to ensure UI shows updated data
-      await EventService.refreshMonthCache(widget.event.startDate);
+      // CRITICAL FIX: Verify the save was successful by reading back the data
+      print('DEBUG: Starting post-save verification...');
+      await Future.delayed(const Duration(milliseconds: 100)); // Small delay to ensure save is complete
       
-      // Refresh the UI
-      if (mounted) {
-        setState(() {});
-        
-        // Force refresh the parent calendar
-        widget.onEdit(Event(
-          id: 'refresh_trigger',
+      final verificationEvents = EventService.getEventsForDay(widget.event.startDate);
+      print('DEBUG: Retrieved ${verificationEvents.length} events for verification on ${widget.event.startDate}');
+      
+      final savedEvent = verificationEvents.firstWhere(
+        (e) => e.id == widget.event.id,
+        orElse: () => Event(
+          id: '',
           title: '',
           startDate: widget.event.startDate,
           startTime: widget.event.startTime,
           endDate: widget.event.endDate,
           endTime: widget.event.endTime,
-        ));
-        
-        // Use callback to refresh dialog if provided
-        if (refreshDialog != null) {
-          refreshDialog(() {});
-        }
+          busAssignments: {},
+        ),
+      );
+      
+      if (savedEvent.id.isEmpty) {
+        throw Exception('Event verification failed - event not found after save');
       }
-    } catch (e) {
-      print('ERROR in _updateDutyBus: $e');
+      
+      print('DEBUG: Found saved event during verification:');
+      print('  - Event ID: ${savedEvent.id}');
+      print('  - Title: ${savedEvent.title}');
+      print('  - Assigned duties: ${savedEvent.assignedDuties}');
+      print('  - Bus assignments: ${savedEvent.busAssignments}');
+      
+      if (savedEvent.assignedDuties == null || 
+          savedEvent.assignedDuties!.length != widget.event.assignedDuties?.length ||
+          (widget.event.busAssignments != null && savedEvent.busAssignments == null)) {
+        throw Exception('Event verification failed - data mismatch after save. Expected duties: ${widget.event.assignedDuties}, got: ${savedEvent.assignedDuties}. Expected buses: ${widget.event.busAssignments}, got: ${savedEvent.busAssignments}');
+      }
+      
+      print('DEBUG: Event save verification successful - duties: ${savedEvent.assignedDuties}, buses: ${savedEvent.busAssignments}');
+    } catch (saveError) {
+      print('ERROR: Failed to save event update: $saveError');
+      
+      // Restore the original event state on save failure
+      widget.event.assignedDuties = oldEvent.assignedDuties?.map((d) => d).toList();
+      widget.event.busAssignments = oldEvent.busAssignments?.map((k, v) => MapEntry(k, v));
+      widget.event.firstHalfBus = oldEvent.firstHalfBus;
+      widget.event.secondHalfBus = oldEvent.secondHalfBus;
+      
+      print('DEBUG: Restored original event state due to save error');
+      
+      // Re-throw to let the caller handle the error
       rethrow;
     }
+    
+    // Force refresh the cache to ensure UI shows updated data
+    try {
+      print('DEBUG: Refreshing event cache...');
+      await EventService.refreshEventInCache(widget.event.id, widget.event.startDate);
+      print('DEBUG: Successfully refreshed event cache');
+      
+      // CRITICAL FIX: Force complete cache synchronization to prevent old cached data
+      print('DEBUG: Starting forced cache synchronization...');
+      await EventService.forceCacheSynchronization(widget.event.startDate);
+      print('DEBUG: Forced cache synchronization completed');
+      
+    } catch (cacheError) {
+      print('WARNING: Failed to refresh cache: $cacheError');
+      // Don't fail the entire operation for cache refresh issues
+    }
+    
+    // Update UI in a controlled manner
+    if (mounted) {
+      print('DEBUG: Updating UI state after successful bus assignment');
+      setState(() {
+        // Update state variables
+        if (dutyCode.endsWith('A')) {
+          _firstHalfBus = newBus;
+        } else if (dutyCode.endsWith('B')) {
+          _secondHalfBus = newBus;
+        }
+      });
+      
+      // CRITICAL: Refresh the dialog if refreshDialog function was provided
+      if (refreshDialog != null) {
+        print('DEBUG: Refreshing dialog state after bus assignment');
+        refreshDialog(() {
+          // Dialog state refreshed - the UI will automatically update
+        });
+      }
+      
+      // CRITICAL: Force parent to refresh by triggering onEdit callback
+      widget.onEdit(Event(
+        id: 'refresh_trigger_bus_${DateTime.now().millisecondsSinceEpoch}',
+        title: '',
+        startDate: widget.event.startDate,
+        startTime: widget.event.startTime,
+        endDate: widget.event.endDate,
+        endTime: widget.event.endTime,
+        busAssignments: {},
+      ));
+      
+    }
+    
+    print('🚌 BUS UPDATE COMPLETE: ${widget.event.title} | duties=${widget.event.assignedDuties}, buses=${widget.event.busAssignments}');
   }
 
   // Show bus assignment dialog for full duties
@@ -3219,21 +3423,25 @@ class _EventCardState extends State<EventCard> {
                           _secondHalfBus = null;
                         });
                         widget.onEdit(Event(
-                          id: 'refresh_trigger',
+                          id: 'refresh_trigger_${DateTime.now().millisecondsSinceEpoch}',
                           title: '',
                           startDate: widget.event.startDate,
                           startTime: widget.event.startTime,
                           endDate: widget.event.endDate,
                           endTime: widget.event.endTime,
+                          busAssignments: {},
                         ));
                         
-                        // Close and reopen the dialog to show updated state
-                        Navigator.of(context).pop(); // Close current dialog
-                        Future.delayed(const Duration(milliseconds: 100), () {
-                          if (mounted) {
-                            _showSpareShiftDialog(context); // Reopen dialog
-                          }
-                        });
+                        // Refresh the current dialog state instead of closing/reopening
+                        try {
+                          dialogSetState(() {
+                            // Force dialog to rebuild with updated data
+                          });
+                          print('DEBUG: Full duty dialog state refreshed successfully');
+                        } catch (refreshError) {
+                          print('WARNING: Full duty dialog refresh failed, closing dialog: $refreshError');
+                          Navigator.of(context).pop();
+                        }
                       }
                     },
                     tooltip: 'Remove duty',
@@ -3401,6 +3609,7 @@ class _EventCardState extends State<EventCard> {
                           endDate: widget.event.endDate,
                           endTime: widget.event.endTime,
                           assignedDuties: widget.event.assignedDuties,
+                          busAssignments: widget.event.busAssignments, // CRITICAL: Preserve bus assignments
                           firstHalfBus: widget.event.firstHalfBus,
                           secondHalfBus: widget.event.secondHalfBus,
                         );
@@ -3445,6 +3654,7 @@ class _EventCardState extends State<EventCard> {
                           endDate: widget.event.endDate,
                           endTime: widget.event.endTime,
                           assignedDuties: widget.event.assignedDuties,
+                          busAssignments: widget.event.busAssignments, // CRITICAL: Preserve bus assignments
                           firstHalfBus: widget.event.firstHalfBus,
                           secondHalfBus: widget.event.secondHalfBus,
                         );

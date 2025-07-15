@@ -401,6 +401,18 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
     List<Event> events = EventService.getEventsForDay(day);
     List<Event> holidayEvents = [];
     
+    // Debug: Log event retrieval for troubleshooting
+    if (kDebugMode && _selectedDay != null && isSameDay(_selectedDay!, day)) {
+      debugPrint('CalendarScreen: Getting events for selected day ${day.toIso8601String()}: ${events.length} events found');
+      for (final event in events) {
+        debugPrint('  - Event: ${event.title} (ID: ${event.id})');
+        if (event.title.startsWith('SP') && event.assignedDuties != null) {
+          debugPrint('    Assigned duties: ${event.assignedDuties}');
+          debugPrint('    Bus assignments: ${event.busAssignments}');
+        }
+      }
+    }
+    
     // First, check for holidays and create holiday events
     for (final holiday in _holidays) {
       if (holiday.containsDate(day)) {
@@ -937,6 +949,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                           startTime: const TimeOfDay(hour: 0, minute: 0),
                           endDate: _selectedDay ?? DateTime.now(),
                           endTime: const TimeOfDay(hour: 0, minute: 0),
+                          busAssignments: {},
                         ));
                       }
                     },
@@ -1253,8 +1266,8 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
   }
 
   void _editEvent(Event event) {
-    // If this is a refresh trigger, force a complete refresh
-    if (event.id == 'refresh_trigger') {
+    // If this is a refresh trigger (with any suffix), force a complete refresh
+    if (event.id == 'refresh_trigger' || event.id.startsWith('refresh_trigger_')) {
       // Force reload events for the current selected day
       if (_selectedDay != null) {
         EventService.preloadMonth(_selectedDay!).then((_) {
@@ -1733,6 +1746,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                                           assignedDuties: event.assignedDuties,
                                           firstHalfBus: event.firstHalfBus,
                                           secondHalfBus: event.secondHalfBus,
+                                          busAssignments: event.busAssignments,
                                           notes: event.notes,
                                         );
                                         
@@ -1748,6 +1762,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                                           breakStartTime: event.breakStartTime,
                                           breakEndTime: event.breakEndTime,
                                           assignedDuties: event.assignedDuties,
+                                          busAssignments: event.busAssignments, // CRITICAL: Preserve bus assignments
                                           firstHalfBus: null, // Remove first half bus
                                           secondHalfBus: event.secondHalfBus,
                                           notes: event.notes,
@@ -1826,6 +1841,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                                           assignedDuties: event.assignedDuties,
                                           firstHalfBus: event.firstHalfBus,
                                           secondHalfBus: event.secondHalfBus,
+                                          busAssignments: event.busAssignments,
                                           notes: event.notes,
                                         );
                                         
@@ -1841,6 +1857,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                                           breakStartTime: event.breakStartTime,
                                           breakEndTime: event.breakEndTime,
                                           assignedDuties: event.assignedDuties,
+                                          busAssignments: event.busAssignments, // CRITICAL: Preserve bus assignments
                                           firstHalfBus: event.firstHalfBus,
                                           secondHalfBus: null, // Remove second half bus
                                           notes: event.notes, // Add this line
@@ -1925,6 +1942,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                                       breakStartTime: event.breakStartTime,
                                       breakEndTime: event.breakEndTime,
                                       assignedDuties: event.assignedDuties,
+                                      busAssignments: event.busAssignments, // CRITICAL: Preserve bus assignments
                                       firstHalfBus: result,
                                       secondHalfBus: event.secondHalfBus,
                                     );
@@ -1988,6 +2006,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                                           assignedDuties: event.assignedDuties,
                                           firstHalfBus: event.firstHalfBus,
                                           secondHalfBus: event.secondHalfBus,
+                                          busAssignments: event.busAssignments,
                                         );
                                         
                                         // Show the bus assignment dialog
@@ -2036,6 +2055,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                                             breakStartTime: event.breakStartTime,
                                             breakEndTime: event.breakEndTime,
                                             assignedDuties: event.assignedDuties,
+                                            busAssignments: event.busAssignments, // CRITICAL: Preserve bus assignments
                                             firstHalfBus: result,
                                             secondHalfBus: event.secondHalfBus,
                                             notes: event.notes, // Add this line
@@ -2097,6 +2117,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                                           assignedDuties: event.assignedDuties,
                                           firstHalfBus: event.firstHalfBus,
                                           secondHalfBus: event.secondHalfBus,
+                                          busAssignments: event.busAssignments,
                                         );
                                         
                                         // Show the bus assignment dialog
@@ -2145,6 +2166,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                                             breakStartTime: event.breakStartTime,
                                             breakEndTime: event.breakEndTime,
                                             assignedDuties: event.assignedDuties,
+                                            busAssignments: event.busAssignments, // CRITICAL: Preserve bus assignments
                                             firstHalfBus: event.firstHalfBus,
                                             secondHalfBus: result,
                                             notes: event.notes, // Add this line
@@ -2614,6 +2636,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                   assignedDuties: event.assignedDuties,
                   firstHalfBus: event.firstHalfBus,
                   secondHalfBus: event.secondHalfBus,
+                  busAssignments: event.busAssignments,
                   isHoliday: event.isHoliday,
                   holidayType: event.holidayType,
                   notes: event.notes,
@@ -2725,6 +2748,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                   assignedDuties: event.assignedDuties,
                   firstHalfBus: event.firstHalfBus,
                   secondHalfBus: event.secondHalfBus,
+                  busAssignments: event.busAssignments,
                   notes: event.notes,
                   hasLateBreak: event.hasLateBreak,
                   tookFullBreak: event.tookFullBreak,
@@ -2761,6 +2785,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                   startTime: const TimeOfDay(hour: 0, minute: 0),
                   endDate: DateTime.now(),
                   endTime: const TimeOfDay(hour: 0, minute: 0),
+                  busAssignments: {},
                 ));
               },
               style: TextButton.styleFrom(
@@ -2820,6 +2845,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                 startTime: const TimeOfDay(hour: 0, minute: 0),
                 endDate: DateTime.now(),
                 endTime: const TimeOfDay(hour: 0, minute: 0),
+                busAssignments: {},
               ));
             },
             child: const Text('Full Break'),
@@ -2901,6 +2927,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                       breakStartTime: event.breakStartTime,
                       breakEndTime: event.breakEndTime,
                       assignedDuties: event.assignedDuties,
+                      busAssignments: event.busAssignments, // CRITICAL: Preserve bus assignments
                       firstHalfBus: event.firstHalfBus,
                       secondHalfBus: event.secondHalfBus,
                       notes: event.notes,
@@ -2939,6 +2966,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                       startTime: const TimeOfDay(hour: 0, minute: 0),
                       endDate: DateTime.now(),
                       endTime: const TimeOfDay(hour: 0, minute: 0),
+                      busAssignments: {},
                     ));
                   },
                   child: const Text('1 Hour (Common)'),
@@ -2967,6 +2995,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                   breakStartTime: event.breakStartTime,
                   breakEndTime: event.breakEndTime,
                   assignedDuties: event.assignedDuties,
+                  busAssignments: event.busAssignments, // CRITICAL: Preserve bus assignments
                   firstHalfBus: event.firstHalfBus,
                   secondHalfBus: event.secondHalfBus,
                   notes: event.notes,
@@ -3005,6 +3034,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                   startTime: const TimeOfDay(hour: 0, minute: 0),
                   endDate: DateTime.now(),
                   endTime: const TimeOfDay(hour: 0, minute: 0),
+                  busAssignments: {},
                 ));
               },
               child: const Text('Save'),
@@ -3213,7 +3243,25 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
           selectedDayPredicate: (day) {
             return isSameDay(_selectedDay, day);
           },
-          onDaySelected: (selectedDay, focusedDay) {
+          onDaySelected: (selectedDay, focusedDay) async {
+            // Check if we're returning to a day that might have missing events
+            if (_selectedDay != null && selectedDay != _selectedDay) {
+              // Force reload events for the selected day to ensure data is current
+              try {
+                await EventService.preloadMonth(selectedDay);
+                
+                // CRITICAL FIX: Additional validation for spare duty data integrity during navigation
+                final selectedDayEvents = EventService.getEventsForDay(selectedDay);
+                for (final event in selectedDayEvents) {
+                  if (event.title.startsWith('SP') && event.assignedDuties != null && event.assignedDuties!.isNotEmpty) {
+                    debugPrint('Navigation check - Spare duty: ${event.title} has duties: ${event.assignedDuties} and buses: ${event.busAssignments}');
+                  }
+                }
+              } catch (e) {
+                debugPrint('Warning: Failed to preload month for selected day: $e');
+              }
+            }
+            
             setState(() {
               _selectedDay = selectedDay;
               _focusedDay = focusedDay;
@@ -3569,13 +3617,20 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
   }
 
   void _showStatisticsPage() {
-    // Fetch all loaded events directly from the service
-    final allEvents = EventService.allLoadedEvents;
+    // Fetch all loaded events directly from the service and convert string keys to DateTime keys
+    final allEventsWithStringKeys = EventService.allLoadedEvents;
+    
+    // Convert string keys back to DateTime keys for StatisticsScreen
+    final Map<DateTime, List<Event>> allEvents = {};
+    for (final entry in allEventsWithStringKeys.entries) {
+      final dateKey = DateTime.parse(entry.key);
+      allEvents[dateKey] = entry.value;
+    }
 
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => StatisticsScreen(
-          events: allEvents, // Pass the fetched events
+          events: allEvents, // Pass the converted events
         ),
       ),
     );
@@ -4958,6 +5013,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                                 startTime: const TimeOfDay(hour: 0, minute: 0),
                                 endDate: DateTime.now(),
                                 endTime: const TimeOfDay(hour: 0, minute: 0),
+                                busAssignments: {},
                               ));
                             }
                           } catch (e) {

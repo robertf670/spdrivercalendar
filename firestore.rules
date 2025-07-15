@@ -1,0 +1,31 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Live Updates Collection
+    // All users can read (for banners and live updates screen)
+    // Anyone can write (admin access controlled at app level)
+    match /live_updates/{document} {
+      allow read: if true;
+      allow write: if true;
+    }
+    
+    // User Activity Collections  
+    // For anonymous analytics tracking
+    match /daily_activity/{document} {
+      allow read: if true;  // For admin analytics dashboard
+      allow write: if true; // For anonymous user activity tracking
+    }
+    
+    match /user_activity/{document} {
+      allow read: if true;  // For admin analytics dashboard
+      allow write: if true; // For anonymous user activity tracking
+    }
+    
+    // Deny all other collections by default
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

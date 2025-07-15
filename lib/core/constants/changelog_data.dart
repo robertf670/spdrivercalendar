@@ -1,4 +1,26 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.14.12': [
+    {
+      'title': 'CRITICAL FIX: Eliminated 1-Second Data Loss Bug',
+      'description': 'Fixed critical bug where spare duties and bus assignments would disappear exactly 1 second after being added. Root cause was refresh triggers with timestamps not being properly detected, causing dummy events with empty data to overwrite real assignments. All duty and bus data now persists correctly during navigation.',
+    },
+    {
+      'title': 'Real-Time Stale Cache Detection & Auto-Recovery',
+      'description': 'Implemented intelligent cache monitoring that automatically detects when spare events lose their duties or bus assignments due to stale cache data. System now auto-reloads fresh data from storage when corruption is detected, ensuring no data loss during calendar navigation.',
+    },
+    {
+      'title': 'Enhanced Date Parsing & Error Handling',
+      'description': 'Fixed FormatException crashes in date parsing that were preventing forced cache reloads from completing successfully. System now handles both ISO format and simple date formats robustly, with comprehensive fallback mechanisms for data recovery operations.',
+    },
+    {
+      'title': 'Instant Dialog UI Updates',
+      'description': 'Fixed spare event dialog not refreshing immediately after adding/removing bus assignments. Bus assignment status now updates in real-time without requiring dialog close/reopen. "No Bus Assigned" buttons instantly change to show assigned bus information.',
+    },
+    {
+      'title': 'Comprehensive Data Persistence Overhaul',
+      'description': 'Implemented multi-layered data protection including enhanced Event constructor validation, improved cache synchronization, and robust error recovery mechanisms. Added comprehensive logging throughout the event lifecycle to prevent and diagnose any future data loss issues.',
+    },
+  ],
   '2.14.11': [
     {
       'title': 'Fixed Spare Duty Bus Assignment Issues',
