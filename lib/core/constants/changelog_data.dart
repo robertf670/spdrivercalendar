@@ -1,12 +1,16 @@
 final Map<String, List<Map<String, String>>> changelogData = {
   '2.14.13': [
     {
-      'title': 'NEW: Route Timing Points Reference',
+      'title': 'Route Timing Points Added',
       'description': 'Added timing points reference for all depot routes. Access via dropdown menu between Bills and Statistics.',
     },
     {
-      'title': 'Fix Duty 4/18X M-F - start location',
+      'title': 'Fix Duty 4/18X M-F - Start Location',
       'description': '4/18X M-F previously showing Unknown Location for first pickup, solved',
+    },
+    {
+      'title': 'Fix Spare Shift Dialog Overflow',
+      'description': 'Fixed text overflow issue in spare shift dialog on small screens. Dialog now properly scrolls and ensures action buttons (Notes, Close) are always accessible regardless of screen size.',
     },
   ],
   '2.14.12': [
