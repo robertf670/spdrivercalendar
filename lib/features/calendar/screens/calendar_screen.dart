@@ -33,6 +33,7 @@ import 'package:spdrivercalendar/features/notes/screens/all_notes_screen.dart'; 
 import 'package:spdrivercalendar/features/feedback/screens/feedback_screen.dart';
 import 'package:spdrivercalendar/features/bills/screens/bills_screen.dart'; // Import the Bills screen
 import 'package:spdrivercalendar/features/payscale/screens/payscale_screen.dart'; // Import the Payscale screen
+import 'package:spdrivercalendar/features/timing_points/screens/timing_points_screen.dart'; // Import the Timing Points screen
 import 'package:uuid/uuid.dart';
 import 'package:spdrivercalendar/services/update_service.dart';
 import 'package:spdrivercalendar/core/widgets/enhanced_update_dialog.dart';
@@ -3067,6 +3068,10 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                 child: Text('Bills'),
               ),
               PopupMenuItem(
+                value: 'timing_points',
+                child: Text('Timing Points'),
+              ),
+              PopupMenuItem(
                 value: 'statistics',
                 child: Text('Statistics'),
               ),
@@ -3098,6 +3103,8 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                 _showAboutPage();
               } else if (value == 'bills') {
                 _showBillsPage();
+              } else if (value == 'timing_points') {
+                _showTimingPointsPage();
               } else if (value == 'settings') {
                 _showSettingsPage();
               } else if (value == 'add_holidays') {
@@ -4463,6 +4470,15 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
     );
   }
   // --- END NEW PAYSCALE FUNCTION ---
+
+  // --- ADD NEW FUNCTION TO NAVIGATE TO TIMING POINTS SCREEN ---
+  void _showTimingPointsPage() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const TimingPointsScreen()),
+    );
+  }
+  // --- END NEW TIMING POINTS FUNCTION ---
 
 
 

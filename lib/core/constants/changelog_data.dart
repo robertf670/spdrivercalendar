@@ -1,4 +1,14 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.14.13': [
+    {
+      'title': 'NEW: Route Timing Points Reference',
+      'description': 'Added timing points reference for all depot routes. Access via dropdown menu between Bills and Statistics.',
+    },
+    {
+      'title': 'Fix Duty 4/18X M-F - start location',
+      'description': '4/18X M-F previously showing Unknown Location for first pickup, solved',
+    },
+  ],
   '2.14.12': [
     {
       'title': 'CRITICAL FIX: Eliminated 1-Second Data Loss Bug',
