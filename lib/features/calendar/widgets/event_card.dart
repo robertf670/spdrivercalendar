@@ -2219,11 +2219,18 @@ class _EventCardState extends State<EventCard> {
             ),
           ],
         ),
-        contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
+        contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+        insetPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 24.0),
+        content: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.7,
+            minWidth: MediaQuery.of(context).size.width * 0.8,
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
             // Show duty addition buttons if we have less than 2 duties
             if (widget.event.assignedDuties == null || widget.event.assignedDuties!.length < 2) ...[
               // Analyze existing duties to determine what can be added
@@ -2404,7 +2411,9 @@ class _EventCardState extends State<EventCard> {
                 );
               }(),
               const SizedBox(height: 16),
-            ],
+                          ],
+              
+              const SizedBox(height: 16),
             
             // Show current duties if any
             if (widget.event.assignedDuties != null && widget.event.assignedDuties!.isNotEmpty) ...[
@@ -2733,9 +2742,11 @@ class _EventCardState extends State<EventCard> {
                  ),
                ),
             ),
-          ],
+              ],
+            ),
+          ),
         ),
-        // Add actions for the dialog
+        actionsPadding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
         actions: [
           TextButton(
             onPressed: () {
