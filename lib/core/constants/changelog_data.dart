@@ -1,4 +1,10 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.14.14': [
+    {
+      'title': 'Enhanced 4/18X M-F Start Location Fix',
+      'description': 'Further refined start location display for duty 4/18X',
+    },
+  ],
   '2.14.13': [
     {
       'title': 'Route Timing Points Added',
