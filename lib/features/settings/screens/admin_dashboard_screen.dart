@@ -104,22 +104,6 @@ class AdminDashboardScreen extends StatelessWidget {
                         color: Colors.green,
                         onTap: () => _navigateToAnalytics(context),
                       ),
-                      _buildAdminCard(
-                        context,
-                        title: 'System Health',
-                        subtitle: 'Monitor app status',
-                        icon: Icons.health_and_safety,
-                        color: Colors.orange,
-                        onTap: () => _showComingSoon(context, 'System Health'),
-                      ),
-                      _buildAdminCard(
-                        context,
-                        title: 'App Settings',
-                        subtitle: 'Global configurations',
-                        icon: Icons.settings,
-                        color: Colors.purple,
-                        onTap: () => _showComingSoon(context, 'App Settings'),
-                      ),
                     ],
                   ),
                 ),
@@ -203,30 +187,6 @@ class AdminDashboardScreen extends StatelessWidget {
       context,
       MaterialPageRoute(
         builder: (context) => const UserAnalyticsScreen(),
-      ),
-    );
-  }
-
-  void _showComingSoon(BuildContext context, String feature) {
-    final theme = Theme.of(context);
-    
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Row(
-          children: [
-            Icon(Icons.construction, color: theme.colorScheme.primary),
-            const SizedBox(width: 8),
-            const Text('Coming Soon'),
-          ],
-        ),
-        content: Text('$feature functionality will be available in a future update.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
-          ),
-        ],
       ),
     );
   }

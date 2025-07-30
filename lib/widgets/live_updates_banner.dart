@@ -348,22 +348,20 @@ class LiveUpdatesBannerDisplayState extends State<LiveUpdatesBannerDisplay> {
                       ),
                     ),
                     
-                    // Message preview - only if there's enough space
-                    if (update.description.isNotEmpty)
-                      Flexible(
-                        child: Padding(
-                          padding: const EdgeInsets.only(top: 1),
-                          child: Text(
-                            update.description,
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                    // Always show tap to view details
+                    Flexible(
+                      child: Padding(
+                        padding: const EdgeInsets.only(top: 1),
+                        child: Text(
+                          'Tap to view details',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                            fontStyle: FontStyle.italic,
                           ),
                         ),
                       ),
+                    ),
                   ],
                 ),
               ),

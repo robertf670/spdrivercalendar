@@ -1,4 +1,10 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.14.15': [
+    {
+      'title': 'Enhanced Live Updates User Experience',
+      'description': 'Improved interaction clarity for live update notifications',
+    },
+  ],
   '2.14.14': [
     {
       'title': 'Enhanced 4/18X M-F Start Location Fix',
