@@ -1,4 +1,10 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.14.16': [
+    {
+      'title': 'SUN PZ1/8X Duty Fix',
+      'description': 'Bill contained wrong information for second half of duty. Now contains the correct information.',
+    },
+  ],
   '2.14.15': [
     {
       'title': 'Enhanced Live Updates User Experience',
