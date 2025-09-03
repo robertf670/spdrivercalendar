@@ -14,6 +14,7 @@ import 'package:spdrivercalendar/services/backup_service.dart';
 import 'dart:io'; // For File type in auto-backup list
 import 'package:intl/intl.dart'; // For DateFormat
 import 'package:spdrivercalendar/features/settings/widgets/color_customization_widget.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import '../../../config/app_config.dart';
 
 // Define Preference Keys for Notifications (Consider moving to AppConstants if not already there)
@@ -40,6 +41,7 @@ class SettingsScreenState extends State<SettingsScreen> {
   String _googleAccount = '';
   bool _syncToGoogleCalendar = false;
   bool _isLoading = false;
+  String _appVersion = '';
 
   // Notification state variables
   int _notificationOffsetHours = 1; // Default offset
@@ -53,6 +55,7 @@ class SettingsScreenState extends State<SettingsScreen> {
     _isDarkMode = widget.isDarkModeNotifier.value;
     _loadSettings();
     _checkGoogleSignIn();
+    _loadAppVersion();
   }
 
   Future<void> _loadSettings() async {
@@ -104,6 +107,20 @@ class SettingsScreenState extends State<SettingsScreen> {
     await StorageService.saveBool(AppConstants.syncToGoogleCalendarKey, value);
   }
 
+  Future<void> _loadAppVersion() async {
+    try {
+      final packageInfo = await PackageInfo.fromPlatform();
+      setState(() {
+        _appVersion = packageInfo.version;
+      });
+    } catch (e) {
+      // Handle error gracefully
+      setState(() {
+        _appVersion = 'Unknown';
+      });
+    }
+  }
+
   void _onColorsChanged() {
     // Trigger a rebuild to refresh any UI that depends on colors
     setState(() {});
@@ -135,6 +152,21 @@ class SettingsScreenState extends State<SettingsScreen> {
             : ListView(
                 padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 32.0), // Added extra bottom padding
                 children: [
+                  // Version label at the top
+                  if (_appVersion.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 16.0),
+                      child: Center(
+                        child: Text(
+                          'Version $_appVersion',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    ),
+                  
                   _buildSectionHeader('Appearance'),
                   _buildDarkModeSwitch(),
                   ColorCustomizationWidget(

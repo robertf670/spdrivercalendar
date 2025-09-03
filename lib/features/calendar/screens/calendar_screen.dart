@@ -286,6 +286,21 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
     return holidays;
   }
 
+  // Reload holidays from storage (bypasses cache)
+  Future<void> _reloadHolidays() async {
+    try {
+      final holidays = await HolidayService.getHolidays();
+      setState(() {
+        _holidays = holidays;
+      });
+    } catch (e) {
+      // Handle error gracefully
+      if (kDebugMode) {
+        debugPrint('Failed to reload holidays: $e');
+      }
+    }
+  }
+
   Future<void> _loadSettings() async {
     final startDateString = await StorageService.getString(AppConstants.startDateKey);
     final startWeek = await StorageService.getInt(AppConstants.startWeekKey);
@@ -3983,10 +3998,8 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                               // Add the holiday
                               await HolidayService.addHoliday(holiday);
                               
-                              // Update the holidays list
-                              setState(() {
-                                _holidays.add(holiday);
-                              });
+                              // Reload holidays from storage to ensure consistency
+                              await _reloadHolidays();
                               
                               // Close the dialog
                               Navigator.of(context).pop();
@@ -4186,10 +4199,8 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                               // Add the holiday
                               await HolidayService.addHoliday(holiday);
                               
-                              // Update the holidays list
-                              setState(() {
-                                _holidays.add(holiday);
-                              });
+                              // Reload holidays from storage to ensure consistency
+                              await _reloadHolidays();
                               
                               // Close the dialog
                               Navigator.of(context).pop();
@@ -4394,10 +4405,8 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                         // Add the holiday
                         await HolidayService.addHoliday(holiday);
                         
-                        // Update the holidays list
-                        setState(() {
-                          _holidays.add(holiday);
-                        });
+                        // Reload holidays from storage to ensure consistency
+                        await _reloadHolidays();
                         
                         // Close the dialog
                         Navigator.of(context).pop();
@@ -4483,18 +4492,26 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
 
 
   // Add this method to handle calendar page changes
-  void _onPageChanged(DateTime focusedDay) {
+  void _onPageChanged(DateTime focusedDay) async {
     if (!mounted) return; // Prevent setState after dispose
     
     setState(() {
       _focusedDay = focusedDay;
     });
     
-    // Preload the new month's events with error handling
+    // Preload the new month's events and wait for completion to ensure UI updates
     try {
-      EventService.preloadMonth(focusedDay);
+      await EventService.preloadMonth(focusedDay);
+      
+      // Trigger UI refresh after events are loaded to show indicator dots
+      if (mounted) {
+        setState(() {});
+      }
     } catch (e) {
-          // Debug statement removed
+      // Handle preload errors gracefully
+      if (kDebugMode) {
+        debugPrint('Error preloading month events: $e');
+      }
     }
     
     // Clear old cache entries periodically with error handling

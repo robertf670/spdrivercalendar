@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:spdrivercalendar/core/constants/app_constants.dart';
 import 'package:spdrivercalendar/core/services/storage_service.dart';
+import 'package:spdrivercalendar/core/services/cache_service.dart';
 import 'package:spdrivercalendar/models/holiday.dart';
 import 'package:spdrivercalendar/google_calendar_service.dart';
 import 'package:spdrivercalendar/calendar_test_helper.dart';
@@ -9,9 +10,13 @@ import 'package:flutter/foundation.dart';
 class HolidayService {
   static const String _holidaysKey = 'holidays';
   static const String _backupSuffix = '_backup';
+  static const String _cacheKey = 'holidays'; // Cache key used in calendar screen
   
   // Save operation synchronization
   static bool _isSaving = false;
+  
+  // Cache service instance
+  static final CacheService _cacheService = CacheService();
   
   // Enhanced error logging
   static void _logError(String operation, dynamic error, [StackTrace? stackTrace]) {
@@ -20,6 +25,16 @@ class HolidayService {
       if (stackTrace != null) {
         print('Stack trace: $stackTrace');
       }
+    }
+  }
+  
+  // Invalidate holidays cache
+  static void _invalidateCache() {
+    try {
+      _cacheService.remove(_cacheKey);
+      _logError('_invalidateCache', 'Successfully invalidated holidays cache');
+    } catch (e) {
+      _logError('_invalidateCache', 'Failed to invalidate cache: $e');
     }
   }
   
@@ -181,6 +196,9 @@ class HolidayService {
       holidays.add(holiday);
       
       await _safeHolidaysSave(holidays);
+      
+      // Invalidate cache after successful save
+      _invalidateCache();
 
       final syncEnabled = await StorageService.getBool(AppConstants.syncToGoogleCalendarKey, defaultValue: false);
       final isSignedIn = await GoogleCalendarService.isSignedIn();
@@ -212,8 +230,11 @@ class HolidayService {
       final initialLength = holidays.length;
       holidays.removeWhere((h) => h.id == id);
 
-      if (holidays.length < initialLength && holidayToRemove != null) {
+      if (holidays.length < initialLength) {
         await _safeHolidaysSave(holidays);
+        
+        // Invalidate cache after successful removal
+        _invalidateCache();
 
         final syncEnabled = await StorageService.getBool(AppConstants.syncToGoogleCalendarKey, defaultValue: false);
         final isSignedIn = await GoogleCalendarService.isSignedIn();

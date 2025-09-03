@@ -1,4 +1,18 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.14.17': [
+    {
+      'title': 'Holiday Cache Fix',
+      'description': 'Fixed issue where existing holidays would disappear when adding new holidays. Resolved cache invalidation problem ensuring all holidays remain visible. You may have to re-add all holidays previously lost to get them back.',
+    },
+    {
+      'title': 'Event Indicator Dots Fix',
+      'description': 'Fixed issue where event indicator dots would disappear or move around when navigating to different months. Calendar navigation now properly loads events before displaying month view.',
+    },
+    {
+      'title': 'Version Display Added',
+      'description': 'Added version number display at the top of the Settings screen for easy reference.',
+    },
+  ],
   '2.14.16': [
     {
       'title': 'SUN PZ1/8X Duty Fix',
