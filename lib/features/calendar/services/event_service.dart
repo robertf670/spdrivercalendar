@@ -15,6 +15,10 @@ class EventService {
   static Map<String, List<Event>> _monthlyCache = {};
   static DateTime? _lastLoadedMonth;
   
+  // Cache for user preferences
+  static bool _showOvernightDutiesOnBothDays = true; // Default to true
+  static bool _preferencesLoaded = false;
+  
   // ADD STATIC GETTER for all loaded events - FIXED: Convert to string keys
   static Map<String, List<Event>> get allLoadedEvents => Map.unmodifiable(_events);
   
@@ -39,6 +43,26 @@ class EventService {
         print('Stack trace: $stackTrace');
       }
     }
+  }
+  
+  // Load user preferences
+  static Future<void> _loadPreferences() async {
+    if (_preferencesLoaded) return;
+    
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      _showOvernightDutiesOnBothDays = prefs.getBool(AppConstants.showOvernightDutiesOnBothDaysKey) ?? true;
+      _preferencesLoaded = true;
+    } catch (e) {
+      _logError('_loadPreferences', 'Failed to load preferences: $e');
+      _showOvernightDutiesOnBothDays = true; // Default to true on error
+      _preferencesLoaded = true;
+    }
+  }
+  
+  // Update the cached preference (call this when user changes the setting)
+  static void updateOvernightDutiesPreference(bool showOnBothDays) {
+    _showOvernightDutiesOnBothDays = showOnBothDays;
   }
   
   // Data validation method
@@ -185,21 +209,39 @@ class EventService {
   
   // Get events for a specific date (maintains same interface)
   static List<Event> getEventsForDay(DateTime day) {
+    // Load preferences if not already loaded
+    if (!_preferencesLoaded) {
+      _loadPreferences(); // Fire and forget - will use default on first call
+    }
+    
     // Normalize date to remove time component for lookup
     final normalizedDate = DateTime(day.year, day.month, day.day);
 
-    // If we have events for this date, return them immediately
+    // If we have events for this date, return them with filtering
     if (_events.containsKey(_dateToKey(normalizedDate))) {
       final events = _events[_dateToKey(normalizedDate)]!;
       
-      // Focus on spare events with duties
+      // Filter out events that end on this day if the preference is disabled
+      final filteredEvents = <Event>[];
       for (final event in events) {
+        final eventStartDate = DateTime(event.startDate.year, event.startDate.month, event.startDate.day);
+        final eventEndDate = DateTime(event.endDate.year, event.endDate.month, event.endDate.day);
+        
+        // If overnight duties should not show on both days, only show on start date
+        if (!_showOvernightDutiesOnBothDays && eventStartDate != eventEndDate && eventEndDate == normalizedDate) {
+          // Skip this event - it's on the end date and user doesn't want to see it
+          continue;
+        }
+        
+        filteredEvents.add(event);
+        
+        // Focus on spare events with duties for debugging
         if (event.title.startsWith('SP') && event.assignedDuties != null && event.assignedDuties!.isNotEmpty) {
           _logError('getEventsForDay', '📅 DISPLAY: ${event.title} | duties: ${event.assignedDuties} | buses: ${event.busAssignments}');
         }
       }
       
-      return events;
+      return filteredEvents;
     }
 
     // Check if month is being loaded or needs to be loaded
@@ -226,8 +268,24 @@ class EventService {
       _populateEventsFromCache(day);
     }
 
-    // Final check after population
-    final finalEvents = _events[_dateToKey(normalizedDate)] ?? [];
+    // Final check after population with filtering
+    final rawEvents = _events[_dateToKey(normalizedDate)] ?? [];
+    final finalEvents = <Event>[];
+    
+    // Apply the same filtering logic
+    for (final event in rawEvents) {
+      final eventStartDate = DateTime(event.startDate.year, event.startDate.month, event.startDate.day);
+      final eventEndDate = DateTime(event.endDate.year, event.endDate.month, event.endDate.day);
+      
+      // If overnight duties should not show on both days, only show on start date
+      if (!_showOvernightDutiesOnBothDays && eventStartDate != eventEndDate && eventEndDate == normalizedDate) {
+        // Skip this event - it's on the end date and user doesn't want to see it
+        continue;
+      }
+      
+      finalEvents.add(event);
+    }
+    
     _logError('getEventsForDay', 'Returning ${finalEvents.length} events for ${normalizedDate.toIso8601String()}');
     
     // If we still don't have events but the month is cached, check for recovery

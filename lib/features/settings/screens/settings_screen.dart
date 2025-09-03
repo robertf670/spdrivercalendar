@@ -15,6 +15,7 @@ import 'dart:io'; // For File type in auto-backup list
 import 'package:intl/intl.dart'; // For DateFormat
 import 'package:spdrivercalendar/features/settings/widgets/color_customization_widget.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:spdrivercalendar/features/calendar/services/event_service.dart';
 import '../../../config/app_config.dart';
 
 // Define Preference Keys for Notifications (Consider moving to AppConstants if not already there)
@@ -48,6 +49,9 @@ class SettingsScreenState extends State<SettingsScreen> {
 
   // Auto-Backup state variable
   bool _autoBackupEnabled = false;
+  
+  // Display settings
+  bool _showOvernightDutiesOnBothDays = true; // Default to true to preserve current behavior
 
   @override
   void initState() {
@@ -71,6 +75,9 @@ class SettingsScreenState extends State<SettingsScreen> {
 
     // Load auto-backup setting - default to true
     _autoBackupEnabled = prefs.getBool(AppConstants.autoBackupEnabledKey) ?? true;
+    
+    // Load display settings - default to true to preserve current behavior
+    _showOvernightDutiesOnBothDays = prefs.getBool(AppConstants.showOvernightDutiesOnBothDaysKey) ?? true;
 
     setState(() {
       _isLoading = false;
@@ -119,6 +126,16 @@ class SettingsScreenState extends State<SettingsScreen> {
         _appVersion = 'Unknown';
       });
     }
+  }
+
+  Future<void> _toggleOvernightDutiesDisplay(bool value) async {
+    setState(() {
+      _showOvernightDutiesOnBothDays = value;
+    });
+    await StorageService.saveBool(AppConstants.showOvernightDutiesOnBothDaysKey, value);
+    
+    // Update the EventService cache so the change takes effect immediately
+    EventService.updateOvernightDutiesPreference(value);
   }
 
   void _onColorsChanged() {
@@ -172,6 +189,7 @@ class SettingsScreenState extends State<SettingsScreen> {
                   ColorCustomizationWidget(
                     onColorsChanged: _onColorsChanged,
                   ),
+                  _buildOvernightDutiesToggle(),
                   
                   const Divider(height: 32),
                   _buildSectionHeader('App'),
@@ -1176,6 +1194,22 @@ class SettingsScreenState extends State<SettingsScreen> {
       context,
       MaterialPageRoute(
         builder: (context) => const AdminDashboardScreen(),
+      ),
+    );
+  }
+
+  Widget _buildOvernightDutiesToggle() {
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 4.0),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppTheme.borderRadius),
+      ),
+      child: SwitchListTile(
+        title: const Text('Show overnight duties on both days'),
+        subtitle: const Text('When enabled, duties spanning midnight will appear on both start and end dates'),
+        secondary: const Icon(Icons.schedule),
+        value: _showOvernightDutiesOnBothDays,
+        onChanged: _toggleOvernightDutiesDisplay,
       ),
     );
   }

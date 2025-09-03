@@ -21,6 +21,9 @@ class AppConstants {
 
   // Auto-Backup Setting
   static const String autoBackupEnabledKey = 'autoBackupEnabled';
+  
+  // Display Settings
+  static const String showOvernightDutiesOnBothDaysKey = 'showOvernightDutiesOnBothDays';
 
   // Routes
   static const String splashRoute = '/splash';

@@ -1,4 +1,10 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.14.18': [
+    {
+      'title': 'Overnight Duties Display Option',
+      'description': 'Added setting to control whether overnight duties appear on both start and end dates. Find the toggle in Settings > Appearance. When disabled, duties spanning midnight will only appear on their start date for a cleaner calendar view.',
+    },
+  ],
   '2.14.17': [
     {
       'title': 'Holiday Cache Fix',
