@@ -1,4 +1,10 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.14.19': [
+    {
+      'title': 'Event Indicator Dots Fix (Complete)',
+      'description': 'Fully resolved issue where event indicator dots would disappear or move around when navigating calendar months. Implemented proper month-level cache population to ensure all event dots display consistently from the first render.',
+    },
+  ],
   '2.14.18': [
     {
       'title': 'Overnight Duties Display Option',

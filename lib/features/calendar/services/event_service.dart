@@ -19,6 +19,9 @@ class EventService {
   static bool _showOvernightDutiesOnBothDays = true; // Default to true
   static bool _preferencesLoaded = false;
   
+  // Track which months have been populated to avoid redundant calls
+  static final Set<String> _populatedMonths = {};
+  
   // ADD STATIC GETTER for all loaded events - FIXED: Convert to string keys
   static Map<String, List<Event>> get allLoadedEvents => Map.unmodifiable(_events);
   
@@ -259,13 +262,13 @@ class EventService {
       }).catchError((error) {
         _logError('getEventsForDay', 'Failed to preload month $monthKey: $error');
       });
-      
-      // For immediate return, check if we can populate from already loaded cache
+    }
+    
+    // Ensure the entire month is populated from cache (only once per month)
+    if (_monthlyCache.containsKey(monthKey) && !_populatedMonths.contains(monthKey)) {
+      _logError('getEventsForDay', 'Populating entire month $monthKey from cache');
       _populateEventsFromCache(day);
-    } else {
-      // Month is cached, ensure events are populated in _events map
-      // _logError('getEventsForDay', 'Month $monthKey is cached, populating events...');
-      _populateEventsFromCache(day);
+      _populatedMonths.add(monthKey);
     }
 
     // Final check after population with filtering
@@ -525,6 +528,8 @@ class EventService {
   
   // Preload events for a month (to be called when calendar page changes)
   static Future<void> preloadMonth(DateTime month) async {
+    final monthKey = '${month.year}-${month.month}';
+    
     if (_lastLoadedMonth != null && 
         _lastLoadedMonth!.year == month.year && 
         _lastLoadedMonth!.month == month.month) {
@@ -536,6 +541,9 @@ class EventService {
     
     // After loading, populate _events from the monthly cache
     _populateEventsFromCache(month);
+    
+    // Mark this month as populated to avoid redundant calls
+    _populatedMonths.add(monthKey);
   }
   
   // Clear old cache entries to manage memory
@@ -546,7 +554,14 @@ class EventService {
     _monthlyCache.removeWhere((key, _) {
       final parts = key.split('-');
       final monthDate = DateTime(int.parse(parts[0]), int.parse(parts[1]), 1);
-      return monthDate.isBefore(threeMonthsAgo);
+      final shouldRemove = monthDate.isBefore(threeMonthsAgo);
+      
+      // Also remove from populated months tracking
+      if (shouldRemove) {
+        _populatedMonths.remove(key);
+      }
+      
+      return shouldRemove;
     });
   }
   
@@ -559,6 +574,9 @@ class EventService {
     // Remove from monthly cache to force reload
     _monthlyCache.remove(monthKey);
     
+    // Remove from populated months tracking
+    _populatedMonths.remove(monthKey);
+    
           // Clear events for this month from _events cache
       _events.removeWhere((key, _) {
         final keyDate = DateTime.parse(key);
@@ -568,6 +586,9 @@ class EventService {
     // Reload the month
     await _loadEventsForMonth(date);
     _populateEventsFromCache(date);
+    
+    // Mark as populated after refresh
+    _populatedMonths.add(monthKey);
     
     _logError('refreshMonthCache', 'Cache refresh completed for month: $monthKey');
   }
