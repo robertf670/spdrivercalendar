@@ -1,4 +1,10 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.15.2': [
+    {
+      'title': 'Critical Spare Duty Persistence Fix',
+      'description': 'Fixed critical regression where spare duty assignments (both full and half duties) would disappear when navigating between calendar months. Resolved overly aggressive stale cache detection and restrictive population logic that was incorrectly clearing valid spare duty data during month navigation.',
+    },
+  ],
   '2.15.1': [
     {
       'title': 'Responsive Week View Design',

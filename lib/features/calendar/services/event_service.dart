@@ -265,9 +265,23 @@ class EventService {
     }
     
     // Ensure the entire month is populated from cache (only once per month)
-    if (_monthlyCache.containsKey(monthKey) && !_populatedMonths.contains(monthKey)) {
-      _logError('getEventsForDay', 'Populating entire month $monthKey from cache');
-      _populateEventsFromCache(day);
+    // CRITICAL FIX: Always populate if monthly cache exists - remove overly restrictive _populatedMonths check
+    // The _populatedMonths set was causing issues where month navigation would skip population
+    if (_monthlyCache.containsKey(monthKey)) {
+      // Check if we need to populate (if no events for this month in _events)
+      final hasEventsForMonth = _events.keys.any((key) {
+        final keyDate = DateTime.parse(key);
+        return keyDate.year == day.year && keyDate.month == day.month;
+      });
+      
+      if (!hasEventsForMonth) {
+        _logError('getEventsForDay', 'Populating entire month $monthKey from cache (no events found in _events)');
+        _populateEventsFromCache(day);
+      } else {
+        _logError('getEventsForDay', 'Month $monthKey already populated in _events cache');
+      }
+      
+      // Still track populated months, but don't let it block population
       _populatedMonths.add(monthKey);
     }
 
@@ -334,13 +348,25 @@ class EventService {
         
         // Scenario 2: Recently created spare event (based on ID) with no content at all
         // Spare events with high IDs (recent) should typically have some content
+        // FIXED: Make stale cache detection much more conservative to prevent false positives during navigation
         if ((event.assignedDuties == null || event.assignedDuties!.isEmpty) &&
             (event.busAssignments == null || event.busAssignments!.isEmpty)) {
           try {
             final idAsInt = int.parse(event.id);
-            if (idAsInt > 1700000000000) { // Recent timestamps (approximately 2023+)
-              _logError('populateEventsFromCache', '🚨 STALE CACHE DETECTED (Type 2): ${event.title} is recent but completely empty - likely data loss');
-              foundStaleCache = true;
+            // CRITICAL FIX: Much more recent threshold (last hour) and additional validation
+            final oneHourAgo = DateTime.now().subtract(const Duration(hours: 1)).millisecondsSinceEpoch;
+            if (idAsInt > oneHourAgo) { 
+              // Additional check: Only consider stale if this is the same month being navigated TO
+              // Avoid false positives when navigating away and back
+              final eventMonth = DateTime(event.startDate.year, event.startDate.month);
+              final currentMonth = DateTime(month.year, month.month);
+              
+              if (eventMonth.isAtSameMomentAs(currentMonth)) {
+                _logError('populateEventsFromCache', '🚨 STALE CACHE DETECTED (Type 2): ${event.title} is very recent (<1h) but completely empty - likely data loss');
+                foundStaleCache = true;
+              } else {
+                _logError('populateEventsFromCache', '⚠️ SKIP STALE CHECK: ${event.title} is in different month (${eventMonth.month} vs ${currentMonth.month})');
+              }
             }
           } catch (e) {
             // If ID is not parseable as int, skip this check
