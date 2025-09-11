@@ -386,8 +386,8 @@ class WeekViewScreenState extends State<WeekViewScreen> {
     
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(8),
-      margin: const EdgeInsets.only(bottom: 6),
+      padding: EdgeInsets.all(sizes['dutyCardPadding']!),
+      margin: EdgeInsets.only(bottom: sizes['dutyCardMargin']!),
       decoration: BoxDecoration(
         color: AppTheme.primaryColor.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(4),
@@ -412,7 +412,7 @@ class WeekViewScreenState extends State<WeekViewScreen> {
           
           // Start - End time
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 3),
             decoration: BoxDecoration(
               color: Theme.of(context).colorScheme.surface,
               borderRadius: BorderRadius.circular(4),
@@ -421,17 +421,23 @@ class WeekViewScreenState extends State<WeekViewScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
-                  event.formattedStartTime,
-                  style: TextStyle(fontSize: sizes['timeText']!, fontWeight: FontWeight.w600),
+                Flexible(
+                  child: Text(
+                    event.formattedStartTime,
+                    style: TextStyle(fontSize: sizes['timeText']!, fontWeight: FontWeight.w600),
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
                 Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 4),
+                  margin: const EdgeInsets.symmetric(horizontal: 2),
                   child: Icon(Icons.arrow_forward, size: sizes['arrowIcon']!),
                 ),
-                Text(
-                  event.formattedEndTime,
-                  style: TextStyle(fontSize: sizes['timeText']!, fontWeight: FontWeight.w600),
+                Flexible(
+                  child: Text(
+                    event.formattedEndTime,
+                    style: TextStyle(fontSize: sizes['timeText']!, fontWeight: FontWeight.w600),
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
               ],
             ),
@@ -493,55 +499,84 @@ class WeekViewScreenState extends State<WeekViewScreen> {
   Map<String, double> _getResponsiveSizes(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     
-    // Base sizes for small screens (phones in portrait)
-    if (screenWidth < 600) {
+    // Very small screens (narrow phones) - more conservative to prevent overflow
+    if (screenWidth < 350) {
       return {
-        'dayName': 16.0,
-        'date': 13.0,
-        'todayBadge': 10.0,
-        'shiftName': 12.0,
-        'dutyTitle': 11.0,
-        'timeText': 10.0,
-        'breakText': 9.0,
-        'workDuration': 8.0,
-        'eventTitle': 9.0,
-        'moreText': 8.0,
-        'arrowIcon': 10.0,
-        'breakIcon': 10.0,
+        'dayName': 17.0,  // +1
+        'date': 14.0,     // +1
+        'todayBadge': 10.0,  // unchanged
+        'shiftName': 13.0,   // +1
+        'dutyTitle': 12.0,   // +1
+        'timeText': 10.0,    // unchanged (prevent overflow)
+        'breakText': 10.0,   // +1
+        'workDuration': 9.0,  // +1
+        'eventTitle': 10.0,    // +1
+        'moreText': 9.0,      // +1
+        'arrowIcon': 9.0,     // -1 (save space)
+        'breakIcon': 11.0,     // +1
+        // Container dimensions - conservative for very small screens
+        'dutyCardPadding': 8.0,  // unchanged
+        'dutyCardMargin': 6.0,    // unchanged
+      };
+    }
+    // Base sizes for small screens (phones in portrait) - BALANCED for readability without overflow
+    else if (screenWidth < 600) {
+      return {
+        'dayName': 18.0,  // +2
+        'date': 15.0,     // +2
+        'todayBadge': 11.0,  // +1
+        'shiftName': 14.0,   // +2
+        'dutyTitle': 13.0,   // +2
+        'timeText': 11.0,    // +1 (reduced from +2 to prevent overflow)
+        'breakText': 11.0,   // +2
+        'workDuration': 10.0,  // +2
+        'eventTitle': 11.0,    // +2
+        'moreText': 10.0,      // +2
+        'arrowIcon': 10.0,     // unchanged (reduced from +2 to save space)
+        'breakIcon': 12.0,     // +2
+        // Container dimensions - increased padding for larger text
+        'dutyCardPadding': 10.0,  // +2
+        'dutyCardMargin': 8.0,    // +2
       };
     }
     // Medium sizes for tablets or larger phones
     else if (screenWidth < 900) {
       return {
-        'dayName': 17.0,
-        'date': 14.0,
-        'todayBadge': 11.0,
-        'shiftName': 13.0,
-        'dutyTitle': 12.0,
-        'timeText': 11.0,
-        'breakText': 10.0,
-        'workDuration': 9.0,
-        'eventTitle': 10.0,
-        'moreText': 9.0,
-        'arrowIcon': 11.0,
-        'breakIcon': 11.0,
+        'dayName': 20.0,  // +3
+        'date': 17.0,     // +3
+        'todayBadge': 13.0,  // +2
+        'shiftName': 16.0,   // +3
+        'dutyTitle': 15.0,   // +3
+        'timeText': 14.0,    // +3
+        'breakText': 13.0,   // +3
+        'workDuration': 12.0,  // +3
+        'eventTitle': 13.0,    // +3
+        'moreText': 12.0,      // +3
+        'arrowIcon': 14.0,     // +3
+        'breakIcon': 14.0,     // +3
+        // Container dimensions - larger for medium screens
+        'dutyCardPadding': 12.0,  // +2
+        'dutyCardMargin': 10.0,   // +2
       };
     }
     // Large sizes for desktop/large tablets
     else {
       return {
-        'dayName': 18.0,
-        'date': 15.0,
-        'todayBadge': 12.0,
-        'shiftName': 14.0,
-        'dutyTitle': 13.0,
-        'timeText': 12.0,
-        'breakText': 11.0,
-        'workDuration': 10.0,
-        'eventTitle': 11.0,
-        'moreText': 10.0,
-        'arrowIcon': 12.0,
-        'breakIcon': 12.0,
+        'dayName': 22.0,  // +4
+        'date': 19.0,     // +4
+        'todayBadge': 15.0,  // +3
+        'shiftName': 18.0,   // +4
+        'dutyTitle': 17.0,   // +4
+        'timeText': 16.0,    // +4
+        'breakText': 15.0,   // +4
+        'workDuration': 14.0,  // +4
+        'eventTitle': 15.0,    // +4
+        'moreText': 14.0,      // +4
+        'arrowIcon': 16.0,     // +4
+        'breakIcon': 16.0,     // +4
+        // Container dimensions - largest for big screens
+        'dutyCardPadding': 14.0,  // +2
+        'dutyCardMargin': 12.0,   // +2
       };
     }
   }

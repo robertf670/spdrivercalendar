@@ -1,4 +1,14 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.15.3': [
+    {
+      'title': 'Enhanced Week View Text Readability',
+      'description': 'Significantly improved text size and readability in week view across all devices. Increased font sizes for duty titles, times, and other text elements while adding larger container padding for better spacing. Implemented three-tier responsive sizing: conservative for very small screens (<350px), balanced for regular phones, and enhanced for larger devices.',
+    },
+    {
+      'title': 'Week View Overflow Protection',
+      'description': 'Fixed RenderFlex overflow issues in week view on smaller devices. Added flexible layout containers, reduced margins strategically, and implemented ellipsis overflow handling to ensure duty information displays properly on all screen sizes without layout breaking.',
+    },
+  ],
   '2.15.2': [
     {
       'title': 'Critical Spare Duty Persistence Fix',
