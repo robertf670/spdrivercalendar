@@ -1,4 +1,10 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.15.1': [
+    {
+      'title': 'Responsive Week View Design',
+      'description': 'Implemented responsive design for the week view that automatically adapts to different screen sizes. Small screens (phones) use compact font sizes to prevent overflow, while larger screens (tablets, desktop) use enhanced font sizes for better readability. All text, icons, and spacing scale proportionally across devices.',
+    },
+  ],
   '2.15.0': [
     {
       'title': 'Complete Route 23 & 24 Duty Schedules - SUBJECT TO CHANGE',

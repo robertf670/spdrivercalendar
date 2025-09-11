@@ -10,8 +10,8 @@ const Map<String, String> locationMappings = {
   'PSQW': 'PSQW',
   'ASTONQ': 'Aston Q',
   'BWALK': 'B Walk',
-  'CONHILL #1619': 'Constitution Hill',
-  'BSTONE #190': 'Broadstone',
+  'CONHILL #1619': 'Con Hill',
+  'BSTONE #190': 'B Stone',
   
   // Route-specific locations
   '39A-ASTONQ': 'Aston Q',

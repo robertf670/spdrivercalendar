@@ -188,6 +188,7 @@ class WeekViewScreenState extends State<WeekViewScreen> {
 
   Widget _buildDayCard(DateTime day) {
     final shift = _getShiftForDate(day);
+    final sizes = _getResponsiveSizes(context);
     final events = _getEventsForDate(day);
     final workEvents = events.where((event) => event.isWorkShift).toList();
     
@@ -228,7 +229,7 @@ class WeekViewScreenState extends State<WeekViewScreen> {
                   DateFormat('EEEE').format(day),
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    fontSize: 16,
+                    fontSize: sizes['dayName']!,
                     color: _isToday(day) ? AppTheme.primaryColor : null,
                   ),
                   textAlign: TextAlign.center,
@@ -236,7 +237,7 @@ class WeekViewScreenState extends State<WeekViewScreen> {
                 Text(
                   DateFormat('MMM d').format(day),
                   style: TextStyle(
-                    fontSize: 13,
+                    fontSize: sizes['date']!,
                     color: _isToday(day) 
                       ? AppTheme.primaryColor 
                       : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
@@ -254,11 +255,11 @@ class WeekViewScreenState extends State<WeekViewScreen> {
                           color: AppTheme.primaryColor,
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        child: const Text(
+                        child: Text(
                           'TODAY',
                           style: TextStyle(
                             color: Colors.white,
-                            fontSize: 10,
+                            fontSize: sizes['todayBadge']!,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -288,7 +289,7 @@ class WeekViewScreenState extends State<WeekViewScreen> {
                       child: Text(
                         shift.name,
                         style: TextStyle(
-                          fontSize: 12,
+                          fontSize: sizes['shiftName']!,
                           fontWeight: FontWeight.w600,
                           color: shift.color,
                         ),
@@ -355,7 +356,7 @@ class WeekViewScreenState extends State<WeekViewScreen> {
                           ...events.where((event) => !event.isWorkShift).take(2).map((event) => 
                             Text(
                               event.title,
-                              style: const TextStyle(fontSize: 9),
+                              style: TextStyle(fontSize: sizes['eventTitle']!),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               textAlign: TextAlign.center,
@@ -364,7 +365,7 @@ class WeekViewScreenState extends State<WeekViewScreen> {
                           if (events.where((event) => !event.isWorkShift).length > 2)
                             Text(
                               '+${events.where((event) => !event.isWorkShift).length - 2} more',
-                              style: const TextStyle(fontSize: 8),
+                              style: TextStyle(fontSize: sizes['moreText']!),
                             ),
                         ],
                       ),
@@ -381,11 +382,12 @@ class WeekViewScreenState extends State<WeekViewScreen> {
 
   Widget _buildDayDutyItem(Event event) {
     final hasBreaks = event.breakStartTime != null && event.breakEndTime != null;
+    final sizes = _getResponsiveSizes(context);
     
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(6),
-      margin: const EdgeInsets.only(bottom: 4),
+      padding: const EdgeInsets.all(8),
+      margin: const EdgeInsets.only(bottom: 6),
       decoration: BoxDecoration(
         color: AppTheme.primaryColor.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(4),
@@ -397,7 +399,7 @@ class WeekViewScreenState extends State<WeekViewScreen> {
           Text(
             event.title,
             style: TextStyle(
-              fontSize: 11,
+              fontSize: sizes['dutyTitle']!,
               fontWeight: FontWeight.w600,
               color: AppTheme.primaryColor,
             ),
@@ -406,7 +408,7 @@ class WeekViewScreenState extends State<WeekViewScreen> {
             overflow: TextOverflow.ellipsis,
           ),
           
-          const SizedBox(height: 4),
+          const SizedBox(height: 6),
           
           // Start - End time
           Container(
@@ -421,15 +423,15 @@ class WeekViewScreenState extends State<WeekViewScreen> {
               children: [
                 Text(
                   event.formattedStartTime,
-                  style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600),
+                  style: TextStyle(fontSize: sizes['timeText']!, fontWeight: FontWeight.w600),
                 ),
                 Container(
                   margin: const EdgeInsets.symmetric(horizontal: 4),
-                  child: const Icon(Icons.arrow_forward, size: 10),
+                  child: Icon(Icons.arrow_forward, size: sizes['arrowIcon']!),
                 ),
                 Text(
                   event.formattedEndTime,
-                  style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600),
+                  style: TextStyle(fontSize: sizes['timeText']!, fontWeight: FontWeight.w600),
                 ),
               ],
             ),
@@ -442,12 +444,12 @@ class WeekViewScreenState extends State<WeekViewScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.pause_circle_outline, size: 10),
+                Icon(Icons.pause_circle_outline, size: sizes['breakIcon']!),
                 const SizedBox(width: 3),
                 Text(
                   '${_formatTimeOfDay(event.breakStartTime!)}-${_formatTimeOfDay(event.breakEndTime!)}',
                   style: TextStyle(
-                    fontSize: 9,
+                    fontSize: sizes['breakText']!,
                     color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                   ),
                 ),
@@ -467,7 +469,7 @@ class WeekViewScreenState extends State<WeekViewScreen> {
               child: Text(
                 _formatDuration(event.workTime!),
                 style: TextStyle(
-                  fontSize: 8,
+                  fontSize: sizes['workDuration']!,
                   fontWeight: FontWeight.w500,
                   color: AppTheme.primaryColor,
                 ),
@@ -485,6 +487,63 @@ class WeekViewScreenState extends State<WeekViewScreen> {
     final hour = timeOfDay.hour.toString().padLeft(2, '0');
     final minute = timeOfDay.minute.toString().padLeft(2, '0');
     return '$hour:$minute';
+  }
+
+  // Responsive sizing helper method
+  Map<String, double> _getResponsiveSizes(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    
+    // Base sizes for small screens (phones in portrait)
+    if (screenWidth < 600) {
+      return {
+        'dayName': 16.0,
+        'date': 13.0,
+        'todayBadge': 10.0,
+        'shiftName': 12.0,
+        'dutyTitle': 11.0,
+        'timeText': 10.0,
+        'breakText': 9.0,
+        'workDuration': 8.0,
+        'eventTitle': 9.0,
+        'moreText': 8.0,
+        'arrowIcon': 10.0,
+        'breakIcon': 10.0,
+      };
+    }
+    // Medium sizes for tablets or larger phones
+    else if (screenWidth < 900) {
+      return {
+        'dayName': 17.0,
+        'date': 14.0,
+        'todayBadge': 11.0,
+        'shiftName': 13.0,
+        'dutyTitle': 12.0,
+        'timeText': 11.0,
+        'breakText': 10.0,
+        'workDuration': 9.0,
+        'eventTitle': 10.0,
+        'moreText': 9.0,
+        'arrowIcon': 11.0,
+        'breakIcon': 11.0,
+      };
+    }
+    // Large sizes for desktop/large tablets
+    else {
+      return {
+        'dayName': 18.0,
+        'date': 15.0,
+        'todayBadge': 12.0,
+        'shiftName': 14.0,
+        'dutyTitle': 13.0,
+        'timeText': 12.0,
+        'breakText': 11.0,
+        'workDuration': 10.0,
+        'eventTitle': 11.0,
+        'moreText': 10.0,
+        'arrowIcon': 12.0,
+        'breakIcon': 12.0,
+      };
+    }
   }
 
   String _formatDuration(Duration duration) {
