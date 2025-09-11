@@ -328,12 +328,9 @@ class EventService {
         
         // ENHANCED STALE CACHE DETECTION - catch multiple scenarios:
         
-        // Scenario 1: Spare event with duties but no bus assignments
-        if (event.assignedDuties != null && event.assignedDuties!.isNotEmpty &&
-            (event.busAssignments == null || event.busAssignments!.isEmpty)) {
-          _logError('populateEventsFromCache', '🚨 STALE CACHE DETECTED (Type 1): ${event.title} has duties ${event.assignedDuties} but no bus assignments');
-          foundStaleCache = true;
-        }
+        // Scenario 1: REMOVED - It's valid to have duties without bus assignments
+        // Users often add duties first, then bus assignments later
+        // This was causing false positives and unnecessary cache reloads
         
         // Scenario 2: Recently created spare event (based on ID) with no content at all
         // Spare events with high IDs (recent) should typically have some content
@@ -350,12 +347,8 @@ class EventService {
           }
         }
         
-        // Scenario 3: Spare event with bus assignments but no duties (data corruption)
-        if ((event.assignedDuties == null || event.assignedDuties!.isEmpty) &&
-            event.busAssignments != null && event.busAssignments!.isNotEmpty) {
-          _logError('populateEventsFromCache', '🚨 STALE CACHE DETECTED (Type 3): ${event.title} has buses ${event.busAssignments} but no duties - data corruption');
-          foundStaleCache = true;
-        }
+        // Scenario 3: REMOVED - Bus assignments without duties might be valid intermediate state
+        // This was causing false positives during the duty assignment process
       }
       
       // Add to start date

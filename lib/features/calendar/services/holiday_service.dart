@@ -31,8 +31,15 @@ class HolidayService {
   // Invalidate holidays cache
   static void _invalidateCache() {
     try {
+      // Invalidate both the service's cache and create a new instance to ensure calendar cache is cleared
       _cacheService.remove(_cacheKey);
-      _logError('_invalidateCache', 'Successfully invalidated holidays cache');
+      
+      // CRITICAL FIX: Also clear cache using a fresh CacheService instance 
+      // to ensure the calendar screen's cache is invalidated
+      final freshCacheService = CacheService();
+      freshCacheService.remove(_cacheKey);
+      
+      _logError('_invalidateCache', 'Successfully invalidated holidays cache (both instances)');
     } catch (e) {
       _logError('_invalidateCache', 'Failed to invalidate cache: $e');
     }

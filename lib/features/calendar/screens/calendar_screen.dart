@@ -34,6 +34,7 @@ import 'package:spdrivercalendar/features/feedback/screens/feedback_screen.dart'
 import 'package:spdrivercalendar/features/bills/screens/bills_screen.dart'; // Import the Bills screen
 import 'package:spdrivercalendar/features/payscale/screens/payscale_screen.dart'; // Import the Payscale screen
 import 'package:spdrivercalendar/features/timing_points/screens/timing_points_screen.dart'; // Import the Timing Points screen
+import 'package:spdrivercalendar/features/calendar/screens/week_view_screen.dart'; // Import the Week View screen
 import 'package:uuid/uuid.dart';
 import 'package:spdrivercalendar/services/update_service.dart';
 import 'package:spdrivercalendar/core/widgets/enhanced_update_dialog.dart';
@@ -289,6 +290,11 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
   // Reload holidays from storage (bypasses cache)
   Future<void> _reloadHolidays() async {
     try {
+      // CRITICAL FIX: Explicitly invalidate the calendar's cache before reloading
+      const cacheKey = 'holidays';
+      final cacheService = CacheService();
+      cacheService.remove(cacheKey);
+      
       final holidays = await HolidayService.getHolidays();
       setState(() {
         _holidays = holidays;
@@ -728,6 +734,30 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
           // Debug statement removed
                   }
                 }
+              } else if (selectedZone == 'Training') {
+                // Load Training shifts from training_duties.csv
+                try {
+                  final csv = await rootBundle.loadString('assets/training_duties.csv');
+                  final lines = csv.split('\n');
+                  shiftNumbers = [];
+                  final seenShifts = <String>{};
+                  
+                  // Skip header line and collect all shift codes
+                  for (int i = 1; i < lines.length; i++) {
+                    final line = lines[i].trim().replaceAll('\r', '');
+                    if (line.isEmpty) continue;
+                    final parts = line.split(',');
+                    if (parts.isNotEmpty) {
+                      final shift = parts[0].trim();
+                      if (shift.isNotEmpty && !seenShifts.contains(shift)) {
+                        shiftNumbers.add(shift);
+                        seenShifts.add(shift);
+                      }
+                    }
+                  }
+                } catch (e) {
+                  shiftNumbers = [];
+                }
               } else {
                 // Regular zone shifts
                 final filename = RosterService.getShiftFilename(zoneNumber, dayOfWeekForFilename, shiftDate);
@@ -796,6 +826,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                     'Uni/Euro',
                     'Bus Check',
                     'Jamestown Road',
+                    'Training',
                   ].map((zone) {
                     return DropdownMenuItem(
                       value: zone,
@@ -866,6 +897,8 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                         title = selectedShiftNumber; // Use the selected duty name (e.g., BusCheck1)
                       } else if (selectedZone == 'Jamestown Road') {
                         title = selectedShiftNumber; // Use the shift code (e.g., 811/01)
+                      } else if (selectedZone == 'Training') {
+                        title = selectedShiftNumber; // Use the training code (e.g., TRAIN23/24, CPC)
                       } else {
                         // Regular PZ shifts
                         title = selectedShiftNumber; // Title is the shift code (e.g., PZ1/01)
@@ -909,6 +942,9 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                         }
                       } else if (selectedZone == 'Jamestown Road') {
                         // For Jamestown Road, load from CSV
+                        shiftTimes = await _getShiftTimes(selectedZone, selectedShiftNumber, shiftDate);
+                      } else if (selectedZone == 'Training') {
+                        // For Training, load from training_duties.csv
                         shiftTimes = await _getShiftTimes(selectedZone, selectedShiftNumber, shiftDate);
                       } else {
                         // For other zones, load from CSV
@@ -1012,6 +1048,8 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
     } else if (zone == 'Jamestown Road') {
       csvPath = 'assets/JAMESTOWN_DUTIES.csv';
       // Jamestown Road only works Monday-Friday
+    } else if (zone == 'Training') {
+      csvPath = 'assets/training_duties.csv';
     } else if (zone == 'Uni/Euro') {
       // Uni/Euro logic requires checking multiple files based on day type.
       // We'll handle this directly within the loop for Uni/Euro below.
@@ -1143,6 +1181,28 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
             }
           }
         }
+        // === Handle Training CSV format ===
+        else if (zone == 'Training') {
+          // Expecting format: shift,starttime,endtime,startlocation,endlocation
+          if (parts.length >= 5) {
+            final csvShiftCode = parts[0].trim();
+            
+            if (csvShiftCode == shiftNumber) {
+              final startTime = _parseTimeOfDay(parts[1].trim()); // Start time
+              final endTime = _parseTimeOfDay(parts[2].trim()); // End time
+
+              if (startTime != null && endTime != null) {
+                final isNextDay = endTime.hour < startTime.hour || 
+                                  (endTime.hour == startTime.hour && endTime.minute < startTime.minute);
+                return {
+                  'startTime': startTime,
+                  'endTime': endTime,
+                  'isNextDay': isNextDay,
+                };
+              }
+            }
+          }
+        }
         // === Handle Regular Zone CSV format ===
         else {
           // Expecting PZ format (index 0 is shift, 2 is report, 3 is depart, 12 is signOff)
@@ -1216,6 +1276,11 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
     
     if (syncEnabled && isSignedIn) {
       try {
+        // ENHANCED: Log training shift sync attempts for verification
+        if (event.title == 'TRAIN23/24' || event.title == 'CPC') {
+          debugPrint('🗓️ GOOGLE SYNC: Syncing training shift ${event.title} to Google Calendar');
+        }
+        
         // Convert to full DateTime objects for Google Calendar
         final startDateTime = DateTime(
           event.startDate.year, 
@@ -1271,6 +1336,11 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
         
         // Use captured messenger to show result (check mounted after async)
         if (success && mounted) {
+          // ENHANCED: Log successful training shift sync
+          if (event.title == 'TRAIN23/24' || event.title == 'CPC') {
+            debugPrint('✅ GOOGLE SYNC: Training shift ${event.title} successfully synced to Google Calendar');
+          }
+          
           scaffoldMessenger.showSnackBar(
             const SnackBar(content: Text('Shift added to Google Calendar')),
           );
@@ -3068,8 +3138,9 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
         title: const Text('Spare Driver Shift Calendar'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: _showAddEventDialog,
+            icon: const Icon(Icons.view_week),
+            tooltip: 'Week View',
+            onPressed: _showWeekView,
           ),
           PopupMenuButton(
             icon: const Icon(Icons.settings),
@@ -4489,6 +4560,17 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
   }
   // --- END NEW TIMING POINTS FUNCTION ---
 
+  void _showWeekView() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => WeekViewScreen(
+          selectedDate: _selectedDay ?? DateTime.now(),
+          shiftInfoMap: _shiftInfoMap,
+        ),
+      ),
+    );
+  }
+
 
 
   // Add this method to handle calendar page changes
@@ -4501,7 +4583,53 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
     
     // Preload the new month's events and wait for completion to ensure UI updates
     try {
+      // CRITICAL FIX: Validate spare duty data before month change
+      final currentMonthEvents = EventService.getEventsForDay(DateTime.now());
+      final currentSpareEvents = currentMonthEvents.where((e) => e.title.startsWith('SP')).toList();
+      
+      if (kDebugMode && currentSpareEvents.isNotEmpty) {
+        debugPrint('🔄 MONTH NAVIGATION: Found ${currentSpareEvents.length} spare events before month change');
+        for (final spare in currentSpareEvents) {
+          debugPrint('   - ${spare.title}: duties=${spare.assignedDuties}, buses=${spare.busAssignments}');
+        }
+      }
+      
       await EventService.preloadMonth(focusedDay);
+      
+      // CRITICAL FIX: Validate spare duty data after month change  
+      if (kDebugMode && currentSpareEvents.isNotEmpty) {
+        final afterMonthEvents = EventService.getEventsForDay(DateTime.now());
+        final afterSpareEvents = afterMonthEvents.where((e) => e.title.startsWith('SP')).toList();
+        
+        debugPrint('🔄 MONTH NAVIGATION: Found ${afterSpareEvents.length} spare events after month change');
+        for (final spare in afterSpareEvents) {
+          debugPrint('   - ${spare.title}: duties=${spare.assignedDuties}, buses=${spare.busAssignments}');
+        }
+        
+        // Check for data loss
+        for (final originalSpare in currentSpareEvents) {
+          final matchingAfter = afterSpareEvents.firstWhere(
+            (e) => e.id == originalSpare.id,
+            orElse: () => Event(
+              id: 'not_found',
+              title: '',
+              startDate: DateTime.now(),
+              startTime: const TimeOfDay(hour: 0, minute: 0),
+              endDate: DateTime.now(),
+              endTime: const TimeOfDay(hour: 0, minute: 0),
+            ),
+          );
+          
+          if (matchingAfter.id == 'not_found') {
+            debugPrint('🚨 MONTH NAVIGATION: Spare event ${originalSpare.title} DISAPPEARED during month change!');
+          } else if ((originalSpare.assignedDuties?.isNotEmpty ?? false) && 
+                     (matchingAfter.assignedDuties?.isEmpty ?? true)) {
+            debugPrint('🚨 MONTH NAVIGATION: Spare event ${originalSpare.title} LOST DUTIES during month change!');
+            debugPrint('   - Before: ${originalSpare.assignedDuties}');
+            debugPrint('   - After: ${matchingAfter.assignedDuties}');
+          }
+        }
+      }
       
       // Trigger UI refresh after events are loaded to show indicator dots
       if (mounted) {

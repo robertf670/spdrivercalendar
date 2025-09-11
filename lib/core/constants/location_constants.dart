@@ -1,6 +1,8 @@
 const Map<String, String> locationMappings = {
   // Base locations
   'GARAGE': 'Garage',
+  'Garage': 'Garage',  // Added for training duties
+  'Training School': 'Training School',  // Added for training duties
   'GAR': 'Garage',  // Added for Jamestown Road duties
   'PHIBPO': 'Garage',
   'PHIBPI': 'Garage',
@@ -8,6 +10,8 @@ const Map<String, String> locationMappings = {
   'PSQW': 'PSQW',
   'ASTONQ': 'Aston Q',
   'BWALK': 'B Walk',
+  'CONHILL #1619': 'Constitution Hill',
+  'BSTONE #190': 'Broadstone',
   
   // Route-specific locations
   '39A-ASTONQ': 'Aston Q',
@@ -24,6 +28,8 @@ const Map<String, String> locationMappings = {
   '39': 'Route 39',
   'C1/C2': 'Route C1/C2',
   '1/C2': 'Route 1/C2',
+  '23': 'Route 23',
+  '24': 'Route 24',
   
   // New location formats
   'PSQE-PQ': 'PSQE',

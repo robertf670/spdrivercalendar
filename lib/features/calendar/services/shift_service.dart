@@ -29,8 +29,29 @@ class ShiftService {
     // Extract the shift code from the title
     final shiftCode = event.title.replaceAll('Shift: ', '').trim();
     
-    // Handle Spare shifts which don't have break times
+    // Handle Spare shifts - check if they have exactly one full duty
     if (shiftCode.startsWith('SP')) {
+      // Check if spare shift has exactly one full duty for break time display
+      if (event.assignedDuties != null && event.assignedDuties!.length == 1) {
+        String dutyCode = event.assignedDuties![0];
+        dutyCode = dutyCode.startsWith('UNI:') ? dutyCode.substring(4) : dutyCode;
+        
+        // Only show break times for full duties (not ending with A or B)
+        if (!dutyCode.endsWith('A') && !dutyCode.endsWith('B')) {
+          // Create a temporary event with the duty code to get break times
+          final tempEvent = Event(
+            id: 'temp',
+            title: dutyCode,
+            startDate: event.startDate,
+            startTime: event.startTime,
+            endDate: event.endDate,
+            endTime: event.endTime,
+          );
+          
+          // Recursively call getBreakTime with the duty code
+          return await getBreakTime(tempEvent);
+        }
+      }
       return null;
     }
     

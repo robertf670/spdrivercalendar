@@ -90,8 +90,21 @@ class TimingPointsScreenState extends State<TimingPointsScreen> {
       ));
     }
 
-    // Sort routes by route number
-    routes.sort((a, b) => a.routeNumber.compareTo(b.routeNumber));
+    // Sort routes by route number, with 23 and 24 at the bottom
+    routes.sort((a, b) {
+      // Put routes 23 and 24 at the bottom
+      if (a.routeNumber == '23' || a.routeNumber == '24') {
+        if (b.routeNumber == '23' || b.routeNumber == '24') {
+          return a.routeNumber.compareTo(b.routeNumber);
+        }
+        return 1; // a comes after b
+      }
+      if (b.routeNumber == '23' || b.routeNumber == '24') {
+        return -1; // a comes before b
+      }
+      // Normal sorting for other routes
+      return a.routeNumber.compareTo(b.routeNumber);
+    });
     return routes;
   }
 

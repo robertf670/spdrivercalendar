@@ -82,15 +82,30 @@ class BillsScreenState extends State<BillsScreen> {
 
     try {
       // Construct the filename based on selected values
-      final zoneNumber = _selectedZone.replaceAll('Zone ', '');
-      // Format filenames with correct capitalization
-      String dayTypeForFilename = _selectedDayType;
-      if (_selectedDayType == 'Sat') {
-        dayTypeForFilename = 'SAT';
-      } else if (_selectedDayType == 'Sun') {
-        dayTypeForFilename = 'SUN';
+      String filename;
+      
+      if (_selectedZone == 'Route 23/24 Proposed Bill') {
+        // Handle the new Route 23/24 files
+        String dayTypeForFilename = _selectedDayType;
+        if (_selectedDayType == 'Sat') {
+          dayTypeForFilename = 'SAT';
+        } else if (_selectedDayType == 'Sun') {
+          dayTypeForFilename = 'SUN';
+        }
+        filename = '${dayTypeForFilename}_DUTIES_PZ4_NEW.csv';
+      } else {
+        // Handle existing zone files
+        final zoneNumber = _selectedZone.replaceAll('Zone ', '');
+        // Format filenames with correct capitalization
+        String dayTypeForFilename = _selectedDayType;
+        if (_selectedDayType == 'Sat') {
+          dayTypeForFilename = 'SAT';
+        } else if (_selectedDayType == 'Sun') {
+          dayTypeForFilename = 'SUN';
+        }
+        filename = '${dayTypeForFilename}_DUTIES_PZ$zoneNumber.csv';
       }
-      final filename = '${dayTypeForFilename}_DUTIES_PZ$zoneNumber.csv';
+      
       final path = 'assets/$filename';
       
       // Load the CSV content
@@ -288,7 +303,7 @@ class BillsScreenState extends State<BillsScreen> {
       ),
       body: SafeArea(
         child: Container(
-          padding: const EdgeInsets.all(20.0),
+          padding: const EdgeInsets.all(12.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -296,17 +311,17 @@ class BillsScreenState extends State<BillsScreen> {
               Container(
                 decoration: BoxDecoration(
                   color: Theme.of(context).colorScheme.surface,
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(12),
                   boxShadow: [
                     BoxShadow(
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08),
-                      spreadRadius: 2,
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.06),
+                      spreadRadius: 1,
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
                     ),
                   ],
                 ),
-                padding: const EdgeInsets.all(20),
+                padding: const EdgeInsets.all(12),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -314,12 +329,12 @@ class BillsScreenState extends State<BillsScreen> {
                     Text(
                       'Day Type',
                       style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
                         color: Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 6),
                     Container(
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(10),
@@ -337,16 +352,19 @@ class BillsScreenState extends State<BillsScreen> {
                             return DropdownMenuItem<String>(
                               value: value,
                               child: Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                                padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
                                 child: Row(
                                   children: [
                                     const Icon(
                                       Icons.work,
                                       color: AppTheme.primaryColor,
-                                      size: 20,
+                                      size: 18,
                                     ),
-                                    const SizedBox(width: 12),
-                                    Text(value),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      value,
+                                      style: const TextStyle(fontSize: 14),
+                                    ),
                                   ],
                                 ),
                               ),
@@ -364,18 +382,18 @@ class BillsScreenState extends State<BillsScreen> {
                       ),
                     ),
                     
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 16),
                     
                     // Zone Dropdown
                     Text(
                       'Zone',
                       style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
                         color: Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 6),
                     Container(
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(10),
@@ -389,20 +407,23 @@ class BillsScreenState extends State<BillsScreen> {
                             padding: EdgeInsets.only(right: 16.0),
                             child: Icon(Icons.arrow_drop_down_circle, color: AppTheme.primaryColor),
                           ),
-                          items: ['Zone 1', 'Zone 3', 'Zone 4'].map((String value) {
+                          items: ['Zone 1', 'Zone 3', 'Zone 4', 'Route 23/24 Proposed Bill'].map((String value) {
                             return DropdownMenuItem<String>(
                               value: value,
                               child: Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                                padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
                                 child: Row(
                                   children: [
                                     const Icon(
                                       Icons.map,
                                       color: AppTheme.primaryColor,
-                                      size: 20,
+                                      size: 18,
                                     ),
-                                    const SizedBox(width: 12),
-                                    Text(value),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      value,
+                                      style: const TextStyle(fontSize: 14),
+                                    ),
                                   ],
                                 ),
                               ),
@@ -423,7 +444,40 @@ class BillsScreenState extends State<BillsScreen> {
                 ),
               ),
               
-              const SizedBox(height: 24),
+              const SizedBox(height: 12),
+              
+              // Warning message for Route 23/24 Proposed Bill
+              if (_selectedZone == 'Route 23/24 Proposed Bill') ...[
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  margin: const EdgeInsets.only(bottom: 12),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.primaryContainer,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: AppTheme.primaryColor.withValues(alpha: 0.3)),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.info_outline,
+                        color: AppTheme.primaryColor,
+                        size: 18,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'This is a proposed bill - It is subject to change!',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w500,
+                            color: Theme.of(context).colorScheme.onPrimaryContainer,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
               
               // CSV Data Display Section
               Expanded(
@@ -542,7 +596,7 @@ class BillsScreenState extends State<BillsScreen> {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  'Schedule Data for $_selectedDayType, $_selectedZone',
+                  '$_selectedDayType $_selectedZone',
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     color: AppTheme.primaryColor,

@@ -209,6 +209,12 @@ class _EventCardState extends State<EventCard> {
         return;
       }
       
+      // Special handling for Training shifts
+      if (shiftCode == 'TRAIN23/24' || shiftCode == 'CPC') {
+        await _loadTrainingShiftData(shiftCode);
+        return;
+      }
+      
       // Special handling for Jamestown Road shifts (CHECK BEFORE UNI/Euro!)
       if (shiftCode.startsWith('811/')) {
 
@@ -693,6 +699,78 @@ class _EventCardState extends State<EventCard> {
     }
   }
 
+  Future<void> _loadTrainingShiftData(String shiftCode) async {
+    try {
+      // Load the training_duties.csv file
+      final file = await rootBundle.loadString('assets/training_duties.csv');
+      final lines = file.split('\n');
+      
+      // Find the matching shift
+      for (final line in lines) {
+        if (line.trim().isEmpty) continue;
+        final parts = line.split(',');
+        if (parts.length >= 5) {
+          final shift = parts[0].trim();
+          if (shift == shiftCode) {
+            // Found matching shift, extract location data
+            // Format: shift,starttime,endtime,startlocation,endlocation
+            final startLoc = parts[3].trim(); // startlocation column
+            final endLoc = parts[4].trim(); // endlocation column
+            final startTimeRaw = parts[1].trim(); // starttime column
+            final endTimeRaw = parts[2].trim(); // endtime column
+            
+            // Format locations for display
+            final start = startLoc.isNotEmpty ? mapLocationName(startLoc) : '';
+            final end = endLoc.isNotEmpty ? mapLocationName(endLoc) : '';
+            final startFormatted = _formatTimeWithoutSeconds(startTimeRaw);
+            final endFormatted = _formatTimeWithoutSeconds(endTimeRaw);
+            
+            if (mounted) {
+              setState(() {
+                startLocation = start;
+                finishLocation = end;
+                _departTimeStr = startFormatted;
+                _finishTimeStr = endFormatted;
+                startBreakLocation = null; // Training shifts don't have breaks
+                finishBreakLocation = null;
+                workTime = null; // Don't show work time for training
+                routeInfo = null;
+                isLoading = false;
+              });
+            }
+            return;
+          }
+        }
+      }
+      
+      // If no match found, clear the data
+      if (mounted) {
+        setState(() {
+          startLocation = null;
+          finishLocation = null;
+          startBreakLocation = null;
+          finishBreakLocation = null;
+          workTime = null;
+          routeInfo = null;
+          isLoading = false;
+        });
+      }
+    } catch (e) {
+      // Handle errors
+      if (mounted) {
+        setState(() {
+          startLocation = null;
+          finishLocation = null;
+          startBreakLocation = null;
+          finishBreakLocation = null;
+          workTime = null;
+          routeInfo = null;
+          isLoading = false;
+        });
+      }
+    }
+  }
+
   Future<void> _loadAssignedDutyDetails() async {
     _allDutyDetails = [];
     
@@ -957,7 +1035,9 @@ class _EventCardState extends State<EventCard> {
                     'dutyCode': dutyCode,
                     'startTime': dutyStartTime,
                     'endTime': breakStartTimeStr,
-                    'location': startLocation,
+                    'startLocation': startLocation.isNotEmpty && startLocation.toLowerCase() != 'nan' ? mapLocationName(startLocation) : '',
+                    'endLocation': endLocation.isNotEmpty && endLocation.toLowerCase() != 'nan' ? mapLocationName(endLocation) : '',
+                    'location': startLocation.isNotEmpty && startLocation.toLowerCase() != 'nan' ? mapLocationName(startLocation) : '',
                     'isHalfDuty': 'true',
                     'isFirstHalf': 'true',
                   });
@@ -972,7 +1052,9 @@ class _EventCardState extends State<EventCard> {
                     'dutyCode': dutyCode,
                     'startTime': dutyStartTime,
                     'endTime': DateFormat('HH:mm:ss').format(halfwayPoint),
-                    'location': startLocation,
+                    'startLocation': startLocation.isNotEmpty && startLocation.toLowerCase() != 'nan' ? mapLocationName(startLocation) : '',
+                    'endLocation': endLocation.isNotEmpty && endLocation.toLowerCase() != 'nan' ? mapLocationName(endLocation) : '',
+                    'location': startLocation.isNotEmpty && startLocation.toLowerCase() != 'nan' ? mapLocationName(startLocation) : '',
                     'isHalfDuty': 'true',
                     'isFirstHalf': 'true',
                   });
@@ -990,7 +1072,9 @@ class _EventCardState extends State<EventCard> {
                     'dutyCode': dutyCode,
                     'startTime': breakEndTimeStr,
                     'endTime': dutyEndTime,
-                    'location': endLocation,
+                    'startLocation': startLocation.isNotEmpty && startLocation.toLowerCase() != 'nan' ? mapLocationName(startLocation) : '',
+                    'endLocation': endLocation.isNotEmpty && endLocation.toLowerCase() != 'nan' ? mapLocationName(endLocation) : '',
+                    'location': endLocation.isNotEmpty && endLocation.toLowerCase() != 'nan' ? mapLocationName(endLocation) : '',
                     'isHalfDuty': 'true',
                     'isSecondHalf': 'true',
                   });
@@ -1005,20 +1089,39 @@ class _EventCardState extends State<EventCard> {
                     'dutyCode': dutyCode,
                     'startTime': DateFormat('HH:mm:ss').format(halfwayPoint),
                     'endTime': dutyEndTime,
-                    'location': endLocation,
+                    'startLocation': startLocation.isNotEmpty && startLocation.toLowerCase() != 'nan' ? mapLocationName(startLocation) : '',
+                    'endLocation': endLocation.isNotEmpty && endLocation.toLowerCase() != 'nan' ? mapLocationName(endLocation) : '',
+                    'location': endLocation.isNotEmpty && endLocation.toLowerCase() != 'nan' ? mapLocationName(endLocation) : '',
                     'isHalfDuty': 'true',
                     'isSecondHalf': 'true',
                   });
                 }
               } else {
-                // Full duty
+                // Full duty - also get break locations and map location names
+                final breakStartLoc = parts.length > 6 ? parts[6].trim() : '';
+                final breakEndLoc = parts.length > 9 ? parts[9].trim() : '';
+                
+                // Map location names to friendly names
+                final mappedStartLocation = startLocation.isNotEmpty && startLocation.toLowerCase() != 'nan' ? mapLocationName(startLocation) : '';
+                final mappedEndLocation = endLocation.isNotEmpty && endLocation.toLowerCase() != 'nan' ? mapLocationName(endLocation) : '';
+                final mappedBreakStartLoc = breakStartLoc.isNotEmpty && breakStartLoc.toLowerCase() != 'nan' ? mapLocationName(breakStartLoc) : '';
+                final mappedBreakEndLoc = breakEndLoc.isNotEmpty && breakEndLoc.toLowerCase() != 'nan' ? mapLocationName(breakEndLoc) : '';
+                
                 _allDutyDetails.add({
                   'dutyCode': dutyCode,
                   'startTime': dutyStartTime,
                   'endTime': dutyEndTime,
-                  'startLocation': startLocation,
-                  'endLocation': endLocation,
-                  'location': '$startLocation - $endLocation',
+                  'startLocation': mappedStartLocation,
+                  'endLocation': mappedEndLocation,
+                  'startBreakLocation': mappedBreakStartLoc,
+                  'finishBreakLocation': mappedBreakEndLoc,
+                  'location': mappedStartLocation.isNotEmpty && mappedEndLocation.isNotEmpty 
+                              ? '$mappedStartLocation - $mappedEndLocation'
+                              : mappedStartLocation.isNotEmpty 
+                                  ? mappedStartLocation
+                                  : mappedEndLocation.isNotEmpty
+                                      ? mappedEndLocation
+                                      : '',
                   'isHalfDuty': 'false',
                 });
               }
@@ -1562,8 +1665,8 @@ class _EventCardState extends State<EventCard> {
                 ),
                 const SizedBox(height: 3.0), // Reduced gap - route/location and breaks are related
               ],
-              // MODIFIED: Break times row (if available AND NOT BusCheck AND is work shift)
-              if (breakTime != null && !isBusCheckShift && !widget.event.title.contains('(OT)') && widget.event.isWorkShift) ...[
+              // MODIFIED: Break times row (if available AND NOT BusCheck AND is work shift AND NOT training shift AND NOT spare shift)
+              if (breakTime != null && !isBusCheckShift && !widget.event.title.contains('(OT)') && widget.event.isWorkShift && widget.event.title != 'TRAIN23/24' && widget.event.title != 'CPC' && !widget.event.title.startsWith('SP')) ...[
                 Row(
                   children: [
                     Icon(
@@ -2430,8 +2533,39 @@ class _EventCardState extends State<EventCard> {
               if (_spareShiftHasFullDuties()) ...[
                 _buildFullDutyBusAssignmentUI(dialogSetState),
               ] else ...[
-              // Create a sorted list of duties
+              // Create a sorted list of duties with better error handling
               ...(() {
+                // Ensure duty details are loaded - if not available, trigger a reload
+                if (_allDutyDetails.isEmpty && widget.event.assignedDuties!.isNotEmpty) {
+                  // Use a delayed call to load duty details and refresh the dialog
+                  Future.delayed(Duration.zero, () async {
+                    await _loadAssignedDutyDetails();
+                    if (mounted) {
+                      dialogSetState(() {}); // Refresh the dialog once data is loaded
+                    }
+                  });
+                  // Show loading state while duty details are being loaded
+                  return [
+                    const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(16.0),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                            SizedBox(width: 8),
+                            Text('Loading duty details...'),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ];
+                }
+                
                 final sortedDuties = widget.event.assignedDuties!.map((dutyCode) {
                   final dutyDetails = _allDutyDetails.firstWhere(
                     (d) => d['dutyCode'] == dutyCode,
@@ -2843,9 +2977,13 @@ class _EventCardState extends State<EventCard> {
                     Expanded(
                       child: Text(
                           '$displayDutyCode | '
-                            '${_formatTimeString(duty['startTime'])} to '
-                          '${_formatTimeString(duty['endTime'])}'
-                          '${widget.event.getBusForDuty(duty['dutyCode'] ?? '') != null ? ' | Bus: ${widget.event.getBusForDuty(duty['dutyCode'] ?? '')}' : ''}',
+                            // For full duties, show both start and end locations inline
+                            '${duty['isHalfDuty'] == 'false' ? (duty['startLocation'] != null && duty['startLocation']!.isNotEmpty ? '${duty['startLocation']} ' : '') : ''}'
+                            '${_formatTimeString(duty['startTime'])} - '
+                            '${_formatTimeString(duty['endTime'])}'
+                            // For full duties, show end location inline
+                            '${duty['isHalfDuty'] == 'false' ? (duty['endLocation'] != null && duty['endLocation']!.isNotEmpty ? ' ${duty['endLocation']}' : '') : ''}'
+                            '${widget.event.getBusForDuty(duty['dutyCode'] ?? '') != null ? ' | Bus: ${widget.event.getBusForDuty(duty['dutyCode'] ?? '')}' : ''}',
                         style: TextStyle(
                           color: Theme.of(context).brightness == Brightness.dark
                               ? Colors.white
@@ -2876,17 +3014,97 @@ class _EventCardState extends State<EventCard> {
               ),
             ],
           ),
-          // Show break times for UNI duties if available
-          if (hasBreakTimes)
+          // Show break times for UNI duties if available OR for spare duties with full duties
+          if (hasBreakTimes || (_spareShiftHasOneFullDuty() && breakTime != null))
             Padding(
-              padding: const EdgeInsets.only(left: 24.0, top: 4.0),
-              child: Text(
-                'Break: ${_formatTimeString(duty['breakStart'])} - ${_formatTimeString(duty['breakEnd'])}',
-                style: TextStyle(
-                  fontSize: 11,
-                  color: Colors.grey[600],
-                  fontStyle: FontStyle.italic,
-                ),
+              padding: const EdgeInsets.only(top: 4.0),
+              child: Row(
+                children: [
+                  Icon(
+                    breakTime != null && breakTime!.toLowerCase().contains('workout') ? Icons.directions_run : Icons.coffee,
+                    size: 16,
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.white
+                        : Colors.black,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      // For spare duties with full duties, use the breakTime string; for UNI duties, use breakStart/breakEnd
+                      hasBreakTimes 
+                        ? 'Break: ${_formatTimeString(duty['breakStart'])} - ${_formatTimeString(duty['breakEnd'])}'
+                        : () {
+                            String baseText;
+                            // For spare duties, try to get break locations from duty data
+                            if (widget.event.title.startsWith('SP') && duty['startBreakLocation'] != null && duty['finishBreakLocation'] != null) {
+                              final startBreakLoc = duty['startBreakLocation']!.isNotEmpty ? '${duty['startBreakLocation']} ' : '';
+                              final endBreakLoc = duty['finishBreakLocation']!.isNotEmpty ? ' ${duty['finishBreakLocation']}' : '';
+                              baseText = '$startBreakLoc${breakTime ?? 'No break info'}$endBreakLoc';
+                            } else {
+                              baseText = breakTime ?? 'No break info';
+                            }
+                            
+                            // Add duration if not a workout and breakTime is available
+                            if (breakTime != null && !breakTime!.toLowerCase().contains('workout')) {
+                              final duration = _calculateBreakDuration(breakTime!);
+                              if (duration != null) {
+                                baseText += ' ($duration)';
+                              }
+                            }
+                            
+                            return baseText;
+                          }(),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.white
+                            : Colors.black,
+                        fontWeight: FontWeight.w400,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          // Show location information for half duties on a separate line
+          if (duty['isHalfDuty'] == 'true' && ((duty['startLocation'] != null && duty['startLocation']!.isNotEmpty) || (duty['endLocation'] != null && duty['endLocation']!.isNotEmpty)))
+            Padding(
+              padding: const EdgeInsets.only(top: 4.0),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.location_on,
+                    size: 16,
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.white
+                        : Colors.black,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      () {
+                        final startLoc = duty['startLocation'] ?? '';
+                        final endLoc = duty['endLocation'] ?? '';
+                        
+                        if (startLoc.isNotEmpty && endLoc.isNotEmpty) {
+                          return '$startLoc - $endLoc';
+                        } else if (startLoc.isNotEmpty) {
+                          return startLoc;
+                        } else if (endLoc.isNotEmpty) {
+                          return endLoc;
+                        }
+                        return '';
+                      }(),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.white
+                            : Colors.black,
+                        fontWeight: FontWeight.w400,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
         ],
@@ -3110,43 +3328,9 @@ class _EventCardState extends State<EventCard> {
       await EventService.updateEvent(oldEvent, widget.event);
       print('DEBUG: EventService.updateEvent completed successfully');
       
-      // CRITICAL FIX: Verify the save was successful by reading back the data
-      print('DEBUG: Starting post-save verification...');
-      await Future.delayed(const Duration(milliseconds: 100)); // Small delay to ensure save is complete
-      
-      final verificationEvents = EventService.getEventsForDay(widget.event.startDate);
-      print('DEBUG: Retrieved ${verificationEvents.length} events for verification on ${widget.event.startDate}');
-      
-      final savedEvent = verificationEvents.firstWhere(
-        (e) => e.id == widget.event.id,
-        orElse: () => Event(
-          id: '',
-          title: '',
-          startDate: widget.event.startDate,
-          startTime: widget.event.startTime,
-          endDate: widget.event.endDate,
-          endTime: widget.event.endTime,
-          busAssignments: {},
-        ),
-      );
-      
-      if (savedEvent.id.isEmpty) {
-        throw Exception('Event verification failed - event not found after save');
-      }
-      
-      print('DEBUG: Found saved event during verification:');
-      print('  - Event ID: ${savedEvent.id}');
-      print('  - Title: ${savedEvent.title}');
-      print('  - Assigned duties: ${savedEvent.assignedDuties}');
-      print('  - Bus assignments: ${savedEvent.busAssignments}');
-      
-      if (savedEvent.assignedDuties == null || 
-          savedEvent.assignedDuties!.length != widget.event.assignedDuties?.length ||
-          (widget.event.busAssignments != null && savedEvent.busAssignments == null)) {
-        throw Exception('Event verification failed - data mismatch after save. Expected duties: ${widget.event.assignedDuties}, got: ${savedEvent.assignedDuties}. Expected buses: ${widget.event.busAssignments}, got: ${savedEvent.busAssignments}');
-      }
-      
-      print('DEBUG: Event save verification successful - duties: ${savedEvent.assignedDuties}, buses: ${savedEvent.busAssignments}');
+      // REMOVED: Post-save verification that was causing false positives and data rollbacks
+      // The EventService.updateEvent method has its own verification logic
+      print('DEBUG: EventService.updateEvent completed - trusting the save operation');
     } catch (saveError) {
       print('ERROR: Failed to save event update: $saveError');
       
@@ -3162,21 +3346,9 @@ class _EventCardState extends State<EventCard> {
       rethrow;
     }
     
-    // Force refresh the cache to ensure UI shows updated data
-    try {
-      print('DEBUG: Refreshing event cache...');
-      await EventService.refreshEventInCache(widget.event.id, widget.event.startDate);
-      print('DEBUG: Successfully refreshed event cache');
-      
-      // CRITICAL FIX: Force complete cache synchronization to prevent old cached data
-      print('DEBUG: Starting forced cache synchronization...');
-      await EventService.forceCacheSynchronization(widget.event.startDate);
-      print('DEBUG: Forced cache synchronization completed');
-      
-    } catch (cacheError) {
-      print('WARNING: Failed to refresh cache: $cacheError');
-      // Don't fail the entire operation for cache refresh issues
-    }
+    // REMOVED: Aggressive cache refresh that was causing data corruption
+    // The cache will naturally update when the dialog refreshes and reads the data
+    print('DEBUG: Skipping aggressive cache refresh to prevent data corruption');
     
     // Update UI in a controlled manner
     if (mounted) {
@@ -3193,8 +3365,13 @@ class _EventCardState extends State<EventCard> {
       // CRITICAL: Refresh the dialog if refreshDialog function was provided
       if (refreshDialog != null) {
         print('DEBUG: Refreshing dialog state after bus assignment');
-        refreshDialog(() {
-          // Dialog state refreshed - the UI will automatically update
+        // Add a small delay to ensure the event data is properly updated before refreshing
+        Future.delayed(const Duration(milliseconds: 100), () {
+          if (mounted) {
+            refreshDialog(() {
+              // Dialog state refreshed - the UI will automatically update
+            });
+          }
         });
       }
       
@@ -3355,6 +3532,25 @@ class _EventCardState extends State<EventCard> {
     }
     return false;
   }
+
+  // Check if spare shift has exactly one full duty (for break time display)
+  bool _spareShiftHasOneFullDuty() {
+    if (!widget.event.title.startsWith('SP') || 
+        widget.event.assignedDuties == null || 
+        widget.event.assignedDuties!.isEmpty) {
+      return false;
+    }
+    
+    // Must have exactly one duty and it must be a full duty
+    if (widget.event.assignedDuties!.length != 1) {
+      return false;
+    }
+    
+    String duty = widget.event.assignedDuties![0];
+    String dutyCode = duty.startsWith('UNI:') ? duty.substring(4) : duty;
+    return !dutyCode.endsWith('A') && !dutyCode.endsWith('B');
+  }
+
 
   // Build the bus assignment UI for spare shifts with full duties
   Widget _buildFullDutyBusAssignmentUI(StateSetter dialogSetState) {
@@ -3706,8 +3902,9 @@ class _EventCardState extends State<EventCard> {
     final bool isFirstHalf = isOvertimeShift && widget.event.title.contains('A (OT)');
     final bool isSecondHalf = isOvertimeShift && widget.event.title.contains('B (OT)');
     
-    // For PZ shifts (and Jamestown Road shifts), use the specialized display format
-    if (widget.event.title.startsWith('PZ') || widget.event.title.startsWith('811/')) {
+    // For PZ shifts, Jamestown Road shifts, and Training shifts, use the specialized display format
+    if (widget.event.title.startsWith('PZ') || widget.event.title.startsWith('811/') || 
+        widget.event.title == 'TRAIN23/24' || widget.event.title == 'CPC') {
       return <TextSpan>[
         if (startLocation != null && startLocation!.isNotEmpty) ...[
           TextSpan(

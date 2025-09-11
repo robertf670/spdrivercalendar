@@ -18,3 +18,9 @@ L59 -> Riverforest, Our Lady's Nativity
 
 C1/C2 -> Sandymount, Fforster Green, Lucan Retail Park, Hermatige Clinic, Memorial Gardens (apparently), Chapelizod Bypass (apparently), Prince's Street South, Ringsend Garage
 C1/C2 -> Adamstown Station, Grand Canal Quay, Aston Quay, Chapelizod Bypass, Clarion Hotel, Ballyowen Park
+
+23 -> Charlestown
+23 -> Merrion Square
+
+24 -> Airport
+24 -> Merrion Square

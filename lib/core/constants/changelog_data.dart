@@ -1,4 +1,54 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.15.0': [
+    {
+      'title': 'Complete Route 23 & 24 Duty Schedules - SUBJECT TO CHANGE',
+      'description': 'Added comprehensive duty schedules for new routes 23 and 24 covering all days of the week. New CSV files include Monday-Friday, Saturday, and Sunday duties with full timing, location, and break information for Constitution Hill and Broadstone locations.',
+    },
+    {
+      'title': 'New Routes 23 & 24 Location Support',
+      'description': 'Added support for new routes 23 and 24 locations including Constitution Hill and Broadstone. Location mapping system updated to handle the new location formats that will appear in upcoming duty schedules.',
+    },
+    {
+      'title': 'Routes 23 & 24 added to Timing Points',
+      'description': 'Added routes 23 and 24 to the Timing Points menu with their respective destinations. Information on this has not been released yet, so they will be added at a later date.',
+    },
+    {
+      'title': 'New Week View Feature',
+      'description': 'Added comprehensive week view accessible from the calendar app bar. Features Sunday-first week layout in a 1-3-3 stacked design, showing all duty schedules with start and end times.',
+    },
+    {
+      'title': 'Training Duty Integration',
+      'description': 'Added new Training zone for work shifts supporting training duties like TRAIN23/24 and CPC.',
+    },
+    {
+      'title': 'Spare Duty Bus Assignment Fix',
+      'description': 'Fixed critical issue where spare duties would disappear from dialog when assigning bus numbers. Resolved cache corruption that was causing display issues while preserving all duty and bus assignment data.',
+    },
+    {
+      'title': 'Spare Duty Month Navigation Fix',
+      'description': 'Fixed issue where spare duty assignments would disappear when navigating between calendar months. Resolved overly aggressive cache validation that was incorrectly flagging valid spare duty states as corrupted data.',
+    },
+    {
+      'title': 'Holiday Cache Synchronization Fix',
+      'description': 'Resolved intermittent issue where existing holidays would disappear when adding new holidays. Fixed cache instance mismatch that prevented proper data synchronization between holiday service and calendar display.',
+    },
+    {
+      'title': 'Enhanced Location Display for Spare Duties',
+      'description': 'Improved location information display for spare duties. Full duties now show both start and end locations inline (e.g., "B Walk 12:09 - 21:35 Garage"), while half duties display complete location information on a separate line with location icon for better readability and space management.',
+    },
+    {
+      'title': 'Consistent Location Name Mapping',
+      'description': 'Applied proper location name mapping to spare duties, ensuring consistency with regular duties. Raw location codes like "39-BWALK" now display as friendly names like "B Walk" across all duty types.',
+    },
+    {
+      'title': 'Complete Break Information for Spare Duties',
+      'description': 'Added comprehensive break time display for spare duties including break locations and duration calculation. Break times now show start/end locations and calculated duration (e.g., "B Walk 16:47 - 17:50 B Walk (1h 3m)") matching the format used in regular work shifts.',
+    },
+    {
+      'title': 'Improved Half Duty Location Support',
+      'description': 'Enhanced half duty assignments to include both start and end location information. Half duties now display complete location data on a dedicated line with location icon, ensuring full operational information is available without cluttering the main duty line.',
+    },
+  ],
   '2.14.19': [
     {
       'title': 'Event Indicator Dots Fix (Complete)',
