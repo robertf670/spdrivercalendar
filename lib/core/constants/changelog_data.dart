@@ -1,4 +1,30 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.15.4': [
+    {
+      'title': 'Week View Layout Optimization',
+      'description': 'Major improvements to week view layout and user experience. Removed cluttering TODAY badge in favor of a cleaner thick blue border (4px) to highlight current day. Made date navigation header more compact with reduced padding and font size for better space utilization.',
+    },
+    {
+      'title': 'Enhanced Time Display System',
+      'description': 'Redesigned time display in week view for better readability across all devices. Removed constraining white containers around times and implemented vertical time stacking (start time, arrow, end time) to prevent truncation. Times now display clearly without space limitations.',
+    },
+    {
+      'title': 'Responsive Design Improvements',
+      'description': 'Fine-tuned responsive breakpoints for optimal display on different device sizes. Added specific sizing for mid-range phones (350-450px) like Samsung Galaxy S23 with generous text and container dimensions. Implemented ultra-conservative sizing for very small screens to prevent overflow.',
+    },
+    {
+      'title': 'Week View Scrolling Support',
+      'description': 'Added comprehensive scrolling capability to week view screen to prevent content cutoff by system UI on smaller devices. Wrapped content in SingleChildScrollView with SafeArea for proper spacing from system elements, ensuring all content remains accessible across all screen sizes.',
+    },
+    {
+      'title': 'Blue Box Container Optimization',
+      'description': 'Completely resolved blue duty boxes extending outside their white containers. Replaced problematic Expanded widgets with fixed 200px height containers, eliminated unnecessary scrolling within individual duty cards, and ensured blue boxes size naturally to their content with full bottom borders visible.',
+    },
+    {
+      'title': 'Layout Structure Refinements',
+      'description': 'Fixed critical layout conflicts between Expanded widgets and SingleChildScrollView that caused blank screens and rendering errors. Implemented proper content-to-container sizing relationships, ensuring blue duty boxes display their full content without artificial height constraints or scrolling issues.',
+    },
+  ],
   '2.15.3': [
     {
       'title': 'Enhanced Week View Text Readability',

@@ -87,53 +87,54 @@ class WeekViewScreenState extends State<WeekViewScreen> {
           ),
         ],
       ),
-      body: Column(
-        children: [
-          // Week navigation header
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface,
-              boxShadow: [
-                BoxShadow(
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
-                  spreadRadius: 1,
-                  blurRadius: 4,
-                  offset: const Offset(0, 2),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          child: Column(
+            children: [
+              // Week navigation header
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surface,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
+                      spreadRadius: 0,
+                      blurRadius: 2,
+                      offset: const Offset(0, 1),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.chevron_left),
-                  onPressed: () => _navigateWeek(-1),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.chevron_left),
+                      onPressed: () => _navigateWeek(-1),
+                    ),
+                    Text(
+                      '${DateFormat('MMM d').format(_weekDays.first)} - ${DateFormat('MMM d, yyyy').format(_weekDays.last)}',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.chevron_right),
+                      onPressed: () => _navigateWeek(1),
+                    ),
+                  ],
                 ),
-                Text(
-                  '${DateFormat('MMM d').format(_weekDays.first)} - ${DateFormat('MMM d, yyyy').format(_weekDays.last)}',
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.chevron_right),
-                  onPressed: () => _navigateWeek(1),
-                ),
-              ],
-            ),
-          ),
-          
-          // Week view content - Stacked layout (1-3-3)
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-              child: Column(
+              ),
+              
+              // Week view content - Stacked layout (1-3-3)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                child: Column(
                 children: [
                   // Row 1: Sunday only (centered)
-                  Expanded(
-                    flex: 1,
+                  SizedBox(
+                    height: 200,
                     child: Row(
                       children: [
                         const Expanded(child: SizedBox()), // Left spacer
@@ -149,8 +150,8 @@ class WeekViewScreenState extends State<WeekViewScreen> {
                   const SizedBox(height: 8),
                   
                   // Row 2: Monday, Tuesday, Wednesday
-                  Expanded(
-                    flex: 1,
+                  SizedBox(
+                    height: 200,
                     child: Row(
                       children: [
                         Expanded(child: _buildDayCard(_weekDays[1])), // Monday
@@ -165,8 +166,8 @@ class WeekViewScreenState extends State<WeekViewScreen> {
                   const SizedBox(height: 8),
                   
                   // Row 3: Thursday, Friday, Saturday
-                  Expanded(
-                    flex: 1,
+                  SizedBox(
+                    height: 200,
                     child: Row(
                       children: [
                         Expanded(child: _buildDayCard(_weekDays[4])), // Thursday
@@ -178,10 +179,11 @@ class WeekViewScreenState extends State<WeekViewScreen> {
                     ),
                   ),
                 ],
+                ),
               ),
-            ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -200,7 +202,7 @@ class WeekViewScreenState extends State<WeekViewScreen> {
           color: _isToday(day) 
             ? AppTheme.primaryColor 
             : Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
-          width: _isToday(day) ? 2 : 1,
+          width: _isToday(day) ? 4 : 1,
         ),
         boxShadow: [
           BoxShadow(
@@ -244,28 +246,6 @@ class WeekViewScreenState extends State<WeekViewScreen> {
                   ),
                   textAlign: TextAlign.center,
                 ),
-                // Always reserve space for TODAY badge to maintain consistent height
-                const SizedBox(height: 4),
-                Container(
-                  height: 18, // Fixed height for consistency
-                  child: _isToday(day) 
-                    ? Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: AppTheme.primaryColor,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Text(
-                          'TODAY',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: sizes['todayBadge']!,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      )
-                    : const SizedBox.shrink(), // Invisible placeholder
-                ),
               ],
             ),
           ),
@@ -274,7 +254,8 @@ class WeekViewScreenState extends State<WeekViewScreen> {
           Expanded(
             child: Padding(
               padding: const EdgeInsets.all(8),
-              child: Column(
+              child: SingleChildScrollView(
+                child: Column(
                 children: [
                   // Shift info
                   if (shift != null) ...[
@@ -301,31 +282,28 @@ class WeekViewScreenState extends State<WeekViewScreen> {
                   
                   // Work events
                   if (workEvents.isNotEmpty) ...[
-                    Expanded(
-                      child: ListView.builder(
-                        itemCount: workEvents.length,
-                        itemBuilder: (context, index) => _buildDayDutyItem(workEvents[index]),
-                      ),
-                    ),
+                    ...workEvents.map((event) => _buildDayDutyItem(event)),
                   ] else ...[
-                    Expanded(
-                      child: Center(
+                    Center(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 20),
                         child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
+                          mainAxisSize: MainAxisSize.min,
                           children: [
                             Icon(
                               Icons.free_breakfast,
-                              size: 32,
+                              size: sizes['moreText']! * 4, // Responsive icon size
                               color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
                             ),
-                            const SizedBox(height: 8),
+                            SizedBox(height: sizes['dutyCardMargin']!),
                             Text(
                               'Free Day',
                               style: TextStyle(
-                                fontSize: 14,
+                                fontSize: sizes['moreText']!,
                                 color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                                 fontStyle: FontStyle.italic,
                               ),
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ],
                         ),
@@ -372,6 +350,7 @@ class WeekViewScreenState extends State<WeekViewScreen> {
                     ),
                   ],
                 ],
+                ),
               ),
             ),
           ),
@@ -410,33 +389,30 @@ class WeekViewScreenState extends State<WeekViewScreen> {
           
           const SizedBox(height: 6),
           
-          // Start - End time
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 3),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface,
-              borderRadius: BorderRadius.circular(4),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              mainAxisSize: MainAxisSize.min,
+          // Start - End time (stacked vertically)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: Column(
               children: [
-                Flexible(
-                  child: Text(
-                    event.formattedStartTime,
-                    style: TextStyle(fontSize: sizes['timeText']!, fontWeight: FontWeight.w600),
-                    overflow: TextOverflow.ellipsis,
+                Text(
+                  event.formattedStartTime,
+                  style: TextStyle(
+                    fontSize: sizes['timeText']!, 
+                    fontWeight: FontWeight.w600,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
-                Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 2),
-                  child: Icon(Icons.arrow_forward, size: sizes['arrowIcon']!),
+                Icon(
+                  Icons.keyboard_arrow_down,
+                  size: sizes['arrowIcon']!,
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                 ),
-                Flexible(
-                  child: Text(
-                    event.formattedEndTime,
-                    style: TextStyle(fontSize: sizes['timeText']!, fontWeight: FontWeight.w600),
-                    overflow: TextOverflow.ellipsis,
+                Text(
+                  event.formattedEndTime,
+                  style: TextStyle(
+                    fontSize: sizes['timeText']!, 
+                    fontWeight: FontWeight.w600,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
               ],
@@ -499,44 +475,61 @@ class WeekViewScreenState extends State<WeekViewScreen> {
   Map<String, double> _getResponsiveSizes(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     
-    // Very small screens (narrow phones) - more conservative to prevent overflow
+    // Very small screens (narrow phones) - ULTRA conservative to prevent overflow
     if (screenWidth < 350) {
       return {
-        'dayName': 17.0,  // +1
-        'date': 14.0,     // +1
-        'todayBadge': 10.0,  // unchanged
-        'shiftName': 13.0,   // +1
-        'dutyTitle': 12.0,   // +1
-        'timeText': 10.0,    // unchanged (prevent overflow)
-        'breakText': 10.0,   // +1
-        'workDuration': 9.0,  // +1
-        'eventTitle': 10.0,    // +1
-        'moreText': 9.0,      // +1
-        'arrowIcon': 9.0,     // -1 (save space)
-        'breakIcon': 11.0,     // +1
-        // Container dimensions - conservative for very small screens
-        'dutyCardPadding': 8.0,  // unchanged
-        'dutyCardMargin': 6.0,    // unchanged
+        'dayName': 11.0,  // even smaller
+        'date': 9.0,      // even smaller
+        'shiftName': 8.0,   // even smaller
+        'dutyTitle': 8.0,   // even smaller
+        'timeText': 10.0,   // made bigger for readability
+        'breakText': 7.0,   // keep small
+        'workDuration': 6.0,  // even smaller
+        'eventTitle': 7.0,    // even smaller
+        'moreText': 6.0,      // even smaller
+        'arrowIcon': 8.0,     // slightly bigger for visibility
+        'breakIcon': 7.0,     // keep small
+        // Container dimensions - ULTRA conservative for very small screens
+        'dutyCardPadding': 3.0,  // even smaller
+        'dutyCardMargin': 1.0,    // even smaller
       };
     }
-    // Base sizes for small screens (phones in portrait) - BALANCED for readability without overflow
+    // Mid-range phones (like S23) - MUCH MORE generous for readability 
+    else if (screenWidth < 450) {
+      return {
+        'dayName': 20.0,  // +4 (more generous)
+        'date': 17.0,     // +4 (more generous)
+        'shiftName': 16.0,   // +4 (more generous)
+        'dutyTitle': 15.0,   // +4 (more generous)
+        'timeText': 14.0,    // +4 (MUCH bigger - was 12, now 14)
+        'breakText': 13.0,   // +4 (more generous)
+        'workDuration': 12.0,  // +4 (more generous)
+        'eventTitle': 13.0,    // +4 (more generous)
+        'moreText': 12.0,      // +4 (more generous)
+        'arrowIcon': 12.0,     // +2 (bigger)
+        'breakIcon': 14.0,     // +4 (more generous)
+        // Container dimensions - MORE generous for mid-range phones but contained
+        'dutyCardPadding': 12.0,  // +4 (generous but not excessive)
+        'dutyCardMargin': 8.0,    // +2 (reasonable spacing)
+      };
+    }
+    // Larger phones and small tablets
     else if (screenWidth < 600) {
       return {
-        'dayName': 18.0,  // +2
-        'date': 15.0,     // +2
-        'todayBadge': 11.0,  // +1
-        'shiftName': 14.0,   // +2
-        'dutyTitle': 13.0,   // +2
-        'timeText': 11.0,    // +1 (reduced from +2 to prevent overflow)
-        'breakText': 11.0,   // +2
-        'workDuration': 10.0,  // +2
-        'eventTitle': 11.0,    // +2
-        'moreText': 10.0,      // +2
-        'arrowIcon': 10.0,     // unchanged (reduced from +2 to save space)
-        'breakIcon': 12.0,     // +2
-        // Container dimensions - increased padding for larger text
-        'dutyCardPadding': 10.0,  // +2
-        'dutyCardMargin': 8.0,    // +2
+        'dayName': 20.0,  // +4
+        'date': 17.0,     // +4
+        'shiftName': 16.0,   // +4
+        'dutyTitle': 15.0,   // +4
+        'timeText': 13.0,    // +3
+        'breakText': 13.0,   // +4
+        'workDuration': 12.0,  // +4
+        'eventTitle': 13.0,    // +4
+        'moreText': 12.0,      // +4
+        'arrowIcon': 12.0,     // +2
+        'breakIcon': 14.0,     // +4
+        // Container dimensions - larger for good-sized phones but contained
+        'dutyCardPadding': 12.0,  // +4 (generous but controlled)
+        'dutyCardMargin': 10.0,    // +4 (good spacing)
       };
     }
     // Medium sizes for tablets or larger phones
@@ -544,7 +537,6 @@ class WeekViewScreenState extends State<WeekViewScreen> {
       return {
         'dayName': 20.0,  // +3
         'date': 17.0,     // +3
-        'todayBadge': 13.0,  // +2
         'shiftName': 16.0,   // +3
         'dutyTitle': 15.0,   // +3
         'timeText': 14.0,    // +3
@@ -554,9 +546,9 @@ class WeekViewScreenState extends State<WeekViewScreen> {
         'moreText': 12.0,      // +3
         'arrowIcon': 14.0,     // +3
         'breakIcon': 14.0,     // +3
-        // Container dimensions - larger for medium screens
-        'dutyCardPadding': 12.0,  // +2
-        'dutyCardMargin': 10.0,   // +2
+        // Container dimensions - moderate for medium screens
+        'dutyCardPadding': 10.0,  // controlled sizing
+        'dutyCardMargin': 8.0,   // controlled spacing
       };
     }
     // Large sizes for desktop/large tablets
@@ -564,7 +556,6 @@ class WeekViewScreenState extends State<WeekViewScreen> {
       return {
         'dayName': 22.0,  // +4
         'date': 19.0,     // +4
-        'todayBadge': 15.0,  // +3
         'shiftName': 18.0,   // +4
         'dutyTitle': 17.0,   // +4
         'timeText': 16.0,    // +4
@@ -574,9 +565,9 @@ class WeekViewScreenState extends State<WeekViewScreen> {
         'moreText': 14.0,      // +4
         'arrowIcon': 16.0,     // +4
         'breakIcon': 16.0,     // +4
-        // Container dimensions - largest for big screens
-        'dutyCardPadding': 14.0,  // +2
-        'dutyCardMargin': 12.0,   // +2
+        // Container dimensions - controlled even for large screens
+        'dutyCardPadding': 12.0,  // generous but contained
+        'dutyCardMargin': 10.0,   // good spacing
       };
     }
   }
