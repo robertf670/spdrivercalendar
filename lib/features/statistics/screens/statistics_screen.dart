@@ -11,6 +11,7 @@ import 'package:spdrivercalendar/core/constants/app_constants.dart';
 import '../widgets/frequency_chart.dart';
 import '../widgets/shift_type_summary_card.dart';
 import '../widgets/work_time_stats_card.dart';
+import '../widgets/spread_statistics_card.dart';
 import '../widgets/break_statistics_card.dart';
 
 enum ShiftType {
@@ -65,6 +66,9 @@ class StatisticsScreenState extends State<StatisticsScreen>
 
   // Cache for parsed CSV data: Key = filename, Value = Map<ShiftCode, Duration>
   final Map<String, Map<String, Duration>> _csvWorkTimeCache = {};
+  
+  // Cache for parsed CSV spread data: Key = filename, Value = Map<ShiftCode, Duration>
+  final Map<String, Map<String, Duration>> _csvSpreadTimeCache = {};
 
   // Constants for work durations
   static const Duration spareDutyWorkDuration = Duration(hours: 7, minutes: 38);
@@ -75,6 +79,9 @@ class StatisticsScreenState extends State<StatisticsScreen>
 
   // State variable to hold the future for work time stats
   Future<Map<String, Duration>>? _workTimeStatsFuture;
+  
+  // State variable to hold the future for spread stats
+  Future<Map<String, Duration>>? _spreadStatsFuture;
 
   // State variables for Sunday Pair Statistics
   DateTime? _currentBlockLsunDate, _currentBlockEsunDate;
@@ -104,6 +111,7 @@ class StatisticsScreenState extends State<StatisticsScreen>
     super.didUpdateWidget(oldWidget);
     if (widget.events != oldWidget.events) {
       _workTimeStatsFuture = _calculateWorkTimeStatistics();
+      _spreadStatsFuture = _calculateSpreadStatistics();
     }
   }
 
@@ -116,12 +124,14 @@ class StatisticsScreenState extends State<StatisticsScreen>
 
   Future<void> _initializeStatistics() async {
     // Clear the cache on initialization to prevent stale data issues
-    _csvWorkTimeCache.clear(); 
+    _csvWorkTimeCache.clear();
+    _csvSpreadTimeCache.clear(); 
     
     await _loadRosterSettings();
     if (mounted) {
        setState(() {
          _workTimeStatsFuture = _calculateWorkTimeStatistics();
+         _spreadStatsFuture = _calculateSpreadStatistics();
          // Trigger Sunday pair calculation (no need to await here, UI will update)
          _calculateSundayPairStatistics(); 
        });
@@ -217,6 +227,38 @@ class StatisticsScreenState extends State<StatisticsScreen>
                     ? const Center(child: CircularProgressIndicator())
                     : WorkTimeStatisticsCard(
                         workTimeStatsFuture: _workTimeStatsFuture!,
+                      ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16), // Spacing between cards
+          // Card for Spread Statistics
+          Card(
+            elevation: 2.0, 
+            child: Padding( 
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Spread Statistics',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Time worked over 10 hours on M-F duties only',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  _spreadStatsFuture == null
+                    ? const Center(child: CircularProgressIndicator())
+                    : SpreadStatisticsCard(
+                        spreadStatsFuture: _spreadStatsFuture!,
                       ),
                 ],
               ),
@@ -1050,6 +1092,58 @@ class StatisticsScreenState extends State<StatisticsScreen>
      }
   }
 
+  // Calculate spread time for UNI shifts (start to finish time)
+  Future<Duration?> _calculateUniSpreadTime(String shiftCode) async {
+    try {
+      // Only use UNI_M-F.csv for spread calculations (M-F only)
+      const fileName = 'UNI_M-F.csv';
+      
+      // Check cache first (reuse existing spread cache)
+      if (_csvSpreadTimeCache.containsKey(fileName)) {
+        final cachedFile = _csvSpreadTimeCache[fileName]!;
+        if (cachedFile.containsKey(shiftCode)) {
+          return cachedFile[shiftCode];
+        }
+      }
+
+      // Load and parse UNI_M-F.csv
+      final csvData = await rootBundle.loadString('assets/$fileName');
+      final lines = csvData.split('\n');
+      final Map<String, Duration> parsedSpreadTimes = {};
+
+      for (final line in lines) {
+        if (line.trim().isEmpty) continue;
+        final parts = line.split(',');
+        
+        if (parts.length >= 5) {
+          final currentShiftCode = parts[0].trim();
+          final startTimeStr = parts[1].trim();
+          final finishTimeStr = parts[4].trim();
+          
+          if (startTimeStr.isNotEmpty && finishTimeStr.isNotEmpty &&
+              startTimeStr.toLowerCase() != 'nan' && finishTimeStr.toLowerCase() != 'nan') {
+            
+            final startTime = _parseTimeOfDay(startTimeStr);
+            final finishTime = _parseTimeOfDay(finishTimeStr);
+            
+            if (startTime != null && finishTime != null) {
+              Duration spreadDuration = _calculateDuration(startTime, finishTime);
+              parsedSpreadTimes[currentShiftCode] = spreadDuration;
+            }
+          }
+        }
+      }
+
+      // Cache the parsed data
+      _csvSpreadTimeCache[fileName] = parsedSpreadTimes;
+
+      // Return the requested duration
+      return parsedSpreadTimes[shiftCode];
+    } catch (e) {
+      return null;
+    }
+  }
+
   // Helper function to parse HH:MM strings into TimeOfDay (reuse from calendar screen if possible)
   TimeOfDay? _parseTimeOfDay(String? timeString) {
      if (timeString == null || timeString.isEmpty || timeString.toLowerCase() == 'nan') return null;
@@ -1236,6 +1330,215 @@ class StatisticsScreenState extends State<StatisticsScreen>
       'averageWeekly': averageWeekly,
       'total': totalWork,
     };
+  }
+
+  Future<Map<String, Duration>> _calculateSpreadStatistics() async {
+    final now = DateTime.now();
+
+    // This week (Sunday to Saturday)
+    final thisWeekStart = DateTime(now.year, now.month, now.day).subtract(Duration(days: now.weekday % 7));
+    final thisWeekEnd = DateTime(thisWeekStart.year, thisWeekStart.month, thisWeekStart.day).add(const Duration(days: 6));
+
+    // Last week (previous Sunday to Saturday)
+    final lastWeekEnd = DateTime(thisWeekStart.year, thisWeekStart.month, thisWeekStart.day).subtract(const Duration(days: 1));
+    final lastWeekStart = DateTime(lastWeekEnd.year, lastWeekEnd.month, lastWeekEnd.day).subtract(const Duration(days: 6));
+
+    // This month
+    final thisMonthStart = DateTime(now.year, now.month, 1);
+    final thisMonthEnd = (now.month < 12)
+        ? DateTime(now.year, now.month + 1, 1)
+        : DateTime(now.year + 1, 1, 1);
+
+    // Last month (not used in current implementation but keeping for future expansion)
+    // final lastMonthStart = (now.month > 1)
+    //     ? DateTime(now.year, now.month - 1, 1)
+    //     : DateTime(now.year - 1, 12, 1);
+    // final lastMonthEnd = thisMonthStart;
+
+    Duration thisWeekSpread = Duration.zero;
+    Duration lastWeekSpread = Duration.zero;
+    Duration thisMonthSpread = Duration.zero;
+
+    Set<String> processedIds = {};
+
+    for (final entry in widget.events.entries) {
+      final date = entry.key;
+      final events = entry.value;
+
+      final normalizedDate = DateTime.utc(date.year, date.month, date.day);
+
+      // Skip if this is a rest day based on roster
+      final String shiftType = (_startDate != null)
+          ? RosterService.getShiftForDate(normalizedDate, _startDate!, _startWeek)
+          : '';
+      final bool isRest = shiftType == 'R';
+
+      if (isRest) {
+        continue;
+      }
+
+      for (final event in events) {
+        final eventNormalizedStartDate = DateTime.utc(event.startDate.year, event.startDate.month, event.startDate.day);
+        
+        // Only process Monday-Friday work shifts, no duplicates, no overtime
+        final dayOfWeek = event.startDate.weekday;
+        if (dayOfWeek < DateTime.monday || dayOfWeek > DateTime.friday ||
+            !event.isWorkShift || 
+            event.title.contains('(OT)') || 
+            processedIds.contains(event.id)) {
+          continue;
+        }
+        processedIds.add(event.id);
+
+        final spreadPay = await _calculateSpreadPay(event);
+
+        // Check This Week
+        if (!eventNormalizedStartDate.isBefore(thisWeekStart) && !eventNormalizedStartDate.isAfter(thisWeekEnd)) {
+          thisWeekSpread += spreadPay;
+        }
+
+        // Check Last Week
+        if (!eventNormalizedStartDate.isBefore(lastWeekStart) && !eventNormalizedStartDate.isAfter(lastWeekEnd)) {
+          lastWeekSpread += spreadPay;
+        }
+
+        // Check This Month
+        if (!eventNormalizedStartDate.isBefore(thisMonthStart) && eventNormalizedStartDate.isBefore(thisMonthEnd)) {
+          thisMonthSpread += spreadPay;
+        }
+      }
+    }
+
+    return {
+      'thisWeek': thisWeekSpread,
+      'lastWeek': lastWeekSpread,
+      'thisMonth': thisMonthSpread,
+    };
+  }
+
+  Future<Duration> _calculateSpreadPay(Event event) async {
+    if (!event.isWorkShift) {
+      return Duration.zero;
+    }
+
+    // For spare duties - no spread pay (they're typically shorter shifts)
+    if (event.title.startsWith('SP')) {
+      return Duration.zero;
+    }
+
+    final spreadTime = await _calculateSpreadTime(event);
+    if (spreadTime == null) {
+      return Duration.zero;
+    }
+
+    // Calculate spread pay: anything over 10 hours
+    const tenHours = Duration(hours: 10);
+    if (spreadTime > tenHours) {
+      return spreadTime - tenHours;
+    }
+
+    return Duration.zero;
+  }
+
+  Future<Duration?> _calculateSpreadTime(Event event) async {
+    final shiftCode = event.title;
+
+    try {
+      // Handle different shift types similar to _calculateWorkTime
+      bool isBusCheck = false;
+      bool isUniShift = false;
+      String fileName = '';
+      String zoneNumber = '1';
+      String dayOfWeek = '';
+
+      // BusCheck shifts
+      if (shiftCode.startsWith('BC')) {
+        isBusCheck = true;
+        fileName = 'buscheck.csv';
+      }
+      // UNI shifts (identified by pattern like 307/01, 807/90, etc.)
+      else if (RegExp(r'^\d+/').firstMatch(shiftCode) != null) {
+        isUniShift = true;
+        // For UNI shifts, we calculate spread from start to finish time
+        return await _calculateUniSpreadTime(shiftCode);
+      }
+      // PZ shifts
+      else {
+        final match = RegExp(r'PZ(\d+)/').firstMatch(shiftCode);
+        if (match != null) {
+          zoneNumber = match.group(1) ?? '1';
+        }
+        fileName = RosterService.getShiftFilename(zoneNumber, dayOfWeek, event.startDate);
+      }
+
+      if (fileName.isEmpty && !isUniShift) {
+        return null;
+      }
+
+
+      // Check cache first
+      if (_csvSpreadTimeCache.containsKey(fileName)) {
+        final cachedFile = _csvSpreadTimeCache[fileName]!;
+        if (cachedFile.containsKey(shiftCode)) {
+          return cachedFile[shiftCode];
+        }
+      }
+
+      // Load and parse the CSV file
+      final csvData = await rootBundle.loadString('assets/$fileName');
+      final lines = csvData.split('\n');
+      final Map<String, Duration> parsedSpreadTimes = {};
+      bool headerSkipped = false;
+
+      for (final line in lines) {
+        if (line.trim().isEmpty) continue;
+
+        // Skip header row for buscheck.csv
+        if (isBusCheck && !headerSkipped) {
+          headerSkipped = true;
+          continue;
+        }
+
+        final parts = line.split(',');
+        String currentShiftCode = parts[0].trim();
+        Duration? duration;
+
+        try {
+          if (isBusCheck) {
+            // BusCheck doesn't have spread data in the same format
+            return null;
+          } else {
+            // PZ_DUTIES files: shift,duty,...,spread,work,... (spread is index 13)
+            if (parts.length > 13) {
+              if (currentShiftCode == shiftCode) {
+                final spreadTimeStr = parts[13].trim();
+                final timeParts = spreadTimeStr.split(':');
+                if (timeParts.length >= 2) {
+                  duration = Duration(
+                    hours: int.parse(timeParts[0]),
+                    minutes: int.parse(timeParts[1])
+                  );
+                }
+              }
+            }
+          }
+
+          if (duration != null) {
+            parsedSpreadTimes[currentShiftCode] = duration;
+          }
+        } catch (e) {
+          // Error processing line - continue
+        }
+      }
+
+      // Cache the parsed data
+      _csvSpreadTimeCache[fileName] = parsedSpreadTimes;
+
+      // Return the requested duration
+      return parsedSpreadTimes[shiftCode];
+    } catch (e) {
+      return null;
+    }
   }
 
   Map<String, int> _getMostFrequentBuses() {

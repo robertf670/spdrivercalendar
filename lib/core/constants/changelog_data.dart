@@ -1,4 +1,18 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.15.5': [
+    {
+      'title': 'Spread Statistics Feature Added',
+      'description': 'Added spread statistics to help track pay eligibility. Calculates spread pay for duties over 10 hours on Monday-Friday shifts. Includes all duties and UNI duties (calculated from start-to-finish times). New statistics section displays weekly, monthly, and historical spread totals in the Statistics screen.',
+    },
+    {
+      'title': 'Relief Time Calculations Added',
+      'description': 'Added relief time to Zone 1 duties, all day types. Caused missing information on the Bill screen for all Zone 1 duties.',
+    },
+    {
+      'title': 'Route Number Corrections',
+      'description': 'Corrected route numbers and location codes in Zone 1 CSV files. Fixed inconsistencies between ASTONQ and BWALK locations. There may still be more issues not found yet.',
+    },
+  ],
   '2.15.4': [
     {
       'title': 'Week View Layout Optimization',
