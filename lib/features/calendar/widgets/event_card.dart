@@ -8,6 +8,7 @@ import 'package:spdrivercalendar/core/utils/location_utils.dart';
 import 'package:flutter/services.dart';
 import 'package:spdrivercalendar/features/calendar/services/roster_service.dart';
 import 'package:spdrivercalendar/features/calendar/services/event_service.dart';
+import 'package:spdrivercalendar/features/calendar/services/route_service.dart';
 import 'package:spdrivercalendar/services/bus_tracking_service.dart';
 
 class EventCard extends StatefulWidget {
@@ -42,6 +43,7 @@ class _EventCardState extends State<EventCard> {
   String? finishBreakLocation;
   String? workTime;
   String? routeInfo; // For Jamestown Road shifts only
+  String? dutyRouteInfo; // For duty route information (PZ1/PZ4)
   String? _departTimeStr;
   String? _finishTimeStr;
   bool isLoading = true;
@@ -62,6 +64,7 @@ class _EventCardState extends State<EventCard> {
     
     _loadBreakTime();
     _loadLocationData();
+    _loadRouteInfo();
     if (widget.event.assignedDuties != null && widget.event.assignedDuties!.isNotEmpty) {
       _loadAssignedDutyDetails();
     }
@@ -111,6 +114,7 @@ class _EventCardState extends State<EventCard> {
         oldWidget.event.assignedDuties != widget.event.assignedDuties) {
       _loadBreakTime();
       _loadLocationData();
+      _loadRouteInfo();
       if (widget.event.assignedDuties != null && widget.event.assignedDuties!.isNotEmpty) {
         _loadAssignedDutyDetails();
       } else {
@@ -331,6 +335,31 @@ class _EventCardState extends State<EventCard> {
           finishBreakLocation = null;
           workTime = null;
           routeInfo = null;
+        });
+      }
+    }
+  }
+
+  // Load route information for duty titles
+  Future<void> _loadRouteInfo() async {
+    if (!widget.event.isWorkShift) {
+      return;
+    }
+
+    try {
+      final shiftCode = widget.event.title.replaceAll('Shift: ', '').trim();
+      final routeData = await RouteService.getRouteInfo(shiftCode);
+      
+      if (mounted) {
+        setState(() {
+          dutyRouteInfo = routeData?.formatForDisplay();
+        });
+      }
+    } catch (e) {
+      // Failed to load route info, ignore
+      if (mounted) {
+        setState(() {
+          dutyRouteInfo = null;
         });
       }
     }
@@ -1343,13 +1372,7 @@ class _EventCardState extends State<EventCard> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Expanded(
-                    child: Text(
-                      _formatDisplayTitle(widget.event.title),
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
+                    child: _buildTitleWithRoute(),
                   ),
                   Row(
                     mainAxisSize: MainAxisSize.min,
@@ -3427,24 +3450,67 @@ class _EventCardState extends State<EventCard> {
     );
   }
 
-  // Add helper function to format the title
-  String _formatDisplayTitle(String title) {
+  // Build title with separate styling for route information
+  Widget _buildTitleWithRoute() {
+    final baseTitle = _formatDisplayTitleWithoutRoute(widget.event.title);
+    
+    // For PZ1 and PZ4 duties, show route with different styling
+    if ((widget.event.title.startsWith('PZ1/') || widget.event.title.startsWith('PZ4/')) &&
+        dutyRouteInfo != null && dutyRouteInfo!.isNotEmpty) {
+      return RichText(
+        overflow: TextOverflow.ellipsis,
+        text: TextSpan(
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
+          children: [
+            TextSpan(text: baseTitle),
+            const TextSpan(text: ' '),
+            TextSpan(
+              text: dutyRouteInfo!,
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.normal, // Non-bold for routes
+                fontSize: (Theme.of(context).textTheme.titleLarge?.fontSize ?? 22) * 0.85, // Slightly smaller
+                color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.8), // Slightly dimmer
+              ),
+            ),
+          ],
+        ),
+      );
+    } else {
+      // For other duty types, use regular text
+      return Text(
+        baseTitle,
+        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+          fontWeight: FontWeight.bold,
+        ),
+        overflow: TextOverflow.ellipsis,
+      );
+    }
+  }
+
+  // Add helper function to format the title without route info
+  String _formatDisplayTitleWithoutRoute(String title) {
+    String formattedTitle = title;
+    
     if (title.startsWith('BusCheck')) {
       // Use RegExp to find the number part and insert a space
       final match = RegExp(r'^BusCheck(\d+)$').firstMatch(title);
       if (match != null && match.groupCount >= 1) {
         final numberPart = match.group(1);
         if (numberPart != null) {
-            return 'Bus Check $numberPart';
+            formattedTitle = 'Bus Check $numberPart';
         }
       }
     }
     // Check for Jamestown Road shifts (format: 811/xx)
     else if (title.startsWith('811/')) {
-      return '$title - Jamestown';
+      formattedTitle = '$title - Jamestown';
     }
-    // Return original title if not BusCheck or format doesn't match
-    return title.isEmpty ? 'Untitled Event' : title;
+    // Note: Route information for PZ1/PZ4 duties is handled separately in _buildTitleWithRoute
+    
+    // Return formatted title or default if empty
+    return formattedTitle.isEmpty ? 'Untitled Event' : formattedTitle;
   }
 
   String _formatTimeString(String? timeStr) {

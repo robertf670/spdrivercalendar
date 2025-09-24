@@ -5,6 +5,10 @@ final Map<String, List<Map<String, String>>> changelogData = {
       'description': 'Added spread statistics to help track pay eligibility. Calculates spread pay for duties over 10 hours on Monday-Friday shifts. Includes all duties and UNI duties (calculated from start-to-finish times). New statistics section displays weekly, monthly, and historical spread totals in the Statistics screen.',
     },
     {
+      'title': 'Route Information Display Added',
+      'description': 'Added route information to duty titles in event cards. Shows first and second half routes for duties. Routes display with clean formatting (e.g., "PZ1/50 39A • 39A"). If the information is not availabe, it will not be displayed. If only one half is available, it will be displayed on the left/right of the • depending on the half. ',
+    },
+    {
       'title': 'Relief Time Calculations Added',
       'description': 'Added relief time to Zone 1 duties, all day types. Caused missing information on the Bill screen for all Zone 1 duties.',
     },
