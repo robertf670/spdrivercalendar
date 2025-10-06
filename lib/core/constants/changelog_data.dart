@@ -1,4 +1,22 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.15.6': [
+    {
+      'title': 'Weekend Route Information Fix',
+      'description': 'Fixed route information display for Saturday and Sunday events. Route information now correctly uses weekend CSV files (SAT_DUTIES_PZ1/PZ4.csv and SUN_DUTIES_PZ1/PZ4.csv) instead of always showing Monday-Friday route data.',
+    },
+    {
+      'title': 'Route Display Layout Improvement',
+      'description': 'Route information now appears on a separate line below the duty title, giving it full width and ensuring complete visibility across all device sizes.',
+    },
+    {
+      'title': 'Break Times Styling Consistency',
+      'description': 'Standardized break times line styling to match report and sign-off times.',
+    },
+    {
+      'title': 'Report Line Format Correction',
+      'description': 'Fixed report line text formatting to match other time displays. Changed from "Report 08:17 - Sign Off 20:00" to "Report 08:17 - 20:00 Sign Off" for consistency.',
+    },
+  ],
   '2.15.5': [
     {
       'title': 'Spread Statistics Feature Added',

@@ -1,4 +1,5 @@
 import 'package:flutter/services.dart';
+import 'package:spdrivercalendar/features/calendar/services/shift_service.dart';
 
 class RouteService {
   // Cache for parsed CSV route data: Key = filename, Value = Map<ShiftCode, RouteInfo>
@@ -6,13 +7,13 @@ class RouteService {
 
   /// Get route information for a duty
   /// Returns null if no route information is available
-  static Future<RouteInfo?> getRouteInfo(String shiftCode) async {
+  static Future<RouteInfo?> getRouteInfo(String shiftCode, DateTime eventDate) async {
     try {
       // Handle different shift types
       if (shiftCode.startsWith('PZ1/')) {
-        return await _getPZ1RouteInfo(shiftCode);
+        return await _getPZ1RouteInfo(shiftCode, eventDate);
       } else if (shiftCode.startsWith('PZ4/')) {
-        return await _getPZ4RouteInfo(shiftCode);
+        return await _getPZ4RouteInfo(shiftCode, eventDate);
       } else if (RegExp(r'^\d+/').hasMatch(shiftCode)) {
         // UNI duties (e.g., 307/01, 807/90) - no route info available
         return null;
@@ -25,10 +26,27 @@ class RouteService {
     }
   }
 
+  /// Helper method to determine the correct CSV filename based on date and zone
+  static String _getRouteFilename(String zoneNumber, DateTime eventDate) {
+    // Check if it's a bank holiday
+    final isBankHoliday = ShiftService.bankHolidays.any((holiday) => holiday.matchesDate(eventDate));
+    
+    // Determine day of week (Sunday = 0, Monday = 1, etc.)
+    final dayOfWeek = eventDate.weekday % 7; // 0 = Sunday, 1-6 = Monday-Saturday
+    
+    if (isBankHoliday || dayOfWeek == 0) { // Sunday or bank holiday
+      return 'SUN_DUTIES_PZ$zoneNumber.csv';
+    } else if (dayOfWeek == 6) { // Saturday
+      return 'SAT_DUTIES_PZ$zoneNumber.csv';
+    } else { // Monday-Friday
+      return 'M-F_DUTIES_PZ$zoneNumber.csv';
+    }
+  }
+
   /// Extract route info for PZ1 duties from location codes
-  static Future<RouteInfo?> _getPZ1RouteInfo(String shiftCode) async {
+  static Future<RouteInfo?> _getPZ1RouteInfo(String shiftCode, DateTime eventDate) async {
     try {
-      const fileName = 'M-F_DUTIES_PZ1.csv';
+      final fileName = _getRouteFilename('1', eventDate);
       
       // Check cache first
       if (_routeCache.containsKey(fileName)) {
@@ -100,9 +118,9 @@ class RouteService {
   }
 
   /// Extract route info for PZ4 duties from location codes with route numbers in parentheses
-  static Future<RouteInfo?> _getPZ4RouteInfo(String shiftCode) async {
+  static Future<RouteInfo?> _getPZ4RouteInfo(String shiftCode, DateTime eventDate) async {
     try {
-      const fileName = 'M-F_DUTIES_PZ4.csv';
+      final fileName = _getRouteFilename('4', eventDate);
       
       // Check cache first
       if (_routeCache.containsKey(fileName)) {

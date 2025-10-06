@@ -348,7 +348,7 @@ class _EventCardState extends State<EventCard> {
 
     try {
       final shiftCode = widget.event.title.replaceAll('Shift: ', '').trim();
-      final routeData = await RouteService.getRouteInfo(shiftCode);
+      final routeData = await RouteService.getRouteInfo(shiftCode, widget.event.startDate);
       
       if (mounted) {
         setState(() {
@@ -1572,7 +1572,7 @@ class _EventCardState extends State<EventCard> {
                                 ),
                               ],
                               TextSpan(
-                                text: widget.event.title.contains('(OT)') ? ' - Finish ' : ' - Sign Off ',
+                                text: ' - ',
                               ),
                               TextSpan(
                                 text: widget.event.formattedEndTime,
@@ -1580,6 +1580,9 @@ class _EventCardState extends State<EventCard> {
                                   color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.9), // Use theme color, slightly less emphasis
                                   fontWeight: FontWeight.w600, // Important - actual time values
                                 ),
+                              ),
+                              TextSpan(
+                                text: widget.event.title.contains('(OT)') ? ' Finish' : ' Sign Off',
                               ),
                               // Add appropriate finish location for overtime shifts based on half type
                               if (widget.event.title.contains('A (OT)') && startBreakLocation != null && startBreakLocation!.isNotEmpty) ...[
@@ -1690,7 +1693,9 @@ class _EventCardState extends State<EventCard> {
               ],
               // MODIFIED: Break times row (if available AND NOT BusCheck AND is work shift AND NOT training shift AND NOT spare shift)
               if (breakTime != null && !isBusCheckShift && !widget.event.title.contains('(OT)') && widget.event.isWorkShift && widget.event.title != 'TRAIN23/24' && widget.event.title != 'CPC' && !widget.event.title.startsWith('SP')) ...[
-                Row(
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 2.0), // Match report line padding
+                  child: Row(
                   children: [
                     Icon(
                       breakTime!.toLowerCase().contains('workout') ? Icons.directions_run : Icons.coffee,
@@ -1701,39 +1706,40 @@ class _EventCardState extends State<EventCard> {
                     ),
                     const SizedBox(width: 8),
                     Expanded(
-                      child: Text(
-                        // Calculate and include break duration
-                        () {
-                          String baseText;
-                        // Only show break locations for PZ shifts and Jamestown Road shifts that are not workouts
-                          if (!breakTime!.toLowerCase().contains('workout') && (widget.event.title.contains('PZ') || widget.event.title.startsWith('811/'))) {
-                            baseText = '${startBreakLocation != null ? "$startBreakLocation " : ""}${breakTime!}${finishBreakLocation != null ? " $finishBreakLocation" : ""}';
-                          } else if (breakTime!.toLowerCase().contains('workout')) {
-                            baseText = 'Workout';
-                          } else {
-                            baseText = breakTime!;
-                          }
-                          
-                          // Add duration if not a workout
-                          if (!breakTime!.toLowerCase().contains('workout')) {
-                            final duration = _calculateBreakDuration(breakTime!);
-                            if (duration != null) {
-                              baseText += ' ($duration)';
+                      child: RichText(
+                        overflow: TextOverflow.ellipsis,
+                        text: TextSpan(
+                          style: TextStyle(
+                            color: Theme.of(context).textTheme.bodyMedium?.color,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500, // Match report/sign off line styling
+                          ),
+                          text: () {
+                            String baseText;
+                          // Only show break locations for PZ shifts and Jamestown Road shifts that are not workouts
+                            if (!breakTime!.toLowerCase().contains('workout') && (widget.event.title.contains('PZ') || widget.event.title.startsWith('811/'))) {
+                              baseText = '${startBreakLocation != null ? "$startBreakLocation " : ""}${breakTime!}${finishBreakLocation != null ? " $finishBreakLocation" : ""}';
+                            } else if (breakTime!.toLowerCase().contains('workout')) {
+                              baseText = 'Workout';
+                            } else {
+                              baseText = breakTime!;
                             }
-                          }
-                          
-                          return baseText;
-                        }(),
-                        style: TextStyle(
-                          color: Theme.of(context).brightness == Brightness.dark
-                              ? Colors.white
-                              : Colors.black,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w400, // Match date styling for operational reference info
+                            
+                            // Add duration if not a workout
+                            if (!breakTime!.toLowerCase().contains('workout')) {
+                              final duration = _calculateBreakDuration(breakTime!);
+                              if (duration != null) {
+                                baseText += ' ($duration)';
+                              }
+                            }
+                            
+                            return baseText;
+                          }(),
                         ),
                       ),
                     ),
                   ],
+                  ),
                 ),
                 // Add gap after break times if this is NOT a Jamestown shift (Jamestown gets gap from route section)
                 if (!widget.event.title.startsWith('811/'))
@@ -3454,28 +3460,33 @@ class _EventCardState extends State<EventCard> {
   Widget _buildTitleWithRoute() {
     final baseTitle = _formatDisplayTitleWithoutRoute(widget.event.title);
     
-    // For PZ1 and PZ4 duties, show route with different styling
+    // For PZ1 and PZ4 duties, show route on a separate line
     if ((widget.event.title.startsWith('PZ1/') || widget.event.title.startsWith('PZ4/')) &&
         dutyRouteInfo != null && dutyRouteInfo!.isNotEmpty) {
-      return RichText(
-        overflow: TextOverflow.ellipsis,
-        text: TextSpan(
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
-          children: [
-            TextSpan(text: baseTitle),
-            const TextSpan(text: ' '),
-            TextSpan(
-              text: dutyRouteInfo!,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.normal, // Non-bold for routes
-                fontSize: (Theme.of(context).textTheme.titleLarge?.fontSize ?? 22) * 0.85, // Slightly smaller
-                color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.8), // Slightly dimmer
-              ),
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Title on first line
+          Text(
+            baseTitle,
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.bold,
             ),
-          ],
-        ),
+            overflow: TextOverflow.ellipsis,
+          ),
+          // Route on second line with smaller font and dimmer color
+          Text(
+            dutyRouteInfo!,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.normal,
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? Colors.white.withOpacity(0.8)
+                  : Colors.black.withOpacity(0.7),
+            ),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
       );
     } else {
       // For other duty types, use regular text
