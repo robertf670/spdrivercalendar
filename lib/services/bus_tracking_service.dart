@@ -6,6 +6,49 @@ class BusTrackingService {
   static const String _fleetUrl = 'https://bustimes.org/operators/dublin-bus/vehicles';
   static const String _baseVehicleUrl = 'https://bustimes.org/vehicles/';
 
+  /// Gets the bustimes.org URL for a bus without launching it
+  /// Returns the URL string if found, null if not found
+  static Future<String?> getBusUrl(String busNumber) async {
+    try {
+      // Clean and normalize the bus number
+      final cleanBusNumber = busNumber.trim().toUpperCase().replaceAll(' ', '');
+      
+      if (kDebugMode) {
+        print('🚌 Getting URL for bus: $cleanBusNumber');
+      }
+      
+      // Try multiple approaches in order of preference
+      
+      // Approach 1: Try common URL patterns first (faster)
+      final directUrl = await _tryDirectUrlPatterns(cleanBusNumber);
+      if (directUrl != null) {
+        if (kDebugMode) {
+          print('✅ Found via direct URL: $directUrl');
+        }
+        return directUrl;
+      }
+      
+      // Approach 2: Search the fleet page
+      final vehicleUrl = await _findVehicleUrl(cleanBusNumber);
+      if (vehicleUrl != null) {
+        if (kDebugMode) {
+          print('✅ Found via fleet search: $vehicleUrl');
+        }
+        return vehicleUrl;
+      } else {
+        if (kDebugMode) {
+          print('❌ Bus $cleanBusNumber not found in fleet search');
+        }
+        return null;
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Error getting bus URL: $e');
+      }
+      return null;
+    }
+  }
+
   /// Attempts to track a Dublin Bus by searching the fleet page
   /// Returns true if successful, false if fallback was used
   static Future<bool> trackBus(String busNumber) async {

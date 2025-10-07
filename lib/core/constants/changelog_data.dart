@@ -1,4 +1,42 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.15.7': [
+    {
+      'title': 'Google Sync Screen shows only on first setup',
+      'description': 'Adjusted onboarding so the "Sync with Google Calendar" page appears only once during initial setup. Users can connect later from Settings.',
+    },
+    {
+      'title': '22B/01 Sunday Duty Fully Implemented',
+      'description': 'Added complete 22B/01 Sunday duty functionality.rr Treated as spare duty with full bus assignment and duty management capabilities.',
+    },
+    {
+      'title': 'Zone Availability Corrections',
+      'description': 'Fixed zone availability by day of week. Jamestown Road now only appears Mon-Fri and Training only appears Mon-Sat.',
+    },
+    {
+      'title': 'Statistics Integration for 22B/01',
+      'description': 'Integrated 22B/01 with statistics system. Counts as spare duty with correct work time calculation (7h 38m excluding break time).',
+    },
+      {
+        'title': '22B/01 Event Card Spare Duty Behavior Fixed',
+        'description': 'Fixed 22B/01 event cards to properly display spare duty interface. Added 22B/01 to isWorkShift recognition and updated all spare duty logic to enable duty assignment, bus management, and spare shift dialog functionality.',
+      },
+      {
+        'title': 'Break Status Dialog Added to Spare Duties',
+        'description': 'Added Break Status functionality to all spare duties (SP and 22B/01). Drivers can now access late break options directly from the spare shift dialog.',
+      },
+      {
+        'title': 'Delete Spare Event Dialog Fix',
+        'description': 'Fixed issue where Delete Spare Event dialog would remain open after deletion. Dialog now properly closes and calendar automatically refreshes to show updated event list.',
+      },
+      {
+        'title': 'Google Calendar Bus Assignment Sync',
+        'description': 'Bus assignments now automatically sync to Google Calendar descriptions with real bustimes.org tracking links.',
+      },
+      {
+        'title': 'Complete Bus Assignment Sync Coverage',
+        'description': 'Fixed all bus assignment and removal scenarios to sync with Google Calendar. Covers adding buses, changing buses, removing individual buses, and removing all bus assignments across all shift types and dialogs.',
+      },
+  ],
   '2.15.6': [
     {
       'title': 'Weekend Route Information Fix',

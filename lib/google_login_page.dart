@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:spdrivercalendar/google_calendar_service.dart';
 import 'package:spdrivercalendar/oauth_helper.dart';
+import 'package:spdrivercalendar/core/services/storage_service.dart';
+import 'package:spdrivercalendar/core/constants/app_constants.dart';
 
 class GoogleLoginPage extends StatefulWidget {
   final VoidCallback onLoginComplete;
@@ -99,7 +101,7 @@ class GoogleLoginPageState extends State<GoogleLoginPage> {
             _statusMessage = 'Signed in but calendar access limited. Check permissions.';
           });
         }
-        
+        await StorageService.saveBool(AppConstants.hasCompletedGoogleLoginKey, true);
         return;
       }
       
@@ -189,12 +191,12 @@ class GoogleLoginPageState extends State<GoogleLoginPage> {
   }
 
   Future<void> _handleSkip() async {
-
+    await StorageService.saveBool(AppConstants.hasCompletedGoogleLoginKey, true);
     widget.onLoginComplete();
   }
 
   Future<void> _handleContinue() async {
-
+    await StorageService.saveBool(AppConstants.hasCompletedGoogleLoginKey, true);
     widget.onLoginComplete();
   }
 

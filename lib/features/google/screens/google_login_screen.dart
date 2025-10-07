@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:spdrivercalendar/google_calendar_service.dart';
+import 'package:spdrivercalendar/core/services/storage_service.dart';
+import 'package:spdrivercalendar/core/constants/app_constants.dart';
 import 'package:spdrivercalendar/theme/app_theme.dart';
 
 class GoogleLoginScreen extends StatefulWidget {
@@ -138,6 +140,7 @@ class GoogleLoginScreenState extends State<GoogleLoginScreen> {
       
       if (account != null) {
         // Successfully signed in
+        await StorageService.saveBool(AppConstants.hasCompletedGoogleLoginKey, true);
         widget.onLoginComplete();
       } else {
         setState(() {
@@ -153,7 +156,8 @@ class GoogleLoginScreenState extends State<GoogleLoginScreen> {
     }
   }
 
-  void _handleSkip() {
+  Future<void> _handleSkip() async {
+    await StorageService.saveBool(AppConstants.hasCompletedGoogleLoginKey, true);
     widget.onLoginComplete();
   }
 }

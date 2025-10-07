@@ -23,6 +23,8 @@ class BackupService {
     AppConstants.startWeekKey,           // Roster start week
     AppConstants.isDarkModeKey,          // Dark mode setting
     AppConstants.syncToGoogleCalendarKey, // Google sync setting
+    AppConstants.includeBusAssignmentsInGoogleCalendarKey, // Bus assignments in Google Calendar
+    AppConstants.includeBustimesLinksInGoogleCalendarKey, // Bustimes.org links in Google Calendar
     kNotificationsEnabledKey,            // Notification enabled setting
     kNotificationOffsetHoursKey,         // Notification offset setting
     // Add any other keys you want to back up here

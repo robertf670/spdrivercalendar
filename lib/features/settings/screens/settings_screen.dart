@@ -41,6 +41,8 @@ class SettingsScreenState extends State<SettingsScreen> {
   bool _isGoogleSignedIn = false;
   String _googleAccount = '';
   bool _syncToGoogleCalendar = false;
+  bool _includeBusAssignmentsInGoogleCalendar = true;
+  bool _includeBustimesLinksInGoogleCalendar = true;
   bool _isLoading = false;
   String _appVersion = '';
 
@@ -69,6 +71,8 @@ class SettingsScreenState extends State<SettingsScreen> {
     final prefs = await SharedPreferences.getInstance();
     _isDarkMode = prefs.getBool(AppConstants.isDarkModeKey) ?? widget.isDarkModeNotifier.value;
     _syncToGoogleCalendar = prefs.getBool(AppConstants.syncToGoogleCalendarKey) ?? false;
+    _includeBusAssignmentsInGoogleCalendar = prefs.getBool(AppConstants.includeBusAssignmentsInGoogleCalendarKey) ?? true;
+    _includeBustimesLinksInGoogleCalendar = prefs.getBool(AppConstants.includeBustimesLinksInGoogleCalendarKey) ?? true;
     
     // Load notification settings
     _notificationOffsetHours = prefs.getInt(kNotificationOffsetHoursKey) ?? 1;
@@ -112,6 +116,20 @@ class SettingsScreenState extends State<SettingsScreen> {
       _syncToGoogleCalendar = value;
     });
     await StorageService.saveBool(AppConstants.syncToGoogleCalendarKey, value);
+  }
+
+  Future<void> _toggleBusAssignments(bool value) async {
+    setState(() {
+      _includeBusAssignmentsInGoogleCalendar = value;
+    });
+    await StorageService.saveBool(AppConstants.includeBusAssignmentsInGoogleCalendarKey, value);
+  }
+
+  Future<void> _toggleBustimesLinks(bool value) async {
+    setState(() {
+      _includeBustimesLinksInGoogleCalendar = value;
+    });
+    await StorageService.saveBool(AppConstants.includeBustimesLinksInGoogleCalendarKey, value);
   }
 
   Future<void> _loadAppVersion() async {
@@ -367,12 +385,44 @@ class SettingsScreenState extends State<SettingsScreen> {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppTheme.borderRadius),
       ),
-      child: SwitchListTile(
-        title: const Text('Auto-sync to Google Calendar'),
-        subtitle: const Text('Automatically add new events to Google Calendar'),
-        secondary: const Icon(Icons.sync),
-        value: _syncToGoogleCalendar,
-        onChanged: _isGoogleSignedIn ? _toggleGoogleSync : null,
+      child: Column(
+        children: [
+          SwitchListTile(
+            title: const Text('Auto-sync to Google Calendar'),
+            subtitle: const Text('Automatically add new events to Google Calendar'),
+            secondary: const Icon(Icons.sync),
+            value: _syncToGoogleCalendar,
+            onChanged: _isGoogleSignedIn ? _toggleGoogleSync : null,
+          ),
+          // Sub-options (only show when sync is enabled)
+          if (_syncToGoogleCalendar && _isGoogleSignedIn) ...[
+            const Divider(height: 1),
+            Padding(
+              padding: const EdgeInsets.only(left: 16.0),
+              child: SwitchListTile(
+                title: const Text('Include Bus Assignments'),
+                subtitle: const Text('Add bus numbers to Google Calendar descriptions'),
+                secondary: const Icon(Icons.directions_bus),
+                value: _includeBusAssignmentsInGoogleCalendar,
+                onChanged: _toggleBusAssignments,
+              ),
+            ),
+            // Bustimes.org links sub-option (only show when bus assignments are enabled)
+            if (_includeBusAssignmentsInGoogleCalendar) ...[
+              const Divider(height: 1),
+              Padding(
+                padding: const EdgeInsets.only(left: 32.0),
+                child: SwitchListTile(
+                  title: const Text('Include Bustimes.org Links'),
+                  subtitle: const Text('Add clickable tracking links for buses'),
+                  secondary: const Icon(Icons.link),
+                  value: _includeBustimesLinksInGoogleCalendar,
+                  onChanged: _toggleBustimesLinks,
+                ),
+              ),
+            ],
+          ],
+        ],
       ),
     );
   }
@@ -624,9 +674,13 @@ class SettingsScreenState extends State<SettingsScreen> {
       _googleAccount = '';
       _isLoading = false;
       _syncToGoogleCalendar = false;
+      _includeBusAssignmentsInGoogleCalendar = true;
+      _includeBustimesLinksInGoogleCalendar = true;
     });
 
     await StorageService.saveBool(AppConstants.syncToGoogleCalendarKey, false);
+    await StorageService.saveBool(AppConstants.includeBusAssignmentsInGoogleCalendarKey, true);
+    await StorageService.saveBool(AppConstants.includeBustimesLinksInGoogleCalendarKey, true);
     
     scaffoldMessenger.showSnackBar(
       const SnackBar(content: Text('Disconnected from Google Calendar')),

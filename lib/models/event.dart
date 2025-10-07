@@ -341,12 +341,16 @@ class Event {
                          title.startsWith('BusCheck') ||
                          title == 'TRAIN23/24' ||
                          title == 'CPC' ||
+                         title == '22B/01' ||
                          RegExp(r'^\d+/').hasMatch(title);
   
   // Check if this duty is eligible for overtime tracking
   bool get isEligibleForOvertimeTracking {
     // First check if it's a work shift
     if (!isWorkShift) return false;
+    
+    // Include spare duties and 22B/01
+    final isSpareOrSpecial = title.startsWith('SP') || title == '22B/01';
     
     // Check if it's a Zone 1, 3, or 4 duty
     final isZoneDuty = title.startsWith('PZ1') || 
@@ -360,7 +364,7 @@ class Event {
     // Exclude workout shifts - look for 'workout' in the title
     final isWorkout = title.toLowerCase().contains('workout');
     
-    return isZoneDuty && !isWorkout;
+    return (isZoneDuty && !isWorkout) || isSpareOrSpecial;
   }
   
   // Get shift code - properly handle shift codes

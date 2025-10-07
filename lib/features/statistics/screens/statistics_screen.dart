@@ -692,7 +692,7 @@ class StatisticsScreenState extends State<StatisticsScreen>
             final shiftCode = event.title;
             
             // First check special shift types
-            if (shiftCode.startsWith('SP')) {
+            if (shiftCode.startsWith('SP') || shiftCode == '22B/01') {
               spareShifts++;
             } else if (shiftCode.endsWith('X')) {
               bogeyShifts++;
@@ -745,10 +745,15 @@ class StatisticsScreenState extends State<StatisticsScreen>
       return Duration.zero;
     }
 
-    // For spare duties (fixed 7h 38m)
+    // For spare duties (fixed 7h 38m) and 22B/01 (fixed 8h 30m)
     if (event.title.startsWith('SP')) {
        // REMOVE log
 
+      return const Duration(hours: 7, minutes: 38);
+    }
+    
+    // For 22B/01 Sunday duty (same work time as spare duties: 7h 38m, excluding break)
+    if (event.title == '22B/01') {
       return const Duration(hours: 7, minutes: 38);
     }
 
@@ -1421,8 +1426,8 @@ class StatisticsScreenState extends State<StatisticsScreen>
       return Duration.zero;
     }
 
-    // For spare duties - no spread pay (they're typically shorter shifts)
-    if (event.title.startsWith('SP')) {
+    // For spare duties and 22B/01 - no spread pay (they're typically shorter shifts)
+    if (event.title.startsWith('SP') || event.title == '22B/01') {
       return Duration.zero;
     }
 
@@ -1557,8 +1562,8 @@ class StatisticsScreenState extends State<StatisticsScreen>
         final isWorkoutShift = _isWorkoutShift(event);
         final isWorkoutOrOvertime = isWorkoutShift || isOvertimeShift;
         
-        // Check if this is a spare shift with bus assignments
-        if (event.title.startsWith('SP')) {
+        // Check if this is a spare shift or 22B/01 with bus assignments
+        if (event.title.startsWith('SP') || event.title == '22B/01') {
           if (event.hasEnhancedDuties) {
             // For spare shifts with enhanced duties, count buses from individual duty assignments
             for (final assignedDuty in event.enhancedAssignedDuties!) {

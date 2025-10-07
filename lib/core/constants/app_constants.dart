@@ -17,6 +17,8 @@ class AppConstants {
   static const String googleCalendarIdKey = 'googleCalendarId';
   static const String lastGoogleSyncTimeKey = 'lastGoogleSyncTime';
   static const String syncToGoogleCalendarKey = 'syncToGoogleCalendar';
+  static const String includeBusAssignmentsInGoogleCalendarKey = 'includeBusAssignmentsInGoogleCalendar';
+  static const String includeBustimesLinksInGoogleCalendarKey = 'includeBustimesLinksInGoogleCalendar';
   static const String lastSeenVersionKey = 'lastSeenVersion';
 
   // Auto-Backup Setting

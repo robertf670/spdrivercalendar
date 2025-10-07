@@ -278,7 +278,7 @@ class EventService {
         _logError('getEventsForDay', 'Populating entire month $monthKey from cache (no events found in _events)');
         _populateEventsFromCache(day);
       } else {
-        _logError('getEventsForDay', 'Month $monthKey already populated in _events cache');
+        // _logError('getEventsForDay', 'Month $monthKey already populated in _events cache');
       }
       
       // Still track populated months, but don't let it block population
@@ -303,7 +303,7 @@ class EventService {
       finalEvents.add(event);
     }
     
-    _logError('getEventsForDay', 'Returning ${finalEvents.length} events for ${normalizedDate.toIso8601String()}');
+    // _logError('getEventsForDay', 'Returning ${finalEvents.length} events for ${normalizedDate.toIso8601String()}');
     
     // If we still don't have events but the month is cached, check for recovery
     if (finalEvents.isEmpty && _monthlyCache.containsKey(monthKey)) {

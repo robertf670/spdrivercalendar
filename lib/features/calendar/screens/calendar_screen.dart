@@ -7,6 +7,8 @@ import 'package:spdrivercalendar/core/services/storage_service.dart';
 import 'package:spdrivercalendar/features/calendar/services/roster_service.dart';
 import 'package:spdrivercalendar/features/calendar/services/event_service.dart';
 import 'package:spdrivercalendar/features/calendar/services/holiday_service.dart';
+import 'package:googleapis/calendar/v3.dart' as calendar;
+import 'package:spdrivercalendar/services/bus_tracking_service.dart';
 import 'package:spdrivercalendar/features/calendar/widgets/event_card.dart';
 import 'package:spdrivercalendar/features/calendar/widgets/shift_details_card.dart';
 import 'package:spdrivercalendar/features/calendar/dialogs/add_event_dialog.dart';
@@ -578,6 +580,16 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
         builder: (context, setState) {
           // Function to load shift numbers for selected zone
           void loadShiftNumbers() async {
+            // Skip loading for 22B/01 as it's a fixed duty
+            if (selectedZone == '22B/01') {
+              setState(() {
+                shiftNumbers = [];
+                selectedShiftNumber = '';
+                isLoading = false;
+              });
+              return;
+            }
+            
             setState(() {
               isLoading = true;
             });
@@ -818,16 +830,38 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                 DropdownButton<String>(
                   value: selectedZone,
                   isExpanded: true,
-                  items: [
-                    'Zone 1',
-                    'Zone 3',
-                    'Zone 4',
-                    'Spare',
-                    'Uni/Euro',
-                    'Bus Check',
-                    'Jamestown Road',
-                    'Training',
-                  ].map((zone) {
+                  items: () {
+                    final dayOfWeek = RosterService.getDayOfWeek(shiftDate);
+                    List<String> zones = [
+                      'Zone 1',
+                      'Zone 3',
+                      'Zone 4',
+                    ];
+                    
+                    // Add 22B/01 right after Zone 4 for Sundays only
+                    if (dayOfWeek == 'Sunday') {
+                      zones.add('22B/01');
+                    }
+                    
+                    // Add remaining zones
+                    zones.addAll([
+                      'Spare',
+                      'Uni/Euro',
+                      'Bus Check',
+                    ]);
+                    
+                    // Add Jamestown Road only for Mon-Fri
+                    if (dayOfWeek != 'Saturday' && dayOfWeek != 'Sunday') {
+                      zones.add('Jamestown Road');
+                    }
+                    
+                    // Add Training only for Mon-Sat (not Sunday)
+                    if (dayOfWeek != 'Sunday') {
+                      zones.add('Training');
+                    }
+                    
+                    return zones;
+                  }().map((zone) {
                     return DropdownMenuItem(
                       value: zone,
                       child: Text(zone),
@@ -846,32 +880,50 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                 
                 const SizedBox(height: 16),
                 const Text('Shift:', style: TextStyle(fontWeight: FontWeight.bold)),
-                isLoading
-                  ? const SizedBox(
-                      height: 50,
-                      child: Center(
-                        child: CircularProgressIndicator(strokeWidth: 2),
+                // Handle 22B/01 special case - no shift selection needed
+                selectedZone == '22B/01'
+                  ? Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey),
+                        borderRadius: BorderRadius.circular(4),
+                        color: Colors.grey.withOpacity(0.1),
+                      ),
+                      child: const Text(
+                        'Fixed Duty - No shift selection required',
+                        style: TextStyle(
+                          color: Colors.grey,
+                          fontStyle: FontStyle.italic,
+                        ),
                       ),
                     )
-                  : shiftNumbers.isEmpty
-                    ? const Text('No shifts available for selected zone and date')
-                    : DropdownButton<String>(
-                        value: selectedShiftNumber.isEmpty ? shiftNumbers[0] : selectedShiftNumber,
-                        isExpanded: true,
-                        items: shiftNumbers.map((shift) {
-                          return DropdownMenuItem(
-                            value: shift,
-                            child: Text(shift),
-                          );
-                        }).toList(),
-                        onChanged: (value) {
-                          if (value != null) {
-                            setState(() {
-                              selectedShiftNumber = value;
-                            });
-                          }
-                        },
-                      ),
+                  : isLoading
+                    ? const SizedBox(
+                        height: 50,
+                        child: Center(
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      )
+                    : shiftNumbers.isEmpty
+                      ? const Text('No shifts available for selected zone and date')
+                      : DropdownButton<String>(
+                          value: selectedShiftNumber.isEmpty ? shiftNumbers[0] : selectedShiftNumber,
+                          isExpanded: true,
+                          items: shiftNumbers.map((shift) {
+                            return DropdownMenuItem(
+                              value: shift,
+                              child: Text(shift),
+                            );
+                          }).toList(),
+                          onChanged: (value) {
+                            if (value != null) {
+                              setState(() {
+                                selectedShiftNumber = value;
+                              });
+                            }
+                          },
+                        ),
               ],
             ),
             actions: [
@@ -880,13 +932,15 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                 child: const Text('Cancel'),
               ),
               TextButton(
-                onPressed: isLoading || shiftNumbers.isEmpty || selectedShiftNumber.isEmpty
-                  ? null  // Disable button if loading or no shifts available
+                onPressed: isLoading || (selectedZone != '22B/01' && (shiftNumbers.isEmpty || selectedShiftNumber.isEmpty))
+                  ? null  // Disable button if loading or no shifts available (except for 22B/01)
                   : () async {
                       // Create title based on zone and shift
                       String title = '';
-                      // For Spare shifts, create SP code from time
-                      if (selectedZone == 'Spare') {
+                      // For 22B/01 Sunday duty
+                      if (selectedZone == '22B/01') {
+                        title = '22B/01';
+                      } else if (selectedZone == 'Spare') {
                         // Convert the time (like "06:00") to SP code (like "SP0600")
                         final timeStr = selectedShiftNumber; // The time is now directly stored
                         final timeWithoutColon = timeStr.replaceAll(':', '');
@@ -907,7 +961,13 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                       // Load shift times based on zone
                       Map<String, dynamic>? shiftTimes;
                       
-                      if (selectedZone == 'Spare') {
+                      if (selectedZone == '22B/01') {
+                        // Fixed times for 22B/01: 04:30 start, 8h 38m duration (same as spare duties)
+                        shiftTimes = {
+                          'startTime': const TimeOfDay(hour: 4, minute: 30),
+                          'endTime': const TimeOfDay(hour: 13, minute: 8), // 04:30 + 8h 38m = 13:08
+                        };
+                      } else if (selectedZone == 'Spare') {
                         // Parse the time directly from the dropdown value (e.g., "04:00")
                         final timeParts = selectedShiftNumber.split(':');
                         if (timeParts.length == 2) {
@@ -1262,6 +1322,236 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
     return null;
   }
 
+  // Helper to sync bus assignments to Google Calendar
+  Future<void> _syncBusAssignmentsToGoogleCalendar(Event event) async {
+    debugPrint('🚌 BUS SYNC: Starting sync for ${event.title}');
+    try {
+      // Check if Google Calendar sync is enabled
+      final syncEnabled = await StorageService.getBool(AppConstants.syncToGoogleCalendarKey, defaultValue: false);
+      final isSignedIn = await GoogleCalendarService.isSignedIn();
+      
+      debugPrint('🚌 BUS SYNC: syncEnabled=$syncEnabled, isSignedIn=$isSignedIn');
+      
+      if (!syncEnabled || !isSignedIn) {
+        debugPrint('🚌 BUS SYNC: Skipping - sync not enabled or not signed in');
+        return; // Skip if not enabled or not signed in
+      }
+
+      // Convert to full DateTime objects for Google Calendar search
+      final startDateTime = DateTime(
+        event.startDate.year, 
+        event.startDate.month, 
+        event.startDate.day,
+        event.startTime.hour,
+        event.startTime.minute,
+      );
+      
+      final endDateTime = DateTime(
+        event.endDate.year, 
+        event.endDate.month, 
+        event.endDate.day,
+        event.endTime.hour,
+        event.endTime.minute,
+      );
+
+      // Search for existing Google Calendar events on the same day
+      final dayStart = DateTime(event.startDate.year, event.startDate.month, event.startDate.day);
+      final dayEnd = dayStart.add(const Duration(days: 1));
+      
+      debugPrint('🚌 BUS SYNC: Searching for events from ${dayStart.toUtc()} to ${dayEnd.toUtc()}');
+      
+      final existingEvents = await GoogleCalendarService.listEvents(
+        startTime: dayStart.toUtc(),
+        endTime: dayEnd.toUtc(),
+      );
+      
+      debugPrint('🚌 BUS SYNC: Found ${existingEvents.length} existing Google Calendar events');
+
+      // Find matching event by title and time
+      calendar.Event? matchingEvent;
+      for (final gcalEvent in existingEvents) {
+        debugPrint('🚌 BUS SYNC: Checking event "${gcalEvent.summary}" vs "${event.title}"');
+        
+        if (gcalEvent.summary == event.title &&
+            gcalEvent.start?.dateTime != null &&
+            gcalEvent.end?.dateTime != null) {
+          
+          final gcalStart = gcalEvent.start!.dateTime!.toLocal();
+          final gcalEnd = gcalEvent.end!.dateTime!.toLocal();
+          
+          debugPrint('🚌 BUS SYNC: Time comparison - GCal: $gcalStart-$gcalEnd vs Local: $startDateTime-$endDateTime');
+          
+          // Check if times match (within 1 minute tolerance)
+          if ((gcalStart.difference(startDateTime).abs().inMinutes <= 1) &&
+              (gcalEnd.difference(endDateTime).abs().inMinutes <= 1)) {
+            matchingEvent = gcalEvent;
+            debugPrint('🚌 BUS SYNC: Found matching event!');
+            break;
+          } else {
+            debugPrint('🚌 BUS SYNC: Time mismatch - start diff: ${gcalStart.difference(startDateTime).inMinutes}min, end diff: ${gcalEnd.difference(endDateTime).inMinutes}min');
+          }
+        }
+      }
+
+      if (matchingEvent != null) {
+        // Build updated description with bus assignments
+        final updatedDescription = await _buildGoogleCalendarDescription(event);
+        
+        debugPrint('🚌 BUS SYNC: Built description: "$updatedDescription"');
+        
+        // Update the event description
+        matchingEvent.description = updatedDescription;
+        
+        // Update the event in Google Calendar
+        await GoogleCalendarService.updateEvent(
+          eventId: matchingEvent.id!,
+          event: matchingEvent,
+        );
+        
+        debugPrint('🚌 GOOGLE SYNC: Updated bus assignments for ${event.title}');
+      } else {
+        debugPrint('🚌 BUS SYNC: No matching event found for ${event.title}');
+      }
+    } catch (e) {
+      debugPrint('🚌 GOOGLE SYNC ERROR: Failed to sync bus assignments: $e');
+      // Continue silently - don't block user if sync fails
+    }
+  }
+
+  // Helper to build Google Calendar description with bus assignments
+  Future<String?> _buildGoogleCalendarDescription(Event event) async {
+    List<String> descriptionParts = [];
+    
+    // Add break times if available (and not a workout)
+    final breakTime = await ShiftService.getBreakTime(event);
+    if (breakTime != null && !breakTime.toLowerCase().contains('workout') && breakTime.isNotEmpty) {
+      descriptionParts.add('Break Times: $breakTime');
+    }
+    
+    // Add rest day indicator if applicable
+    final String shiftType = getShiftForDate(event.startDate);
+    final bool isRest = shiftType == 'R';
+    if (isRest) {
+      descriptionParts.add('(Working on Rest Day)');
+    }
+    
+    // Add bus assignment information (if enabled)
+    final includeBusAssignments = await StorageService.getBool(AppConstants.includeBusAssignmentsInGoogleCalendarKey, defaultValue: true);
+    debugPrint('🚌 DESCRIPTION: includeBusAssignments=$includeBusAssignments');
+    
+    if (includeBusAssignments) {
+      final busInfo = await _formatBusAssignmentForGoogleCalendar(event);
+      debugPrint('🚌 DESCRIPTION: Bus info for description: "$busInfo"');
+      if (busInfo != null) {
+        if (descriptionParts.isNotEmpty) {
+          descriptionParts.add(''); // Add blank line separator
+        }
+        descriptionParts.add('Bus Assignment:');
+        descriptionParts.add(busInfo);
+        debugPrint('🚌 DESCRIPTION: Added bus info to description');
+      } else {
+        debugPrint('🚌 DESCRIPTION: No bus info to add');
+      }
+    } else {
+      debugPrint('🚌 DESCRIPTION: Bus assignments disabled in settings');
+    }
+    
+    // Combine all parts into final description
+    final description = descriptionParts.join('\n');
+    return description.isEmpty ? null : description;
+  }
+
+  // Helper to format bus assignment for Google Calendar description
+  Future<String?> _formatBusAssignmentForGoogleCalendar(Event event) async {
+    debugPrint('🚌 BUS FORMAT: Formatting bus info for ${event.title}');
+    debugPrint('🚌 BUS FORMAT: firstHalfBus=${event.firstHalfBus}, secondHalfBus=${event.secondHalfBus}');
+    debugPrint('🚌 BUS FORMAT: busAssignments=${event.busAssignments}');
+    
+    // Check if bustimes.org links should be included
+    final includeLinks = await StorageService.getBool(AppConstants.includeBustimesLinksInGoogleCalendarKey, defaultValue: true);
+    debugPrint('🚌 BUS FORMAT: includeLinks=$includeLinks');
+    
+    // Check for workout shifts (single bus assignment)
+    if (event.title.toLowerCase().contains('workout')) {
+      // For workout shifts, check firstHalfBus or any bus assignment
+      final workoutBus = event.firstHalfBus ?? 
+                        (event.busAssignments?.values.isNotEmpty == true 
+                         ? event.busAssignments!.values.first 
+                         : null);
+      if (workoutBus != null && workoutBus.isNotEmpty) {
+        if (includeLinks) {
+          final busUrl = await BusTrackingService.getBusUrl(workoutBus);
+          if (busUrl != null) {
+            return 'Bus: $workoutBus ($busUrl)';
+          } else {
+            return 'Bus: $workoutBus';
+          }
+        } else {
+          return 'Bus: $workoutBus';
+        }
+      }
+    } else {
+      // For regular shifts, show first half and second half
+      List<String> busParts = [];
+      
+      if (event.firstHalfBus != null && event.firstHalfBus!.isNotEmpty) {
+        if (includeLinks) {
+          final busUrl = await BusTrackingService.getBusUrl(event.firstHalfBus!);
+          if (busUrl != null) {
+            busParts.add('First Half: ${event.firstHalfBus} ($busUrl)');
+          } else {
+            busParts.add('First Half: ${event.firstHalfBus}');
+          }
+        } else {
+          busParts.add('First Half: ${event.firstHalfBus}');
+        }
+      }
+      
+      if (event.secondHalfBus != null && event.secondHalfBus!.isNotEmpty) {
+        if (includeLinks) {
+          final busUrl = await BusTrackingService.getBusUrl(event.secondHalfBus!);
+          if (busUrl != null) {
+            busParts.add('Second Half: ${event.secondHalfBus} ($busUrl)');
+          } else {
+            busParts.add('Second Half: ${event.secondHalfBus}');
+          }
+        } else {
+          busParts.add('Second Half: ${event.secondHalfBus}');
+        }
+      }
+      
+      // Also check busAssignments for spare duties with specific duty codes
+      if (event.busAssignments != null && event.busAssignments!.isNotEmpty) {
+        for (final entry in event.busAssignments!.entries) {
+          final dutyCode = entry.key;
+          final busNumber = entry.value;
+          
+          if (busNumber.isNotEmpty) {
+            if (includeLinks) {
+              final busUrl = await BusTrackingService.getBusUrl(busNumber);
+              if (busUrl != null) {
+                busParts.add('$dutyCode: $busNumber ($busUrl)');
+              } else {
+                busParts.add('$dutyCode: $busNumber');
+              }
+            } else {
+              busParts.add('$dutyCode: $busNumber');
+            }
+          }
+        }
+      }
+      
+      if (busParts.isNotEmpty) {
+        final result = busParts.join('\n');
+        debugPrint('🚌 BUS FORMAT: Returning bus info: "$result"');
+        return result;
+      }
+    }
+    
+    debugPrint('🚌 BUS FORMAT: No bus assignments found, returning null');
+    return null; // No bus assignments to display
+  }
+
   // Helper to check settings and sync to Google Calendar if enabled
   Future<void> _checkAndSyncToGoogleCalendar(Event event, BuildContext? context) async {
     // Return early if context is null or widget is not mounted
@@ -1298,31 +1588,10 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
           event.endTime.minute,
         );
 
-        // Get break information
-        final breakTime = await ShiftService.getBreakTime(event);
+        // Variables moved to _buildGoogleCalendarDescription method
         
-        // Check if it's a rest day using RosterService
-        final String shiftType = getShiftForDate(event.startDate); // Use existing screen method
-        final bool isRest = shiftType == 'R';
-        
-        // Build description with all available information
-        List<String> descriptionParts = [];
-        
-        // Add break times if available (and not a workout)
-        if (breakTime != null && !breakTime.toLowerCase().contains('workout') && breakTime.isNotEmpty) {
-          descriptionParts.add('Break Times: $breakTime');
-        }
-        
-        // Add rest day indicator if applicable
-        if (isRest) {
-          descriptionParts.add('(Working on Rest Day)');
-        }
-        
-        // Combine all parts into final description
-        final description = descriptionParts.join('\n');
-        
-        // Handle case where description might still be empty
-        final finalDescription = description.isEmpty ? null : description;
+        // Build description with all available information including bus assignments
+        final finalDescription = await _buildGoogleCalendarDescription(event);
         
         // Add to Google Calendar (check mounted again before async operation)
         if (!mounted) return;
@@ -1857,6 +2126,9 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                                         // Save the updated event
                                         await EventService.updateEvent(oldEvent, updatedEvent);
                                         
+                                        // Sync bus assignments to Google Calendar
+                                        await _syncBusAssignmentsToGoogleCalendar(updatedEvent);
+                                        
                                         // Refresh the UI
                                         if (mounted) {
                                           setState(() {});
@@ -1952,6 +2224,9 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                                         // Save the updated event
                                         await EventService.updateEvent(oldEvent, updatedEvent);
                                         
+                                        // Sync bus assignments to Google Calendar
+                                        await _syncBusAssignmentsToGoogleCalendar(updatedEvent);
+                                        
                                         // Refresh the UI
                                         if (mounted) {
                                           setState(() {});
@@ -1975,7 +2250,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                           final isWorkout = snapshot.data?.toLowerCase().contains('workout') ?? false;
                           final isOvertimeShift = event.title.contains('(OT)');
                           final isWorkoutOrOvertime = isWorkout || isOvertimeShift;
-                          final isSpareWithFullDuties = _spareShiftHasFullDuties(event);
+                          // Removed unused variable isSpareWithFullDuties
                           
                           if (isWorkoutOrOvertime) {
                             // Single button for workout and overtime shifts - only show if no bus is assigned
@@ -2015,26 +2290,31 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                                     ),
                                   );
                                   
-                                  if (result != null) {
-                                    // Create a new event with the updated bus number
-                                    final updatedEvent = Event(
-                                      id: event.id,
-                                      title: event.title,
-                                      startDate: event.startDate,
-                                      startTime: event.startTime,
-                                      endDate: event.endDate,
-                                      endTime: event.endTime,
-                                      workTime: event.workTime,
-                                      breakStartTime: event.breakStartTime,
-                                      breakEndTime: event.breakEndTime,
-                                      assignedDuties: event.assignedDuties,
-                                      busAssignments: event.busAssignments, // CRITICAL: Preserve bus assignments
-                                      firstHalfBus: result,
-                                      secondHalfBus: event.secondHalfBus,
-                                    );
+                                        if (result != null) {
+                                          debugPrint('🚌 FIRST HALF: Bus assignment result = "$result"');
+                                          // Create a new event with the updated bus number
+                                          final updatedEvent = Event(
+                                            id: event.id,
+                                            title: event.title,
+                                            startDate: event.startDate,
+                                            startTime: event.startTime,
+                                            endDate: event.endDate,
+                                            endTime: event.endTime,
+                                            workTime: event.workTime,
+                                            breakStartTime: event.breakStartTime,
+                                            breakEndTime: event.breakEndTime,
+                                            assignedDuties: event.assignedDuties,
+                                            busAssignments: event.busAssignments, // CRITICAL: Preserve bus assignments
+                                            firstHalfBus: result,
+                                            secondHalfBus: event.secondHalfBus,
+                                          );
+                                          debugPrint('🚌 FIRST HALF: Created updatedEvent with firstHalfBus="${updatedEvent.firstHalfBus}"');
                                     
                                     // Save the updated event
                                     await EventService.updateEvent(event, updatedEvent);
+                                    
+                                    // Sync bus assignments to Google Calendar
+                                    await _syncBusAssignmentsToGoogleCalendar(updatedEvent);
                                     
                                     // Refresh the UI
                                     if (mounted) {
@@ -2129,6 +2409,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                                         );
                                         
                                         if (result != null) {
+                                          debugPrint('🚌 FIRST HALF (2nd location): Bus assignment result = "$result"');
                                           // Create a new event with the updated bus number
                                           final updatedEvent = Event(
                                             id: event.id,
@@ -2146,9 +2427,13 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                                             secondHalfBus: event.secondHalfBus,
                                             notes: event.notes, // Add this line
                                           );
+                                          debugPrint('🚌 FIRST HALF (2nd location): Created updatedEvent with firstHalfBus="${updatedEvent.firstHalfBus}"');
                                           
                                           // Save the updated event
                                           await EventService.updateEvent(oldEvent, updatedEvent);
+                                          
+                                          // Sync bus assignments to Google Calendar
+                                          await _syncBusAssignmentsToGoogleCalendar(updatedEvent);
                                           
                                           // Refresh the UI
                                           if (mounted) {
@@ -2260,6 +2545,9 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                                           
                                           // Save the updated event
                                           await EventService.updateEvent(oldEvent, updatedEvent);
+                                          
+                                          // Sync bus assignments to Google Calendar
+                                          await _syncBusAssignmentsToGoogleCalendar(updatedEvent);
                                           
                                           // Refresh the UI
                                           if (mounted) {
@@ -3702,6 +3990,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                     isRestDay: getShiftForDate(event.startDate) == 'R',
                     onEdit: _editEvent, // Use _editEvent for all types, EventCard handles spare logic
                     onShowNotes: _showNotesDialog, // Pass the function here
+                    onBusAssignmentUpdate: _syncBusAssignmentsToGoogleCalendar, // Pass the bus sync callback
                   );
                 }).toList(),
               ),

@@ -19,6 +19,7 @@ class EventCard extends StatefulWidget {
   final bool isBankHoliday;
   final bool isRestDay;
   final Function(Event) onShowNotes;
+  final Function(Event)? onBusAssignmentUpdate;
 
   const EventCard({
     Key? key,
@@ -29,6 +30,7 @@ class EventCard extends StatefulWidget {
     this.isBankHoliday = false,
     this.isRestDay = false,
     required this.onShowNotes,
+    this.onBusAssignmentUpdate,
   }) : super(key: key);
 
   @override
@@ -200,8 +202,8 @@ class _EventCardState extends State<EventCard> {
       
 
       
-      // Skip for spare shifts
-      if (shiftCode.startsWith('SP')) {
+      // Skip for spare shifts and 22B/01
+      if (shiftCode.startsWith('SP') || shiftCode == '22B/01') {
         setState(() {
           startLocation = null;
           finishLocation = null;
@@ -1211,8 +1213,8 @@ class _EventCardState extends State<EventCard> {
     // Check if this is a work shift
     final isWorkShift = widget.event.isWorkShift;
     
-    // Check if it's a Spare shift
-    final isSpareShift = isWorkShift && widget.event.title.startsWith('SP');
+    // Check if it's a Spare shift or 22B/01
+    final isSpareShift = isWorkShift && (widget.event.title.startsWith('SP') || widget.event.title == '22B/01');
     // Check if it's a BusCheck shift
     final bool isBusCheckShift = widget.event.title.startsWith('BusCheck');
     
@@ -1692,7 +1694,7 @@ class _EventCardState extends State<EventCard> {
                 const SizedBox(height: 3.0), // Reduced gap - route/location and breaks are related
               ],
               // MODIFIED: Break times row (if available AND NOT BusCheck AND is work shift AND NOT training shift AND NOT spare shift)
-              if (breakTime != null && !isBusCheckShift && !widget.event.title.contains('(OT)') && widget.event.isWorkShift && widget.event.title != 'TRAIN23/24' && widget.event.title != 'CPC' && !widget.event.title.startsWith('SP')) ...[
+              if (breakTime != null && !isBusCheckShift && !widget.event.title.contains('(OT)') && widget.event.isWorkShift && widget.event.title != 'TRAIN23/24' && widget.event.title != 'CPC' && !widget.event.title.startsWith('SP') && widget.event.title != '22B/01') ...[
                 Padding(
                   padding: const EdgeInsets.only(bottom: 2.0), // Match report line padding
                   child: Row(
@@ -2679,6 +2681,11 @@ class _EventCardState extends State<EventCard> {
                           // Save the updated event
                           await EventService.updateEvent(oldEvent, updatedEvent);
                           
+                          // Sync bus assignments to Google Calendar if callback provided
+                          if (widget.onBusAssignmentUpdate != null) {
+                            widget.onBusAssignmentUpdate!(updatedEvent);
+                          }
+                          
                           // Update the widget's event reference
                           widget.event.assignedDuties = updatedEvent.assignedDuties;
                           widget.event.busAssignments = updatedEvent.busAssignments;
@@ -2889,8 +2896,24 @@ class _EventCardState extends State<EventCard> {
                   // Close the dialog
                   navigator.pop();
                   
-                  // Notify parent to rebuild
-                  widget.onEdit(widget.event);
+                  // Show confirmation message
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Event deleted successfully'),
+                      duration: Duration(seconds: 2),
+                    ),
+                  );
+                  
+                  // Trigger calendar refresh by creating a refresh event
+                  final refreshEvent = Event(
+                    id: 'refresh_trigger_delete',
+                    title: 'refresh',
+                    startDate: DateTime.now(),
+                    startTime: const TimeOfDay(hour: 0, minute: 0),
+                    endDate: DateTime.now(),
+                    endTime: const TimeOfDay(hour: 0, minute: 0),
+                  );
+                  widget.onEdit(refreshEvent);
                 }
               },
                  icon: const Icon(Icons.delete_forever),
@@ -2920,6 +2943,17 @@ class _EventCardState extends State<EventCard> {
             },
             child: const Text('Notes'),
           ),
+          // Add Break Status button for spare duties and 22B/01
+          if (widget.event.isEligibleForOvertimeTracking)
+            TextButton(
+              onPressed: () {
+                // Close the current dialog
+                Navigator.of(context).pop();
+                // Show break status dialog
+                _showBreakStatusDialog(context);
+              },
+              child: const Text('Break Status'),
+            ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(), // Simple close action
             child: const Text('Close'),
@@ -3065,7 +3099,7 @@ class _EventCardState extends State<EventCard> {
                         : () {
                             String baseText;
                             // For spare duties, try to get break locations from duty data
-                            if (widget.event.title.startsWith('SP') && duty['startBreakLocation'] != null && duty['finishBreakLocation'] != null) {
+                            if ((widget.event.title.startsWith('SP') || widget.event.title == '22B/01') && duty['startBreakLocation'] != null && duty['finishBreakLocation'] != null) {
                               final startBreakLoc = duty['startBreakLocation']!.isNotEmpty ? '${duty['startBreakLocation']} ' : '';
                               final endBreakLoc = duty['finishBreakLocation']!.isNotEmpty ? ' ${duty['finishBreakLocation']}' : '';
                               baseText = '$startBreakLoc${breakTime ?? 'No break info'}$endBreakLoc';
@@ -3357,6 +3391,11 @@ class _EventCardState extends State<EventCard> {
       await EventService.updateEvent(oldEvent, widget.event);
       print('DEBUG: EventService.updateEvent completed successfully');
       
+      // Sync bus assignments to Google Calendar if callback provided
+      if (widget.onBusAssignmentUpdate != null) {
+        widget.onBusAssignmentUpdate!(widget.event);
+      }
+      
       // REMOVED: Post-save verification that was causing false positives and data rollbacks
       // The EventService.updateEvent method has its own verification logic
       print('DEBUG: EventService.updateEvent completed - trusting the save operation');
@@ -3594,7 +3633,7 @@ class _EventCardState extends State<EventCard> {
 
   // Helper method to check if spare shift has full duties
   bool _spareShiftHasFullDuties() {
-    if (!widget.event.title.startsWith('SP') || 
+    if ((!widget.event.title.startsWith('SP') && widget.event.title != '22B/01') || 
         widget.event.assignedDuties == null || 
         widget.event.assignedDuties!.isEmpty) {
       return false;
@@ -3612,7 +3651,7 @@ class _EventCardState extends State<EventCard> {
 
   // Check if spare shift has exactly one full duty (for break time display)
   bool _spareShiftHasOneFullDuty() {
-    if (!widget.event.title.startsWith('SP') || 
+    if ((!widget.event.title.startsWith('SP') && widget.event.title != '22B/01') || 
         widget.event.assignedDuties == null || 
         widget.event.assignedDuties!.isEmpty) {
       return false;
@@ -3628,6 +3667,241 @@ class _EventCardState extends State<EventCard> {
     return !dutyCode.endsWith('A') && !dutyCode.endsWith('B');
   }
 
+  // Show break status dialog for spare duties
+  void _showBreakStatusDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.access_time, color: AppTheme.primaryColor),
+            SizedBox(width: 8),
+            Text('Break Status'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (widget.event.hasLateBreak) ...[
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Current Status:',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      widget.event.tookFullBreak
+                          ? 'Full Break Taken'
+                          : 'Overtime: ${widget.event.overtimeDuration} minutes',
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+            const Text(
+              'Select break status for this spare duty:',
+              style: TextStyle(fontSize: 16),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+            },
+            child: const Text('Cancel'),
+          ),
+          // Add Remove button if break status exists
+          if (widget.event.hasLateBreak)
+            TextButton(
+              onPressed: () async {
+                // Save the old event for update
+                final oldEvent = Event(
+                  id: widget.event.id,
+                  title: widget.event.title,
+                  startDate: widget.event.startDate,
+                  startTime: widget.event.startTime,
+                  endDate: widget.event.endDate,
+                  endTime: widget.event.endTime,
+                  workTime: widget.event.workTime,
+                  breakStartTime: widget.event.breakStartTime,
+                  breakEndTime: widget.event.breakEndTime,
+                  assignedDuties: widget.event.assignedDuties,
+                  firstHalfBus: widget.event.firstHalfBus,
+                  secondHalfBus: widget.event.secondHalfBus,
+                  busAssignments: widget.event.busAssignments,
+                  notes: widget.event.notes,
+                  hasLateBreak: widget.event.hasLateBreak,
+                  tookFullBreak: widget.event.tookFullBreak,
+                  overtimeDuration: widget.event.overtimeDuration,
+                );
+                
+                // Reset break status
+                widget.event.hasLateBreak = false;
+                widget.event.tookFullBreak = false;
+                widget.event.overtimeDuration = null;
+                
+                // Save the updated event
+                await EventService.updateEvent(oldEvent, widget.event);
+                
+                // Close the dialog
+                Navigator.of(context).pop();
+                
+                // Update the UI
+                setState(() {});
+                
+                // Show confirmation
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Break status removed'),
+                    duration: Duration(seconds: 2),
+                  ),
+                );
+              },
+              child: const Text('Remove'),
+            ),
+          TextButton(
+            onPressed: () async {
+              // Save the old event for update
+              final oldEvent = Event(
+                id: widget.event.id,
+                title: widget.event.title,
+                startDate: widget.event.startDate,
+                startTime: widget.event.startTime,
+                endDate: widget.event.endDate,
+                endTime: widget.event.endTime,
+                workTime: widget.event.workTime,
+                breakStartTime: widget.event.breakStartTime,
+                breakEndTime: widget.event.breakEndTime,
+                assignedDuties: widget.event.assignedDuties,
+                firstHalfBus: widget.event.firstHalfBus,
+                secondHalfBus: widget.event.secondHalfBus,
+                notes: widget.event.notes,
+                hasLateBreak: widget.event.hasLateBreak,
+                tookFullBreak: widget.event.tookFullBreak,
+                overtimeDuration: widget.event.overtimeDuration,
+              );
+              
+              // Update event with Full Break option
+              widget.event.hasLateBreak = true;
+              widget.event.tookFullBreak = true;
+              widget.event.overtimeDuration = null;
+              
+              // Save the updated event
+              await EventService.updateEvent(oldEvent, widget.event);
+              
+              // Close the dialog
+              Navigator.of(context).pop();
+              
+              // Update the UI
+              setState(() {});
+              
+              // Show confirmation
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Full Break status saved'),
+                  duration: Duration(seconds: 2),
+                ),
+              );
+            },
+            child: const Text('Full Break'),
+          ),
+          TextButton(
+            onPressed: () {
+              // Close current dialog and show overtime selection dialog
+              Navigator.of(context).pop();
+              _showOvertimeSelectionDialog(context);
+            },
+            child: const Text('Overtime'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Show dialog for overtime duration selection
+  void _showOvertimeSelectionDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Select Overtime Duration'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('How many minutes of overtime?'),
+            const SizedBox(height: 16),
+            ...([15, 30, 45, 60].map((minutes) => 
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () async {
+                    // Save the old event for update
+                    final oldEvent = Event(
+                      id: widget.event.id,
+                      title: widget.event.title,
+                      startDate: widget.event.startDate,
+                      startTime: widget.event.startTime,
+                      endDate: widget.event.endDate,
+                      endTime: widget.event.endTime,
+                      workTime: widget.event.workTime,
+                      breakStartTime: widget.event.breakStartTime,
+                      breakEndTime: widget.event.breakEndTime,
+                      assignedDuties: widget.event.assignedDuties,
+                      firstHalfBus: widget.event.firstHalfBus,
+                      secondHalfBus: widget.event.secondHalfBus,
+                      notes: widget.event.notes,
+                      hasLateBreak: widget.event.hasLateBreak,
+                      tookFullBreak: widget.event.tookFullBreak,
+                      overtimeDuration: widget.event.overtimeDuration,
+                    );
+                    
+                    // Update event with overtime
+                    widget.event.hasLateBreak = true;
+                    widget.event.tookFullBreak = false;
+                    widget.event.overtimeDuration = minutes;
+                    
+                    // Save the updated event
+                    await EventService.updateEvent(oldEvent, widget.event);
+                    
+                    // Close the dialog
+                    Navigator.of(context).pop();
+                    
+                    // Update the UI
+                    setState(() {});
+                    
+                    // Show confirmation
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('$minutes minutes overtime saved'),
+                        duration: const Duration(seconds: 2),
+                      ),
+                    );
+                  },
+                  child: Text('$minutes minutes'),
+                ),
+              ),
+            )),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+        ],
+      ),
+    );
+  }
 
   // Build the bus assignment UI for spare shifts with full duties
   Widget _buildFullDutyBusAssignmentUI(StateSetter dialogSetState) {
@@ -3695,6 +3969,12 @@ class _EventCardState extends State<EventCard> {
                       );
 
                       await EventService.updateEvent(oldEvent, updatedEvent);
+                      
+                      // Sync bus assignments to Google Calendar if callback provided
+                      if (widget.onBusAssignmentUpdate != null) {
+                        widget.onBusAssignmentUpdate!(updatedEvent);
+                      }
+                      
                       widget.event.assignedDuties = updatedEvent.assignedDuties;
                       widget.event.firstHalfBus = null;
                       widget.event.secondHalfBus = null;
