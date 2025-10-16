@@ -84,7 +84,7 @@ class BillsScreenState extends State<BillsScreen> {
       // Construct the filename based on selected values
       String filename;
       
-      if (_selectedZone == 'Route 23/24 Proposed Bill') {
+      if (_selectedZone == 'Route 23/24') {
         // Handle the new Route 23/24 files
         String dayTypeForFilename = _selectedDayType;
         if (_selectedDayType == 'Sat') {
@@ -92,7 +92,7 @@ class BillsScreenState extends State<BillsScreen> {
         } else if (_selectedDayType == 'Sun') {
           dayTypeForFilename = 'SUN';
         }
-        filename = '${dayTypeForFilename}_DUTIES_PZ4_NEW.csv';
+        filename = '${dayTypeForFilename}_ROUTE2324.csv';
       } else {
         // Handle existing zone files
         final zoneNumber = _selectedZone.replaceAll('Zone ', '');
@@ -407,7 +407,7 @@ class BillsScreenState extends State<BillsScreen> {
                             padding: EdgeInsets.only(right: 16.0),
                             child: Icon(Icons.arrow_drop_down_circle, color: AppTheme.primaryColor),
                           ),
-                          items: ['Zone 1', 'Zone 3', 'Zone 4', 'Route 23/24 Proposed Bill'].map((String value) {
+                          items: ['Zone 1', 'Zone 3', 'Zone 4', 'Route 23/24'].map((String value) {
                             return DropdownMenuItem<String>(
                               value: value,
                               child: Padding(
@@ -445,39 +445,6 @@ class BillsScreenState extends State<BillsScreen> {
               ),
               
               const SizedBox(height: 12),
-              
-              // Warning message for Route 23/24 Proposed Bill
-              if (_selectedZone == 'Route 23/24 Proposed Bill') ...[
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  margin: const EdgeInsets.only(bottom: 12),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.primaryContainer,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: AppTheme.primaryColor.withValues(alpha: 0.3)),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.info_outline,
-                        color: AppTheme.primaryColor,
-                        size: 18,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'This is a proposed bill - It is subject to change!',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w500,
-                            color: Theme.of(context).colorScheme.onPrimaryContainer,
-                            fontSize: 13,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
               
               // CSV Data Display Section
               Expanded(

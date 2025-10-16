@@ -1,4 +1,14 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.15.8': [
+    {
+      'title': 'Route 23/24 Bill Updated',
+      'description': 'Updated Route 23/24 bill to the latest version. The bill now reflects the current schedule and is no longer marked as "Proposed".',
+    },
+    {
+      'title': 'View Board Feature Removed',
+      'description': 'Removed the View Board feature for Zone 4 duties as it is now redundant due to the removal of route 9/122.',
+    },
+  ],
   '2.15.7': [
     {
       'title': 'Google Sync Screen shows only on first setup',
