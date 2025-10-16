@@ -1,12 +1,28 @@
 final Map<String, List<Map<String, String>>> changelogData = {
   '2.15.8': [
     {
-      'title': 'Route 23/24 Bill Updated',
-      'description': 'Updated Route 23/24 bill to the latest version. The bill now reflects the current schedule and is no longer marked as "Proposed".',
+      'title': 'Important Notice',
+      'description': 'The new Zone 4 (23/24) duties have been added based on the bill due for implementation. As the app stands, it will automatically switch to the new duties on October 19, 2025. You can add them now for Sunday coming and you will see routes 23/24 displayed in the calendar. The previous 9/122 duties will remain in the app, for all dates before 19th October 2025, for the point of keeping all data/statistics available. If you notice any errors or discrepancies in duty times, locations, or routes, please report them and I will get to them as soon as I can.',
     },
     {
-      'title': 'View Board Feature Removed',
-      'description': 'Removed the View Board feature for Zone 4 duties as it is now redundant due to the removal of route 9/122.',
+      'title': 'New Zone 4 Schedule - Routes 23/24',
+      'description': 'Zone 4 has been updated to the new Routes 23/24 schedule, effective October 19, 2025. The app will automatically switch to the new duties on this date, replacing the old Route 9/122 schedule.',
+    },
+    {
+      'title': 'Route 23/24 Bill Available',
+      'description': 'Added the new Route 23/24 bill to the Bills screen.',
+    },
+    {
+      'title': 'Improved Route Display',
+      'description': 'Enhanced route information display for the new Zone 4 duties.',
+    },
+    {
+      'title': 'View Board Feature Removed - For now...',
+      'description': 'Removed the View Board feature for Zone 4 duties as it is no longer needed as previously only worked with routes 9/122.',
+    },
+    {
+      'title': 'New Uni Duty Added',
+      'description': 'Added 807/21 duty to the Uni/Euro weekday schedule.',
     },
   ],
   '2.15.7': [

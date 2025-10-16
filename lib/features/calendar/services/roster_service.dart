@@ -139,6 +139,24 @@ class RosterService {
     // Check if it's a bank holiday
     final isBankHoliday = ShiftService.bankHolidays.any((holiday) => holiday.matchesDate(date));
     
+    // Zone 4 Route 23/24 changeover date: October 19, 2025
+    final route2324ChangeoverDate = DateTime(2025, 10, 19);
+    final isZone4NewSchedule = zoneNumber == '4' && !date.isBefore(route2324ChangeoverDate);
+    
+    // For Zone 4 on or after October 19, 2025, use Route 23/24 files
+    if (isZone4NewSchedule) {
+      if (isBankHoliday) {
+        return 'SUN_ROUTE2324.csv';
+      } else if (dayOfWeek == 'SAT') {
+        return 'SAT_ROUTE2324.csv';
+      } else if (dayOfWeek == 'SUN') {
+        return 'SUN_ROUTE2324.csv';
+      } else {
+        return 'M-F_ROUTE2324.csv';
+      }
+    }
+    
+    // For all other zones and Zone 4 before October 19, 2025, use legacy files
     // Determine the correct PZ filename suffix based on the zone number
     String pzFileSuffix = 'PZ$zoneNumber';
     

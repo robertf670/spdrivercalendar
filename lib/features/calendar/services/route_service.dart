@@ -1,5 +1,5 @@
 import 'package:flutter/services.dart';
-import 'package:spdrivercalendar/features/calendar/services/shift_service.dart';
+import 'package:spdrivercalendar/features/calendar/services/roster_service.dart';
 
 class RouteService {
   // Cache for parsed CSV route data: Key = filename, Value = Map<ShiftCode, RouteInfo>
@@ -27,20 +27,25 @@ class RouteService {
   }
 
   /// Helper method to determine the correct CSV filename based on date and zone
+  /// Uses RosterService.getShiftFilename to ensure consistent file selection
+  /// including the Zone 4 Route 23/24 changeover logic
   static String _getRouteFilename(String zoneNumber, DateTime eventDate) {
-    // Check if it's a bank holiday
-    final isBankHoliday = ShiftService.bankHolidays.any((holiday) => holiday.matchesDate(eventDate));
+    // Get day of week in RosterService format
+    final dayOfWeek = RosterService.getDayOfWeek(eventDate);
     
-    // Determine day of week (Sunday = 0, Monday = 1, etc.)
-    final dayOfWeek = eventDate.weekday % 7; // 0 = Sunday, 1-6 = Monday-Saturday
-    
-    if (isBankHoliday || dayOfWeek == 0) { // Sunday or bank holiday
-      return 'SUN_DUTIES_PZ$zoneNumber.csv';
-    } else if (dayOfWeek == 6) { // Saturday
-      return 'SAT_DUTIES_PZ$zoneNumber.csv';
-    } else { // Monday-Friday
-      return 'M-F_DUTIES_PZ$zoneNumber.csv';
+    // Convert to the abbreviated format expected by getShiftFilename
+    String dayOfWeekForFilename;
+    if (dayOfWeek == 'Saturday') {
+      dayOfWeekForFilename = 'SAT';
+    } else if (dayOfWeek == 'Sunday') {
+      dayOfWeekForFilename = 'SUN';
+    } else {
+      dayOfWeekForFilename = 'M-F';
     }
+    
+    // Use RosterService to get the correct filename
+    // This automatically handles Zone 4 Route 23/24 changeover on Oct 19, 2025
+    return RosterService.getShiftFilename(zoneNumber, dayOfWeekForFilename, eventDate);
   }
 
   /// Extract route info for PZ1 duties from location codes
@@ -141,24 +146,23 @@ class RouteService {
         if (parts.length >= 12) {
           final currentShiftCode = parts[0].trim();
           
-          // Extract route from break and after-break locations
-          // Column 5: startbreak, Column 6: startbreaklocation, Column 9: finishbreaklocation, Column 11: finishlocation
+          // Extract route from locations
+          // Column 4: location, Column 5: startbreak, Column 6: startbreaklocation, Column 9: finishbreaklocation, Column 11: finishlocation
+          final location = parts.length > 4 ? parts[4].trim() : '';
           final startBreak = parts.length > 5 ? parts[5].trim() : '';
           final breakLocation = parts.length > 6 ? parts[6].trim() : '';
           final afterBreakLocation = parts.length > 9 ? parts[9].trim() : '';
           final finishLocation = parts.length > 11 ? parts[11].trim() : '';
-
-          final firstRoute = _extractRouteFromPZ4Location(breakLocation);
-          final secondRoute = _extractRouteFromPZ4Location(afterBreakLocation) ?? 
-                            _extractRouteFromPZ4Location(finishLocation);
 
           // Determine if this is a WORKOUT duty
           final isWorkout = startBreak.toUpperCase() == 'WORKOUT';
 
           RouteInfo? routeInfo;
           if (isWorkout) {
-            // For WORKOUT duties, only show single route if available
-            final singleRoute = secondRoute ?? firstRoute;
+            // For WORKOUT duties, check location, finishLocation, or breakLocation for route
+            final singleRoute = _extractRouteFromPZ4Location(location) ??
+                              _extractRouteFromPZ4Location(finishLocation) ??
+                              _extractRouteFromPZ4Location(breakLocation);
             if (singleRoute != null) {
               routeInfo = RouteInfo(
                 firstRoute: singleRoute,
@@ -167,7 +171,13 @@ class RouteService {
               );
             }
           } else {
-            // For regular duties, show both routes
+            // For regular duties, extract first and second half routes
+            final firstRoute = _extractRouteFromPZ4Location(breakLocation) ??
+                             _extractRouteFromPZ4Location(location);
+            final secondRoute = _extractRouteFromPZ4Location(afterBreakLocation) ?? 
+                              _extractRouteFromPZ4Location(finishLocation);
+            
+            // Show both routes
             if (firstRoute != null || secondRoute != null) {
               routeInfo = RouteInfo(
                 firstRoute: firstRoute,
@@ -207,12 +217,9 @@ class RouteService {
     return null;
   }
 
-  /// Extract route from PZ4 location code (e.g., "PSQW-PE(9)" -> "9")
+  /// Extract route from PZ4 location code (e.g., "PSQW-PE(9)" -> "9", "Garage(24)" -> "24")
   static String? _extractRouteFromPZ4Location(String location) {
-    if (location.isEmpty || 
-        location.toLowerCase() == 'nan' || 
-        location.toUpperCase() == 'GARAGE' ||
-        location.toUpperCase() == 'WORKOUT') {
+    if (location.isEmpty || location.toLowerCase() == 'nan') {
       return null;
     }
 
@@ -222,6 +229,8 @@ class RouteService {
       return match.group(1);
     }
 
+    // No route found - return null for locations without route numbers
+    // (e.g., plain "Garage", "WORKOUT", "ConHill #1619" without parentheses)
     return null;
   }
 
@@ -259,6 +268,7 @@ class RouteInfo {
         return '';
       }
       
+      // Always show both routes with bullet separator (even if they're the same)
       return '$first • $second';
     }
   }
