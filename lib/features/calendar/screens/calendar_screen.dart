@@ -632,10 +632,10 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                   final csv = await rootBundle.loadString('assets/UNI_7DAYs.csv');
                   final lines = csv.split('\n');
                   
-                  // Don't skip any lines for UNI files
-                  for (final line in lines) {
-                    if (line.trim().isEmpty) continue;
-                    final parts = line.split(',');
+                  // Skip header line and load duty codes
+                  for (var i = 1; i < lines.length; i++) {
+                    if (lines[i].trim().isEmpty) continue;
+                    final parts = lines[i].split(',');
                     if (parts.isNotEmpty) {
                       // For regular work shifts, include ALL duties (including workouts)
                       combinedShifts.add(parts[0]);
@@ -651,10 +651,10 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                     final csv = await rootBundle.loadString('assets/UNI_M-F.csv');
                     final lines = csv.split('\n');
                     
-                    // Don't skip any lines for UNI files
-                    for (final line in lines) {
-                      if (line.trim().isEmpty) continue;
-                      final parts = line.split(',');
+                    // Skip header line and load duty codes
+                    for (var i = 1; i < lines.length; i++) {
+                      if (lines[i].trim().isEmpty) continue;
+                      final parts = lines[i].split(',');
                       if (parts.isNotEmpty) {
                         // For regular work shifts, include ALL duties (including workouts)
                         combinedShifts.add(parts[0]);
@@ -1134,15 +1134,23 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
             try {
                 final csv = await rootBundle.loadString(filePath);
                 final lines = csv.split('\n');
+                bool headerSkippedGetShift = false;
                 for (final line in lines) {
                     if (line.trim().isEmpty) continue;
+                    
+                    // Skip header row
+                    if (!headerSkippedGetShift) {
+                      headerSkippedGetShift = true;
+                      continue;
+                    }
+                    
                     final parts = line.split(',');
-                    if (parts.length >= 5 && parts[0].trim() == shiftNumber) {
+                    if (parts.length >= 15 && parts[0].trim() == shiftNumber) {
           // Debug statement removed
                         
-                        // Include all duties for _getShiftTimes (filtering handled in dialog loading)
-                        final startTimeRaw = parts[1].trim();
-                        final endTimeRaw = parts[4].trim();
+                        // New 17-column format: shift,duty,report,depart,location,startbreak,startbreaklocation,breakreport,finishbreak,finishbreaklocation,finish,finishlocation,signoff,spread,work,relief,routes
+                        final startTimeRaw = parts.length > 2 ? parts[2].trim() : '';
+                        final endTimeRaw = parts.length > 10 ? parts[10].trim() : '';
                         
                         if (startTimeRaw.isNotEmpty && endTimeRaw.isNotEmpty) {
                           final startTime = _parseTimeOfDay(startTimeRaw);
@@ -4500,10 +4508,10 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                   final csv = await rootBundle.loadString('assets/UNI_7DAYs.csv');
                   final lines = csv.split('\n');
                   
-                  // Don't skip any lines for UNI files
-                  for (final line in lines) {
-                    if (line.trim().isEmpty) continue;
-                    final parts = line.split(',');
+                  // Skip header line and load duty codes
+                  for (var i = 1; i < lines.length; i++) {
+                    if (lines[i].trim().isEmpty) continue;
+                    final parts = lines[i].split(',');
                     if (parts.isNotEmpty) {
                       // For regular work shifts, include ALL duties (including workouts)
                       combinedShifts.add(parts[0]);
@@ -4519,10 +4527,10 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                     final csv = await rootBundle.loadString('assets/UNI_M-F.csv');
                     final lines = csv.split('\n');
                     
-                    // Don't skip any lines for UNI files
-                    for (final line in lines) {
-                      if (line.trim().isEmpty) continue;
-                      final parts = line.split(',');
+                    // Skip header line and load duty codes
+                    for (var i = 1; i < lines.length; i++) {
+                      if (lines[i].trim().isEmpty) continue;
+                      final parts = lines[i].split(',');
                       if (parts.isNotEmpty) {
                         // For regular work shifts, include ALL duties (including workouts)
                         combinedShifts.add(parts[0]);

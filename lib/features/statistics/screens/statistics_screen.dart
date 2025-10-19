@@ -1053,22 +1053,35 @@ class StatisticsScreenState extends State<StatisticsScreen>
         final lines = csvData.split('\n'); 
         final Map<String, Duration> parsedDurations = {};
 
+        bool headerSkippedUni = false;
         for (final line in lines) {
             if (line.trim().isEmpty) continue;
+            
+            // Skip header row
+            if (!headerSkippedUni) {
+              headerSkippedUni = true;
+              continue;
+            }
+            
             final parts = line.split(',');
             
             if (parts.isNotEmpty) {
                final currentShiftCode = parts[0].trim();
                Duration? duration;
 
-               // UNI CSV Parsing logic (same as before)
-               if (parts.length >= 5) {
-                   final startTime = _parseTimeOfDay(parts[1].trim());
-                   final endTime = _parseTimeOfDay(parts[4].trim()); 
-                   if (startTime != null && endTime != null) {
-                       duration = _calculateDuration(startTime, endTime);
-                   } else {
-
+               // New 17-column format: shift,duty,report,depart,location,startbreak,startbreaklocation,breakreport,finishbreak,finishbreaklocation,finish,finishlocation,signoff,spread,work,relief,routes
+               // Use work time directly from column 14
+               if (parts.length >= 15) {
+                   final workTimeStr = parts.length > 14 ? parts[14].trim() : '';
+                   if (workTimeStr.isNotEmpty && workTimeStr.toLowerCase() != 'nan') {
+                       // Parse work time in HH:MM:SS or HH:MM format
+                       final timeParts = workTimeStr.split(':');
+                       if (timeParts.length >= 2) {
+                           duration = Duration(
+                               hours: int.parse(timeParts[0]),
+                               minutes: int.parse(timeParts[1])
+                           );
+                       }
                    }
                }
                
@@ -1116,23 +1129,31 @@ class StatisticsScreenState extends State<StatisticsScreen>
       final lines = csvData.split('\n');
       final Map<String, Duration> parsedSpreadTimes = {};
 
+      bool headerSkippedSpread = false;
       for (final line in lines) {
         if (line.trim().isEmpty) continue;
+        
+        // Skip header row
+        if (!headerSkippedSpread) {
+          headerSkippedSpread = true;
+          continue;
+        }
+        
         final parts = line.split(',');
         
-        if (parts.length >= 5) {
+        // New 17-column format: shift,duty,report,depart,location,startbreak,startbreaklocation,breakreport,finishbreak,finishbreaklocation,finish,finishlocation,signoff,spread,work,relief,routes
+        if (parts.length >= 14) {
           final currentShiftCode = parts[0].trim();
-          final startTimeStr = parts[1].trim();
-          final finishTimeStr = parts[4].trim();
+          final spreadTimeStr = parts.length > 13 ? parts[13].trim() : '';
           
-          if (startTimeStr.isNotEmpty && finishTimeStr.isNotEmpty &&
-              startTimeStr.toLowerCase() != 'nan' && finishTimeStr.toLowerCase() != 'nan') {
-            
-            final startTime = _parseTimeOfDay(startTimeStr);
-            final finishTime = _parseTimeOfDay(finishTimeStr);
-            
-            if (startTime != null && finishTime != null) {
-              Duration spreadDuration = _calculateDuration(startTime, finishTime);
+          // Use spread time directly from CSV column 13
+          if (spreadTimeStr.isNotEmpty && spreadTimeStr.toLowerCase() != 'nan') {
+            final timeParts = spreadTimeStr.split(':');
+            if (timeParts.length >= 2) {
+              final spreadDuration = Duration(
+                hours: int.parse(timeParts[0]),
+                minutes: int.parse(timeParts[1])
+              );
               parsedSpreadTimes[currentShiftCode] = spreadDuration;
             }
           }

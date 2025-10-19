@@ -1,4 +1,26 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.15.9': [
+    {
+      'title': 'Universal & Euro Duties Updated',
+      'description': 'All Universal and Euro duties have been updated to match the latest duty list dated October 19, 2025. This may cause your duties to disappear from the calendar and need to be re-added.',
+    },
+    {
+      'title': 'Duty 807/90 Removed',
+      'description': 'Removed 807/90 duty as it is no longer in service.',
+    },
+    {
+      'title': 'Updated Duty Timings',
+      'description': 'Updated break times, finish times, and locations for multiple Euro and Universal duties.',
+    },
+    {
+      'title': 'Route Information Display',
+      'description': 'Universal duties now display route information on event cards (e.g., X26/C1, 39A, C1 • C1) just like other duties.',
+    },
+    {
+      'title': 'Statistics Accuracy Improved',
+      'description': 'Fixed spread and work time calculations for Universal/Euro duties to use accurate values from the duty list.',
+    },
+  ],
   '2.15.8': [
     {
       'title': 'Important Notice',

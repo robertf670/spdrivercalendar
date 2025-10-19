@@ -15,8 +15,8 @@ class RouteService {
       } else if (shiftCode.startsWith('PZ4/')) {
         return await _getPZ4RouteInfo(shiftCode, eventDate);
       } else if (RegExp(r'^\d+/').hasMatch(shiftCode)) {
-        // UNI duties (e.g., 307/01, 807/90) - no route info available
-        return null;
+        // UNI duties (e.g., 307/01, 807/90) - extract route info from CSV
+        return await _getUNIRouteInfo(shiftCode, eventDate);
       } else {
         // Other duty types (BusCheck, etc.) - no route info
         return null;
@@ -234,6 +234,107 @@ class RouteService {
     return null;
   }
 
+  /// Extract route info for UNI duties from routes column
+  static Future<RouteInfo?> _getUNIRouteInfo(String shiftCode, DateTime eventDate) async {
+    try {
+      // Determine which file(s) to check based on day of week
+      final dayOfWeek = RosterService.getDayOfWeek(eventDate);
+      final isWeekend = dayOfWeek == 'Saturday' || dayOfWeek == 'Sunday';
+      
+      List<String> filesToTry = ['UNI_7DAYs.csv'];
+      if (!isWeekend) {
+        filesToTry.add('UNI_M-F.csv');
+      }
+      
+      for (final fileName in filesToTry) {
+        // Check cache first
+        if (_routeCache.containsKey(fileName)) {
+          final cached = _routeCache[fileName]![shiftCode];
+          if (cached != null) {
+            return cached;
+          }
+        }
+
+        // Load and parse CSV
+        final csvData = await rootBundle.loadString('assets/$fileName');
+        final lines = csvData.split('\n');
+        final Map<String, RouteInfo> parsedRoutes = {};
+
+        // Skip header line
+        for (int i = 1; i < lines.length; i++) {
+          final line = lines[i].trim();
+          if (line.isEmpty) continue;
+
+          final parts = line.split(',');
+          if (parts.length >= 15) {
+            final currentShiftCode = parts[0].trim();
+            
+            // New 17-column format: shift,duty,report,depart,location,startbreak,startbreaklocation,breakreport,finishbreak,finishbreaklocation,finish,finishlocation,signoff,spread,work,relief,routes
+            final startBreak = parts.length > 5 ? parts[5].trim() : '';
+            final routesStr = parts.length > 16 ? parts[16].trim() : '';
+            
+            // Determine if this is a WORKOUT duty
+            final isWorkout = startBreak.toUpperCase() == 'WORKOUT';
+
+            RouteInfo? routeInfo;
+            if (routesStr.isNotEmpty && routesStr.toLowerCase() != 'nan') {
+              // For UNI duties, the routes column might contain single route or multiple routes separated by /
+              if (isWorkout) {
+                // WORKOUT duties typically have one route
+                routeInfo = RouteInfo(
+                  firstRoute: routesStr,
+                  secondRoute: null,
+                  isWorkout: true,
+                );
+              } else {
+                // Regular duties with breaks - check if there are multiple routes
+                final routeParts = routesStr.split('/');
+                if (routeParts.length >= 3) {
+                  // Three or more routes (e.g., "L58/L59/C3") - store all routes in firstRoute
+                  routeInfo = RouteInfo(
+                    firstRoute: routesStr,  // Keep all routes together
+                    secondRoute: null,
+                    isWorkout: false,
+                  );
+                } else if (routeParts.length == 2) {
+                  // Two routes (e.g., "X26/C1")
+                  routeInfo = RouteInfo(
+                    firstRoute: routeParts[0].trim(),
+                    secondRoute: routeParts[1].trim(),
+                    isWorkout: false,
+                  );
+                } else {
+                  // Single route for both halves
+                  routeInfo = RouteInfo(
+                    firstRoute: routesStr,
+                    secondRoute: routesStr,
+                    isWorkout: false,
+                  );
+                }
+              }
+            }
+
+            if (routeInfo != null) {
+              parsedRoutes[currentShiftCode] = routeInfo;
+            }
+          }
+        }
+
+        // Cache the parsed routes
+        _routeCache[fileName] = parsedRoutes;
+
+        // If we found the shift in this file, return it
+        if (parsedRoutes.containsKey(shiftCode)) {
+          return parsedRoutes[shiftCode];
+        }
+      }
+      
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+
   /// Clear the route cache (useful for testing or memory management)
   static void clearCache() {
     _routeCache.clear();
@@ -258,8 +359,17 @@ class RouteInfo {
       // Single route format for WORKOUT duties
       final route = _formatRouteDisplay(firstRoute);
       return route ?? '';
+    } else if (firstRoute != null && firstRoute!.contains('/') && secondRoute == null) {
+      // Handle duties with 3+ routes (e.g., "L58/L59/C3")
+      // Split, format each route, and join with bullet separator
+      final routeParts = firstRoute!.split('/');
+      final formattedRoutes = routeParts
+          .map((r) => _formatRouteDisplay(r.trim()))
+          .where((r) => r != null && r.isNotEmpty)
+          .join(' • ');
+      return formattedRoutes;
     } else {
-      // First/Second route format for regular duties
+      // First/Second route format for regular duties with 2 routes
       final first = _formatRouteDisplay(firstRoute) ?? '';
       final second = _formatRouteDisplay(secondRoute) ?? '';
       
@@ -277,12 +387,15 @@ class RouteInfo {
   String? _formatRouteDisplay(String? route) {
     if (route == null) return null;
     
+    // Remove " N-Service" suffix
+    String cleanRoute = route.replaceAll(' N-Service', '').trim();
+    
     // Convert "C1-C2" or "C1/C2" to "C"
-    if (route.startsWith('C') && (route.contains('-') || route.contains('/'))) {
+    if (cleanRoute.startsWith('C') && (cleanRoute.contains('-') || cleanRoute.contains('/'))) {
       return "C";
     }
     
-    return route;
+    return cleanRoute;
   }
 
   @override

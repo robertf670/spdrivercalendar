@@ -78,23 +78,31 @@ class ShiftService {
   static Future<String> _getUniShiftBreakTime(String shiftCode, String dayOfWeek, DateTime date) async {
     try {
       
-      // Check 7-day UNI shifts first - include all lines (no skipping first line)
+      // Check 7-day UNI shifts first
       final file7Days = await rootBundle.loadString('assets/UNI_7DAYs.csv');
       final lines7Days = file7Days.split('\n');
       
+      bool headerSkipped7Days = false;
       for (final line in lines7Days) {
         if (line.trim().isEmpty) continue;
+        
+        // Skip header row
+        if (!headerSkipped7Days) {
+          headerSkipped7Days = true;
+          continue;
+        }
+        
         final parts = line.split(',');
-        if (parts.length < 5) {
+        if (parts.length < 15) {
           continue;
         }
         final shift = parts[0];
         
         if (shift == shiftCode) {
           
-          // For UNI files, break start is at index 2 and break finish at index 3
-          final breakStart = parts[2].trim();
-          final breakEnd = parts[3].trim();
+          // New 17-column format: shift,duty,report,depart,location,startbreak,startbreaklocation,breakreport,finishbreak,finishbreaklocation,finish,finishlocation,signoff,spread,work,relief,routes
+          final breakStart = parts.length > 5 ? parts[5].trim() : '';
+          final breakEnd = parts.length > 8 ? parts[8].trim() : '';
           
           
           // Check if this is a workout shift or has "nan" values
@@ -106,9 +114,9 @@ class ShiftService {
             return 'Workout';
           }
           
-          // Format the break times, removing seconds if present
-          final formattedStart = breakStart.split(':').take(2).join(':');
-          final formattedEnd = breakEnd.split(':').take(2).join(':');
+          // Format the break times, removing seconds if present and converting times >= 24
+          final formattedStart = _formatTime(breakStart);
+          final formattedEnd = _formatTime(breakEnd);
           
           return '$formattedStart - $formattedEnd';
         }
@@ -126,18 +134,26 @@ class ShiftService {
         final fileMF = await rootBundle.loadString('assets/UNI_M-F.csv');
         final linesMF = fileMF.split('\n');
         
+        bool headerSkippedMF = false;
         for (final line in linesMF) {
           if (line.trim().isEmpty) continue;
+          
+          // Skip header row
+          if (!headerSkippedMF) {
+            headerSkippedMF = true;
+            continue;
+          }
+          
           final parts = line.split(',');
-          if (parts.length < 5) {
+          if (parts.length < 15) {
             continue;
           }
           final shift = parts[0];
           
           if (shift == shiftCode) {
-            // For UNI files, break start is at index 2 and break finish at index 3
-            final breakStart = parts[2].trim();
-            final breakEnd = parts[3].trim();
+            // New 17-column format: shift,duty,report,depart,location,startbreak,startbreaklocation,breakreport,finishbreak,finishbreaklocation,finish,finishlocation,signoff,spread,work,relief,routes
+            final breakStart = parts.length > 5 ? parts[5].trim() : '';
+            final breakEnd = parts.length > 8 ? parts[8].trim() : '';
             
             
             // Check if this is a workout shift or has "nan" values
@@ -149,9 +165,9 @@ class ShiftService {
               return 'Workout';
             }
             
-            // Format the break times, removing seconds if present
-            final formattedStart = breakStart.split(':').take(2).join(':');
-            final formattedEnd = breakEnd.split(':').take(2).join(':');
+            // Format the break times, removing seconds if present and converting times >= 24
+            final formattedStart = _formatTime(breakStart);
+            final formattedEnd = _formatTime(breakEnd);
             
             return '$formattedStart - $formattedEnd';
           }
@@ -453,5 +469,20 @@ class ShiftService {
     } else {
       return 'Night';
     }
+  }
+
+  // Helper method to format time and convert hours >= 24 to actual clock time
+  static String _formatTime(String timeStr) {
+    if (timeStr.isEmpty || timeStr.toLowerCase() == 'nan') return '';
+    final parts = timeStr.split(':');
+    if (parts.length >= 2) {
+      // Convert hours >= 24 to actual clock time (e.g., 28:45 -> 04:45)
+      int hour = int.tryParse(parts[0]) ?? 0;
+      if (hour >= 24) {
+        hour = hour - 24;
+      }
+      return '${hour.toString().padLeft(2, '0')}:${parts[1].padLeft(2, '0')}';
+    }
+    return timeStr;
   }
 }

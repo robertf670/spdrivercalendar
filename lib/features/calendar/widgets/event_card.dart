@@ -388,31 +388,47 @@ class _EventCardState extends State<EventCard> {
       String? workTimeStr;
       String? breakStartTime;
       String? breakEndTime;
+      String? reportLocation;
+      String? finishLoc;
+      String? breakStartLoc;
+      String? breakFinishLoc;
       
       // Try 7DAYs file first
       final file7Days = await rootBundle.loadString('assets/UNI_7DAYs.csv');
       final lines7Days = file7Days.split('\n');
       
+      bool headerSkipped = false;
       for (final line in lines7Days) {
         if (line.trim().isEmpty) continue;
+        
+        // Skip header row
+        if (!headerSkipped) {
+          headerSkipped = true;
+          continue;
+        }
+        
         final parts = line.split(',');
-        if (parts.length < 5) continue;
+        if (parts.length < 15) continue;
         
         final shift = parts[0];
         if (shift == shiftCode) {
-          // For UNI files, columns are: ShiftCode,StartTime,BreakStart,BreakEnd,FinishTime
-          startTime = parts[1].trim();
-          endTime = parts[4].trim();
-          breakStartTime = parts[2].trim();
-          breakEndTime = parts[3].trim();
+          // New 17-column format: shift,duty,report,depart,location,startbreak,startbreaklocation,breakreport,finishbreak,finishbreaklocation,finish,finishlocation,signoff,spread,work,relief,routes
+          final reportTime = parts.length > 2 ? parts[2].trim() : '';
+          reportLocation = parts.length > 4 ? parts[4].trim() : '';
+          final startBreak = parts.length > 5 ? parts[5].trim() : '';
+          breakStartLoc = parts.length > 6 ? parts[6].trim() : '';
+          final finishBreak = parts.length > 8 ? parts[8].trim() : '';
+          breakFinishLoc = parts.length > 9 ? parts[9].trim() : '';
+          final finishTime = parts.length > 10 ? parts[10].trim() : '';
+          finishLoc = parts.length > 11 ? parts[11].trim() : '';
+          final workTime = parts.length > 14 ? parts[14].trim() : '';
           
-          // Format times by removing seconds
-          startTime = _formatTimeWithoutSeconds(startTime);
-          endTime = _formatTimeWithoutSeconds(endTime);
-          breakStartTime = _formatTimeWithoutSeconds(breakStartTime);
-          breakEndTime = _formatTimeWithoutSeconds(breakEndTime);
+          startTime = _formatTimeWithoutSeconds(reportTime);
+          endTime = _formatTimeWithoutSeconds(finishTime);
+          breakStartTime = _formatTimeWithoutSeconds(startBreak);
+          breakEndTime = _formatTimeWithoutSeconds(finishBreak);
           
-          // For overtime half shifts, adjust times and calculate work time accordingly
+          // For overtime half shifts, calculate work time based on half duration
           if (isOvertimeShift) {
             if (isFirstHalf && breakStartTime.toLowerCase() != "nan") {
               // For first half, use start time to break start time
@@ -441,56 +457,24 @@ class _EventCardState extends State<EventCard> {
               // Update start time for display
               startTime = breakEndTime;
             } else {
-              // Calculate full work time
-              final start = DateFormat('HH:mm').parse(startTime);
-              final end = DateFormat('HH:mm').parse(endTime);
-              final totalSpread = end.difference(start);
-              
-              // If there's a break, subtract it
-              if (breakStartTime.toLowerCase() != 'nan' && breakEndTime.toLowerCase() != 'nan') {
-                final breakStart = DateFormat('HH:mm').parse(breakStartTime);
-                final breakEnd = DateFormat('HH:mm').parse(breakEndTime);
-                final breakDuration = breakEnd.difference(breakStart);
-                final workTime = totalSpread - breakDuration;
-                
-                // Format work time as HH:mm
-                final hours = workTime.inHours;
-                final minutes = workTime.inMinutes % 60;
-                workTimeStr = '${hours}h ${minutes}m';
-              } else {
-                // No break, use total spread
-                final hours = totalSpread.inHours;
-                final minutes = totalSpread.inMinutes % 60;
-                workTimeStr = '${hours}h ${minutes}m';
+              // Full OT shift - use work time from CSV
+              if (workTime.isNotEmpty && workTime.toLowerCase() != 'nan') {
+                final timeParts = workTime.split(':');
+                if (timeParts.length >= 2) {
+                  workTimeStr = '${timeParts[0]}h ${timeParts[1]}m';
+                }
               }
             }
           } else {
-            // Original code for non-overtime shifts
-            // Calculate work time
-            final start = DateFormat('HH:mm').parse(startTime);
-            final end = DateFormat('HH:mm').parse(endTime);
-            final totalSpread = end.difference(start);
-            
-            // If there's a break, subtract it
-            if (breakStartTime.toLowerCase() != 'nan' && breakEndTime.toLowerCase() != 'nan') {
-              final breakStart = DateFormat('HH:mm').parse(breakStartTime);
-              final breakEnd = DateFormat('HH:mm').parse(breakEndTime);
-              final breakDuration = breakEnd.difference(breakStart);
-              final workTime = totalSpread - breakDuration;
-              
-              // Format work time as HH:mm
-              final hours = workTime.inHours;
-              final minutes = workTime.inMinutes % 60;
-              workTimeStr = '${hours}h ${minutes}m';
-            } else {
-              // No break, use total spread
-              final hours = totalSpread.inHours;
-              final minutes = totalSpread.inMinutes % 60;
-              workTimeStr = '${hours}h ${minutes}m';
+            // For non-overtime shifts, use work time directly from CSV
+            if (workTime.isNotEmpty && workTime.toLowerCase() != 'nan') {
+              final timeParts = workTime.split(':');
+              if (timeParts.length >= 2) {
+                workTimeStr = '${timeParts[0]}h ${timeParts[1]}m';
+              }
             }
           }
           
-
           break;
         }
       }
@@ -500,26 +484,38 @@ class _EventCardState extends State<EventCard> {
         final fileMF = await rootBundle.loadString('assets/UNI_M-F.csv');
         final linesMF = fileMF.split('\n');
         
+        bool headerSkippedMF = false;
         for (final line in linesMF) {
           if (line.trim().isEmpty) continue;
+          
+          // Skip header row
+          if (!headerSkippedMF) {
+            headerSkippedMF = true;
+            continue;
+          }
+          
           final parts = line.split(',');
-          if (parts.length < 5) continue;
+          if (parts.length < 15) continue;
           
           final shift = parts[0];
           if (shift == shiftCode) {
-            // For UNI files, columns are: ShiftCode,StartTime,BreakStart,BreakEnd,FinishTime
-            startTime = parts[1].trim();
-            endTime = parts[4].trim();
-            breakStartTime = parts[2].trim();
-            breakEndTime = parts[3].trim();
+            // New 17-column format: shift,duty,report,depart,location,startbreak,startbreaklocation,breakreport,finishbreak,finishbreaklocation,finish,finishlocation,signoff,spread,work,relief,routes
+            final reportTime = parts.length > 2 ? parts[2].trim() : '';
+            reportLocation = parts.length > 4 ? parts[4].trim() : '';
+            final startBreak = parts.length > 5 ? parts[5].trim() : '';
+            breakStartLoc = parts.length > 6 ? parts[6].trim() : '';
+            final finishBreak = parts.length > 8 ? parts[8].trim() : '';
+            breakFinishLoc = parts.length > 9 ? parts[9].trim() : '';
+            final finishTime = parts.length > 10 ? parts[10].trim() : '';
+            finishLoc = parts.length > 11 ? parts[11].trim() : '';
+            final workTime = parts.length > 14 ? parts[14].trim() : '';
             
-            // Format times by removing seconds
-            startTime = _formatTimeWithoutSeconds(startTime);
-            endTime = _formatTimeWithoutSeconds(endTime);
-            breakStartTime = _formatTimeWithoutSeconds(breakStartTime);
-            breakEndTime = _formatTimeWithoutSeconds(breakEndTime);
+            startTime = _formatTimeWithoutSeconds(reportTime);
+            endTime = _formatTimeWithoutSeconds(finishTime);
+            breakStartTime = _formatTimeWithoutSeconds(startBreak);
+            breakEndTime = _formatTimeWithoutSeconds(finishBreak);
             
-            // For overtime half shifts, adjust times and calculate work time accordingly
+            // For overtime half shifts, calculate work time based on half duration
             if (isOvertimeShift) {
               if (isFirstHalf && breakStartTime.toLowerCase() != "nan") {
                 // For first half, use start time to break start time
@@ -548,56 +544,24 @@ class _EventCardState extends State<EventCard> {
                 // Update start time for display
                 startTime = breakEndTime;
               } else {
-                // Calculate full work time
-                final start = DateFormat('HH:mm').parse(startTime);
-                final end = DateFormat('HH:mm').parse(endTime);
-                final totalSpread = end.difference(start);
-                
-                // If there's a break, subtract it
-                if (breakStartTime.toLowerCase() != 'nan' && breakEndTime.toLowerCase() != 'nan') {
-                  final breakStart = DateFormat('HH:mm').parse(breakStartTime);
-                  final breakEnd = DateFormat('HH:mm').parse(breakEndTime);
-                  final breakDuration = breakEnd.difference(breakStart);
-                  final workTime = totalSpread - breakDuration;
-                  
-                  // Format work time as HH:mm
-                  final hours = workTime.inHours;
-                  final minutes = workTime.inMinutes % 60;
-                  workTimeStr = '${hours}h ${minutes}m';
-                } else {
-                  // No break, use total spread
-                  final hours = totalSpread.inHours;
-                  final minutes = totalSpread.inMinutes % 60;
-                  workTimeStr = '${hours}h ${minutes}m';
+                // Full OT shift - use work time from CSV
+                if (workTime.isNotEmpty && workTime.toLowerCase() != 'nan') {
+                  final timeParts = workTime.split(':');
+                  if (timeParts.length >= 2) {
+                    workTimeStr = '${timeParts[0]}h ${timeParts[1]}m';
+                  }
                 }
               }
             } else {
-              // Original code for non-overtime shifts
-              // Calculate work time
-              final start = DateFormat('HH:mm').parse(startTime);
-              final end = DateFormat('HH:mm').parse(endTime);
-              final totalSpread = end.difference(start);
-              
-              // If there's a break, subtract it
-              if (breakStartTime.toLowerCase() != 'nan' && breakEndTime.toLowerCase() != 'nan') {
-                final breakStart = DateFormat('HH:mm').parse(breakStartTime);
-                final breakEnd = DateFormat('HH:mm').parse(breakEndTime);
-                final breakDuration = breakEnd.difference(breakStart);
-                final workTime = totalSpread - breakDuration;
-                
-                // Format work time as HH:mm
-                final hours = workTime.inHours;
-                final minutes = workTime.inMinutes % 60;
-                workTimeStr = '${hours}h ${minutes}m';
-              } else {
-                // No break, use total spread
-                final hours = totalSpread.inHours;
-                final minutes = totalSpread.inMinutes % 60;
-                workTimeStr = '${hours}h ${minutes}m';
+              // For non-overtime shifts, use work time directly from CSV
+              if (workTime.isNotEmpty && workTime.toLowerCase() != 'nan') {
+                final timeParts = workTime.split(':');
+                if (timeParts.length >= 2) {
+                  workTimeStr = '${timeParts[0]}h ${timeParts[1]}m';
+                }
               }
             }
             
-
             break;
           }
         }
@@ -605,19 +569,24 @@ class _EventCardState extends State<EventCard> {
       
       if (mounted) {
         setState(() {
-          // For UNI shifts, we don't have location data in the CSV, so set to null
-          startLocation = null;
-          finishLocation = null;
-          startBreakLocation = null;
-          finishBreakLocation = null;
+          // Set locations from CSV data (now available in 17-column format)
+          startLocation = reportLocation != null && reportLocation.isNotEmpty && reportLocation.toLowerCase() != 'nan' 
+              ? mapLocationName(reportLocation) : null;
+          finishLocation = finishLoc != null && finishLoc.isNotEmpty && finishLoc.toLowerCase() != 'nan'
+              ? mapLocationName(finishLoc) : null;
+          startBreakLocation = breakStartLoc != null && breakStartLoc.isNotEmpty && breakStartLoc.toLowerCase() != 'nan'
+              ? mapLocationName(breakStartLoc) : null;
+          finishBreakLocation = breakFinishLoc != null && breakFinishLoc.isNotEmpty && breakFinishLoc.toLowerCase() != 'nan'
+              ? mapLocationName(breakFinishLoc) : null;
           workTime = workTimeStr;
           routeInfo = null;
           
-          // Even though we don't use times in the location fields, we're setting them
-          // so that the widget can be updated with the modified event times
+          // Set display times
           if (startTime != null && endTime != null) {
+            _departTimeStr = startTime;
+            _finishTimeStr = endTime;
+            
             // Update the event times directly
-            // This is needed because we don't have a separate display for Universal shifts
             widget.event.startTime = TimeOfDay.fromDateTime(
               DateFormat('HH:mm').parse(startTime));
             widget.event.endTime = TimeOfDay.fromDateTime(
@@ -843,15 +812,25 @@ class _EventCardState extends State<EventCard> {
           final file7Days = await rootBundle.loadString('assets/UNI_7DAYs.csv');
           final lines7Days = file7Days.split('\n');
           
+          bool headerSkippedAssigned = false;
           for (var line in lines7Days) {
             if (line.trim().isEmpty) continue;
             
+            // Skip header row
+            if (!headerSkippedAssigned) {
+              headerSkippedAssigned = true;
+              continue;
+            }
+            
             final parts = line.split(',');
-            if (parts.isNotEmpty && parts[0].trim() == codeWithoutHalf) {
-              String startTimeStr = parts[1].trim();
-              String breakStartStr = parts[2].trim();
-              String breakEndStr = parts[3].trim();
-              String endTimeStr = parts[4].trim();
+            if (parts.length < 15) continue;
+            
+            if (parts[0].trim() == codeWithoutHalf) {
+              // New 17-column format: shift,duty,report,depart,location,startbreak,startbreaklocation,breakreport,finishbreak,finishbreaklocation,finish,finishlocation,signoff,spread,work,relief,routes
+              String startTimeStr = parts.length > 2 ? parts[2].trim() : '';
+              String breakStartStr = parts.length > 5 ? parts[5].trim() : '';
+              String breakEndStr = parts.length > 8 ? parts[8].trim() : '';
+              String endTimeStr = parts.length > 10 ? parts[10].trim() : '';
               
               // Parse times for start and end
               final startTime = _parseTimeFromString(startTimeStr);
@@ -911,15 +890,25 @@ class _EventCardState extends State<EventCard> {
             final fileMF = await rootBundle.loadString('assets/UNI_M-F.csv');
             final linesMF = fileMF.split('\n');
             
+            bool headerSkippedMF = false;
             for (var line in linesMF) {
               if (line.trim().isEmpty) continue;
               
+              // Skip header row
+              if (!headerSkippedMF) {
+                headerSkippedMF = true;
+                continue;
+              }
+              
               final parts = line.split(',');
-              if (parts.isNotEmpty && parts[0].trim() == codeWithoutHalf) {
-                String startTimeStr = parts[1].trim();
-                String breakStartStr = parts[2].trim();
-                String breakEndStr = parts[3].trim();
-                String endTimeStr = parts[4].trim();
+              if (parts.length < 15) continue;
+              
+              if (parts[0].trim() == codeWithoutHalf) {
+                // New 17-column format: shift,duty,report,depart,location,startbreak,startbreaklocation,breakreport,finishbreak,finishbreaklocation,finish,finishlocation,signoff,spread,work,relief,routes
+                String startTimeStr = parts.length > 3 ? parts[3].trim() : '';
+                String breakStartStr = parts.length > 5 ? parts[5].trim() : '';
+                String breakEndStr = parts.length > 8 ? parts[8].trim() : '';
+                String endTimeStr = parts.length > 10 ? parts[10].trim() : '';
                 
                 // Parse times for start and end
                 final startTime = _parseTimeFromString(startTimeStr);
@@ -1718,8 +1707,8 @@ class _EventCardState extends State<EventCard> {
                           ),
                           text: () {
                             String baseText;
-                          // Only show break locations for PZ shifts and Jamestown Road shifts that are not workouts
-                            if (!breakTime!.toLowerCase().contains('workout') && (widget.event.title.contains('PZ') || widget.event.title.startsWith('811/'))) {
+                          // Only show break locations for PZ shifts, Jamestown Road shifts, and Universal/Euro shifts that are not workouts
+                            if (!breakTime!.toLowerCase().contains('workout') && (widget.event.title.contains('PZ') || widget.event.title.startsWith('811/') || RegExp(r'^\d+/').hasMatch(widget.event.title))) {
                               baseText = '${startBreakLocation != null ? "$startBreakLocation " : ""}${breakTime!}${finishBreakLocation != null ? " $finishBreakLocation" : ""}';
                             } else if (breakTime!.toLowerCase().contains('workout')) {
                               baseText = 'Workout';
@@ -2032,20 +2021,22 @@ class _EventCardState extends State<EventCard> {
                   final file7Days = await rootBundle.loadString('assets/UNI_7DAYs.csv');
                   final lines7Days = file7Days.split('\n');
                   
-                  // Don't skip any lines for UNI files
-                  for (final line in lines7Days) {
+                  // Skip header line and process duties
+                  for (var i = 1; i < lines7Days.length; i++) {
+                    final line = lines7Days[i];
                     if (line.trim().isEmpty) continue;
                     final parts = line.split(',');
-                    if (parts.length < 5) continue;
+                    if (parts.length < 15) continue;
                     
                     // For half duties (A or B), only include duties that have break times
                     // For full duties, include all duties
+                    // New format: shift,duty,report,depart,location,startbreak,startbreaklocation,breakreport,finishbreak,finishbreaklocation,finish,finishlocation,signoff,spread,work,relief,routes
                     final dutyCode = parts[0].trim();
-                    final breakStartStr = parts[2].trim().toLowerCase();
-                    final breakEndStr = parts[3].trim().toLowerCase();
+                    final breakStartStr = parts.length > 5 ? parts[5].trim().toLowerCase() : 'nan';
+                    final breakEndStr = parts.length > 8 ? parts[8].trim().toLowerCase() : 'nan';
                     
                     // Skip duties without break times for half duties
-                    if (halfIndicator != null && (breakStartStr == 'nan' || breakEndStr == 'nan')) {
+                    if (halfIndicator != null && (breakStartStr == 'nan' || breakStartStr == 'workout' || breakEndStr == 'nan' || breakEndStr == 'workout')) {
                       continue; // Skip duties without breaks for half duties
                     }
                     
@@ -2069,16 +2060,17 @@ class _EventCardState extends State<EventCard> {
                       final line = linesMF[i];
                       if (line.trim().isEmpty) continue;
                       final parts = line.split(',');
-                      if (parts.length < 5) continue;
+                      if (parts.length < 15) continue;
                       
                       // For half duties (A or B), only include duties that have break times
                       // For full duties, include all duties
+                      // New format: shift,duty,report,depart,location,startbreak,startbreaklocation,breakreport,finishbreak,finishbreaklocation,finish,finishlocation,signoff,spread,work,relief,routes
                       final dutyCode = parts[0].trim();
-                      final breakStartStr = parts[2].trim().toLowerCase();
-                      final breakEndStr = parts[3].trim().toLowerCase();
+                      final breakStartStr = parts.length > 5 ? parts[5].trim().toLowerCase() : 'nan';
+                      final breakEndStr = parts.length > 8 ? parts[8].trim().toLowerCase() : 'nan';
                       
                       // Skip duties without break times for half duties
-                      if (halfIndicator != null && (breakStartStr == 'nan' || breakEndStr == 'nan')) {
+                      if (halfIndicator != null && (breakStartStr == 'nan' || breakStartStr == 'workout' || breakEndStr == 'nan' || breakEndStr == 'workout')) {
                         continue; // Skip duties without breaks for half duties
                       }
                       
@@ -2968,7 +2960,12 @@ class _EventCardState extends State<EventCard> {
     if (timeStr.isEmpty || timeStr.toLowerCase() == 'nan') return '';
     final parts = timeStr.split(':');
     if (parts.length >= 2) {
-      return '${parts[0].padLeft(2, '0')}:${parts[1].padLeft(2, '0')}';
+      // Convert hours >= 24 to actual clock time (e.g., 28:45 -> 04:45)
+      int hour = int.tryParse(parts[0]) ?? 0;
+      if (hour >= 24) {
+        hour = hour - 24;
+      }
+      return '${hour.toString().padLeft(2, '0')}:${parts[1].padLeft(2, '0')}';
     }
     return timeStr; // Return original if format is unexpected
   }
@@ -3499,8 +3496,9 @@ class _EventCardState extends State<EventCard> {
   Widget _buildTitleWithRoute() {
     final baseTitle = _formatDisplayTitleWithoutRoute(widget.event.title);
     
-    // For PZ1 and PZ4 duties, show route on a separate line
-    if ((widget.event.title.startsWith('PZ1/') || widget.event.title.startsWith('PZ4/')) &&
+   // For PZ1, PZ4, and Universal/Euro duties, show route on a separate line
+    if ((widget.event.title.startsWith('PZ1/') || widget.event.title.startsWith('PZ4/') || 
+         RegExp(r'^\d+/').hasMatch(widget.event.title)) &&
         dutyRouteInfo != null && dutyRouteInfo!.isNotEmpty) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -4259,9 +4257,10 @@ class _EventCardState extends State<EventCard> {
     final bool isFirstHalf = isOvertimeShift && widget.event.title.contains('A (OT)');
     final bool isSecondHalf = isOvertimeShift && widget.event.title.contains('B (OT)');
     
-    // For PZ shifts, Jamestown Road shifts, and Training shifts, use the specialized display format
+    // For PZ shifts, Jamestown Road shifts, Training shifts, and Universal/Euro shifts, use the specialized display format
     if (widget.event.title.startsWith('PZ') || widget.event.title.startsWith('811/') || 
-        widget.event.title == 'TRAIN23/24' || widget.event.title == 'CPC') {
+        widget.event.title == 'TRAIN23/24' || widget.event.title == 'CPC' ||
+        RegExp(r'^\d+/').hasMatch(widget.event.title)) {
       return <TextSpan>[
         if (startLocation != null && startLocation!.isNotEmpty) ...[
           TextSpan(
