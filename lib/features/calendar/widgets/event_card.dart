@@ -1333,6 +1333,15 @@ class _EventCardState extends State<EventCard> {
       }
     }
     
+    // Override card color for sick days with subtle orange tint
+    if (widget.event.sickDayType != null) {
+      if (Theme.of(context).brightness == Brightness.dark) {
+        cardColor = Colors.orange.withValues(alpha: 0.15);
+      } else {
+        cardColor = Colors.orange.withValues(alpha: 0.08);
+      }
+    }
+    
     return Card(
       elevation: 2,
       margin: const EdgeInsets.symmetric(vertical: 8.0),
@@ -3523,16 +3532,65 @@ class _EventCardState extends State<EventCard> {
             ),
             overflow: TextOverflow.ellipsis,
           ),
+          // Add sick day status badge if applicable
+          if (widget.event.sickDayType != null) ...[
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Icon(
+                  Icons.medical_services,
+                  size: 14,
+                  color: Colors.orange.shade700,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  _getSickDayTypeLabel(widget.event.sickDayType!),
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.orange.shade700,
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
       );
     } else {
       // For other duty types, use regular text
-      return Text(
-        baseTitle,
-        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-          fontWeight: FontWeight.bold,
-        ),
-        overflow: TextOverflow.ellipsis,
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            baseTitle,
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+            overflow: TextOverflow.ellipsis,
+          ),
+          // Add sick day status badge if applicable
+          if (widget.event.sickDayType != null) ...[
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Icon(
+                  Icons.medical_services,
+                  size: 14,
+                  color: Colors.orange.shade700,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  _getSickDayTypeLabel(widget.event.sickDayType!),
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.orange.shade700,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
       );
     }
   }
@@ -3825,6 +3883,20 @@ class _EventCardState extends State<EventCard> {
         ],
       ),
     );
+  }
+
+  // Helper method to get sick day type label
+  String _getSickDayTypeLabel(String type) {
+    switch (type) {
+      case 'normal':
+        return 'Normal Sick';
+      case 'self-certified':
+        return 'Self-Certified';
+      case 'force-majeure':
+        return 'Force Majeure';
+      default:
+        return type;
+    }
   }
 
   // Show dialog for overtime duration selection

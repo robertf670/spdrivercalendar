@@ -97,6 +97,8 @@ class Event {
   bool hasLateBreak;
   bool tookFullBreak; 
   int? overtimeDuration; // In minutes
+  // Sick day status: null, 'normal', 'self-certified', or 'force-majeure'
+  String? sickDayType;
 
   Event({
     required this.id,
@@ -119,6 +121,7 @@ class Event {
     this.hasLateBreak = false,
     this.tookFullBreak = false,
     this.overtimeDuration,
+    this.sickDayType,
   });
 
   // Helper method to check if using enhanced duties
@@ -195,6 +198,7 @@ class Event {
     bool? hasLateBreak,
     bool? tookFullBreak,
     int? overtimeDuration,
+    String? sickDayType,
   }) {
     return Event(
       id: id ?? this.id,
@@ -217,6 +221,7 @@ class Event {
       hasLateBreak: hasLateBreak ?? this.hasLateBreak,
       tookFullBreak: tookFullBreak ?? this.tookFullBreak,
       overtimeDuration: overtimeDuration ?? this.overtimeDuration,
+      sickDayType: sickDayType ?? this.sickDayType,
     );
   }
 
@@ -247,6 +252,7 @@ class Event {
       'hasLateBreak': hasLateBreak,
       'tookFullBreak': tookFullBreak,
       'overtimeDuration': overtimeDuration,
+      'sickDayType': sickDayType,
     };
   }
 
@@ -299,6 +305,7 @@ class Event {
       hasLateBreak: map['hasLateBreak'] ?? false,
       tookFullBreak: map['tookFullBreak'] ?? false,
       overtimeDuration: map['overtimeDuration'],
+      sickDayType: map['sickDayType'],  // Nullable for backwards compatibility
     );
     
     // Auto-migrate legacy duties if needed

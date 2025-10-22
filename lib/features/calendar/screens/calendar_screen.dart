@@ -1441,6 +1441,25 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
       descriptionParts.add('(Working on Rest Day)');
     }
     
+    // Add sick day status if applicable
+    if (event.sickDayType != null) {
+      String sickDayLabel;
+      switch (event.sickDayType) {
+        case 'normal':
+          sickDayLabel = 'Normal Sick Day';
+          break;
+        case 'self-certified':
+          sickDayLabel = 'Self-Certified Sick Day';
+          break;
+        case 'force-majeure':
+          sickDayLabel = 'Force Majeure';
+          break;
+        default:
+          sickDayLabel = event.sickDayType!;
+      }
+      descriptionParts.add('📋 Sick Day: $sickDayLabel');
+    }
+    
     // Add bus assignment information (if enabled)
     final includeBusAssignments = await StorageService.getBool(AppConstants.includeBusAssignmentsInGoogleCalendarKey, defaultValue: true);
     debugPrint('🚌 DESCRIPTION: includeBusAssignments=$includeBusAssignments');
@@ -1687,7 +1706,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
               // Action buttons
               Column(
                 children: [
-                  // Notes and Break Status buttons - always centered together
+                  // First row - Notes and Break Status
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -1700,9 +1719,9 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                         },
                         child: const Text('Notes'),
                       ),
-                      const SizedBox(width: 16),
                       // Add Break Status button for eligible duties
-                      if (event.isEligibleForOvertimeTracking) 
+                      if (event.isEligibleForOvertimeTracking) ...[
+                        const SizedBox(width: 8),
                         TextButton(
                           onPressed: () {
                             // Close the current dialog first
@@ -1712,8 +1731,25 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                           },
                           child: const Text('Break Status'),
                         ),
+                      ],
                     ],
                   ),
+                  // Second row - Sick Day Status (if work shift)
+                  if (event.isWorkShift)
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        TextButton(
+                          onPressed: () {
+                            // Close the current dialog first
+                            Navigator.of(context).pop();
+                            // Show sick day status dialog
+                            _showSickDayStatusDialog(event);
+                          },
+                          child: const Text('Sick Day Status'),
+                        ),
+                      ],
+                    ),
                 ],
               ),
               // Add a divider before the bus selection section
@@ -2897,6 +2933,283 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
         ),
       ),
     );
+  }
+
+  void _showSickDayStatusDialog(Event event) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.medical_services, color: Colors.orange),
+            SizedBox(width: 8),
+            Text('Sick Day Status'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (event.sickDayType != null) ...[
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.orange.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Current Status:', 
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.medical_services,
+                          size: 16,
+                          color: Colors.orange.shade700,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          _getSickDayTypeLabel(event.sickDayType!),
+                          style: TextStyle(
+                            color: Colors.orange.shade900,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Divider(height: 1),
+              const SizedBox(height: 16),
+            ],
+            const Text(
+              'Select sick day type:',
+              style: TextStyle(fontSize: 14),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+            },
+            child: const Text('Cancel'),
+          ),
+          // Clear button if sick day status exists
+          if (event.sickDayType != null)
+            TextButton(
+              onPressed: () async {
+                // Save the old event for update
+                final oldEvent = Event(
+                  id: event.id,
+                  title: event.title,
+                  startDate: event.startDate,
+                  startTime: event.startTime,
+                  endDate: event.endDate,
+                  endTime: event.endTime,
+                  workTime: event.workTime,
+                  breakStartTime: event.breakStartTime,
+                  breakEndTime: event.breakEndTime,
+                  assignedDuties: event.assignedDuties,
+                  firstHalfBus: event.firstHalfBus,
+                  secondHalfBus: event.secondHalfBus,
+                  busAssignments: event.busAssignments,
+                  notes: event.notes,
+                  hasLateBreak: event.hasLateBreak,
+                  tookFullBreak: event.tookFullBreak,
+                  overtimeDuration: event.overtimeDuration,
+                  sickDayType: event.sickDayType,
+                );
+                
+                // Clear sick day status
+                event.sickDayType = null;
+                
+                // Save the updated event
+                await EventService.updateEvent(oldEvent, event);
+                
+                // Close the dialog
+                Navigator.of(context).pop();
+                
+                // Update the UI
+                setState(() {});
+                
+                // Show confirmation
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Sick day status cleared'),
+                    duration: Duration(seconds: 2),
+                  ),
+                );
+              },
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.red,
+              ),
+              child: const Text('Clear'),
+            ),
+          TextButton(
+            onPressed: () async {
+              // Save the old event for update
+              final oldEvent = Event(
+                id: event.id,
+                title: event.title,
+                startDate: event.startDate,
+                startTime: event.startTime,
+                endDate: event.endDate,
+                endTime: event.endTime,
+                workTime: event.workTime,
+                breakStartTime: event.breakStartTime,
+                breakEndTime: event.breakEndTime,
+                assignedDuties: event.assignedDuties,
+                firstHalfBus: event.firstHalfBus,
+                secondHalfBus: event.secondHalfBus,
+                busAssignments: event.busAssignments,
+                notes: event.notes,
+                hasLateBreak: event.hasLateBreak,
+                tookFullBreak: event.tookFullBreak,
+                overtimeDuration: event.overtimeDuration,
+                sickDayType: event.sickDayType,
+              );
+              
+              // Set as Normal Sick
+              event.sickDayType = 'normal';
+              
+              // Save the updated event
+              await EventService.updateEvent(oldEvent, event);
+              
+              // Close the dialog
+              Navigator.of(context).pop();
+              
+              // Update the UI
+              setState(() {});
+              
+              // Show confirmation
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Normal Sick Day saved'),
+                  duration: Duration(seconds: 2),
+                ),
+              );
+            },
+            child: const Text('Normal Sick'),
+          ),
+          TextButton(
+            onPressed: () async {
+              // Save the old event for update
+              final oldEvent = Event(
+                id: event.id,
+                title: event.title,
+                startDate: event.startDate,
+                startTime: event.startTime,
+                endDate: event.endDate,
+                endTime: event.endTime,
+                workTime: event.workTime,
+                breakStartTime: event.breakStartTime,
+                breakEndTime: event.breakEndTime,
+                assignedDuties: event.assignedDuties,
+                firstHalfBus: event.firstHalfBus,
+                secondHalfBus: event.secondHalfBus,
+                busAssignments: event.busAssignments,
+                notes: event.notes,
+                hasLateBreak: event.hasLateBreak,
+                tookFullBreak: event.tookFullBreak,
+                overtimeDuration: event.overtimeDuration,
+                sickDayType: event.sickDayType,
+              );
+              
+              // Set as Self-Certified
+              event.sickDayType = 'self-certified';
+              
+              // Save the updated event
+              await EventService.updateEvent(oldEvent, event);
+              
+              // Close the dialog
+              Navigator.of(context).pop();
+              
+              // Update the UI
+              setState(() {});
+              
+              // Show confirmation
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Self-Certified Sick Day saved'),
+                  duration: Duration(seconds: 2),
+                ),
+              );
+            },
+            child: const Text('Self-Certified'),
+          ),
+          TextButton(
+            onPressed: () async {
+              // Save the old event for update
+              final oldEvent = Event(
+                id: event.id,
+                title: event.title,
+                startDate: event.startDate,
+                startTime: event.startTime,
+                endDate: event.endDate,
+                endTime: event.endTime,
+                workTime: event.workTime,
+                breakStartTime: event.breakStartTime,
+                breakEndTime: event.breakEndTime,
+                assignedDuties: event.assignedDuties,
+                firstHalfBus: event.firstHalfBus,
+                secondHalfBus: event.secondHalfBus,
+                busAssignments: event.busAssignments,
+                notes: event.notes,
+                hasLateBreak: event.hasLateBreak,
+                tookFullBreak: event.tookFullBreak,
+                overtimeDuration: event.overtimeDuration,
+                sickDayType: event.sickDayType,
+              );
+              
+              // Set as Force Majeure
+              event.sickDayType = 'force-majeure';
+              
+              // Save the updated event
+              await EventService.updateEvent(oldEvent, event);
+              
+              // Close the dialog
+              Navigator.of(context).pop();
+              
+              // Update the UI
+              setState(() {});
+              
+              // Show confirmation
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Force Majeure saved'),
+                  duration: Duration(seconds: 2),
+                ),
+              );
+            },
+            child: const Text('Force Majeure'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _getSickDayTypeLabel(String type) {
+    switch (type) {
+      case 'normal':
+        return 'Normal Sick Day';
+      case 'self-certified':
+        return 'Self-Certified Sick Day';
+      case 'force-majeure':
+        return 'Force Majeure';
+      default:
+        return type;
+    }
   }
 
   @override

@@ -1,6 +1,10 @@
 final Map<String, List<Map<String, String>>> changelogData = {
   '2.15.10': [
     {
+      'title': 'Sick Day Tracking',
+      'description': 'Added ability to mark work shifts as Normal Sick, Self-Certified, or Force Majeure. Sick days display with a subtle orange tint and status badge.',
+    },
+    {
       'title': 'Week View Improvements',
       'description': 'Fixed Week View to correctly follow roster patterns. Rest days now have distinctive blue-tinted styling for easy identification, and work days show "No duties loaded" instead of incorrectly displaying "Free Day".',
     },
@@ -11,6 +15,10 @@ final Map<String, List<Map<String, String>>> changelogData = {
     {
       'title': 'Route Display Fix for Compound Routes',
       'description': 'Fixed route information display for duties routes like C1/C2. Duties such as PZ1/91 now correctly show "C • 39A" instead of just "• 39A".',
+    },
+    {
+      'title': 'Edit Event Dialog Layout Improvements',
+      'description': 'Improved button alignment and responsiveness in the Edit Event dialog for better display across different screen sizes.',
     },
   ],
   '2.15.9': [
