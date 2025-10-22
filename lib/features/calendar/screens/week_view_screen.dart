@@ -2,17 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:spdrivercalendar/models/shift_info.dart';
 import 'package:spdrivercalendar/features/calendar/services/event_service.dart';
+import 'package:spdrivercalendar/features/calendar/services/roster_service.dart';
 import 'package:spdrivercalendar/models/event.dart';
 import 'package:spdrivercalendar/theme/app_theme.dart';
 
 class WeekViewScreen extends StatefulWidget {
   final DateTime selectedDate;
   final Map<String, ShiftInfo> shiftInfoMap;
+  final DateTime? startDate;
+  final int startWeek;
 
   const WeekViewScreen({
     Key? key,
     required this.selectedDate,
     required this.shiftInfoMap,
+    this.startDate,
+    this.startWeek = 0,
   }) : super(key: key);
 
   @override
@@ -194,15 +199,31 @@ class WeekViewScreenState extends State<WeekViewScreen> {
     final events = _getEventsForDate(day);
     final workEvents = events.where((event) => event.isWorkShift).toList();
     
+    // Get the actual roster shift type for this date
+    String rosterShiftType = '';
+    bool isRosteredRestDay = false;
+    if (widget.startDate != null) {
+      rosterShiftType = RosterService.getShiftForDate(day, widget.startDate!, widget.startWeek);
+      isRosteredRestDay = rosterShiftType == 'R';
+    }
+    
+    // Get rest day color for visual distinction
+    final restDayColor = widget.shiftInfoMap['R']?.color;
+    
     return Container(
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
+        // Use tinted background for rest days to make them stand out
+        color: isRosteredRestDay && restDayColor != null
+            ? restDayColor.withValues(alpha: 0.15)
+            : Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: _isToday(day) 
             ? AppTheme.primaryColor 
-            : Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
-          width: _isToday(day) ? 4 : 1,
+            : isRosteredRestDay && restDayColor != null
+              ? restDayColor.withValues(alpha: 0.5)
+              : Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
+          width: _isToday(day) ? 4 : isRosteredRestDay ? 2 : 1,
         ),
         boxShadow: [
           BoxShadow(
@@ -222,7 +243,9 @@ class WeekViewScreenState extends State<WeekViewScreen> {
             decoration: BoxDecoration(
               color: _isToday(day) 
                 ? AppTheme.primaryColor.withValues(alpha: 0.1)
-                : Theme.of(context).colorScheme.surfaceContainerLow,
+                : isRosteredRestDay && restDayColor != null
+                  ? restDayColor.withValues(alpha: 0.25)
+                  : Theme.of(context).colorScheme.surfaceContainerLow,
               borderRadius: const BorderRadius.vertical(top: Radius.circular(11)),
             ),
             child: Column(
@@ -284,28 +307,46 @@ class WeekViewScreenState extends State<WeekViewScreen> {
                   if (workEvents.isNotEmpty) ...[
                     ...workEvents.map((event) => _buildDayDutyItem(event)),
                   ] else ...[
+                    // Show different message based on whether it's a rostered rest day or work day without duties
                     Center(
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 20),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.free_breakfast,
-                              size: sizes['moreText']! * 4, // Responsive icon size
-                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
-                            ),
-                            SizedBox(height: sizes['dutyCardMargin']!),
-                            Text(
-                              'Free Day',
-                              style: TextStyle(
-                                fontSize: sizes['moreText']!,
-                                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-                                fontStyle: FontStyle.italic,
+                        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                        child: Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: isRosteredRestDay && restDayColor != null
+                                ? restDayColor.withValues(alpha: 0.2)
+                                : Theme.of(context).colorScheme.surfaceContainerLow,
+                            borderRadius: BorderRadius.circular(8),
+                            border: isRosteredRestDay && restDayColor != null
+                                ? Border.all(color: restDayColor.withValues(alpha: 0.4), width: 1.5)
+                                : null,
+                          ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                isRosteredRestDay ? Icons.free_breakfast : Icons.info_outline,
+                                size: sizes['moreText']! * 4, // Responsive icon size
+                                color: isRosteredRestDay && restDayColor != null
+                                    ? restDayColor
+                                    : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
                               ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
+                              SizedBox(height: sizes['dutyCardMargin']!),
+                              Text(
+                                isRosteredRestDay ? 'Rest Day' : 'No duties loaded',
+                                style: TextStyle(
+                                  fontSize: sizes['moreText']! + 1,
+                                  fontWeight: isRosteredRestDay ? FontWeight.w600 : FontWeight.normal,
+                                  color: isRosteredRestDay && restDayColor != null
+                                      ? restDayColor
+                                      : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                                  fontStyle: isRosteredRestDay ? FontStyle.normal : FontStyle.italic,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),

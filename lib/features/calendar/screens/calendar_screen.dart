@@ -4335,6 +4335,8 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
         builder: (context) => WeekViewScreen(
           selectedDate: _selectedDay ?? DateTime.now(),
           shiftInfoMap: _shiftInfoMap,
+          startDate: _startDate,
+          startWeek: _startWeek,
         ),
       ),
     );

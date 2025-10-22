@@ -2,6 +2,7 @@ import 'package:flutter/services.dart';
 import 'package:csv/csv.dart';
 import 'package:spdrivercalendar/models/board_entry.dart';
 import 'package:spdrivercalendar/features/calendar/services/shift_service.dart';
+import 'package:spdrivercalendar/features/calendar/services/roster_service.dart';
 
 class BoardService {
   static Future<List<BoardEntry>> loadBoardEntries(String dutyNumber, DateTime date) async {
@@ -13,7 +14,8 @@ class BoardService {
     if (isBankHoliday) {
       // Use Sunday board for bank holidays
       fileName = 'assets/Zone3BoardsSun.csv';
-    } else if (date.weekday == DateTime.saturday) {
+    } else if (RosterService.isSaturdayService(date) || date.weekday == DateTime.saturday) {
+      // Use Saturday board for actual Saturdays and special Saturday service dates
       fileName = 'assets/Zone3BoardsSat.csv';
     } else if (date.weekday == DateTime.sunday) {
       fileName = 'assets/Zone3BoardsSun.csv';

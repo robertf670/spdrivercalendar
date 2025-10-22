@@ -1,4 +1,18 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.15.10': [
+    {
+      'title': 'Week View Improvements',
+      'description': 'Fixed Week View to correctly follow roster patterns. Rest days now have distinctive blue-tinted styling for easy identification, and work days show "No duties loaded" instead of incorrectly displaying "Free Day".',
+    },
+    {
+      'title': 'Saturday Service Dates Support',
+      'description': 'Added support for special dates that run Saturday service regardless of actual day of week. December 29, 30, 31, and January 2 now automatically load Saturday duties.',
+    },
+    {
+      'title': 'Route Display Fix for Compound Routes',
+      'description': 'Fixed route information display for duties routes like C1/C2. Duties such as PZ1/91 now correctly show "C • 39A" instead of just "• 39A".',
+    },
+  ],
   '2.15.9': [
     {
       'title': 'Universal & Euro Duties Updated',

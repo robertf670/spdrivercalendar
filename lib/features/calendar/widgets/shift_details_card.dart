@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:spdrivercalendar/models/bank_holiday.dart';
 import 'package:spdrivercalendar/models/shift_info.dart';
 import 'package:spdrivercalendar/theme/app_theme.dart';
+import 'package:spdrivercalendar/features/calendar/services/roster_service.dart';
 
 class ShiftDetailsCard extends StatelessWidget {
   final DateTime date;
@@ -22,8 +23,8 @@ class ShiftDetailsCard extends StatelessWidget {
     final shiftInfo = shiftInfoMap[shift];
     final isBankHoliday = bankHoliday != null;
     
-    // Determine if it's a Saturday
-    final isSaturday = date.weekday == DateTime.saturday;
+    // Determine if it's a Saturday or Saturday service date
+    final isSaturday = RosterService.isSaturdayService(date) || date.weekday == DateTime.saturday;
     
     // Get display name for the shift - show "Relief Shift" for Middle shifts on Saturdays
     final String shiftDisplayName = (shift == 'M' && isSaturday) 

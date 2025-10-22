@@ -72,14 +72,17 @@ class RouteService {
         if (parts.length >= 12) {
           final currentShiftCode = parts[0].trim();
           
-          // Extract route from break and finish locations
-          // Column 5: startbreak, Column 6: startbreaklocation, Column 9: finishbreaklocation, Column 11: finishlocation
+          // Extract route from locations
+          // Column 4: location (start location), Column 5: startbreak, Column 6: startbreaklocation, 
+          // Column 9: finishbreaklocation, Column 11: finishlocation
+          final startLocation = parts.length > 4 ? parts[4].trim() : '';
           final startBreak = parts.length > 5 ? parts[5].trim() : '';
           final breakLocation = parts.length > 6 ? parts[6].trim() : '';
           final afterBreakLocation = parts.length > 9 ? parts[9].trim() : '';
           final finishLocation = parts.length > 11 ? parts[11].trim() : '';
 
-          final firstRoute = _extractRouteFromLocation(breakLocation);
+          final firstRoute = _extractRouteFromLocation(breakLocation) ?? 
+                           _extractRouteFromLocation(startLocation);
           final secondRoute = _extractRouteFromLocation(afterBreakLocation) ?? 
                             _extractRouteFromLocation(finishLocation);
 
@@ -201,7 +204,7 @@ class RouteService {
     }
   }
 
-  /// Extract route from PZ1 location code (e.g., "39A-BWALK" -> "39A")
+  /// Extract route from PZ1 location code (e.g., "39A-BWALK" -> "39A", "C1/C2-ASTONQ" -> "C")
   static String? _extractRouteFromLocation(String location) {
     if (location.isEmpty || 
         location.toLowerCase() == 'nan' || 
@@ -211,7 +214,18 @@ class RouteService {
 
     final dashIndex = location.indexOf('-');
     if (dashIndex > 0) {
-      return location.substring(0, dashIndex).replaceAll('/', '-');
+      String route = location.substring(0, dashIndex);
+      
+      // Simplify compound routes like "C1/C2" to just "C" or "1/C2" to just "C"
+      if (route.contains('/')) {
+        // Extract the letter part (e.g., "C" from "C1/C2" or "1/C2")
+        final match = RegExp(r'([A-Z]+)').firstMatch(route);
+        if (match != null) {
+          return match.group(1);
+        }
+      }
+      
+      return route;
     }
 
     return null;

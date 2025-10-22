@@ -117,8 +117,32 @@ class RosterService {
     return shift;
   }
   
+  // Helper method to check if a date should run Saturday service
+  // These are special dates that run Saturday service regardless of actual day of week
+  static bool isSaturdayService(DateTime date) {
+    final month = date.month;
+    final day = date.day;
+    
+    // December 29, 30, 31 run Saturday service
+    if (month == 12 && (day == 29 || day == 30 || day == 31)) {
+      return true;
+    }
+    
+    // January 2 runs Saturday service
+    if (month == 1 && day == 2) {
+      return true;
+    }
+    
+    return false;
+  }
+  
   // Helper method to determine the day of week string
   static String getDayOfWeek(DateTime date) {
+    // Check if this date should run Saturday service
+    if (isSaturdayService(date)) {
+      return 'Saturday';
+    }
+    
     // Modified to handle Sunday properly
     final dayOfWeek = date.weekday % 7; // 0 = Sunday, 1-6 = Monday-Saturday
     

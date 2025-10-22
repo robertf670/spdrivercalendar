@@ -1208,6 +1208,11 @@ class StatisticsScreenState extends State<StatisticsScreen>
       return 'SUN';  // Bank Holidays use Sunday duty times
     }
     
+    // Check if this is a special Saturday service date (Dec 29-31, Jan 2)
+    if (RosterService.isSaturdayService(date)) {
+      return 'SAT';
+    }
+    
     // Then check regular weekdays
     switch (date.weekday) {
       case DateTime.monday:
