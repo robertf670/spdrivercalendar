@@ -177,16 +177,16 @@ class ContactsPage extends StatelessWidget {
                 child: const Icon(Icons.support_agent, color: Colors.teal), // Icon for controller
               ),
               title: const Text(
-                '9/122 Controller',
+                '23/24 Controller',
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
-              subtitle: const Text('01 703 1132'),
+              subtitle: const Text('01 703 1145'),
               trailing: IconButton(
                 icon: const Icon(Icons.phone, color: AppTheme.primaryColor),
-                tooltip: 'Call 9/122 Controller',
-                onPressed: () => _launchPhoneCall('017031132', context),
+                tooltip: 'Call 23/24 Controller',
+                onPressed: () => _launchPhoneCall('017031145', context),
               ),
-              onTap: () => _launchPhoneCall('017031132', context),
+              onTap: () => _launchPhoneCall('017031145', context),
             ),
           ),
           const SizedBox(height: 8), // Spacer between cards
