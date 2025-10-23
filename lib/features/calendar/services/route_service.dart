@@ -392,6 +392,11 @@ class RouteInfo {
         return '';
       }
       
+      // Special handling for routes 23 and 24 - always show as "23/24"
+      if ((first == '23' || first == '24') && (second == '23' || second == '24')) {
+        return '23/24';
+      }
+      
       // Always show both routes with bullet separator (even if they're the same)
       return '$first • $second';
     }

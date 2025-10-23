@@ -1377,7 +1377,8 @@ class _EventCardState extends State<EventCard> {
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      if (workTime != null && !widget.event.title.contains('(OT)')) ...[
+                      // On larger screens, show work time inline
+                      if (workTime != null && !widget.event.title.contains('(OT)') && MediaQuery.of(context).size.width >= 380) ...[
                         Text(
                           'Work: $workTime',
                           style: TextStyle(
@@ -1434,46 +1435,66 @@ class _EventCardState extends State<EventCard> {
                           ),
                         ),
                       ),
-                      // Rest day badge
+                      // Rest day badge - compact on small screens
                       if (widget.isRestDay && widget.event.isWorkShift)
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 3.0),
+                          padding: EdgeInsets.symmetric(
+                            horizontal: MediaQuery.of(context).size.width < 380 ? 6.0 : 8.0,
+                            vertical: 3.0,
+                          ),
                           margin: const EdgeInsets.only(left: 4),
                           decoration: BoxDecoration(
                             color: widget.shiftInfoMap['R']?.color ?? Colors.blue,
                             borderRadius: BorderRadius.circular(12.0),
                           ),
-                          child: const Text(
-                            'Rest Day',
-                            style: TextStyle(
+                          child: Text(
+                            MediaQuery.of(context).size.width < 380 ? 'Rest' : 'Rest Day',
+                            style: const TextStyle(
                               color: Colors.white,
-                              fontSize: 12.0,
+                              fontSize: 11.0,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
                         ),
-                      // Bank holiday badge
+                      // Bank holiday badge - compact on small screens
                       if (widget.isBankHoliday && widget.event.isWorkShift)
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 3.0),
+                          padding: EdgeInsets.symmetric(
+                            horizontal: MediaQuery.of(context).size.width < 380 ? 6.0 : 8.0,
+                            vertical: 3.0,
+                          ),
                           margin: const EdgeInsets.only(left: 4),
                           decoration: BoxDecoration(
                             color: Colors.red,
                             borderRadius: BorderRadius.circular(12.0),
                           ),
-                          child: const Text(
-                            'Bank Holiday',
-                            style: TextStyle(
+                          child: Text(
+                            MediaQuery.of(context).size.width < 380 ? 'Bank Hol' : 'Bank Holiday',
+                            style: const TextStyle(
                               color: Colors.white,
-                              fontSize: 12.0,
+                              fontSize: 11.0,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
                         ),
-                    ],
-                  ),
+                      ],
+                    ),
                 ],
               ),
+              // On small screens, show work time on separate line below title
+              if (workTime != null && !widget.event.title.contains('(OT)') && MediaQuery.of(context).size.width < 380) ...[
+                const SizedBox(height: 4.0),
+                Text(
+                  'Work: $workTime',
+                  style: TextStyle(
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.white.withOpacity(0.8)
+                        : Colors.black.withOpacity(0.7),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
               const SizedBox(height: 8.0), // Slightly larger gap after title
               
               // For normal events (non-work shifts), show simple time display
@@ -1715,21 +1736,43 @@ class _EventCardState extends State<EventCard> {
                             fontWeight: FontWeight.w500, // Match report/sign off line styling
                           ),
                           text: () {
+                            // Smart truncation based on screen width
+                            final screenWidth = MediaQuery.of(context).size.width;
+                            final isSmallScreen = screenWidth < 380;
+                            
                             String baseText;
-                          // Only show break locations for PZ shifts, Jamestown Road shifts, and Universal/Euro shifts that are not workouts
-                            if (!breakTime!.toLowerCase().contains('workout') && (widget.event.title.contains('PZ') || widget.event.title.startsWith('811/') || RegExp(r'^\d+/').hasMatch(widget.event.title))) {
-                              baseText = '${startBreakLocation != null ? "$startBreakLocation " : ""}${breakTime!}${finishBreakLocation != null ? " $finishBreakLocation" : ""}';
-                            } else if (breakTime!.toLowerCase().contains('workout')) {
-                              baseText = 'Workout';
+                          // Show break locations for all shifts (PZ, Jamestown, Universal/Euro, Routes 23/24) that are not workouts
+                            if (!breakTime!.toLowerCase().contains('workout')) {
+                              // Check if this shift type should show break locations
+                              final shouldShowLocations = widget.event.title.contains('PZ') || 
+                                                          widget.event.title.startsWith('811/') || 
+                                                          RegExp(r'^\d+/').hasMatch(widget.event.title) ||
+                                                          widget.event.title == '23' || 
+                                                          widget.event.title == '24';
+                              
+                              if (shouldShowLocations) {
+                                // On small screens, abbreviate location names
+                                if (isSmallScreen) {
+                                  final startLoc = startBreakLocation != null ? _abbreviateLocation(startBreakLocation!) : '';
+                                  final endLoc = finishBreakLocation != null ? _abbreviateLocation(finishBreakLocation!) : '';
+                                  baseText = '${startLoc.isNotEmpty ? "$startLoc " : ""}${breakTime!}${endLoc.isNotEmpty ? " $endLoc" : ""}';
+                                } else {
+                                  baseText = '${startBreakLocation != null ? "$startBreakLocation " : ""}${breakTime!}${finishBreakLocation != null ? " $finishBreakLocation" : ""}';
+                                }
+                              } else {
+                                baseText = breakTime!;
+                              }
                             } else {
-                              baseText = breakTime!;
+                              baseText = 'Workout';
                             }
                             
                             // Add duration if not a workout
                             if (!breakTime!.toLowerCase().contains('workout')) {
                               final duration = _calculateBreakDuration(breakTime!);
                               if (duration != null) {
-                                baseText += ' ($duration)';
+                                // On small screens, use compact duration format
+                                final compactDuration = isSmallScreen ? duration.replaceAll(' ', '').replaceAll('m', '') : duration;
+                                baseText += ' ($compactDuration)';
                               }
                             }
                             
@@ -3103,12 +3146,23 @@ class _EventCardState extends State<EventCard> {
                       hasBreakTimes 
                         ? 'Break: ${_formatTimeString(duty['breakStart'])} - ${_formatTimeString(duty['breakEnd'])}'
                         : () {
+                            // Smart truncation based on screen width
+                            final screenWidth = MediaQuery.of(context).size.width;
+                            final isSmallScreen = screenWidth < 380;
+                            
                             String baseText;
                             // For spare duties, try to get break locations from duty data
                             if ((widget.event.title.startsWith('SP') || widget.event.title == '22B/01') && duty['startBreakLocation'] != null && duty['finishBreakLocation'] != null) {
-                              final startBreakLoc = duty['startBreakLocation']!.isNotEmpty ? '${duty['startBreakLocation']} ' : '';
-                              final endBreakLoc = duty['finishBreakLocation']!.isNotEmpty ? ' ${duty['finishBreakLocation']}' : '';
-                              baseText = '$startBreakLoc${breakTime ?? 'No break info'}$endBreakLoc';
+                              if (isSmallScreen) {
+                                // Abbreviate locations on small screens
+                                final startBreakLoc = duty['startBreakLocation']!.isNotEmpty ? '${_abbreviateLocation(duty['startBreakLocation']!)} ' : '';
+                                final endBreakLoc = duty['finishBreakLocation']!.isNotEmpty ? ' ${_abbreviateLocation(duty['finishBreakLocation']!)}' : '';
+                                baseText = '$startBreakLoc${breakTime ?? 'No break info'}$endBreakLoc';
+                              } else {
+                                final startBreakLoc = duty['startBreakLocation']!.isNotEmpty ? '${duty['startBreakLocation']} ' : '';
+                                final endBreakLoc = duty['finishBreakLocation']!.isNotEmpty ? ' ${duty['finishBreakLocation']}' : '';
+                                baseText = '$startBreakLoc${breakTime ?? 'No break info'}$endBreakLoc';
+                              }
                             } else {
                               baseText = breakTime ?? 'No break info';
                             }
@@ -3117,7 +3171,9 @@ class _EventCardState extends State<EventCard> {
                             if (breakTime != null && !breakTime!.toLowerCase().contains('workout')) {
                               final duration = _calculateBreakDuration(breakTime!);
                               if (duration != null) {
-                                baseText += ' ($duration)';
+                                // On small screens, use compact duration format
+                                final compactDuration = isSmallScreen ? duration.replaceAll(' ', '').replaceAll('m', '') : duration;
+                                baseText += ' ($compactDuration)';
                               }
                             }
                             
@@ -3130,6 +3186,7 @@ class _EventCardState extends State<EventCard> {
                             : Colors.black,
                         fontWeight: FontWeight.w400,
                       ),
+                      overflow: TextOverflow.ellipsis, // Use ellipsis if still too long
                     ),
                   ),
                 ],
@@ -3520,7 +3577,7 @@ class _EventCardState extends State<EventCard> {
             ),
             overflow: TextOverflow.ellipsis,
           ),
-          // Route on second line with smaller font and dimmer color
+          // Route on second line
           Text(
             dutyRouteInfo!,
             style: TextStyle(
@@ -4440,6 +4497,38 @@ class _EventCardState extends State<EventCard> {
   }
 
 
+
+  // Helper method to abbreviate location names for small screens
+  String _abbreviateLocation(String location) {
+    final abbrevMap = {
+      'Garage': 'Gar',
+      'B Walk': 'BW',
+      'A Walk': 'AW',
+      'C Walk': 'CW',
+      'D Walk': 'DW',
+      'B Stone': 'BS', // Broadstone - compact to BS
+      'Con Hill': 'CH', // Constitution Hill - compact to CH
+      'Park Gate St': 'PGS',
+      'Aston Q': 'AQ',
+      'Donnybrook': 'Don',
+      'Clontarf': 'Clo',
+      'Ringsend': 'Rng',
+      'Phibsborough': 'Phi',
+    };
+    
+    // Return abbreviated version if it exists
+    if (abbrevMap.containsKey(location)) {
+      return abbrevMap[location]!;
+    }
+    
+    // For any location with spaces and <= 8 chars total, just remove spaces for compactness
+    if (location.length <= 8 && location.contains(' ')) {
+      return location.replaceAll(' ', '');
+    }
+    
+    // Otherwise return first 3 characters
+    return location.length > 3 ? location.substring(0, 3) : location;
+  }
 
   // Helper method to calculate break duration from break time string
   String? _calculateBreakDuration(String breakTimeString) {

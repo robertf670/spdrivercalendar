@@ -1,4 +1,26 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.15.12': [
+    {
+      'title': 'Calendar Scrolling Improvements',
+      'description': 'Entire calendar view is now scrollable to help users with smaller phones access duty lists. You can now scroll by dragging on the calendar days themselves.',
+    },
+    {
+      'title': 'Navigation Bar Fix',
+      'description': 'Fixed event cards being cut off by navigation bars on phones. Bottom padding now automatically adapts to your device\'s navigation bar height.',
+    },
+    {
+      'title': 'Smart Break Time Display',
+      'description': 'Break times now intelligently adapt to screen size. On smaller phones, location names are abbreviated (e.g., "BS" for B Stone, "CH" for Con Hill, "BW" for B Walk) and durations are compacted to fit better.',
+    },
+    {
+      'title': 'Routes 23/24 Display',
+      'description': 'Routes 23 and 24 now always display together as "23/24" because of interchanging between trips.',
+    },
+    {
+      'title': 'Small Screen Layout Improvements',
+      'description': 'On smaller phones, improved event card layout to prevent title truncation. Work time, rest day badges, and bank holiday badges are now optimized for small screens.',
+    }
+  ],
   '2.15.11': [
     {
       'title': 'Duty Update',

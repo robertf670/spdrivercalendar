@@ -3299,39 +3299,35 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
               // Main content with dynamic padding based on banner presence
               Padding(
                 padding: EdgeInsets.only(top: hasActiveUpdates ? 90 : 0),
-                child: Column(
-                  children: [
-                    // TableCalendar stays fixed at the top
-                    _buildCalendar(),
-                    // The rest of the content becomes scrollable
-                    Expanded(
-                      child: SingleChildScrollView(
-                        child: Column(
-                          children: [
-                            const SizedBox(height: 16),
-                            if (_selectedDay != null && _startDate != null)
-                              Padding(
-                                padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
-                                child: ShiftDetailsCard(
-                                  date: _selectedDay!,
-                                  shift: getShiftForDate(_selectedDay!),
-                                  shiftInfoMap: _shiftInfoMap,
-                                  bankHoliday: getBankHoliday(_selectedDay!),
-                                ),
-                              ),
-                            if (_selectedDay != null)
-                              Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                                child: _buildEventsList(),
-                              ),
-                            // Add some padding at the bottom to ensure the last item is fully visible
-                            // Consider wrapping this inner Column/ScrollView in SafeArea if needed for bottom intrusions
-                            const SizedBox(height: 24),
-                          ],
-                        ),
-                      ),
+                child: SingleChildScrollView(
+                  child: SafeArea(
+                    top: false, // Don't add top padding since we handle it with the banner
+                    child: Column(
+                      children: [
+                        // TableCalendar is now scrollable with the rest of the content
+                        _buildCalendar(),
+                        // The rest of the content
+                        const SizedBox(height: 16),
+                        if (_selectedDay != null && _startDate != null)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+                            child: ShiftDetailsCard(
+                              date: _selectedDay!,
+                              shift: getShiftForDate(_selectedDay!),
+                              shiftInfoMap: _shiftInfoMap,
+                              bankHoliday: getBankHoliday(_selectedDay!),
+                            ),
+                          ),
+                        if (_selectedDay != null)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                            child: _buildEventsList(),
+                          ),
+                        // Dynamic bottom padding that adapts to device navigation bar height
+                        SizedBox(height: MediaQuery.of(context).padding.bottom + 24),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
               ),
               // Live Updates Banner - only show when there are active updates
@@ -3408,12 +3404,16 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
           ),
         ),
         // The TableCalendar with headerVisible: false to hide the default header
+        // Note: TableCalendar allows vertical scrolling when used in a ScrollView
         TableCalendar(
           firstDay: DateTime.utc(2020, 1, 1),
           lastDay: DateTime.utc(2030, 12, 31),
           focusedDay: _focusedDay,
           calendarFormat: CalendarFormat.month,
           headerVisible: false, // Hide default header since we're using our custom one above
+          // Disable swipe gestures to allow vertical scrolling on calendar days
+          // Users can still tap days to select and use arrow buttons to change months
+          availableGestures: AvailableGestures.none,
           selectedDayPredicate: (day) {
             return isSameDay(_selectedDay, day);
           },
