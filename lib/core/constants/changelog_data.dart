@@ -1,4 +1,22 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.15.14': [
+    {
+      'title': 'Critical Holiday Persistence Fix',
+      'description': 'Fixed critical bug where holidays would disappear after force stopping and restarting the app. Holidays are now properly saved to disk and persist across app restarts.',
+    },
+    {
+      'title': 'Cache System Optimization',
+      'description': 'Fixed cache key conflict that was causing data loss. The app now properly manages different types of cached data.',
+    },
+    {
+      'title': 'Holiday Management UI Redesign',
+      'description': 'Completely redesigned the holiday management dialog for better clarity and usability. Removed boxes for a cleaner list view, improved spacing for all screen sizes, and made scrolling more obvious. The new compact design shows more content at once.',
+    },
+    {
+      'title': 'Performance Improvements',
+      'description': 'Removed unnecessary debug logging to improve app performance.',
+    },
+  ],
   '2.15.13': [
     {
       'title': 'Zone 4 Spare Duty Assignment Fix',

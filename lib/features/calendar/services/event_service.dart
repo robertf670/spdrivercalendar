@@ -275,7 +275,6 @@ class EventService {
       });
       
       if (!hasEventsForMonth) {
-        _logError('getEventsForDay', 'Populating entire month $monthKey from cache (no events found in _events)');
         _populateEventsFromCache(day);
       } else {
         // _logError('getEventsForDay', 'Month $monthKey already populated in _events cache');

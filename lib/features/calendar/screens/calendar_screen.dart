@@ -272,7 +272,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
   }
 
   Future<List<Holiday>> _loadHolidaysWithCache(CacheService cacheService) async {
-    const cacheKey = 'holidays';
+    const cacheKey = 'holidays_list_cache'; // Changed to avoid conflict with StorageService cache
     
     // Try to get from cache first
     final cached = cacheService.get<List<Holiday>>(cacheKey);
@@ -291,7 +291,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
   Future<void> _reloadHolidays() async {
     try {
       // CRITICAL FIX: Explicitly invalidate the calendar's cache before reloading
-      const cacheKey = 'holidays';
+      const cacheKey = 'holidays_list_cache'; // Changed to match the new cache key
       final cacheService = CacheService();
       cacheService.remove(cacheKey);
       
@@ -422,18 +422,6 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
   List<Event> getEventsForDay(DateTime day) {
     List<Event> events = EventService.getEventsForDay(day);
     List<Event> holidayEvents = [];
-    
-    // Debug: Log event retrieval for troubleshooting
-    if (kDebugMode && _selectedDay != null && isSameDay(_selectedDay!, day)) {
-      debugPrint('CalendarScreen: Getting events for selected day ${day.toIso8601String()}: ${events.length} events found');
-      for (final event in events) {
-        debugPrint('  - Event: ${event.title} (ID: ${event.id})');
-        if (event.title.startsWith('SP') && event.assignedDuties != null) {
-          debugPrint('    Assigned duties: ${event.assignedDuties}');
-          debugPrint('    Bus assignments: ${event.busAssignments}');
-        }
-      }
-    }
     
     // First, check for holidays and create holiday events
     for (final holiday in _holidays) {
@@ -3847,19 +3835,22 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
               mainAxisSize: MainAxisSize.min,
               children: [
                 Padding(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   child: Row(
                     children: [
                       const Text(
                         'Add Holidays',
                         style: TextStyle(
-                          fontSize: 20,
+                          fontSize: 18,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                       const Spacer(),
                       IconButton(
                         icon: const Icon(Icons.close),
+                        iconSize: 22,
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
                         onPressed: () => Navigator.of(context).pop(),
                       ),
                     ],
@@ -3869,7 +3860,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                 Flexible(
                   child: SingleChildScrollView(
                     child: Padding(
-                      padding: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -3879,174 +3870,204 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                               'Existing Holidays',
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
-                                fontSize: 16,
+                                fontSize: 14,
                               ),
                             ),
-                            const SizedBox(height: 8),
-                            Container(
-                              decoration: BoxDecoration(
-                                color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.5), // Use theme color
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: Theme.of(context).dividerColor), // Use theme divider color
-                              ),
-                              child: ListView.builder(
-                                shrinkWrap: true,
-                                physics: const NeverScrollableScrollPhysics(),
-                                itemCount: _holidays.length,
-                                itemBuilder: (context, index) {
+                            const SizedBox(height: 4),
+                            ListView.builder(
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              itemCount: _holidays.length,
+                              itemBuilder: (context, index) {
                                   final holiday = _holidays[index];
-                                  return Container(
-                                    margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                    decoration: BoxDecoration(
-                                      color: Theme.of(context).cardColor, // Use theme card color
-                                      borderRadius: BorderRadius.circular(8),
-                                      border: Border.all(
-                                        color: Theme.of(context).dividerColor, // Use theme divider color
-                                        width: 1,
-                                      ),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: Colors.black.withValues(alpha: 0.05),
-                                          blurRadius: 4,
-                                          offset: const Offset(0, 2),
+                                  final dateText = holiday.startDate == holiday.endDate
+                                      ? DateFormat('MMM d').format(holiday.startDate)
+                                      : '${DateFormat('MMM d').format(holiday.startDate)} - ${DateFormat('MMM d').format(holiday.endDate)}';
+                                  
+                                  return Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                                    child: Row(
+                                      children: [
+                                        Icon(
+                                          holiday.type == 'winter' ? Icons.ac_unit : 
+                                          holiday.type == 'summer' ? Icons.wb_sunny :
+                                          Icons.event,
+                                          color: holidayColor,
+                                          size: 22,
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Text(
+                                                holiday.type == 'winter' ? 'Winter Holiday' : 
+                                                holiday.type == 'summer' ? 'Summer Holiday' :
+                                                'Other Holiday',
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.w600,
+                                                  fontSize: 14,
+                                                  color: Theme.of(context).textTheme.titleMedium?.color
+                                                ),
+                                              ),
+                                              const SizedBox(height: 2),
+                                              Text(
+                                                dateText,
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  color: Theme.of(context).textTheme.bodySmall?.color
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        InkWell(
+                                          onTap: () async {
+                                            // Show confirmation dialog
+                                            final shouldDelete = await showDialog<bool>(
+                                              context: context,
+                                              builder: (context) => AlertDialog(
+                                                title: const Text('Remove Holiday'),
+                                                content: const Text('Are you sure you want to remove this holiday?'),
+                                                actions: [
+                                                  TextButton(
+                                                    onPressed: () => Navigator.of(context).pop(false),
+                                                    child: const Text('Cancel'),
+                                                  ),
+                                                  TextButton(
+                                                    onPressed: () => Navigator.of(context).pop(true),
+                                                    style: TextButton.styleFrom(
+                                                      foregroundColor: Colors.red,
+                                                    ),
+                                                    child: const Text('Remove'),
+                                                  ),
+                                                ],
+                                              ),
+                                            );
+
+                                            if (shouldDelete == true) {
+                                              // Remove the holiday
+                                              await HolidayService.removeHoliday(holiday.id);
+                                              
+                                              // Update the holidays list
+                                              setState(() {
+                                                _holidays.removeWhere((h) => h.id == holiday.id);
+                                              });
+                                              
+                                              // Show success message
+                                              if (mounted) {
+                                                ScaffoldMessenger.of(context).showSnackBar(
+                                                  const SnackBar(
+                                                    content: Text('Holiday removed successfully'),
+                                                    backgroundColor: Colors.green,
+                                                  ),
+                                                );
+                                                
+                                                // Force a rebuild of the calendar to update holiday indicators
+                                                _updateAllEvents();
+                                                
+                                                // Close and reopen the dialog to refresh the view
+                                                Navigator.of(context).pop();
+                                                _showAddHolidaysDialog();
+                                              }
+                                            }
+                                          },
+                                          child: Padding(
+                                            padding: const EdgeInsets.all(4),
+                                            child: Icon(
+                                              Icons.delete_outline,
+                                              color: Colors.red.shade400,
+                                              size: 20,
+                                            ),
+                                          ),
                                         ),
                                       ],
-                                    ),
-                                    child: ListTile(
-                                      leading: Icon(
-                                        holiday.type == 'winter' ? Icons.ac_unit : 
-                                        holiday.type == 'summer' ? Icons.wb_sunny :
-                                        Icons.event,
-                                        color: holidayColor,
-                                      ),
-                                      title: Text(
-                                        holiday.type == 'winter' ? 'Winter Holiday' : 
-                                        holiday.type == 'summer' ? 'Summer Holiday' :
-                                        'Other Holiday',
-                                        style: TextStyle( // Remove const since we use Theme.of(context)
-                                          fontWeight: FontWeight.bold,
-                                          color: Theme.of(context).textTheme.titleMedium?.color // Use theme text color
-                                        ),
-                                      ),
-                                      subtitle: Text(
-                                        holiday.startDate == holiday.endDate
-                                            ? DateFormat('MMM d').format(holiday.startDate)
-                                            : '${DateFormat('MMM d').format(holiday.startDate)} - ${DateFormat('MMM d').format(holiday.endDate)}',
-                                        style: TextStyle( // Add style for subtitle
-                                          color: Theme.of(context).textTheme.bodySmall?.color // Use theme text color
-                                        ),
-                                      ),
-                                      trailing: IconButton(
-                                        icon: const Icon(Icons.delete_outline, color: Colors.red),
-                                        onPressed: () async {
-                                          // Show confirmation dialog
-                                          final shouldDelete = await showDialog<bool>(
-                                            context: context,
-                                            builder: (context) => AlertDialog(
-                                              title: const Text('Remove Holiday'),
-                                              content: const Text('Are you sure you want to remove this holiday?'),
-                                              actions: [
-                                                TextButton(
-                                                  onPressed: () => Navigator.of(context).pop(false),
-                                                  child: const Text('Cancel'),
-                                                ),
-                                                TextButton(
-                                                  onPressed: () => Navigator.of(context).pop(true),
-                                                  style: TextButton.styleFrom(
-                                                    foregroundColor: Colors.red,
-                                                  ),
-                                                  child: const Text('Remove'),
-                                                ),
-                                              ],
-                                            ),
-                                          );
-
-                                          if (shouldDelete == true) {
-                                            // Remove the holiday
-                                            await HolidayService.removeHoliday(holiday.id);
-                                            
-                                            // Update the holidays list
-                                            setState(() {
-                                              _holidays.removeWhere((h) => h.id == holiday.id);
-                                            });
-                                            
-                                            // Show success message
-                                            if (mounted) {
-                                              ScaffoldMessenger.of(context).showSnackBar(
-                                                const SnackBar(
-                                                  content: Text('Holiday removed successfully'),
-                                                  backgroundColor: Colors.green,
-                                                ),
-                                              );
-                                              
-                                              // Force a rebuild of the calendar to update holiday indicators
-                                              _updateAllEvents();
-                                              
-                                              // Close and reopen the dialog to refresh the view
-                                              Navigator.of(context).pop();
-                                              _showAddHolidaysDialog();
-                                            }
-                                          }
-                                        },
-                                      ),
                                     ),
                                   );
                                 },
                               ),
-                            ),
-                            const SizedBox(height: 16),
+                            const SizedBox(height: 6),
                             const Divider(),
-                            const SizedBox(height: 16),
+                            const SizedBox(height: 8),
                           ],
                           // Add new holiday section
                           const Text(
                             'Add New Holiday',
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
-                              fontSize: 16,
+                              fontSize: 14,
                             ),
                           ),
-                          const SizedBox(height: 8),
-                          ListTile(
-                            leading: const Icon(Icons.wb_sunny),
-                            title: const Text('Summer (2 Weeks)'),
+                          const SizedBox(height: 4),
+                          InkWell(
                             onTap: () {
-                              Navigator.of(context).pop(); // Close the current dialog
+                              Navigator.of(context).pop();
                               _showSummerHolidayDateDialog();
                             },
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.wb_sunny, size: 22),
+                                  const SizedBox(width: 12),
+                                  const Text('Summer (2 Weeks)', style: TextStyle(fontSize: 14)),
+                                ],
+                              ),
+                            ),
                           ),
-                          ListTile(
-                            leading: const Icon(Icons.ac_unit),
-                            title: const Text('Winter (1 Week)'),
+                          InkWell(
                             onTap: () {
-                              Navigator.of(context).pop(); // Close the current dialog
+                              Navigator.of(context).pop();
                               _showWinterHolidayDateDialog();
                             },
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.ac_unit, size: 22),
+                                  const SizedBox(width: 12),
+                                  const Text('Winter (1 Week)', style: TextStyle(fontSize: 14)),
+                                ],
+                              ),
+                            ),
                           ),
-                          ListTile(
-                            leading: const Icon(Icons.event),
-                            title: const Text('Other'),
+                          InkWell(
                             onTap: () {
-                              Navigator.of(context).pop(); // Close the current dialog
+                              Navigator.of(context).pop();
                               _showOtherHolidayDialog();
                             },
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.event, size: 22),
+                                  const SizedBox(width: 12),
+                                  const Text('Other', style: TextStyle(fontSize: 14)),
+                                ],
+                              ),
+                            ),
                           ),
                         ],
                       ),
                     ),
                   ),
                 ),
-                const Divider(height: 0),
+                const Divider(height: 1),
                 Padding(
-                  padding: const EdgeInsets.all(8),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      TextButton(
-                        onPressed: () => Navigator.of(context).pop(),
-                        child: const Text('Close'),
+                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ),
-                    ],
+                      child: const Text('Close'),
+                    ),
                   ),
                 ),
               ],
@@ -4083,6 +4104,9 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
     showDialog(
       context: context,
       builder: (BuildContext context) {
+        final screenHeight = MediaQuery.of(context).size.height;
+        final listHeight = (screenHeight * 0.4).clamp(200.0, 300.0);
+        
         return AlertDialog(
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
@@ -4095,10 +4119,15 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                   color: Colors.blue.shade50,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(Icons.ac_unit, color: Colors.blue),
+                child: const Icon(Icons.ac_unit, color: Colors.blue, size: 20),
               ),
               const SizedBox(width: 12),
-              const Text('Select Winter Holiday Start Date'),
+              const Expanded(
+                child: Text(
+                  'Select Winter Holiday Start Date',
+                  style: TextStyle(fontSize: 16),
+                ),
+              ),
             ],
           ),
           contentPadding: const EdgeInsets.only(top: 8, bottom: 0),
@@ -4113,7 +4142,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                 ),
                 child: SizedBox(
                   width: double.maxFinite,
-                  height: 300,
+                  height: listHeight,
                   child: ListView.builder(
                     shrinkWrap: true,
                     itemCount: sundays.length,
@@ -4169,11 +4198,11 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                             },
                             borderRadius: BorderRadius.circular(8),
                             child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                               child: Row(
                                 children: [
                                   Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                                     decoration: BoxDecoration(
                                       color: Colors.blue.shade50,
                                       borderRadius: BorderRadius.circular(4),
@@ -4183,10 +4212,11 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                                       style: TextStyle(
                                         color: Colors.blue.shade700,
                                         fontWeight: FontWeight.bold,
+                                        fontSize: 12,
                                       ),
                                     ),
                                   ),
-                                  const SizedBox(width: 12),
+                                  const SizedBox(width: 10),
                                   Expanded(
                                     child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -4194,7 +4224,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                                         Text(
                                           DateFormat('MMM d, yyyy').format(date),
                                           style: const TextStyle(
-                                            fontSize: 15,
+                                            fontSize: 13,
                                             color: Colors.black87,
                                           ),
                                         ),
@@ -4203,7 +4233,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                                   ),
                                   Icon(
                                     Icons.arrow_forward_ios,
-                                    size: 16,
+                                    size: 14,
                                     color: Colors.blue.shade300,
                                   ),
                                 ],
@@ -4284,6 +4314,9 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
     showDialog(
       context: context,
       builder: (BuildContext context) {
+        final screenHeight = MediaQuery.of(context).size.height;
+        final listHeight = (screenHeight * 0.4).clamp(200.0, 300.0);
+        
         return AlertDialog(
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
@@ -4296,10 +4329,15 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                   color: Colors.orange.shade50,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(Icons.wb_sunny, color: Colors.orange),
+                child: const Icon(Icons.wb_sunny, color: Colors.orange, size: 20),
               ),
               const SizedBox(width: 12),
-              const Text('Select Summer Holiday Start Date'),
+              const Expanded(
+                child: Text(
+                  'Select Summer Holiday Start Date',
+                  style: TextStyle(fontSize: 16),
+                ),
+              ),
             ],
           ),
           contentPadding: const EdgeInsets.only(top: 8, bottom: 0),
@@ -4314,7 +4352,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                 ),
                 child: SizedBox(
                   width: double.maxFinite,
-                  height: 300,
+                  height: listHeight,
                   child: ListView.builder(
                     shrinkWrap: true,
                     itemCount: sundays.length,
@@ -4370,11 +4408,11 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                             },
                             borderRadius: BorderRadius.circular(8),
                             child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                               child: Row(
                                 children: [
                                   Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                                     decoration: BoxDecoration(
                                       color: Colors.orange.shade50,
                                       borderRadius: BorderRadius.circular(4),
@@ -4384,10 +4422,11 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                                       style: TextStyle(
                                         color: Colors.orange.shade700,
                                         fontWeight: FontWeight.bold,
+                                        fontSize: 12,
                                       ),
                                     ),
                                   ),
-                                  const SizedBox(width: 12),
+                                  const SizedBox(width: 10),
                                   Expanded(
                                     child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -4395,14 +4434,14 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                                         Text(
                                           DateFormat('MMM d, yyyy').format(date),
                                           style: const TextStyle(
-                                            fontSize: 15,
+                                            fontSize: 13,
                                             color: Colors.black87,
                                           ),
                                         ),
                                         Text(
                                           'Ends: ${DateFormat('MMM d, yyyy').format(date.add(const Duration(days: 13)))}',
                                           style: TextStyle(
-                                            fontSize: 13,
+                                            fontSize: 11,
                                             color: Colors.grey.shade600,
                                           ),
                                         ),
@@ -4411,7 +4450,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                                   ),
                                   Icon(
                                     Icons.arrow_forward_ios,
-                                    size: 16,
+                                    size: 14,
                                     color: Colors.orange.shade300,
                                   ),
                                 ],

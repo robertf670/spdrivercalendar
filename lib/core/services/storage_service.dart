@@ -40,14 +40,25 @@ class StorageService {
   static Future<void> saveString(String key, String value) async {
     try {
       final p = await prefs;
-      await p.setString(key, value);
-      _cache.set(key, value, expiration: _cacheDuration);
+      final success = await p.setString(key, value);
+      
+      if (!success) {
+        _logError('saveString', 'SharedPreferences.setString returned false for key $key');
+        throw Exception('Failed to save string to SharedPreferences for key $key');
+      }
+      
+      // Force commit to disk (ensures data is persisted even if app is force stopped)
+      await p.reload();
       
       // Validate save by reading back
       final savedValue = p.getString(key);
       if (savedValue != value) {
         _logError('saveString', 'Validation failed: saved value does not match input for key $key');
+        throw Exception('Save validation failed for key $key');
       }
+      
+      // Only cache after successful validation
+      _cache.set(key, value, expiration: _cacheDuration);
     } catch (e) {
       _logError('saveString', 'Failed to save string for key $key: $e');
       rethrow;
@@ -192,6 +203,16 @@ class StorageService {
       _logError('clear', 'Failed to clear storage: $e');
       rethrow;
     }
+  }
+
+  // Clear only the cache (not the stored data) - useful for forcing a fresh read
+  static void clearCache() {
+    _cache.clear();
+  }
+
+  // Clear cache for a specific key - useful when you know data has changed
+  static void clearCacheForKey(String key) {
+    _cache.remove(key);
   }
 
   // Batch save multiple values with validation

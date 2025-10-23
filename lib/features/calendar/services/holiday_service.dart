@@ -10,7 +10,7 @@ import 'package:flutter/foundation.dart';
 class HolidayService {
   static const String _holidaysKey = 'holidays';
   static const String _backupSuffix = '_backup';
-  static const String _cacheKey = 'holidays'; // Cache key used in calendar screen
+  static const String _cacheKey = 'holidays_list_cache'; // Cache key used in calendar screen
   
   // Save operation synchronization
   static bool _isSaving = false;
@@ -39,7 +39,11 @@ class HolidayService {
       final freshCacheService = CacheService();
       freshCacheService.remove(_cacheKey);
       
-      _logError('_invalidateCache', 'Successfully invalidated holidays cache (both instances)');
+      // CRITICAL FIX: Also clear StorageService's internal cache for the holidays key
+      // This ensures we always read fresh data from SharedPreferences on next access
+      StorageService.clearCacheForKey(_holidaysKey);
+      
+      _logError('_invalidateCache', 'Successfully invalidated holidays cache (all instances including StorageService)');
     } catch (e) {
       _logError('_invalidateCache', 'Failed to invalidate cache: $e');
     }
@@ -158,10 +162,15 @@ class HolidayService {
   static Future<List<Holiday>> getHolidays() async {
     try {
       final holidaysJson = await StorageService.getString(_holidaysKey);
-      if (holidaysJson == null) return [];
+      if (holidaysJson == null) {
+        _logError('getHolidays', 'No holidays found in storage (null)');
+        return [];
+      }
 
       final List<dynamic> decoded = json.decode(holidaysJson);
       final holidays = <Holiday>[];
+      
+      _logError('getHolidays', 'Decoded ${decoded.length} holidays from storage');
       
       for (final holidayData in decoded) {
         try {
@@ -175,6 +184,7 @@ class HolidayService {
         }
       }
       
+      _logError('getHolidays', 'Returning ${holidays.length} valid holidays');
       return holidays;
     } catch (e, stackTrace) {
       _logError('getHolidays', 'Failed to load holidays: $e', stackTrace);
@@ -195,17 +205,31 @@ class HolidayService {
   // Add a new holiday
   static Future<void> addHoliday(Holiday holiday) async {
     try {
+      _logError('addHoliday', 'Starting to add holiday ${holiday.id} (type: ${holiday.type})');
+      
       final holidays = await getHolidays();
+      _logError('addHoliday', 'Loaded ${holidays.length} existing holidays from storage');
+      
       if (holidays.any((h) => h.id == holiday.id)) {
         _logError('addHoliday', 'Holiday ${holiday.id} already exists');
         return;
       }
+      
       holidays.add(holiday);
+      _logError('addHoliday', 'Added new holiday, total count now: ${holidays.length}');
       
       await _safeHolidaysSave(holidays);
+      _logError('addHoliday', 'Successfully saved ${holidays.length} holidays to storage');
       
       // Invalidate cache after successful save
       _invalidateCache();
+      
+      // Verify the save by reading back
+      final verifyHolidays = await getHolidays();
+      _logError('addHoliday', 'Verification: Read back ${verifyHolidays.length} holidays from storage');
+      if (verifyHolidays.length != holidays.length) {
+        _logError('addHoliday', 'WARNING: Holiday count mismatch after save! Expected ${holidays.length}, got ${verifyHolidays.length}');
+      }
 
       final syncEnabled = await StorageService.getBool(AppConstants.syncToGoogleCalendarKey, defaultValue: false);
       final isSignedIn = await GoogleCalendarService.isSignedIn();
