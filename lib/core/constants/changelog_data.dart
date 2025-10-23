@@ -1,4 +1,10 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.15.13': [
+    {
+      'title': 'Zone 4 Spare Duty Assignment Fix',
+      'description': 'Fixed issue where assigning duties to spare shifts in Zone 4 after October 19, 2025 was using old Zone 4 files instead of the new Route 23/24 duty files.',
+    }
+  ],
   '2.15.12': [
     {
       'title': 'Calendar Scrolling Improvements',

@@ -1011,10 +1011,16 @@ class _EventCardState extends State<EventCard> {
           }
           
           // Determine the filename based on the day of the week and zone
-          final filename = bankHoliday != null ? 'SUN_DUTIES_PZ$zone.csv' :
-                         dayOfWeek == 'Saturday' ? 'SAT_DUTIES_PZ$zone.csv' :
-                         dayOfWeek == 'Sunday' ? 'SUN_DUTIES_PZ$zone.csv' :
-                         'M-F_DUTIES_PZ$zone.csv';
+          // Use RosterService to get the correct filename (handles Route 23/24 changeover for Zone 4)
+          String dayOfWeekForFilename;
+          if (dayOfWeek == 'Saturday') {
+            dayOfWeekForFilename = 'SAT';
+          } else if (dayOfWeek == 'Sunday' || bankHoliday != null) {
+            dayOfWeekForFilename = 'SUN';
+          } else {
+            dayOfWeekForFilename = 'M-F';
+          }
+          final filename = RosterService.getShiftFilename(zone, dayOfWeekForFilename, widget.event.startDate);
           
 
                          
@@ -2137,10 +2143,16 @@ class _EventCardState extends State<EventCard> {
                 }
               } else {
                 // Handle regular zone duties
-                final filename = bankHoliday != null ? 'SUN_DUTIES_PZ$zoneNumber.csv' :
-                               dayOfWeek == 'Saturday' ? 'SAT_DUTIES_PZ$zoneNumber.csv' :
-                               dayOfWeek == 'Sunday' ? 'SUN_DUTIES_PZ$zoneNumber.csv' :
-                               'M-F_DUTIES_PZ$zoneNumber.csv';
+                // Use RosterService to get the correct filename (handles Route 23/24 changeover for Zone 4)
+                String dayOfWeekForFilename;
+                if (dayOfWeek == 'Saturday') {
+                  dayOfWeekForFilename = 'SAT';
+                } else if (dayOfWeek == 'Sunday' || bankHoliday != null) {
+                  dayOfWeekForFilename = 'SUN';
+                } else {
+                  dayOfWeekForFilename = 'M-F';
+                }
+                final filename = RosterService.getShiftFilename(zoneNumber, dayOfWeekForFilename, widget.event.startDate);
 
                 final file = await rootBundle.loadString('assets/$filename');
                 final lines = file.split('\n');
