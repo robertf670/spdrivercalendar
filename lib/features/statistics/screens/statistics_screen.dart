@@ -403,6 +403,9 @@ class StatisticsScreenState extends State<StatisticsScreen>
             },
           ),
           
+          // Sick Days Statistics Card (Placeholder)
+          _buildSickDaysPlaceholderCard(),
+          
           // Work Time Stats Card
           // ... existing code ...
         ],
@@ -1939,5 +1942,79 @@ class StatisticsScreenState extends State<StatisticsScreen>
       'overtime': overtime,
       'totalOvertimeMinutes': totalOvertimeMinutes,
     };
+  }
+  
+  Widget _buildSickDaysPlaceholderCard() {
+    return Card(
+      elevation: 2,
+      margin: const EdgeInsets.symmetric(vertical: 8.0),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.sick,
+                  color: Theme.of(context).colorScheme.primary,
+                  size: 24,
+                ),
+                const SizedBox(width: 8),
+                const Text(
+                  'Sick Days Statistics',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Center(
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 24.0, horizontal: 16.0),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
+                    width: 1,
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    Icon(
+                      Icons.construction,
+                      size: 48,
+                      color: Theme.of(context).colorScheme.primary.withOpacity(0.6),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Coming Soon',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Sick days statistics will be implemented shortly',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontStyle: FontStyle.italic,
+                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

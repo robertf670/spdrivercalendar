@@ -84,8 +84,8 @@ class BillsScreenState extends State<BillsScreen> {
       // Construct the filename based on selected values
       String filename;
       
-      if (_selectedZone == 'Route 23/24') {
-        // Handle the new Route 23/24 files
+      if (_selectedZone == 'Zone 4') {
+        // Handle Zone 4 (Route 23/24 files)
         String dayTypeForFilename = _selectedDayType;
         if (_selectedDayType == 'Sat') {
           dayTypeForFilename = 'SAT';
@@ -94,7 +94,7 @@ class BillsScreenState extends State<BillsScreen> {
         }
         filename = '${dayTypeForFilename}_ROUTE2324.csv';
       } else {
-        // Handle existing zone files
+        // Handle existing zone files (Zone 1 and Zone 3)
         final zoneNumber = _selectedZone.replaceAll('Zone ', '');
         // Format filenames with correct capitalization
         String dayTypeForFilename = _selectedDayType;
@@ -407,7 +407,7 @@ class BillsScreenState extends State<BillsScreen> {
                             padding: EdgeInsets.only(right: 16.0),
                             child: Icon(Icons.arrow_drop_down_circle, color: AppTheme.primaryColor),
                           ),
-                          items: ['Zone 1', 'Zone 3', 'Zone 4', 'Route 23/24'].map((String value) {
+                          items: ['Zone 1', 'Zone 3', 'Zone 4'].map((String value) {
                             return DropdownMenuItem<String>(
                               value: value,
                               child: Padding(

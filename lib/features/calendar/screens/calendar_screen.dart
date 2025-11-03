@@ -3204,7 +3204,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Spare Driver Shift Calendar'),
+        title: const Text('Spare Driver Calendar'),
         actions: [
           IconButton(
             icon: const Icon(Icons.view_week),

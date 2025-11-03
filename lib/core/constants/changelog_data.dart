@@ -1,4 +1,30 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.15.15': [
+    {
+      'title': 'Calendar Screen Title Update',
+      'description': 'Changed calendar screen title from "Spare Driver Shift Calendar" to "Spare Driver Calendar".',
+    },
+    {
+      'title': 'Bills Screen Zone Update',
+      'description': 'Removed old Zone 4 (route 9/122) from Bills screen. Route 23/24 is now labeled as Zone 4.',
+    },
+    {
+      'title': 'Timing Points Update',
+      'description': 'Removed old Zone 4 routes (9 and 122) from Timing Points screen.',
+    },
+    {
+      'title': 'Sick Days Statistics Placeholder',
+      'description': 'Added placeholder for sick days statistics on the Shift Summary page, to be fully implemented soon.',
+    },
+    {
+      'title': 'M-F 1/73 Fix',
+      'description': 'Fixed incorrect start break route for duty PZ1/73 on Monday-Friday.',
+    },
+    {
+      'title': 'Saturday 1/8X Fix',
+      'description': 'Fixed incorrect route in the second half of duty PZ1/8X for Saturday',
+    },
+  ],
   '2.15.14': [
     {
       'title': 'Critical Holiday Persistence Fix',

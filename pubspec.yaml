@@ -3,7 +3,7 @@ description: Calendar application for spare drivers.
 
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 
-version: 2.15.14
+version: 2.15.15
 
 environment:
   sdk: '>=3.1.5 <4.0.0'

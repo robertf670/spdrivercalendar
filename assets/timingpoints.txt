@@ -4,12 +4,6 @@
 39a -> Ongar, Stillorgan Road (RTE), Hampton Hotel, Waterloo Road, Pembrook Street, Pearse Street, Aston Quay, Manor Street, Navan Road (after car dealerships), Nephin Road, Baggot Road, Kempton, Parkway Station, River Road, New Ongar Road
 39a -> UCD, Parkway Station, Kempton, Blackhall Place, Bachelors Walk, Nassau Street, Kildare Street, Baggot Street, Waterloo Road, Stillorgan Road (RTE)
 
-9 -> Limekiln Avenue, Jamestown Road, Hampstead Avenue, Na Fianna GAA Club, Western Way, Harolds Cross, Kimmage Road (before KCR), Kimmage Road West (after KCR), Cromwellsfort Road
-9 -> Charlestown, Brookfield, Kimmage Road Lower, Ravensdale Park, Western Way, Phibsboro Road, Ballymun Road (first stop), Albert College Park, Jamestown Road
-
-122 -> Drimnagh Road, Faussagh Avenue (Church), Dowth Avenue, Cabra Road (Charleville), Mater Hospital, National Stadium
-122 -> Ashington, Rialto Church, National Stadium, Mater Hospital, Cabra Road (Charleville)
-
 L58 -> Hazelhatch Station, Hewlett Packard
 L58 -> Riverforest, Hewlett Packard
 
