@@ -76,9 +76,9 @@ class MyApp extends StatefulWidget {
   final bool isDarkModeInitial;
 
   const MyApp({
-    Key? key,
+    super.key,
     required this.isDarkModeInitial,
-  }) : super(key: key);
+  });
 
   @override
   MyAppState createState() => MyAppState();
@@ -188,10 +188,10 @@ class SplashScreen extends StatefulWidget {
   final Function(String) onInitializationComplete;
 
   const SplashScreen({
-    Key? key,
+    super.key,
     required this.isDarkModeNotifier,
     required this.onInitializationComplete,
-  }) : super(key: key);
+  });
 
   @override
   SplashScreenState createState() => SplashScreenState();

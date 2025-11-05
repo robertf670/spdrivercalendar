@@ -4,7 +4,7 @@ import 'package:spdrivercalendar/services/update_service.dart';
 class UpdateDialog extends StatefulWidget {
   final UpdateInfo updateInfo;
 
-  const UpdateDialog({Key? key, required this.updateInfo}) : super(key: key);
+  const UpdateDialog({super.key, required this.updateInfo});
 
   @override
   State<UpdateDialog> createState() => _UpdateDialogState();

@@ -13,12 +13,12 @@ class WeekViewScreen extends StatefulWidget {
   final int startWeek;
 
   const WeekViewScreen({
-    Key? key,
+    super.key,
     required this.selectedDate,
     required this.shiftInfoMap,
     this.startDate,
     this.startWeek = 0,
-  }) : super(key: key);
+  });
 
   @override
   WeekViewScreenState createState() => WeekViewScreenState();

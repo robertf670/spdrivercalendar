@@ -9,12 +9,12 @@ class ShiftTypeSummaryCard extends StatelessWidget {
   final ValueChanged<String?> onChanged;
 
   const ShiftTypeSummaryCard({
-    Key? key, 
+    super.key, 
     required this.stats,
     required this.currentRange,
     required this.availableRanges,
     required this.onChanged,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

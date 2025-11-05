@@ -5,7 +5,7 @@ import 'package:spdrivercalendar/services/apk_download_manager.dart';
 class EnhancedUpdateDialog extends StatefulWidget {
   final UpdateInfo updateInfo;
 
-  const EnhancedUpdateDialog({Key? key, required this.updateInfo}) : super(key: key);
+  const EnhancedUpdateDialog({super.key, required this.updateInfo});
 
   @override
   State<EnhancedUpdateDialog> createState() => _EnhancedUpdateDialogState();

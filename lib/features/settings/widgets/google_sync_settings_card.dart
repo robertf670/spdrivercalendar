@@ -8,12 +8,12 @@ class GoogleSyncSettingsCard extends StatelessWidget {
   final VoidCallback onSyncStatusCheck;
 
   const GoogleSyncSettingsCard({
-    Key? key,
+    super.key,
     required this.isGoogleSignedIn,
     required this.syncToGoogleCalendar,
     required this.onSyncToggleChanged,
     required this.onSyncStatusCheck,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

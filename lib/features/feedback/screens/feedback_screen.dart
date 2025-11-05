@@ -3,7 +3,7 @@ import 'package:spdrivercalendar/theme/app_theme.dart'; // Assuming AppTheme has
 import 'package:url_launcher/url_launcher.dart'; // Import url_launcher
 
 class FeedbackScreen extends StatefulWidget {
-  const FeedbackScreen({Key? key}) : super(key: key);
+  const FeedbackScreen({super.key});
 
   @override
   FeedbackScreenState createState() => FeedbackScreenState();

@@ -4,7 +4,7 @@ import 'package:spdrivercalendar/theme/app_theme.dart';
 class BreakStatisticsCard extends StatelessWidget {
   final Map<String, dynamic> breakStats;
 
-  const BreakStatisticsCard({Key? key, required this.breakStats}) : super(key: key);
+  const BreakStatisticsCard({super.key, required this.breakStats});
 
   @override
   Widget build(BuildContext context) {

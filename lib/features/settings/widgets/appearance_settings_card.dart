@@ -6,10 +6,10 @@ class AppearanceSettingsCard extends StatelessWidget {
   final ValueChanged<bool> onDarkModeChanged;
 
   const AppearanceSettingsCard({
-    Key? key,
+    super.key,
     required this.isDarkMode,
     required this.onDarkModeChanged,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

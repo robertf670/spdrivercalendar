@@ -7,7 +7,7 @@ import 'package:spdrivercalendar/core/constants/app_constants.dart';
 class GoogleLoginPage extends StatefulWidget {
   final VoidCallback onLoginComplete;
   
-  const GoogleLoginPage({Key? key, required this.onLoginComplete}) : super(key: key);
+  const GoogleLoginPage({super.key, required this.onLoginComplete});
 
   @override
   GoogleLoginPageState createState() => GoogleLoginPageState();

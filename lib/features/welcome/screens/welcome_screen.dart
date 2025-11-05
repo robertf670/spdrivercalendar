@@ -5,9 +5,9 @@ class WelcomeScreen extends StatefulWidget {
   final VoidCallback onGetStarted;
   
   const WelcomeScreen({
-    Key? key,
+    super.key,
     required this.onGetStarted,
-  }) : super(key: key);
+  });
   
   @override
   WelcomeScreenState createState() => WelcomeScreenState();

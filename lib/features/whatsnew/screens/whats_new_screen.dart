@@ -9,9 +9,9 @@ class WhatsNewScreen extends StatefulWidget {
   final VoidCallback onContinue;
 
   const WhatsNewScreen({
-    Key? key,
+    super.key,
     required this.onContinue,
-  }) : super(key: key);
+  });
 
   @override
   State<WhatsNewScreen> createState() => _WhatsNewScreenState();

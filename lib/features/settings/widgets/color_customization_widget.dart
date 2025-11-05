@@ -7,9 +7,9 @@ class ColorCustomizationWidget extends StatefulWidget {
   final VoidCallback? onColorsChanged;
 
   const ColorCustomizationWidget({
-    Key? key,
+    super.key,
     this.onColorsChanged,
-  }) : super(key: key);
+  });
 
   @override
   State<ColorCustomizationWidget> createState() => _ColorCustomizationWidgetState();

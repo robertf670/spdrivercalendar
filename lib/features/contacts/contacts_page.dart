@@ -3,7 +3,7 @@ import 'package:url_launcher/url_launcher.dart'; // Import url_launcher
 import 'package:spdrivercalendar/theme/app_theme.dart'; // Import AppTheme for styling
 
 class ContactsPage extends StatelessWidget {
-  const ContactsPage({Key? key}) : super(key: key);
+  const ContactsPage({super.key});
 
   // Helper function to launch phone calls
   Future<void> _launchPhoneCall(String phoneNumber, BuildContext context) async {

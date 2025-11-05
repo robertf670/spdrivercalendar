@@ -6,10 +6,10 @@ class FrequencyChart extends StatelessWidget {
   final String emptyDataMessage;
 
   const FrequencyChart({
-    Key? key,
+    super.key,
     required this.frequencyData,
     this.emptyDataMessage = 'No data available',
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

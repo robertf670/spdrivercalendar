@@ -9,10 +9,10 @@ class WorkTimeStatisticsCard extends StatelessWidget {
   // final Map<String, Duration> stats;
 
   const WorkTimeStatisticsCard({
-    Key? key,
+    super.key,
     required this.workTimeStatsFuture, // Use this if FutureBuilder is inside
     // required this.stats, // Use this if FutureBuilder is outside
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

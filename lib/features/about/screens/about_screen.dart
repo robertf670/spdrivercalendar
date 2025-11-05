@@ -4,7 +4,7 @@ import 'package:spdrivercalendar/theme/app_theme.dart';
 import 'package:spdrivercalendar/core/mixins/text_rendering_mixin.dart';
 
 class AboutScreen extends StatefulWidget {
-  const AboutScreen({Key? key}) : super(key: key);
+  const AboutScreen({super.key});
 
   @override
   AboutScreenState createState() => AboutScreenState();

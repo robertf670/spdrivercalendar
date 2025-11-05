@@ -5,9 +5,9 @@ class RebuildText extends StatefulWidget {
   final Widget child;
   
   const RebuildText({
-    Key? key,
+    super.key,
     required this.child,
-  }) : super(key: key);
+  });
 
   @override
   RebuildTextState createState() => RebuildTextState();

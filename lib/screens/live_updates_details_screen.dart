@@ -7,7 +7,7 @@ import '../features/settings/screens/live_updates_preferences_screen.dart';
 import '../theme/app_theme.dart';
 
 class LiveUpdatesDetailsScreen extends StatefulWidget {
-  const LiveUpdatesDetailsScreen({Key? key}) : super(key: key);
+  const LiveUpdatesDetailsScreen({super.key});
 
   @override
   LiveUpdatesDetailsScreenState createState() => LiveUpdatesDetailsScreenState();

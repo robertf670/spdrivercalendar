@@ -27,10 +27,10 @@ class SettingsScreen extends StatefulWidget {
   final ValueNotifier<bool> isDarkModeNotifier;
 
   const SettingsScreen({
-    Key? key,
+    super.key,
     required this.resetRestDaysCallback,
     required this.isDarkModeNotifier,
-  }) : super(key: key);
+  });
 
   @override
   SettingsScreenState createState() => SettingsScreenState();

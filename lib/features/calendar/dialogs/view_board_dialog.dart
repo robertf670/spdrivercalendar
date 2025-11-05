@@ -8,12 +8,12 @@ class ViewBoardDialog extends StatelessWidget {
   final bool isBankHoliday;
 
   const ViewBoardDialog({
-    Key? key,
+    super.key,
     required this.entries,
     required this.dutyNumber,
     required this.weekday,
     required this.isBankHoliday,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

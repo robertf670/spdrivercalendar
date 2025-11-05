@@ -7,7 +7,7 @@ import 'package:spdrivercalendar/features/notes/screens/edit_note_screen.dart'; 
 import 'package:collection/collection.dart'; // Import for groupBy
 
 class AllNotesScreen extends StatefulWidget {
-  const AllNotesScreen({Key? key}) : super(key: key);
+  const AllNotesScreen({super.key});
 
   @override
   AllNotesScreenState createState() => AllNotesScreenState();

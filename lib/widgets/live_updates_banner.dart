@@ -8,9 +8,9 @@ class LiveUpdatesBanner extends StatefulWidget {
   static const Key staticKey = ValueKey('live_updates_banner_static');
 
   const LiveUpdatesBanner({
-    Key? key = staticKey,
+    super.key = staticKey,
     this.onTap,
-  }) : super(key: key);
+  });
 
   @override
   LiveUpdatesBannerState createState() => LiveUpdatesBannerState();
@@ -72,10 +72,10 @@ class LiveUpdatesBannerDisplay extends StatefulWidget {
   final VoidCallback? onTap;
 
   const LiveUpdatesBannerDisplay({
-    Key? key,
+    super.key,
     required this.updates,
     this.onTap,
-  }) : super(key: key);
+  });
 
   @override
   LiveUpdatesBannerDisplayState createState() => LiveUpdatesBannerDisplayState();

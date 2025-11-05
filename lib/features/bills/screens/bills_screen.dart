@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:spdrivercalendar/theme/app_theme.dart';
 
 class BillsScreen extends StatefulWidget {
-  const BillsScreen({Key? key}) : super(key: key);
+  const BillsScreen({super.key});
 
   @override
   BillsScreenState createState() => BillsScreenState();

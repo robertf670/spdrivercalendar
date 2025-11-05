@@ -6,7 +6,7 @@ import 'package:spdrivercalendar/features/calendar/services/event_service.dart';
 class EditNoteScreen extends StatefulWidget {
   final Event event;
 
-  const EditNoteScreen({Key? key, required this.event}) : super(key: key);
+  const EditNoteScreen({super.key, required this.event});
 
   @override
   EditNoteScreenState createState() => EditNoteScreenState();

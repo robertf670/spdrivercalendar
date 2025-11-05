@@ -1,15 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:spdrivercalendar/theme/app_theme.dart';
 import 'admin_panel_screen.dart';
 import 'user_analytics_screen.dart';
 
 class AdminDashboardScreen extends StatelessWidget {
-  const AdminDashboardScreen({Key? key}) : super(key: key);
+  const AdminDashboardScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDarkMode = theme.brightness == Brightness.dark;
     
     return Scaffold(
       appBar: AppBar(

@@ -4,7 +4,7 @@ import '../../../main.dart';
 import '../../../services/user_activity_service.dart';
 
 class UserAnalyticsScreen extends StatefulWidget {
-  const UserAnalyticsScreen({Key? key}) : super(key: key);
+  const UserAnalyticsScreen({super.key});
 
   @override
   UserAnalyticsScreenState createState() => UserAnalyticsScreenState();

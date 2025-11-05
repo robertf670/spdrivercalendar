@@ -9,13 +9,13 @@ class NotificationSettingsGroup extends StatelessWidget {
   final VoidCallback onTestNotification;
 
   const NotificationSettingsGroup({
-    Key? key,
+    super.key,
     required this.notificationsEnabled,
     required this.notificationOffsetHours,
     required this.onEnabledChanged,
     required this.onOffsetChanged,
     required this.onTestNotification,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

@@ -7,10 +7,10 @@ class AddEventDialog extends StatefulWidget {
   final Function(Event) onEventAdded;
 
   const AddEventDialog({
-    Key? key,
+    super.key,
     required this.selectedDate,
     required this.onEventAdded,
-  }) : super(key: key);
+  });
 
   @override
   AddEventDialogState createState() => AddEventDialogState();

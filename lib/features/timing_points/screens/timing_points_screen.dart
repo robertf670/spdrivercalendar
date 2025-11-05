@@ -4,7 +4,7 @@ import 'package:spdrivercalendar/models/timing_point.dart';
 import 'package:spdrivercalendar/theme/app_theme.dart';
 
 class TimingPointsScreen extends StatefulWidget {
-  const TimingPointsScreen({Key? key}) : super(key: key);
+  const TimingPointsScreen({super.key});
 
   @override
   TimingPointsScreenState createState() => TimingPointsScreenState();

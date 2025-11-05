@@ -9,13 +9,13 @@ class GoogleAccountCard extends StatelessWidget {
   final VoidCallback onSignOut;
 
   const GoogleAccountCard({
-    Key? key,
+    super.key,
     required this.isLoading,
     required this.isGoogleSignedIn,
     required this.googleAccountEmail,
     required this.onSignIn,
     required this.onSignOut,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

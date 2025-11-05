@@ -4,7 +4,7 @@ import 'package:spdrivercalendar/theme/app_theme.dart';
 class AppSettingsCard extends StatelessWidget {
   final VoidCallback onShowWelcomePage;
 
-  const AppSettingsCard({Key? key, required this.onShowWelcomePage}) : super(key: key);
+  const AppSettingsCard({super.key, required this.onShowWelcomePage});
 
   @override
   Widget build(BuildContext context) {

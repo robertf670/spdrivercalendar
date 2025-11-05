@@ -8,9 +8,9 @@ class GoogleLoginScreen extends StatefulWidget {
   final VoidCallback onLoginComplete;
   
   const GoogleLoginScreen({
-    Key? key,
+    super.key,
     required this.onLoginComplete,
-  }) : super(key: key);
+  });
   
   @override
   GoogleLoginScreenState createState() => GoogleLoginScreenState();

@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:spdrivercalendar/core/services/cache_service.dart';
-import 'package:flutter/foundation.dart';
 
 class StorageService {
   static SharedPreferences? _prefs;
@@ -9,13 +8,8 @@ class StorageService {
   static const Duration _cacheDuration = Duration(minutes: 5);
   
   // Enhanced error logging
-  static void _logError(String operation, dynamic error, [StackTrace? stackTrace]) {
-    if (kDebugMode) {
-      print('StorageService Error [$operation]: $error');
-      if (stackTrace != null) {
-        print('Stack trace: $stackTrace');
-      }
-    }
+  static void _logError(String operation, dynamic error) {
+    // Error logging removed
   }
   
   // Initialize the storage service

@@ -7,11 +7,11 @@ class TimeRangeSelector extends StatelessWidget {
   final ValueChanged<String?> onChanged;
 
   const TimeRangeSelector({
-    Key? key,
+    super.key,
     required this.currentRange,
     required this.availableRanges,
     required this.onChanged,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

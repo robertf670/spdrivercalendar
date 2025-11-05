@@ -11,11 +11,11 @@ class CalendarWidget extends StatefulWidget {
   final Function(Event) onShowNotes;
   
   const CalendarWidget({
-    Key? key, 
+    super.key, 
     required this.onDaySelected,
     required this.shiftInfoMap,
     required this.onShowNotes,
-  }) : super(key: key);
+  });
   
   @override
   State<CalendarWidget> createState() => _CalendarWidgetState();

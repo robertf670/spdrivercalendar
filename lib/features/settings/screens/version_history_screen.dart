@@ -7,7 +7,7 @@ import 'package:spdrivercalendar/services/update_service.dart';
 import 'package:spdrivercalendar/core/widgets/enhanced_update_dialog.dart';
 
 class VersionHistoryScreen extends StatefulWidget {
-  const VersionHistoryScreen({Key? key}) : super(key: key);
+  const VersionHistoryScreen({super.key});
 
   @override
   State<VersionHistoryScreen> createState() => _VersionHistoryScreenState();

@@ -5,7 +5,6 @@ import 'package:spdrivercalendar/core/services/cache_service.dart';
 import 'package:spdrivercalendar/models/holiday.dart';
 import 'package:spdrivercalendar/google_calendar_service.dart';
 import 'package:spdrivercalendar/calendar_test_helper.dart';
-import 'package:flutter/foundation.dart';
 
 class HolidayService {
   static const String _holidaysKey = 'holidays';
@@ -20,12 +19,7 @@ class HolidayService {
   
   // Enhanced error logging
   static void _logError(String operation, dynamic error, [StackTrace? stackTrace]) {
-    if (kDebugMode) {
-      print('HolidayService Error [$operation]: $error');
-      if (stackTrace != null) {
-        print('Stack trace: $stackTrace');
-      }
-    }
+    // Error logging removed
   }
   
   // Invalidate holidays cache

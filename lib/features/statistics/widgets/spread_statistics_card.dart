@@ -5,9 +5,9 @@ class SpreadStatisticsCard extends StatelessWidget {
   final Future<Map<String, Duration>> spreadStatsFuture;
   
   const SpreadStatisticsCard({
-    Key? key,
+    super.key,
     required this.spreadStatsFuture,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

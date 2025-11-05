@@ -1,4 +1,18 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.15.16': [
+    {
+      'title': 'Code Cleanup and Optimization',
+      'description': 'Removed all print statements from production code to improve performance. Fixed unused imports, fields, variables, and methods throughout the codebase.',
+    },
+    {
+      'title': 'Modern Dart Syntax Updates',
+      'description': 'Refactored all widget constructors to use super parameters for cleaner, more modern Dart code. Improved code readability and maintainability.',
+    },
+    {
+      'title': 'Code Quality Improvements',
+      'description': 'Replaced deprecated withOpacity() calls with modern withValues() API. Fixed unnecessary string interpolation braces and removed unnecessary .toList() calls. Improved code quality and future compatibility.',
+    },
+  ],
   '2.15.15': [
     {
       'title': 'Calendar Screen Title Update',

@@ -3,7 +3,7 @@ import '../../../services/user_preferences_service.dart';
 import '../../../theme/app_theme.dart';
 
 class LiveUpdatesPreferencesScreen extends StatefulWidget {
-  const LiveUpdatesPreferencesScreen({Key? key}) : super(key: key);
+  const LiveUpdatesPreferencesScreen({super.key});
 
   @override
   LiveUpdatesPreferencesScreenState createState() => LiveUpdatesPreferencesScreenState();

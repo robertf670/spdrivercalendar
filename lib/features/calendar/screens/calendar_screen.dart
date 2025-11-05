@@ -50,9 +50,8 @@ class _StableLiveUpdatesBanner extends StatefulWidget {
   final VoidCallback onTap;
 
   const _StableLiveUpdatesBanner({
-    Key? key,
     required this.onTap,
-  }) : super(key: key);
+  });
 
   @override
   _StableLiveUpdatesBannerState createState() => _StableLiveUpdatesBannerState();
@@ -70,7 +69,7 @@ class _StableLiveUpdatesBannerState extends State<_StableLiveUpdatesBanner> {
 class CalendarScreen extends StatefulWidget {
   final ValueNotifier<bool> isDarkModeNotifier;
 
-  const CalendarScreen(this.isDarkModeNotifier, {Key? key}) : super(key: key);
+  const CalendarScreen(this.isDarkModeNotifier, {super.key});
 
   @override
   CalendarScreenState createState() => CalendarScreenState();
@@ -874,7 +873,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                       decoration: BoxDecoration(
                         border: Border.all(color: Colors.grey),
                         borderRadius: BorderRadius.circular(4),
-                        color: Colors.grey.withOpacity(0.1),
+                        color: Colors.grey.withValues(alpha: 0.1),
                       ),
                       child: const Text(
                         'Fixed Duty - No shift selection required',

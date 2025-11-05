@@ -4,7 +4,7 @@ import 'package:spdrivercalendar/theme/app_theme.dart';
 class ScheduleSettingsCard extends StatelessWidget {
   final VoidCallback onResetRestDays;
 
-  const ScheduleSettingsCard({Key? key, required this.onResetRestDays}) : super(key: key);
+  const ScheduleSettingsCard({super.key, required this.onResetRestDays});
 
   @override
   Widget build(BuildContext context) {

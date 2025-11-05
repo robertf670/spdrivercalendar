@@ -9,12 +9,12 @@ class BreakStatisticsCard extends StatelessWidget {
   final ValueChanged<String?> onChanged;
 
   const BreakStatisticsCard({
-    Key? key, 
+    super.key, 
     required this.breakStats,
     required this.currentRange,
     required this.availableRanges,
     required this.onChanged,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

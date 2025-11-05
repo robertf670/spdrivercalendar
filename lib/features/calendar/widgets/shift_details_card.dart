@@ -11,12 +11,12 @@ class ShiftDetailsCard extends StatelessWidget {
   final BankHoliday? bankHoliday;
 
   const ShiftDetailsCard({
-    Key? key,
+    super.key,
     required this.date,
     required this.shift,
     required this.shiftInfoMap,
     this.bankHoliday,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

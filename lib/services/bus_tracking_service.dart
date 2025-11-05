@@ -1,6 +1,5 @@
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
-import 'package:flutter/foundation.dart';
 
 class BusTrackingService {
   static const String _fleetUrl = 'https://bustimes.org/operators/dublin-bus/vehicles';
@@ -13,38 +12,22 @@ class BusTrackingService {
       // Clean and normalize the bus number
       final cleanBusNumber = busNumber.trim().toUpperCase().replaceAll(' ', '');
       
-      if (kDebugMode) {
-        print('🚌 Getting URL for bus: $cleanBusNumber');
-      }
-      
       // Try multiple approaches in order of preference
       
       // Approach 1: Try common URL patterns first (faster)
       final directUrl = await _tryDirectUrlPatterns(cleanBusNumber);
       if (directUrl != null) {
-        if (kDebugMode) {
-          print('✅ Found via direct URL: $directUrl');
-        }
         return directUrl;
       }
       
       // Approach 2: Search the fleet page
       final vehicleUrl = await _findVehicleUrl(cleanBusNumber);
       if (vehicleUrl != null) {
-        if (kDebugMode) {
-          print('✅ Found via fleet search: $vehicleUrl');
-        }
         return vehicleUrl;
       } else {
-        if (kDebugMode) {
-          print('❌ Bus $cleanBusNumber not found in fleet search');
-        }
         return null;
       }
     } catch (e) {
-      if (kDebugMode) {
-        print('❌ Error getting bus URL: $e');
-      }
       return null;
     }
   }
@@ -56,18 +39,11 @@ class BusTrackingService {
       // Clean and normalize the bus number
       final cleanBusNumber = busNumber.trim().toUpperCase().replaceAll(' ', '');
       
-      if (kDebugMode) {
-        print('🚌 Tracking bus: $cleanBusNumber');
-      }
-      
       // Try multiple approaches in order of preference
       
       // Approach 1: Try common URL patterns first (faster)
       final directUrl = await _tryDirectUrlPatterns(cleanBusNumber);
       if (directUrl != null) {
-        if (kDebugMode) {
-          print('✅ Found via direct URL: $directUrl');
-        }
         await _launchUrl(directUrl);
         return true;
       }
@@ -75,29 +51,17 @@ class BusTrackingService {
       // Approach 2: Search the fleet page
       final vehicleUrl = await _findVehicleUrl(cleanBusNumber);
       if (vehicleUrl != null) {
-        if (kDebugMode) {
-          print('✅ Found via fleet search: $vehicleUrl');
-        }
         try {
           await _launchUrl(vehicleUrl);
           return true;
         } catch (e) {
-          if (kDebugMode) {
-            print('⚠️ Specific vehicle URL failed to launch: $e');
-          }
           return false; // Return false since we couldn't open the specific page
         }
       } else {
-        if (kDebugMode) {
-          print('❌ Bus $cleanBusNumber not found in fleet search');
-        }
         // Don't open anything if bus not found
         return false;
       }
     } catch (e) {
-      if (kDebugMode) {
-        print('🚨 Error tracking bus: $e');
-      }
       // Don't open anything if error occurred
       return false;
     }
@@ -116,9 +80,6 @@ class BusTrackingService {
     for (final pattern in patterns) {
       try {
         final testUrl = '$_baseVehicleUrl$pattern';
-        if (kDebugMode) {
-          print('🔍 Testing URL: $testUrl');
-        }
         
         final response = await http.head(Uri.parse(testUrl)).timeout(const Duration(seconds: 5));
         if (response.statusCode == 200) {
@@ -135,10 +96,6 @@ class BusTrackingService {
   /// Searches the fleet page for the bus number and extracts vehicle URL
   static Future<String?> _findVehicleUrl(String busNumber) async {
     try {
-      if (kDebugMode) {
-        print('🔍 Downloading fleet page...');
-      }
-      
       final response = await http.get(
         Uri.parse(_fleetUrl),
         headers: {
@@ -149,28 +106,9 @@ class BusTrackingService {
       if (response.statusCode == 200) {
         final htmlContent = response.body;
         
-        if (kDebugMode) {
-          print('📄 Fleet page downloaded (${htmlContent.length} chars)');
-          // Check if the bus number appears anywhere in the content
-          if (htmlContent.contains(busNumber)) {
-            print('✅ Bus number $busNumber found in HTML content');
-          } else {
-            print('❌ Bus number $busNumber NOT found in HTML content');
-            // Try case insensitive
-            if (htmlContent.toLowerCase().contains(busNumber.toLowerCase())) {
-              print('✅ Found case-insensitive match for $busNumber');
-            } else {
-              print('❌ No case-insensitive match for $busNumber');
-            }
-          }
-        }
-        
         // First: Try exact match search with validation
         final exactVehicleId = _searchForExactMatch(htmlContent, busNumber);
         if (exactVehicleId != null) {
-          if (kDebugMode) {
-            print('🎉 Found exact match: $exactVehicleId');
-          }
           return '$_baseVehicleUrl$exactVehicleId';
         }
 
@@ -180,22 +118,12 @@ class BusTrackingService {
           // Validate this result
           final isValid = await _validateVehicleId(tableVehicleId, busNumber);
           if (isValid) {
-            if (kDebugMode) {
-              print('🎉 Found via validated table search: $tableVehicleId');
-            }
             return '$_baseVehicleUrl$tableVehicleId';
-          } else {
-            if (kDebugMode) {
-              print('❌ Table search result failed validation: $tableVehicleId');
-            }
           }
         }
       }
       return null;
     } catch (e) {
-      if (kDebugMode) {
-        print('🚨 Error in fleet search: $e');
-      }
       return null;
     }
   }
@@ -219,20 +147,12 @@ class BusTrackingService {
 
       for (final pattern in exactPatterns) {
         if (htmlContent.contains(pattern)) {
-          if (kDebugMode) {
-            print('🎯 Found exact pattern: $pattern');
-          }
-          
           // Extract vehicle ID from this exact match
           final vehicleId = _extractVehicleIdFromExactMatch(htmlContent, pattern, busNumber);
           if (vehicleId != null) {
             // Validate that this vehicle ID actually corresponds to our bus number
             if (_isVehicleIdValid(vehicleId, busNumber, htmlContent)) {
               return vehicleId;
-            } else {
-              if (kDebugMode) {
-                print('❌ Vehicle ID $vehicleId failed validation for $busNumber');
-              }
             }
           }
         }
@@ -240,9 +160,6 @@ class BusTrackingService {
       
       return null;
     } catch (e) {
-      if (kDebugMode) {
-        print('🚨 Error in exact match search: $e');
-      }
       return null;
     }
   }
@@ -406,24 +323,11 @@ class BusTrackingService {
   static Future<void> _launchUrl(String url) async {
     final uri = Uri.parse(url);
     
-    if (kDebugMode) {
-      print('🌐 Attempting to launch: $url');
-      print('📋 Parsed URI: $uri');
-      print('🔍 URI scheme: ${uri.scheme}');
-      print('🔍 URI host: ${uri.host}');
-    }
-    
     try {
       // First, check if URL launching works at all with a simple test
       if (url.contains('bustimes.org')) {
-        if (kDebugMode) {
-          print('🧪 Testing basic URL launcher functionality...');
-        }
         final testUri = Uri.parse('https://www.google.com');
         final canLaunchTest = await canLaunchUrl(testUri);
-        if (kDebugMode) {
-          print('🧪 Can launch test URL (google.com): $canLaunchTest');
-        }
         
         if (!canLaunchTest) {
           throw Exception('URL launcher not working - cannot launch any URLs');
@@ -432,9 +336,6 @@ class BusTrackingService {
       
       // Check if we can launch the specific URL
       final canLaunch = await canLaunchUrl(uri);
-      if (kDebugMode) {
-        print('🔍 Can launch target URL: $canLaunch');
-      }
       
       if (!canLaunch) {
         throw Exception('Cannot launch URL: $url (canLaunchUrl returned false)');
@@ -444,86 +345,47 @@ class BusTrackingService {
       
       // Method 1: Try platform default mode (most compatible)
       try {
-        if (kDebugMode) {
-          print('🔄 Trying platformDefault mode...');
-        }
         final launched = await launchUrl(
           uri, 
           mode: LaunchMode.platformDefault,
         );
         if (launched) {
-          if (kDebugMode) {
-            print('✅ Launched via platform default');
-          }
           return;
-        } else {
-          if (kDebugMode) {
-            print('❌ Platform default returned false');
-          }
         }
       } catch (e) {
-        if (kDebugMode) {
-          print('❌ Platform default failed: $e');
-        }
+        // Continue to next method
       }
       
       // Method 2: Try external application mode
       try {
-        if (kDebugMode) {
-          print('🔄 Trying externalApplication mode...');
-        }
         final launched = await launchUrl(
           uri, 
           mode: LaunchMode.externalApplication,
         );
         if (launched) {
-          if (kDebugMode) {
-            print('✅ Launched via external application');
-          }
           return;
-        } else {
-          if (kDebugMode) {
-            print('❌ External application returned false');
-          }
         }
       } catch (e) {
-        if (kDebugMode) {
-          print('❌ External application failed: $e');
-        }
+        // Continue to next method
       }
       
       // Method 3: Try in-app web view mode
       try {
-        if (kDebugMode) {
-          print('🔄 Trying inAppWebView mode...');
-        }
         final launched = await launchUrl(
           uri, 
           mode: LaunchMode.inAppWebView,
         );
         if (launched) {
-          if (kDebugMode) {
-            print('✅ Launched via in-app web view');
-          }
           return;
-        } else {
-          if (kDebugMode) {
-            print('❌ In-app web view returned false');
-          }
         }
       } catch (e) {
-        if (kDebugMode) {
-          print('❌ In-app web view failed: $e');
-        }
+        // Continue
       }
       
       // If all methods fail, provide detailed error
       throw Exception('All launch methods failed for $url. URI valid: ${uri.isAbsolute}, Scheme: ${uri.scheme}');
       
     } catch (e) {
-      if (kDebugMode) {
-        print('❌ Launch completely failed: $e');
-      }
       throw Exception('Could not launch $url: $e');
     }
   }

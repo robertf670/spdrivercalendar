@@ -28,10 +28,9 @@ class StatisticsScreen extends StatefulWidget {
   final Map<DateTime, List<Event>> events;
 
   const StatisticsScreen({
-    Key? key,
+    super.key,
     required this.events,
-  })
-      : super(key: key);
+  });
 
   @override
   StatisticsScreenState createState() => StatisticsScreenState();
@@ -1978,7 +1977,7 @@ class StatisticsScreenState extends State<StatisticsScreen>
                   color: Theme.of(context).colorScheme.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
+                    color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
                     width: 1,
                   ),
                 ),
@@ -1987,7 +1986,7 @@ class StatisticsScreenState extends State<StatisticsScreen>
                     Icon(
                       Icons.construction,
                       size: 48,
-                      color: Theme.of(context).colorScheme.primary.withOpacity(0.6),
+                      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.6),
                     ),
                     const SizedBox(height: 12),
                     Text(
@@ -2005,7 +2004,7 @@ class StatisticsScreenState extends State<StatisticsScreen>
                       style: TextStyle(
                         fontSize: 14,
                         fontStyle: FontStyle.italic,
-                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                       ),
                     ),
                   ],

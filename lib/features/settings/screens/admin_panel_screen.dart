@@ -6,14 +6,14 @@ import '../../../services/live_updates_service.dart';
 import 'package:http/http.dart' as http;
 
 class AdminPanelScreen extends StatefulWidget {
-  const AdminPanelScreen({Key? key}) : super(key: key);
+  const AdminPanelScreen({super.key});
 
   @override
   AdminPanelScreenState createState() => AdminPanelScreenState();
 }
 
 class AdminPanelScreenState extends State<AdminPanelScreen> {
-  bool _isLoading = false;
+  final bool _isLoading = false;
 
   @override
   void initState() {
@@ -632,10 +632,10 @@ class UpdateDialog extends StatefulWidget {
   final Function(LiveUpdate) onSave;
 
   const UpdateDialog({
-    Key? key,
+    super.key,
     this.existingUpdate,
     required this.onSave,
-  }) : super(key: key);
+  });
 
   @override
   UpdateDialogState createState() => UpdateDialogState();

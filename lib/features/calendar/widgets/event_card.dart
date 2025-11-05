@@ -22,7 +22,7 @@ class EventCard extends StatefulWidget {
   final Function(Event)? onBusAssignmentUpdate;
 
   const EventCard({
-    Key? key,
+    super.key,
     required this.event,
     required this.shiftType,
     required this.shiftInfoMap,
@@ -31,7 +31,7 @@ class EventCard extends StatefulWidget {
     this.isRestDay = false,
     required this.onShowNotes,
     this.onBusAssignmentUpdate,
-  }) : super(key: key);
+  });
 
   @override
   State<EventCard> createState() => _EventCardState();
@@ -55,7 +55,6 @@ class _EventCardState extends State<EventCard> {
   // Explicit state tracking for bus assignments
   String? _firstHalfBus;
   String? _secondHalfBus;
-  bool _isUpdatingBus = false;
 
   @override
   void initState() {
@@ -1494,8 +1493,8 @@ class _EventCardState extends State<EventCard> {
                   'Work: $workTime',
                   style: TextStyle(
                     color: Theme.of(context).brightness == Brightness.dark
-                        ? Colors.white.withOpacity(0.8)
-                        : Colors.black.withOpacity(0.7),
+                        ? Colors.white.withValues(alpha: 0.8)
+                        : Colors.black.withValues(alpha: 0.7),
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
                   ),
@@ -2684,8 +2683,7 @@ class _EventCardState extends State<EventCard> {
                       ),
                              IconButton(
                         onPressed: () async {
-                          // Capture context and navigator before async operations
-                          final currentContext = context;
+                          // Capture navigator before async operations
                           final navigator = Navigator.of(context);
                           
                           // Create a copy of the old event
@@ -2772,9 +2770,7 @@ class _EventCardState extends State<EventCard> {
                             dialogSetState(() {
                               // Force dialog to rebuild with updated data
                             });
-                            print('DEBUG: Dialog state refreshed successfully after duty removal');
                           } catch (refreshError) {
-                            print('WARNING: Dialog refresh failed, closing dialog: $refreshError');
                             navigator.pop();
                           }
                         },
@@ -3271,8 +3267,6 @@ class _EventCardState extends State<EventCard> {
   Future<void> _showDutyBusAssignmentDialog(BuildContext context, String dutyCode, [StateSetter? refreshDialog]) async {
     String? busNumber = widget.event.getBusForDuty(dutyCode);
     
-    print('🚌 DIALOG OPEN: $dutyCode | duties: ${widget.event.assignedDuties} | buses: ${widget.event.busAssignments}');
-    
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -3280,11 +3274,8 @@ class _EventCardState extends State<EventCard> {
         content: TextField(
           onChanged: (value) {
             busNumber = value.isEmpty ? null : value;
-            print('DEBUG: Bus number changed to: $busNumber');
           },
           onSubmitted: (value) {
-            print('⌨️ ENTER: "$value" -> $dutyCode | duties=${widget.event.assignedDuties}, buses=${widget.event.busAssignments}');
-            
             try {
               String? normalizedBusNumber = value.trim().toUpperCase().replaceAll(' ', '');
               busNumber = normalizedBusNumber.isEmpty ? null : normalizedBusNumber;
@@ -3292,9 +3283,8 @@ class _EventCardState extends State<EventCard> {
               Navigator.of(dialogContext).pop();
               
               _updateDutyBus(dutyCode, busNumber, refreshDialog).then((_) {
-                print('✅ ENTER SUCCESS: $dutyCode -> $busNumber');
+                // Success - no action needed
               }).catchError((error) {
-                print('❌ ENTER ERROR: $error');
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
@@ -3307,7 +3297,6 @@ class _EventCardState extends State<EventCard> {
               });
               
             } catch (error) {
-              print('ERROR: Failed to process Enter key: $error');
               // Still close the dialog even if there's an error
               Navigator.of(dialogContext).pop();
             }
@@ -3332,7 +3321,6 @@ class _EventCardState extends State<EventCard> {
                   await _updateDutyBus(dutyCode, null, refreshDialog);
                   navigator.pop();
                 } catch (error) {
-                  print('ERROR: Failed to remove bus: $error');
                   // Show error to user but don't close dialog
                   if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -3350,28 +3338,16 @@ class _EventCardState extends State<EventCard> {
             ),
           TextButton(
             onPressed: () async {
-              print('=== ASSIGN BUTTON PRESSED ===');
-              print('DEBUG: Assign button pressed with busNumber: "$busNumber"');
-              print('DEBUG: Current event state before Assign button processing:');
-              print('  - Assigned duties: ${widget.event.assignedDuties}');
-              print('  - Bus assignments: ${widget.event.busAssignments}');
-              
               try {
                 // Normalize the bus number like other duties
                 String? normalizedBusNumber = busNumber?.trim().toUpperCase();
                 // Remove any spaces
                 normalizedBusNumber = normalizedBusNumber?.replaceAll(' ', '');
                 
-                print('DEBUG: Normalized bus number (Assign button): "$normalizedBusNumber"');
-                
                 final navigator = Navigator.of(dialogContext);
-                print('DEBUG: About to call _updateDutyBus from Assign button...');
                 await _updateDutyBus(dutyCode, normalizedBusNumber?.isEmpty == true ? null : normalizedBusNumber, refreshDialog);
-                print('DEBUG: _updateDutyBus completed successfully from Assign button');
                 navigator.pop();
-                print('=== ASSIGN BUTTON PROCESSING COMPLETE ===');
               } catch (error) {
-                print('ERROR: Failed to assign bus: $error');
                 // Show error to user but don't close dialog
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -3393,8 +3369,6 @@ class _EventCardState extends State<EventCard> {
 
   // Update duty bus assignment
   Future<void> _updateDutyBus(String dutyCode, String? newBus, [StateSetter? refreshDialog]) async {
-    print('🚌 BUS UPDATE: ${widget.event.title} ($dutyCode -> $newBus)');
-
     // Create a snapshot of the original event for safety and rollback
     final oldEvent = Event(
       id: widget.event.id,
@@ -3419,21 +3393,15 @@ class _EventCardState extends State<EventCard> {
       overtimeDuration: widget.event.overtimeDuration,
     );
     
-    print('DEBUG: Created oldEvent snapshot with duties: ${oldEvent.assignedDuties} and buses: ${oldEvent.busAssignments}');
-    
     // Validate that we can modify this duty
     if (widget.event.assignedDuties == null) {
-      print('ERROR: Cannot assign bus - no duties assigned to this event');
       return;
     }
     
     if (widget.event.assignedDuties != null && 
         !widget.event.assignedDuties!.contains(dutyCode)) {
-      print('ERROR: Duty $dutyCode no longer exists in assigned duties');
       return;
     }
-    
-    print('DEBUG: Validation passed - duty $dutyCode exists in ${widget.event.assignedDuties}');
     
     // Update the bus assignment in a controlled way
     if (newBus == null || newBus.trim().isEmpty) {
@@ -3442,29 +3410,15 @@ class _EventCardState extends State<EventCard> {
       if (widget.event.busAssignments?.isEmpty == true) {
         widget.event.busAssignments = null;
       }
-      print('DEBUG: Removed bus assignment for duty $dutyCode');
     } else {
       // Add/update bus assignment
       widget.event.busAssignments ??= {};
       widget.event.busAssignments![dutyCode] = newBus.trim();
-      print('DEBUG: Set bus $newBus for duty $dutyCode');
     }
-    
-    print('DEBUG: Bus assignment update completed');
-    print('DEBUG: Updated event state AFTER bus assignment:');
-    print('  - Assigned duties: ${widget.event.assignedDuties}');
-    print('  - Bus assignments: ${widget.event.busAssignments}');
-    print('  - First half bus: ${widget.event.firstHalfBus}');
-    print('  - Second half bus: ${widget.event.secondHalfBus}');
     
     // Save the updated event with enhanced error handling
     try {
-      print('DEBUG: About to call EventService.updateEvent...');
-      print('DEBUG: oldEvent for update - duties: ${oldEvent.assignedDuties}, buses: ${oldEvent.busAssignments}');
-      print('DEBUG: newEvent for update - duties: ${widget.event.assignedDuties}, buses: ${widget.event.busAssignments}');
-      
       await EventService.updateEvent(oldEvent, widget.event);
-      print('DEBUG: EventService.updateEvent completed successfully');
       
       // Sync bus assignments to Google Calendar if callback provided
       if (widget.onBusAssignmentUpdate != null) {
@@ -3473,17 +3427,12 @@ class _EventCardState extends State<EventCard> {
       
       // REMOVED: Post-save verification that was causing false positives and data rollbacks
       // The EventService.updateEvent method has its own verification logic
-      print('DEBUG: EventService.updateEvent completed - trusting the save operation');
     } catch (saveError) {
-      print('ERROR: Failed to save event update: $saveError');
-      
       // Restore the original event state on save failure
       widget.event.assignedDuties = oldEvent.assignedDuties?.map((d) => d).toList();
       widget.event.busAssignments = oldEvent.busAssignments?.map((k, v) => MapEntry(k, v));
       widget.event.firstHalfBus = oldEvent.firstHalfBus;
       widget.event.secondHalfBus = oldEvent.secondHalfBus;
-      
-      print('DEBUG: Restored original event state due to save error');
       
       // Re-throw to let the caller handle the error
       rethrow;
@@ -3491,11 +3440,9 @@ class _EventCardState extends State<EventCard> {
     
     // REMOVED: Aggressive cache refresh that was causing data corruption
     // The cache will naturally update when the dialog refreshes and reads the data
-    print('DEBUG: Skipping aggressive cache refresh to prevent data corruption');
     
     // Update UI in a controlled manner
     if (mounted) {
-      print('DEBUG: Updating UI state after successful bus assignment');
       setState(() {
         // Update state variables
         if (dutyCode.endsWith('A')) {
@@ -3507,7 +3454,6 @@ class _EventCardState extends State<EventCard> {
       
       // CRITICAL: Refresh the dialog if refreshDialog function was provided
       if (refreshDialog != null) {
-        print('DEBUG: Refreshing dialog state after bus assignment');
         // Add a small delay to ensure the event data is properly updated before refreshing
         Future.delayed(const Duration(milliseconds: 100), () {
           if (mounted) {
@@ -3530,8 +3476,6 @@ class _EventCardState extends State<EventCard> {
       ));
       
     }
-    
-    print('🚌 BUS UPDATE COMPLETE: ${widget.event.title} | duties=${widget.event.assignedDuties}, buses=${widget.event.busAssignments}');
   }
 
   // Show bus assignment dialog for full duties
@@ -3596,8 +3540,8 @@ class _EventCardState extends State<EventCard> {
               fontSize: 14,
               fontWeight: FontWeight.normal,
               color: Theme.of(context).brightness == Brightness.dark
-                  ? Colors.white.withOpacity(0.8)
-                  : Colors.black.withOpacity(0.7),
+                  ? Colors.white.withValues(alpha: 0.8)
+                  : Colors.black.withValues(alpha: 0.7),
             ),
             overflow: TextOverflow.ellipsis,
           ),
@@ -4140,9 +4084,7 @@ class _EventCardState extends State<EventCard> {
                           dialogSetState(() {
                             // Force dialog to rebuild with updated data
                           });
-                          print('DEBUG: Full duty dialog state refreshed successfully');
                         } catch (refreshError) {
-                          print('WARNING: Full duty dialog refresh failed, closing dialog: $refreshError');
                           Navigator.of(context).pop();
                         }
                       }
@@ -4152,7 +4094,7 @@ class _EventCardState extends State<EventCard> {
                 ],
               ),
             );
-          }).toList(),
+          }),
           
           const Divider(),
           const SizedBox(height: 8),
@@ -4172,13 +4114,6 @@ class _EventCardState extends State<EventCard> {
           
           // Show current bus assignments if any
           if (_firstHalfBus != null || _secondHalfBus != null) ...[
-            // DEBUG: Print bus assignment status
-            Builder(
-              builder: (context) {
-                print('DEBUG: Showing bus assignments - First: $_firstHalfBus, Second: $_secondHalfBus');
-                return const SizedBox.shrink();
-              },
-            ),
             
             // Current bus assignments display
             if (_firstHalfBus != null)
@@ -4324,7 +4259,6 @@ class _EventCardState extends State<EventCard> {
                           setState(() {
                             // Update state variable to force rebuild
                             _firstHalfBus = result;
-                            print('DEBUG: First half bus assigned: $_firstHalfBus');
                           });
                           // Also refresh the dialog
                           dialogSetState(() {});
@@ -4369,7 +4303,6 @@ class _EventCardState extends State<EventCard> {
                           setState(() {
                             // Update state variable to force rebuild
                             _secondHalfBus = result;
-                            print('DEBUG: Second half bus assigned: $_secondHalfBus');
                           });
                           // Also refresh the dialog
                           dialogSetState(() {});

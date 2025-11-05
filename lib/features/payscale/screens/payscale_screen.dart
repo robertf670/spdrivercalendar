@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:spdrivercalendar/theme/app_theme.dart';
 
 class PayscaleScreen extends StatefulWidget {
-  const PayscaleScreen({Key? key}) : super(key: key);
+  const PayscaleScreen({super.key});
 
   @override
   PayscaleScreenState createState() => PayscaleScreenState();
@@ -275,7 +275,7 @@ class HorizontalSplitTable extends StatefulWidget {
   final Color borderColor;
 
   const HorizontalSplitTable({
-    Key? key,
+    super.key,
     required this.fixedColumnWidth,
     required this.headerHeight,
     required this.headerBackgroundColor,
@@ -288,7 +288,7 @@ class HorizontalSplitTable extends StatefulWidget {
     required this.alternateRowColor,
     required this.headerTextStyle,
     required this.borderColor,
-  }) : super(key: key);
+  });
 
   @override
   HorizontalSplitTableState createState() => HorizontalSplitTableState();

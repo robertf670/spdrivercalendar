@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:spdrivercalendar/core/constants/app_constants.dart';
 import 'package:spdrivercalendar/models/event.dart';
@@ -27,10 +26,8 @@ class EventService {
   
   // Add save operation synchronization
   static bool _isSaving = false;
-  static final List<Function> _pendingSaveQueue = [];
   
   // Add data validation and backup mechanisms
-  static const int _maxBackupRetries = 3;
   static const String _backupSuffix = '_backup';
   
   // ADDED: Helper method to normalize date to string key
@@ -40,12 +37,7 @@ class EventService {
   
   // Enhanced error logging
   static void _logError(String operation, dynamic error, [StackTrace? stackTrace]) {
-    if (kDebugMode) {
-      print('EventService Error [$operation]: $error');
-      if (stackTrace != null) {
-        print('Stack trace: $stackTrace');
-      }
-    }
+    // Error logging removed
   }
   
   // Load user preferences
@@ -611,27 +603,6 @@ class EventService {
     _logError('refreshMonthCache', 'Cache refresh completed for month: $monthKey');
   }
 
-  // Enhanced cache synchronization method
-  static Future<void> _synchronizeAllCaches() async {
-    _logError('synchronizeAllCaches', 'Starting full cache synchronization');
-    
-    try {
-      // Clear all in-memory caches
-      final eventsBackup = Map<String, List<Event>>.from(_events);
-      final monthlyBackup = Map<String, List<Event>>.from(_monthlyCache);
-      
-      _events.clear();
-      _monthlyCache.clear();
-      
-      // Reload from persistent storage
-      await initializeService();
-      
-      _logError('synchronizeAllCaches', 'Cache synchronization completed successfully');
-    } catch (e, stackTrace) {
-      _logError('synchronizeAllCaches', 'Cache synchronization failed: $e', stackTrace);
-      rethrow;
-    }
-  }
 
   // Validate cache consistency
   static bool _validateCacheConsistency() {
@@ -858,21 +829,19 @@ class EventService {
     final normalizedNewStartDate = DateTime(newEventWithId.startDate.year, newEventWithId.startDate.month, newEventWithId.startDate.day);
     final normalizedNewEndDate = DateTime(newEventWithId.endDate.year, newEventWithId.endDate.month, newEventWithId.endDate.day);
 
-    _logError('updateEvent', 'Searching for event ${eventId} in dates: ${normalizedOldStartDate.toIso8601String()}, ${normalizedOldEndDate.toIso8601String()}');
+    _logError('updateEvent', 'Searching for event $eventId in dates: ${normalizedOldStartDate.toIso8601String()}, ${normalizedOldEndDate.toIso8601String()}');
 
     // Enhanced event finding logic - search more thoroughly
     bool eventFoundAndRemoved = false;
-    Event? foundEvent;
 
     // 1. Search and remove the old event reference(s) from its original date(s)
     // Search in start date
     if (_events[_dateToKey(normalizedOldStartDate)] != null) {
-      _logError('updateEvent', '🔍 SEARCHING for ${eventId} in ${_events[_dateToKey(normalizedOldStartDate)]!.length} cached events');
+      _logError('updateEvent', '🔍 SEARCHING for $eventId in ${_events[_dateToKey(normalizedOldStartDate)]!.length} cached events');
       for (int i = 0; i < _events[_dateToKey(normalizedOldStartDate)]!.length; i++) {
         final event = _events[_dateToKey(normalizedOldStartDate)]![i];
         _logError('updateEvent', '  Checking event: ${event.id} (${event.title})');
         if (event.id == eventId) {
-          foundEvent = event;
           _events[_dateToKey(normalizedOldStartDate)]!.removeAt(i);
           eventFoundAndRemoved = true;
           _logError('updateEvent', '✅ FOUND and removed event from start date');
@@ -897,9 +866,6 @@ class EventService {
       for (int i = 0; i < _events[_dateToKey(normalizedOldEndDate)]!.length; i++) {
         final event = _events[_dateToKey(normalizedOldEndDate)]![i];
         if (event.id == eventId) {
-          if (!eventFoundAndRemoved) {
-            foundEvent = event;
-          }
           _events[_dateToKey(normalizedOldEndDate)]!.removeAt(i);
           eventFoundAndRemoved = true;
           _logError('updateEvent', 'Found and removed event from end date');
@@ -921,7 +887,6 @@ class EventService {
         for (int i = 0; i < dateEntry.value.length; i++) {
           final event = dateEntry.value[i];
           if (event.id == eventId) {
-            foundEvent = event;
             dateEntry.value.removeAt(i);
             eventFoundAndRemoved = true;
             _logError('updateEvent', 'Found event in unexpected date: ${dateEntry.key}');
@@ -1447,42 +1412,6 @@ class EventService {
     }
   }
 
-  // Recover a specific event from storage when cache data seems incomplete
-  static Future<void> _recoverEventFromStorage(String eventId, DateTime eventDate) async {
-    try {
-      _logError('_recoverEventFromStorage', 'Attempting to recover event $eventId from storage');
-      
-      // Force reload from storage
-      await _loadEventsForMonth(eventDate);
-      
-      // Clear the specific day from cache and repopulate
-      _events.remove(_dateToKey(eventDate));
-      await preloadMonth(eventDate);
-      
-      // Verify the event was recovered
-      final recoveredEvents = _events[_dateToKey(eventDate)] ?? [];
-      final recoveredEvent = recoveredEvents.firstWhere(
-        (e) => e.id == eventId,
-        orElse: () => Event(
-          id: '',
-          title: '',
-          startDate: eventDate,
-          startTime: const TimeOfDay(hour: 0, minute: 0),
-          endDate: eventDate,
-          endTime: const TimeOfDay(hour: 0, minute: 0),
-          busAssignments: {},
-        ),
-      );
-      
-      if (recoveredEvent.id.isNotEmpty) {
-        _logError('_recoverEventFromStorage', 'Successfully recovered event $eventId with duties: ${recoveredEvent.assignedDuties} and buses: ${recoveredEvent.busAssignments}');
-      } else {
-        _logError('_recoverEventFromStorage', 'Failed to recover event $eventId - event not found in storage');
-      }
-    } catch (e) {
-      _logError('_recoverEventFromStorage', 'Recovery failed for event $eventId: $e');
-    }
-  }
 }
 
 
