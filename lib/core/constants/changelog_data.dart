@@ -1,4 +1,22 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.15.17': [
+    {
+      'title': 'Payscale Screen Responsive Design',
+      'description': 'Completely overhauled Payscale screen with comprehensive responsive design support. Fixed critical layout issues on small phones where the 190px fixed column was taking up over 50% of screen width. Implemented six-tier responsive breakpoint system (very small phones <350px to large tablets ≥900px) with adaptive column widths, font sizes, padding, and header heights. Table now displays perfectly on all device sizes from 320px to large tablets.',
+    },
+    {
+      'title': 'Bills Screen Responsive Design',
+      'description': 'Added comprehensive responsive design to Bills screen to prevent layout overflow on small phones. Implemented adaptive sizing for fixed column (80px→60px on small screens), data columns (110px→90px), header heights, row heights, and all padding values. Added six-tier breakpoint system matching Payscale screen for consistent responsive behavior across all table views. Text sizes and spacing now scale appropriately for optimal readability on all devices.',
+    },
+    {
+      'title': 'About Screen Responsive Design',
+      'description': 'Completely redesigned About screen with responsive grid layout and balanced sizing. Fixed critical issue where 3-column grid created cramped ~100px cards on small phones. Implemented adaptive 2-column layout for phones (<600px) and 3-column for tablets (≥600px). Added responsive font sizes (12-16px), icon sizes, padding, and card aspect ratios. Feature cards now display with proper proportions and readable text on all screen sizes from 320px to large tablets.',
+    },
+    {
+      'title': 'Feedback Screen Responsive Design',
+      'description': 'Added comprehensive responsive design to Feedback screen to prevent cramped layouts on small phones. Implemented adaptive sizing for padding (24px→12px on very small screens), icon size (64px→48px), button padding, and all spacing values. Added six-tier breakpoint system for consistent responsive behavior. Screen now displays comfortably on all device sizes from 320px to large tablets with proper spacing and readable text.',
+    },
+  ],
   '2.15.16': [
     {
       'title': 'Search & Filter Feature',

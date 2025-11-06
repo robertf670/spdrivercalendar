@@ -19,8 +19,142 @@ class AboutScreenState extends State<AboutScreen> with TextRenderingMixin {
     super.dispose();
   }
 
+  // Responsive sizing helper method
+  Map<String, double> _getResponsiveSizes(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    
+    // Very small screens (narrow phones) - Balanced sizing
+    if (screenWidth < 350) {
+      return {
+        'padding': 12.0,              // Reasonable padding
+        'cardPadding': 14.0,          // Balanced card padding
+        'spacing': 16.0,              // Reasonable spacing
+        'smallSpacing': 12.0,         // Smaller spacing
+        'crossAxisCount': 2,          // 2 columns on small screens
+        'iconSize': 24.0,             // Readable icons
+        'headerIconSize': 18.0,       // Header icons
+        'avatarRadius': 32.0,         // Smaller avatar
+        'avatarSize': 64.0,           // Smaller avatar image
+        'gridSpacing': 8.0,           // Tighter grid spacing
+        'featureCardPadding': 6.0,     // Minimal padding for compact cards
+        'featureCardFontSize': 12.0,   // Larger, more readable font
+        'categoryTitleFontSize': 15.0, // Category titles
+        'featureTitleFontSize': 13.0,   // Feature item titles
+        'featureDescFontSize': 12.0,    // Feature descriptions
+        'childAspectRatio': 1.2,       // Taller, narrower cards
+      };
+    }
+    // Small phones (like older iPhones)
+    else if (screenWidth < 400) {
+      return {
+        'padding': 14.0,
+        'cardPadding': 16.0,
+        'spacing': 18.0,
+        'smallSpacing': 14.0,
+        'crossAxisCount': 2,
+        'iconSize': 26.0,
+        'headerIconSize': 19.0,
+        'avatarRadius': 36.0,
+        'avatarSize': 72.0,
+        'gridSpacing': 9.0,
+        'featureCardPadding': 7.0,
+        'featureCardFontSize': 12.0,
+        'categoryTitleFontSize': 15.5,
+        'featureTitleFontSize': 13.5,
+        'featureDescFontSize': 12.5,
+        'childAspectRatio': 1.15,
+      };
+    }
+    // Mid-range phones (like Galaxy S23)
+    else if (screenWidth < 450) {
+      return {
+        'padding': 15.0,
+        'cardPadding': 18.0,
+        'spacing': 20.0,
+        'smallSpacing': 15.0,
+        'crossAxisCount': 2,
+        'iconSize': 26.0,
+        'headerIconSize': 20.0,
+        'avatarRadius': 38.0,
+        'avatarSize': 76.0,
+        'gridSpacing': 12.0,
+        'featureCardPadding': 10.0,
+        'featureCardFontSize': 12.0,
+        'categoryTitleFontSize': 16.0,
+        'featureTitleFontSize': 14.0,
+        'featureDescFontSize': 13.0,
+        'childAspectRatio': 1.0,
+      };
+    }
+    // Regular phones
+    else if (screenWidth < 600) {
+      return {
+        'padding': 16.0,              // Original size
+        'cardPadding': 20.0,
+        'spacing': 22.0,
+        'smallSpacing': 16.0,
+        'crossAxisCount': 2,
+        'iconSize': 28.0,             // Original size
+        'headerIconSize': 20.0,       // Original size
+        'avatarRadius': 40.0,         // Original size
+        'avatarSize': 80.0,           // Original size
+        'gridSpacing': 12.0,          // Original size
+        'featureCardPadding': 12.0,    // Original size
+        'featureCardFontSize': 12.0,
+        'categoryTitleFontSize': 16.0,
+        'featureTitleFontSize': 14.0,
+        'featureDescFontSize': 13.0,
+        'childAspectRatio': 1.0,
+      };
+    }
+    // Tablets
+    else if (screenWidth < 900) {
+      return {
+        'padding': 16.0,
+        'cardPadding': 22.0,
+        'spacing': 24.0,
+        'smallSpacing': 16.0,
+        'crossAxisCount': 3,          // 3 columns on tablets
+        'iconSize': 28.0,
+        'headerIconSize': 20.0,
+        'avatarRadius': 40.0,
+        'avatarSize': 80.0,
+        'gridSpacing': 12.0,
+        'featureCardPadding': 12.0,
+        'featureCardFontSize': 12.0,
+        'categoryTitleFontSize': 16.0,
+        'featureTitleFontSize': 14.0,
+        'featureDescFontSize': 13.0,
+        'childAspectRatio': 1.0,
+      };
+    }
+    // Large tablets/desktop
+    else {
+      return {
+        'padding': 16.0,              // Original size
+        'cardPadding': 24.0,          // Original size
+        'spacing': 24.0,              // Original size
+        'smallSpacing': 16.0,         // Original size
+        'crossAxisCount': 3,          // Original size
+        'iconSize': 28.0,             // Original size
+        'headerIconSize': 20.0,       // Original size
+        'avatarRadius': 40.0,         // Original size
+        'avatarSize': 80.0,           // Original size
+        'gridSpacing': 12.0,          // Original size
+        'featureCardPadding': 12.0,    // Original size
+        'featureCardFontSize': 12.0,
+        'categoryTitleFontSize': 16.0,
+        'featureTitleFontSize': 14.0,
+        'featureDescFontSize': 13.0,
+        'childAspectRatio': 1.0,
+      };
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final sizes = _getResponsiveSizes(context);
+    
     return Scaffold(
       appBar: AppBar(
         title: const Text('About'),
@@ -33,24 +167,24 @@ class AboutScreenState extends State<AboutScreen> with TextRenderingMixin {
         radius: const Radius.circular(3),
         child: SingleChildScrollView(
           controller: _scrollController,
-          padding: const EdgeInsets.all(16.0),
+          padding: EdgeInsets.all(sizes['padding']!),
           child: Column(
                 children: [
             // App Header
-            _buildAppHeader(),
-            const SizedBox(height: 24),
+            _buildAppHeader(sizes),
+            SizedBox(height: sizes['spacing']!),
             
             // Description
-            _buildDescriptionCard(),
-            const SizedBox(height: 24),
+            _buildDescriptionCard(sizes),
+            SizedBox(height: sizes['spacing']!),
             
             // Key Features Overview
-            _buildFeaturesOverview(),
-            const SizedBox(height: 24),
+            _buildFeaturesOverview(sizes),
+            SizedBox(height: sizes['spacing']!),
             
             // Detailed Features
-            _buildDetailedFeatures(),
-                  const SizedBox(height: 16),
+            _buildDetailedFeatures(sizes),
+                  SizedBox(height: sizes['smallSpacing']!),
           ],
         ),
         ),
@@ -58,26 +192,26 @@ class AboutScreenState extends State<AboutScreen> with TextRenderingMixin {
     );
   }
 
-  Widget _buildAppHeader() {
+  Widget _buildAppHeader(Map<String, double> sizes) {
     return Card(
       elevation: 4,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: EdgeInsets.all(sizes['cardPadding']!),
         child: Column(
           children: [
                   CircleAvatar(
-              radius: 40,
+              radius: sizes['avatarRadius']!,
                     backgroundColor: Colors.transparent,
                     child: Image.asset(
                 'assets/appiconwhitebg.png',
-                width: 80,
-                height: 80,
+                width: sizes['avatarSize']!,
+                height: sizes['avatarSize']!,
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  SizedBox(height: sizes['smallSpacing']!),
                   Text(
                     AppConstants.appName,
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
@@ -86,7 +220,7 @@ class AboutScreenState extends State<AboutScreen> with TextRenderingMixin {
                         ),
                     textAlign: TextAlign.center,
                   ),
-            const SizedBox(height: 8),
+            SizedBox(height: sizes['padding']! * 0.5),
             Text(
               'Your comprehensive shift management toolkit',
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
@@ -100,14 +234,14 @@ class AboutScreenState extends State<AboutScreen> with TextRenderingMixin {
     );
   }
 
-  Widget _buildDescriptionCard() {
+  Widget _buildDescriptionCard(Map<String, double> sizes) {
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: EdgeInsets.all(sizes['cardPadding']!),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -116,9 +250,9 @@ class AboutScreenState extends State<AboutScreen> with TextRenderingMixin {
                 Icon(
                   Icons.description,
                   color: AppTheme.primaryColor,
-                  size: 24,
+                  size: sizes['headerIconSize']!,
                 ),
-                const SizedBox(width: 8),
+                SizedBox(width: sizes['padding']! * 0.5),
             Text(
                   'About This App',
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
@@ -128,24 +262,24 @@ class AboutScreenState extends State<AboutScreen> with TextRenderingMixin {
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: sizes['smallSpacing']!),
             const Text(
               'Spare Driver Calendar is a comprehensive shift management solution designed specifically for public transport drivers. More than just a calendar, it\'s your complete toolkit for managing rotating shift patterns, staying informed with real-time updates, and accessing essential driver resources.',
               style: TextStyle(fontSize: 15, height: 1.5),
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: sizes['padding']! * 0.75),
             const Text(
               'Built with deep understanding of driver workflows, the app seamlessly integrates shift scheduling, running board information, communication systems, and productivity tools into one powerful platform.',
               style: TextStyle(fontSize: 15, height: 1.5),
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: sizes['smallSpacing']!),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildFeaturesOverview() {
+  Widget _buildFeaturesOverview(Map<String, double> sizes) {
     final features = [
       {
         'icon': Icons.notifications_active,
@@ -188,15 +322,15 @@ class AboutScreenState extends State<AboutScreen> with TextRenderingMixin {
             fontWeight: FontWeight.bold,
           ),
         ),
-        const SizedBox(height: 16),
+        SizedBox(height: sizes['smallSpacing']!),
         GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 3,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-            childAspectRatio: 1.0,
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: sizes['crossAxisCount']!.toInt(),
+            crossAxisSpacing: sizes['gridSpacing']!,
+            mainAxisSpacing: sizes['gridSpacing']!,
+            childAspectRatio: sizes['childAspectRatio']!,
           ),
           itemCount: features.length,
           itemBuilder: (context, index) {
@@ -205,6 +339,7 @@ class AboutScreenState extends State<AboutScreen> with TextRenderingMixin {
               feature['icon'] as IconData,
               feature['title'] as String,
               feature['color'] as Color,
+              sizes,
             );
           },
         ),
@@ -212,32 +347,34 @@ class AboutScreenState extends State<AboutScreen> with TextRenderingMixin {
     );
   }
 
-  Widget _buildFeatureOverviewCard(IconData icon, String title, Color color) {
+  Widget _buildFeatureOverviewCard(IconData icon, String title, Color color, Map<String, double> sizes) {
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: EdgeInsets.all(sizes['featureCardPadding']!),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
               icon,
-              size: 28,
+              size: sizes['iconSize']!,
               color: color,
             ),
-            const SizedBox(height: 8),
-            Text(
-              title,
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 12,
+            SizedBox(height: 4.0),
+            Flexible(
+              child: Text(
+                title,
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: sizes['featureCardFontSize']!,
+                ),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
-              textAlign: TextAlign.center,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),
@@ -245,7 +382,7 @@ class AboutScreenState extends State<AboutScreen> with TextRenderingMixin {
     );
   }
 
-  Widget _buildDetailedFeatures() {
+  Widget _buildDetailedFeatures(Map<String, double> sizes) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -255,7 +392,7 @@ class AboutScreenState extends State<AboutScreen> with TextRenderingMixin {
             fontWeight: FontWeight.bold,
           ),
         ),
-        const SizedBox(height: 16),
+        SizedBox(height: sizes['smallSpacing']!),
         _buildFeatureCategory(
           'Communication & Updates',
           Icons.campaign,
@@ -266,6 +403,7 @@ class AboutScreenState extends State<AboutScreen> with TextRenderingMixin {
               'description': 'Stay informed with real-time announcements, service updates, and important notices. Critical information appears instantly at the top of your calendar with priority indicators for different urgency levels.'
             },
           ],
+          sizes,
         ),
         _buildFeatureCategory(
           'Shift Management',
@@ -285,6 +423,7 @@ class AboutScreenState extends State<AboutScreen> with TextRenderingMixin {
               'description': 'Full support for all zone types including Zone 1-4, Spare duties, and Uni/Euro routes. Each zone type handled with appropriate scheduling and tracking capabilities.'
             },
           ],
+          sizes,
         ),
         _buildFeatureCategory(
           'Running Boards & Operations',
@@ -300,6 +439,7 @@ class AboutScreenState extends State<AboutScreen> with TextRenderingMixin {
               'description': 'Advanced chronological sorting ensures duty information displays in proper time order. Handles complex multi-section duties with accurate progression across different routes and locations.'
             },
           ],
+          sizes,
         ),
         _buildFeatureCategory(
           'Driver Resources',
@@ -324,6 +464,7 @@ class AboutScreenState extends State<AboutScreen> with TextRenderingMixin {
                'description': 'Quick access to essential phone numbers and contact information for depot and controllers.'
              },
           ],
+          sizes,
         ),
         _buildFeatureCategory(
           'Integration & Synchronization',
@@ -343,6 +484,7 @@ class AboutScreenState extends State<AboutScreen> with TextRenderingMixin {
               'description': 'In-app update system with real-time progress tracking and automatic installation. No need to switch to browser or navigate through download folders.'
             },
           ],
+          sizes,
         ),
         _buildFeatureCategory(
           'Analytics & Insights',
@@ -362,6 +504,7 @@ class AboutScreenState extends State<AboutScreen> with TextRenderingMixin {
               'description': 'Organize both allocated holidays and personal time off. Integrated holiday tracking ensures complete schedule visibility and prevents scheduling conflicts.'
             },
           ],
+          sizes,
         ),
         _buildFeatureCategory(
           'Customization & Productivity',
@@ -385,20 +528,21 @@ class AboutScreenState extends State<AboutScreen> with TextRenderingMixin {
               'description': 'Direct feedback channel for suggestions, bug reports, or feature requests. Your input drives continuous improvement and feature development.'
             },
           ],
+          sizes,
         ),
       ],
     );
   }
 
-  Widget _buildFeatureCategory(String title, IconData icon, Color color, List<Map<String, String>> features) {
+  Widget _buildFeatureCategory(String title, IconData icon, Color color, List<Map<String, String>> features, Map<String, double> sizes) {
     return Card(
       elevation: 1,
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: EdgeInsets.only(bottom: sizes['smallSpacing']!),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(sizes['smallSpacing']!),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -407,23 +551,24 @@ class AboutScreenState extends State<AboutScreen> with TextRenderingMixin {
                 Icon(
                   icon,
                   color: color,
-                  size: 20,
+                  size: sizes['headerIconSize']!,
                 ),
-                const SizedBox(width: 8),
+                SizedBox(width: sizes['padding']! * 0.5),
                 Text(
                   title,
                   style: TextStyle(
-                    fontSize: 16,
+                    fontSize: sizes['categoryTitleFontSize']!,
                     fontWeight: FontWeight.bold,
                     color: color,
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: sizes['padding']! * 0.75),
             ...features.map((feature) => _buildFeatureItem(
               feature['title']!,
               feature['description']!,
+              sizes,
             )),
           ],
         ),
@@ -431,30 +576,30 @@ class AboutScreenState extends State<AboutScreen> with TextRenderingMixin {
     );
   }
 
-  Widget _buildFeatureItem(String title, String description) {
+  Widget _buildFeatureItem(String title, String description, Map<String, double> sizes) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12.0),
+      padding: EdgeInsets.only(bottom: sizes['padding']! * 0.75),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.check_circle, color: AppTheme.successColor, size: 18),
-          const SizedBox(width: 8),
+          Icon(Icons.check_circle, color: AppTheme.successColor, size: sizes['headerIconSize']! * 0.9),
+          SizedBox(width: sizes['padding']! * 0.5),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   title,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    fontSize: 14,
+                    fontSize: sizes['featureTitleFontSize']!,
                   ),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   description,
-                  style: const TextStyle(
-                    fontSize: 13,
+                  style: TextStyle(
+                    fontSize: sizes['featureDescFontSize']!,
                     height: 1.4,
                   ),
                 ),

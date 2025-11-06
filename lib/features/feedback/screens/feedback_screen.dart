@@ -91,10 +91,107 @@ class FeedbackScreenState extends State<FeedbackScreen> {
         .join('&');
   }
 
+  // Responsive sizing helper method
+  Map<String, double> _getResponsiveSizes(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    
+    // Very small screens (narrow phones)
+    if (screenWidth < 350) {
+      return {
+        'padding': 12.0,              // Reduced from 24
+        'iconSize': 48.0,              // Reduced from 64
+        'iconSpacing': 12.0,           // Reduced from 16
+        'titleSpacing': 10.0,          // Reduced from 12
+        'textFieldSpacing': 20.0,      // Reduced from 32
+        'infoSpacing': 10.0,           // Reduced from 12
+        'buttonSpacing': 16.0,         // Reduced from 24
+        'bottomSpacing': 12.0,         // Reduced from 16
+        'buttonPadding': 12.0,         // Reduced from 16
+        'buttonIconSize': 18.0,        // Reduced from 20
+      };
+    }
+    // Small phones (like older iPhones)
+    else if (screenWidth < 400) {
+      return {
+        'padding': 16.0,
+        'iconSize': 52.0,
+        'iconSpacing': 14.0,
+        'titleSpacing': 11.0,
+        'textFieldSpacing': 24.0,
+        'infoSpacing': 11.0,
+        'buttonSpacing': 20.0,
+        'bottomSpacing': 14.0,
+        'buttonPadding': 14.0,
+        'buttonIconSize': 19.0,
+      };
+    }
+    // Mid-range phones (like Galaxy S23)
+    else if (screenWidth < 450) {
+      return {
+        'padding': 18.0,
+        'iconSize': 56.0,
+        'iconSpacing': 15.0,
+        'titleSpacing': 12.0,
+        'textFieldSpacing': 28.0,
+        'infoSpacing': 12.0,
+        'buttonSpacing': 22.0,
+        'bottomSpacing': 15.0,
+        'buttonPadding': 15.0,
+        'buttonIconSize': 20.0,
+      };
+    }
+    // Regular phones
+    else if (screenWidth < 600) {
+      return {
+        'padding': 20.0,
+        'iconSize': 60.0,
+        'iconSpacing': 16.0,
+        'titleSpacing': 12.0,
+        'textFieldSpacing': 30.0,
+        'infoSpacing': 12.0,
+        'buttonSpacing': 24.0,
+        'bottomSpacing': 16.0,
+        'buttonPadding': 16.0,
+        'buttonIconSize': 20.0,
+      };
+    }
+    // Tablets
+    else if (screenWidth < 900) {
+      return {
+        'padding': 22.0,
+        'iconSize': 62.0,
+        'iconSpacing': 16.0,
+        'titleSpacing': 12.0,
+        'textFieldSpacing': 32.0,
+        'infoSpacing': 12.0,
+        'buttonSpacing': 24.0,
+        'bottomSpacing': 16.0,
+        'buttonPadding': 16.0,
+        'buttonIconSize': 20.0,
+      };
+    }
+    // Large tablets/desktop
+    else {
+      return {
+        'padding': 24.0,              // Original size
+        'iconSize': 64.0,             // Original size
+        'iconSpacing': 16.0,          // Original size
+        'titleSpacing': 12.0,         // Original size
+        'textFieldSpacing': 32.0,     // Original size
+        'infoSpacing': 12.0,          // Original size
+        'buttonSpacing': 24.0,        // Original size
+        'bottomSpacing': 16.0,        // Original size
+        'buttonPadding': 16.0,        // Original size
+        'buttonIconSize': 20.0,       // Original size
+      };
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDarkMode = theme.brightness == Brightness.dark;
+    final sizes = _getResponsiveSizes(context);
 
     return Scaffold(
       appBar: AppBar(
@@ -110,19 +207,19 @@ class FeedbackScreenState extends State<FeedbackScreen> {
           radius: const Radius.circular(3),
           child: SingleChildScrollView(
             controller: _scrollController,
-            padding: const EdgeInsets.all(24.0), // Increased padding
+            padding: EdgeInsets.all(sizes['padding']!),
             child: Form(
             key: _formKey,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 // Added Icon for visual appeal
-                const Icon(
+                Icon(
                   Icons.feedback_outlined,
-                  size: 64,
+                  size: sizes['iconSize']!,
                   color: AppTheme.primaryColor,
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: sizes['iconSpacing']!),
                 Text(
                   'We value your input!', // Slightly different wording
                   style: theme.textTheme.headlineMedium?.copyWith(
@@ -131,7 +228,7 @@ class FeedbackScreenState extends State<FeedbackScreen> {
                   ),
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 12),
+                SizedBox(height: sizes['titleSpacing']!),
                 Text(
                   'Share suggestions, report bugs, or tell us what you think. Your feedback helps improve the app.', // More detailed description
                   style: theme.textTheme.bodyLarge?.copyWith(
@@ -139,7 +236,7 @@ class FeedbackScreenState extends State<FeedbackScreen> {
                   ),
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 32),
+                SizedBox(height: sizes['textFieldSpacing']!),
                 TextFormField(
                   controller: _feedbackController,
                   maxLines: 8,
@@ -187,7 +284,7 @@ class FeedbackScreenState extends State<FeedbackScreen> {
                     return null;
                   },
                 ),
-                const SizedBox(height: 12), // Add spacing before the info text
+                SizedBox(height: sizes['infoSpacing']!), // Add spacing before the info text
                 Text(
                   'This feedback will be sent directly to the app creator.',
                   style: theme.textTheme.bodySmall?.copyWith(
@@ -195,14 +292,14 @@ class FeedbackScreenState extends State<FeedbackScreen> {
                   ),
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 24), // Keep spacing before the button
+                SizedBox(height: sizes['buttonSpacing']!), // Keep spacing before the button
                 // Update Button: No loading state needed
                 FilledButton.icon(
                   onPressed: _submitFeedback, // Directly call the submit function
-                  icon: const Icon(Icons.send_rounded, size: 20),
+                  icon: Icon(Icons.send_rounded, size: sizes['buttonIconSize']!),
                   label: const Text('Send Feedback via Email'), // Updated label
                   style: FilledButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    padding: EdgeInsets.symmetric(vertical: sizes['buttonPadding']!),
                     // Use primary color from AppTheme if available
                     backgroundColor: AppTheme.primaryColor,
                     foregroundColor: theme.colorScheme.onPrimary, // Ensure contrast
@@ -212,7 +309,7 @@ class FeedbackScreenState extends State<FeedbackScreen> {
                     ),
                   ),
                 ),
-                 const SizedBox(height: 16), // Add some space at the bottom
+                 SizedBox(height: sizes['bottomSpacing']!), // Add some space at the bottom
               ],
             ),
           ),

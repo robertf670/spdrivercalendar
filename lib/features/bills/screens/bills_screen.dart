@@ -294,8 +294,100 @@ class BillsScreenState extends State<BillsScreen> {
     return words.join(' ');
   }
   
+  // Responsive sizing helper method
+  Map<String, double> _getResponsiveSizes(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    
+    // Very small screens (narrow phones) - ULTRA conservative to prevent overflow
+    if (screenWidth < 350) {
+      return {
+        'fixedColumnWidth': 60.0,   // Reduced from 80
+        'dataColumnWidth': 90.0,    // Reduced from 110
+        'headerHeight': 50.0,       // Reduced from 60
+        'rowHeight': 36.0,          // Reduced from 40
+        'padding': 8.0,              // Reduced from 12
+        'dropdownPadding': 8.0,     // Reduced from 12
+        'headerFontSize': 10.0,     // Reduced from 12
+        'cellFontSize': 10.0,       // Reduced from 11/12
+        'cellPadding': 3.0,         // Reduced from 4
+      };
+    }
+    // Small phones (like older iPhones)
+    else if (screenWidth < 400) {
+      return {
+        'fixedColumnWidth': 65.0,
+        'dataColumnWidth': 95.0,
+        'headerHeight': 52.0,
+        'rowHeight': 38.0,
+        'padding': 10.0,
+        'dropdownPadding': 10.0,
+        'headerFontSize': 11.0,
+        'cellFontSize': 10.5,
+        'cellPadding': 3.5,
+      };
+    }
+    // Mid-range phones (like Galaxy S23)
+    else if (screenWidth < 450) {
+      return {
+        'fixedColumnWidth': 70.0,
+        'dataColumnWidth': 100.0,
+        'headerHeight': 54.0,
+        'rowHeight': 39.0,
+        'padding': 11.0,
+        'dropdownPadding': 11.0,
+        'headerFontSize': 11.5,
+        'cellFontSize': 11.0,
+        'cellPadding': 4.0,
+      };
+    }
+    // Regular phones
+    else if (screenWidth < 600) {
+      return {
+        'fixedColumnWidth': 75.0,
+        'dataColumnWidth': 105.0,
+        'headerHeight': 56.0,
+        'rowHeight': 39.5,
+        'padding': 12.0,            // Original size
+        'dropdownPadding': 12.0,     // Original size
+        'headerFontSize': 12.0,      // Original size
+        'cellFontSize': 11.0,
+        'cellPadding': 4.0,         // Original size
+      };
+    }
+    // Tablets
+    else if (screenWidth < 900) {
+      return {
+        'fixedColumnWidth': 78.0,
+        'dataColumnWidth': 108.0,
+        'headerHeight': 58.0,
+        'rowHeight': 40.0,          // Original size
+        'padding': 12.0,
+        'dropdownPadding': 12.0,
+        'headerFontSize': 12.0,
+        'cellFontSize': 11.0,
+        'cellPadding': 4.0,
+      };
+    }
+    // Large tablets/desktop
+    else {
+      return {
+        'fixedColumnWidth': 80.0,   // Original size
+        'dataColumnWidth': 110.0,   // Original size
+        'headerHeight': 60.0,       // Original size
+        'rowHeight': 40.0,          // Original size
+        'padding': 12.0,            // Original size
+        'dropdownPadding': 12.0,     // Original size
+        'headerFontSize': 12.0,      // Original size
+        'cellFontSize': 11.0,
+        'cellPadding': 4.0,         // Original size
+      };
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final sizes = _getResponsiveSizes(context);
+    
     return Scaffold(
       appBar: AppBar(
         title: const Text('Bills'),
@@ -303,7 +395,7 @@ class BillsScreenState extends State<BillsScreen> {
       ),
       body: SafeArea(
         child: Container(
-          padding: const EdgeInsets.all(12.0),
+          padding: EdgeInsets.all(sizes['padding']!),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -321,7 +413,7 @@ class BillsScreenState extends State<BillsScreen> {
                     ),
                   ],
                 ),
-                padding: const EdgeInsets.all(12),
+                padding: EdgeInsets.all(sizes['dropdownPadding']!),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -444,7 +536,7 @@ class BillsScreenState extends State<BillsScreen> {
                 ),
               ),
               
-              const SizedBox(height: 12),
+              SizedBox(height: sizes['padding']!),
               
               // CSV Data Display Section
               Expanded(
@@ -480,9 +572,11 @@ class BillsScreenState extends State<BillsScreen> {
     }
 
     if (_errorMessage != null) {
+      final sizes = _getResponsiveSizes(context);
+      
       return Center(
         child: Container(
-          padding: const EdgeInsets.all(16),
+          padding: EdgeInsets.all(sizes['padding']! * 1.33),
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.errorContainer,
             borderRadius: BorderRadius.circular(12),
@@ -531,11 +625,11 @@ class BillsScreenState extends State<BillsScreen> {
       );
     }
 
-    // Column width constants - SIGNIFICANTLY INCREASED for better content visibility
-    const double fixedColumnWidth = 80;  // Increased from 50 to 80 for shift IDs
-    const double dataColumnWidth = 110;  // Increased from 70 to 110 for locations/times
-    const double headerHeight = 60;  // Kept same for wrapped text
-    const double rowHeight = 40;  // Fixed row height for perfect alignment
+    final sizes = _getResponsiveSizes(context);
+    final fixedColumnWidth = sizes['fixedColumnWidth']!;
+    final dataColumnWidth = sizes['dataColumnWidth']!;
+    final headerHeight = sizes['headerHeight']!;
+    final rowHeight = sizes['rowHeight']!;
 
     return Card(
       elevation: 2,
@@ -546,7 +640,10 @@ class BillsScreenState extends State<BillsScreen> {
         children: [
           // Table title
           Container(
-            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+            padding: EdgeInsets.symmetric(
+              vertical: sizes['padding']!,
+              horizontal: sizes['padding']! * 1.33,
+            ),
             decoration: BoxDecoration(
               color: AppTheme.primaryColor.withValues(alpha: 0.1),
               borderRadius: const BorderRadius.only(
@@ -585,13 +682,16 @@ class BillsScreenState extends State<BillsScreen> {
                 Container(
                   width: fixedColumnWidth,
                   color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                  padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 4),
+                  padding: EdgeInsets.symmetric(
+                    vertical: sizes['cellPadding']! * 1.25,
+                    horizontal: sizes['cellPadding']!,
+                  ),
                   child: Center(
                     child: Text(
                       _shiftColumnHeader,
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
-                        fontSize: 12,
+                        fontSize: sizes['headerFontSize']!,
                         color: Theme.of(context).colorScheme.onSurface,
                       ),
                       textAlign: TextAlign.center,
@@ -617,13 +717,13 @@ class BillsScreenState extends State<BillsScreen> {
                           return Container(
                             width: dataColumnWidth,
                             height: headerHeight,
-                            padding: const EdgeInsets.all(4),
+                            padding: EdgeInsets.all(sizes['cellPadding']!),
                             child: Center(
                               child: Text(
                                 header,
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
-                                  fontSize: 10,  // Reduced from 11 to 10 for better fit
+                                  fontSize: sizes['headerFontSize']! * 0.83,  // Slightly smaller than header
                                   color: Theme.of(context).colorScheme.onSurface,
                                 ),
                                 textAlign: TextAlign.center,
@@ -656,14 +756,17 @@ class BillsScreenState extends State<BillsScreen> {
                         width: fixedColumnWidth,
                         height: rowHeight,  // Fixed height for alignment
                         color: isEvenRow ? Theme.of(context).colorScheme.surface : Theme.of(context).colorScheme.surfaceContainerLow,
-                        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                        padding: EdgeInsets.symmetric(
+                          vertical: sizes['cellPadding']! * 2,
+                          horizontal: sizes['cellPadding']!,
+                        ),
                         child: Center(
                           child: Text(
                             _shiftColumnData[index].toLowerCase() == "nan" ? "W/O" : _shiftColumnData[index],
                             style: TextStyle(
                               fontWeight: FontWeight.w500, // Make shift column slightly bolder
                               color: Theme.of(context).colorScheme.onSurface,
-                              fontSize: 12,
+                              fontSize: sizes['cellFontSize']!,
                             ),
                             textAlign: TextAlign.center,
                             overflow: TextOverflow.ellipsis,
@@ -706,13 +809,16 @@ class BillsScreenState extends State<BillsScreen> {
                                   (colIndex) => Container(
                                     width: dataColumnWidth,
                                     height: rowHeight,  // Fixed height for alignment
-                                    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                                    padding: EdgeInsets.symmetric(
+                                      vertical: sizes['cellPadding']! * 2,
+                                      horizontal: sizes['cellPadding']!,
+                                    ),
                                     child: Center(
                                       child: Text(
                                         colIndex < row.length ? (row[colIndex].toLowerCase() == "nan" ? "W/O" : row[colIndex]) : '',
                                         style: TextStyle(
                                           color: Theme.of(context).colorScheme.onSurface,
-                                          fontSize: 11,  // Reduced from 12 to 11 to fit more content
+                                          fontSize: sizes['cellFontSize']!,
                                         ),
                                         textAlign: TextAlign.center,
                                         maxLines: 2,  // Allow 2 lines instead of 1
@@ -735,7 +841,10 @@ class BillsScreenState extends State<BillsScreen> {
           
           // Table footer with row count
           Container(
-            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+            padding: EdgeInsets.symmetric(
+              vertical: sizes['cellPadding']! * 2,
+              horizontal: sizes['padding']!,
+            ),
             decoration: BoxDecoration(
               color: Theme.of(context).colorScheme.surfaceContainerLow,
               borderRadius: const BorderRadius.only(

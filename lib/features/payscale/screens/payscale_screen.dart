@@ -102,10 +102,90 @@ class PayscaleScreenState extends State<PayscaleScreen> {
     );
   }
 
+  // Responsive sizing helper method
+  Map<String, double> _getResponsiveSizes(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    
+    // Very small screens (narrow phones) - ULTRA conservative to prevent overflow
+    if (screenWidth < 350) {
+      return {
+        'fixedColumnWidth': 120.0,  // Reduced from 190
+        'dataColumnWidth': 90.0,    // Reduced from 120
+        'headerHeight': 48.0,       // Reduced from 56
+        'padding': 8.0,              // Reduced from 16
+        'cellPadding': 8.0,          // Reduced from 16
+        'headerFontSize': 11.0,      // Reduced from 14
+        'cellFontSize': 11.0,        // Reduced from 14
+      };
+    }
+    // Small phones (like older iPhones)
+    else if (screenWidth < 400) {
+      return {
+        'fixedColumnWidth': 140.0,
+        'dataColumnWidth': 100.0,
+        'headerHeight': 50.0,
+        'padding': 10.0,
+        'cellPadding': 10.0,
+        'headerFontSize': 12.0,
+        'cellFontSize': 12.0,
+      };
+    }
+    // Mid-range phones (like Galaxy S23)
+    else if (screenWidth < 450) {
+      return {
+        'fixedColumnWidth': 150.0,
+        'dataColumnWidth': 110.0,
+        'headerHeight': 52.0,
+        'padding': 12.0,
+        'cellPadding': 12.0,
+        'headerFontSize': 13.0,
+        'cellFontSize': 13.0,
+      };
+    }
+    // Regular phones
+    else if (screenWidth < 600) {
+      return {
+        'fixedColumnWidth': 170.0,
+        'dataColumnWidth': 115.0,
+        'headerHeight': 54.0,
+        'padding': 14.0,
+        'cellPadding': 14.0,
+        'headerFontSize': 14.0,
+        'cellFontSize': 14.0,
+      };
+    }
+    // Tablets
+    else if (screenWidth < 900) {
+      return {
+        'fixedColumnWidth': 180.0,
+        'dataColumnWidth': 118.0,
+        'headerHeight': 55.0,
+        'padding': 15.0,
+        'cellPadding': 15.0,
+        'headerFontSize': 14.0,
+        'cellFontSize': 14.0,
+      };
+    }
+    // Large tablets/desktop
+    else {
+      return {
+        'fixedColumnWidth': 190.0,  // Original size
+        'dataColumnWidth': 120.0,   // Original size
+        'headerHeight': 56.0,       // Original size
+        'padding': 16.0,            // Original size
+        'cellPadding': 16.0,        // Original size
+        'headerFontSize': 14.0,
+        'cellFontSize': 14.0,
+      };
+    }
+  }
+
   Widget _buildPayscaleTable() {
     if (_payscaleData == null || _payscaleData!.isEmpty) {
       return const Center(child: Text('No pay scale data available'));
     }
+
+    final sizes = _getResponsiveSizes(context);
 
     List<String> allHeaders = _payscaleData![0].keys.toList();
     String fixedColumnKey = 'type';
@@ -158,16 +238,16 @@ class PayscaleScreenState extends State<PayscaleScreen> {
       color: Theme.of(context).brightness == Brightness.dark
           ? Colors.white.withValues(alpha: 0.9)
           : AppTheme.primaryColor.withValues(alpha: 0.9),
-      fontSize: 14,
+      fontSize: sizes['headerFontSize']!,
     );
     
     final cellTextStyle = TextStyle(
       color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.87),
-      fontSize: 14,
+      fontSize: sizes['cellFontSize']!,
     );
 
     return Padding(
-      padding: const EdgeInsets.all(16.0),
+      padding: EdgeInsets.all(sizes['padding']!),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -178,14 +258,14 @@ class PayscaleScreenState extends State<PayscaleScreen> {
                   color: AppTheme.primaryColor,
                 ),
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: sizes['padding']! * 0.5),
           Text(
             'The following rates apply based on length of service:',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
-          const SizedBox(height: 20),
+          SizedBox(height: sizes['padding']! * 1.25),
           Expanded(
             child: Container(
               decoration: BoxDecoration(
@@ -201,10 +281,11 @@ class PayscaleScreenState extends State<PayscaleScreen> {
               ),
               clipBehavior: Clip.antiAlias,
               child: HorizontalSplitTable(
-                fixedColumnWidth: 190.0,
-                headerHeight: 56.0,
+                fixedColumnWidth: sizes['fixedColumnWidth']!,
+                headerHeight: sizes['headerHeight']!,
                 headerBackgroundColor: headerBackgroundColor,
-                dataColumnWidth: 120.0,
+                dataColumnWidth: sizes['dataColumnWidth']!,
+                cellPadding: sizes['cellPadding']!,
                 fixedColumnHeader: labelMap[fixedColumnKey] ?? fixedColumnKey,
                 dataColumnHeaders: scrollableColumnHeaders.map((header) => labelMap[header] ?? header).toList(),
                 rowCount: _payscaleData!.length,
@@ -215,7 +296,7 @@ class PayscaleScreenState extends State<PayscaleScreen> {
                   
                   return Container(
                     alignment: Alignment.centerLeft,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    padding: EdgeInsets.symmetric(horizontal: sizes['cellPadding']!),
                     child: Text(
                       cellValue, 
                       style: cellTextStyle.copyWith(
@@ -240,7 +321,7 @@ class PayscaleScreenState extends State<PayscaleScreen> {
                   
                   return Container(
                     alignment: Alignment.centerRight,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    padding: EdgeInsets.symmetric(horizontal: sizes['cellPadding']!),
                     child: Text(
                       cellValue, 
                       style: cellTextStyle,
@@ -265,6 +346,7 @@ class HorizontalSplitTable extends StatefulWidget {
   final double headerHeight;
   final Color headerBackgroundColor;
   final double dataColumnWidth;
+  final double cellPadding;
   final String fixedColumnHeader;
   final List<String> dataColumnHeaders;
   final int rowCount;
@@ -280,6 +362,7 @@ class HorizontalSplitTable extends StatefulWidget {
     required this.headerHeight,
     required this.headerBackgroundColor,
     required this.dataColumnWidth,
+    required this.cellPadding,
     required this.fixedColumnHeader,
     required this.dataColumnHeaders,
     required this.rowCount,
@@ -366,7 +449,7 @@ class HorizontalSplitTableState extends State<HorizontalSplitTable> {
                 width: widget.fixedColumnWidth,
                 height: widget.headerHeight,
                 alignment: Alignment.centerLeft,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+                padding: EdgeInsets.symmetric(horizontal: widget.cellPadding),
                 decoration: BoxDecoration(
                   color: widget.headerBackgroundColor,
                   border: Border(
@@ -401,7 +484,7 @@ class HorizontalSplitTableState extends State<HorizontalSplitTable> {
                           width: widget.dataColumnWidth,
                           height: widget.headerHeight,
                           alignment: Alignment.centerRight,
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          padding: EdgeInsets.symmetric(horizontal: widget.cellPadding),
                           child: Text(
                             widget.dataColumnHeaders[index],
                             style: widget.headerTextStyle,
