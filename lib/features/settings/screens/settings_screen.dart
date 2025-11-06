@@ -45,6 +45,7 @@ class SettingsScreenState extends State<SettingsScreen> {
   bool _includeBustimesLinksInGoogleCalendar = true;
   bool _isLoading = false;
   String _appVersion = '';
+  final ScrollController _scrollController = ScrollController();
 
   // Notification state variables
   int _notificationOffsetHours = 1; // Default offset
@@ -54,6 +55,16 @@ class SettingsScreenState extends State<SettingsScreen> {
   
   // Display settings
   bool _showOvernightDutiesOnBothDays = true; // Default to true to preserve current behavior
+  
+  // Expandable sections state
+  final Map<String, bool> _expandedSections = {
+    'Appearance': true,
+    'App': true,
+    'Google Calendar': false,
+    'Backup & Restore': false,
+    'Notifications': false,
+    'Admin': false,
+  };
 
   @override
   void initState() {
@@ -62,6 +73,47 @@ class SettingsScreenState extends State<SettingsScreen> {
     _loadSettings();
     _checkGoogleSignIn();
     _loadAppVersion();
+    _loadExpandedSections();
+  }
+  
+  Future<void> _loadExpandedSections() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _expandedSections['Appearance'] = prefs.getBool('settings_expanded_appearance') ?? true;
+      _expandedSections['App'] = prefs.getBool('settings_expanded_app') ?? true;
+      _expandedSections['Google Calendar'] = prefs.getBool('settings_expanded_google') ?? false;
+      _expandedSections['Backup & Restore'] = prefs.getBool('settings_expanded_backup') ?? false;
+      _expandedSections['Notifications'] = prefs.getBool('settings_expanded_notifications') ?? false;
+      _expandedSections['Admin'] = prefs.getBool('settings_expanded_admin') ?? false;
+    });
+  }
+  
+  Future<void> _saveExpandedSection(String section, bool expanded) async {
+    final prefs = await SharedPreferences.getInstance();
+    String key;
+    switch (section) {
+      case 'Appearance':
+        key = 'settings_expanded_appearance';
+        break;
+      case 'App':
+        key = 'settings_expanded_app';
+        break;
+      case 'Google Calendar':
+        key = 'settings_expanded_google';
+        break;
+      case 'Backup & Restore':
+        key = 'settings_expanded_backup';
+        break;
+      case 'Notifications':
+        key = 'settings_expanded_notifications';
+        break;
+      case 'Admin':
+        key = 'settings_expanded_admin';
+        break;
+      default:
+        return;
+    }
+    await prefs.setBool(key, expanded);
   }
 
   Future<void> _loadSettings() async {
@@ -170,6 +222,11 @@ class SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
 
   
 
@@ -184,9 +241,20 @@ class SettingsScreenState extends State<SettingsScreen> {
       body: SafeArea(
         child: _isLoading
             ? const Center(child: CircularProgressIndicator())
-            : ListView(
-                padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 32.0), // Added extra bottom padding
-                children: [
+            : Scrollbar(
+                controller: _scrollController,
+                thumbVisibility: true,
+                thickness: 6,
+                radius: const Radius.circular(3),
+                child: ListView(
+                  controller: _scrollController,
+                  padding: EdgeInsets.fromLTRB(
+                    MediaQuery.of(context).size.width < 600 ? 8.0 : 16.0,
+                    16.0,
+                    MediaQuery.of(context).size.width < 600 ? 8.0 : 16.0,
+                    32.0,
+                  ),
+                  children: [
                   // Version label at the top
                   if (_appVersion.isNotEmpty)
                     Padding(
@@ -196,115 +264,204 @@ class SettingsScreenState extends State<SettingsScreen> {
                           'Version $_appVersion',
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                            fontSize: 12,
+                            fontSize: MediaQuery.of(context).size.width < 600 ? 11 : 12,
                           ),
                         ),
                       ),
                     ),
                   
-                  _buildSectionHeader('Appearance'),
-                  _buildDarkModeSwitch(),
-                  ColorCustomizationWidget(
-                    onColorsChanged: _onColorsChanged,
-                  ),
-                  _buildOvernightDutiesToggle(),
-                  
-                  const Divider(height: 32),
-                  _buildSectionHeader('App'),
-                  _buildFeedbackButton(),
-                  _buildLiveUpdatesPreferencesButton(),
-                  _buildVersionHistoryButton(),
-                  _buildResetRestDaysButton(),
-                  _buildShowWelcomePageButton(),
-                  
-                  const Divider(height: 32),
-                  _buildSectionHeader('Google Calendar'),
-                  // Add disclaimer about Google Calendar access
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
-                    child: Container(
-                      padding: const EdgeInsets.all(12.0),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-                        borderRadius: BorderRadius.circular(8.0),
+                  _buildExpandableSection(
+                    title: 'Appearance',
+                    icon: Icons.palette,
+                    children: [
+                      _buildDarkModeSwitch(),
+                      ColorCustomizationWidget(
+                        onColorsChanged: _onColorsChanged,
                       ),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Icon(
-                            Icons.info_outline,
-                            color: Theme.of(context).colorScheme.primary,
-                            size: 20,
+                      _buildOvernightDutiesToggle(),
+                    ],
+                  ),
+                  
+                  const SizedBox(height: 8),
+                  
+                  _buildExpandableSection(
+                    title: 'App',
+                    icon: Icons.apps,
+                    children: [
+                      _buildFeedbackButton(),
+                      _buildLiveUpdatesPreferencesButton(),
+                      _buildVersionHistoryButton(),
+                      _buildResetRestDaysButton(),
+                      _buildShowWelcomePageButton(),
+                    ],
+                  ),
+                  
+                  const SizedBox(height: 8),
+                  
+                  _buildExpandableSection(
+                    title: 'Google Calendar',
+                    icon: Icons.calendar_today,
+                    children: [
+                      // Add disclaimer about Google Calendar access
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
+                        child: Container(
+                          padding: const EdgeInsets.all(12.0),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                            borderRadius: BorderRadius.circular(8.0),
                           ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              'Google Calendar access requires test user approval. Please use the feedback section to request access with your email address.',
-                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: Theme.of(context).colorScheme.onSurface,
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Icon(
+                                Icons.info_outline,
+                                color: Theme.of(context).colorScheme.primary,
+                                size: MediaQuery.of(context).size.width < 600 ? 18 : 20,
                               ),
-                            ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'Google Calendar access requires test user approval. Please use the feedback section to request access with your email address.',
+                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: Theme.of(context).colorScheme.onSurface,
+                                    fontSize: MediaQuery.of(context).size.width < 600 ? 12 : null,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
-                        ],
+                        ),
                       ),
-                    ),
+                      _buildGoogleAccountSection(),
+                      _buildGoogleSyncOption(),
+                      _buildManualSyncOption(),
+                      _buildGoogleCalendarHelpButton(),
+                    ],
                   ),
-                  _buildGoogleAccountSection(),
-                  _buildGoogleSyncOption(),
-                  _buildManualSyncOption(),
-                  _buildGoogleCalendarHelpButton(),
                   
-                  // --- Restore Backup & Restore section to original position ---
-                  const Divider(height: 32),
-                  _buildSectionHeader('Backup & Restore'),
-                  _buildBackupButton(),
-                  _buildRestoreButton(),
-                  _buildAutoBackupToggle(),
-                  _buildRestoreFromAutoBackupButton(),
-                  // --- End Restored Section ---
+                  const SizedBox(height: 8),
                   
-                  // --- Modify Notifications Section --- 
-                  const Divider(height: 32),
-                  _buildSectionHeader('Notifications'),
-                  // Add the warning message here
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
-                    child: Text(
-                      'Shift notifications are temporarily disabled due to technical issues. We are working on a fix.',
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.error, // Use error color for warning
-                        //fontSize: Theme.of(context).textTheme.bodySmall?.fontSize,
+                  _buildExpandableSection(
+                    title: 'Backup & Restore',
+                    icon: Icons.backup,
+                    children: [
+                      _buildBackupButton(),
+                      _buildRestoreButton(),
+                      _buildAutoBackupToggle(),
+                      _buildRestoreFromAutoBackupButton(),
+                    ],
+                  ),
+                  
+                  const SizedBox(height: 8),
+                  
+                  _buildExpandableSection(
+                    title: 'Notifications',
+                    icon: Icons.notifications,
+                    children: [
+                      // Add the warning message here
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
+                        child: Text(
+                          'Shift notifications are temporarily disabled due to technical issues. We are working on a fix.',
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.error,
+                            fontSize: MediaQuery.of(context).size.width < 600 ? 12 : null,
+                          ),
+                        ),
                       ),
-                    ),
+                      _buildShiftNotificationToggle(),
+                      _buildNotificationOffsetDropdown(),
+                      _buildTestNotificationButton(),
+                      _buildViewPendingNotificationsButton(),
+                    ],
                   ),
-                  _buildShiftNotificationToggle(),
-                  _buildNotificationOffsetDropdown(),
-                  _buildTestNotificationButton(),
-                  _buildViewPendingNotificationsButton(),
-                  // --- End Notifications Section ---
                   
-                            // Driver Resources section removed and moved to dropdown menu
+                  const SizedBox(height: 8),
                   
-                  const Divider(height: 32),
-                  _buildSectionHeader('Admin'),
-                  _buildAdminPanelButton(),
+                  _buildExpandableSection(
+                    title: 'Admin',
+                    icon: Icons.admin_panel_settings,
+                    children: [
+                      _buildAdminPanelButton(),
+                    ],
+                  ),
                 ],
               ),
             ),
-          );
+      ),
+    );
   }
 
-  Widget _buildSectionHeader(String title) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 8.0, bottom: 16.0, left: 8.0),
-      child: Text(
-        title,
-        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-          color: AppTheme.primaryColor,
+  Widget _buildExpandableSection({
+    required String title,
+    required List<Widget> children,
+    IconData? icon,
+  }) {
+    final isExpanded = _expandedSections[title] ?? false;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isSmallScreen = screenWidth < 600;
+    
+    return Card(
+      margin: EdgeInsets.symmetric(
+        vertical: 4.0,
+        horizontal: isSmallScreen ? 0.0 : 4.0,
+      ),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppTheme.borderRadius),
+      ),
+      child: Theme(
+        data: Theme.of(context).copyWith(
+          dividerColor: Colors.transparent,
+        ),
+        child: ExpansionTile(
+          leading: icon != null
+              ? Icon(icon, color: AppTheme.primaryColor)
+              : null,
+          title: Text(
+            title,
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              color: AppTheme.primaryColor,
+              fontSize: isSmallScreen ? 18 : 20,
+            ),
+          ),
+          initiallyExpanded: isExpanded,
+          onExpansionChanged: (expanded) {
+            setState(() {
+              _expandedSections[title] = expanded;
+            });
+            _saveExpandedSection(title, expanded);
+          },
+          tilePadding: EdgeInsets.symmetric(
+            horizontal: isSmallScreen ? 12.0 : 16.0,
+            vertical: 8.0,
+          ),
+          childrenPadding: EdgeInsets.zero,
+          children: [
+            Container(
+              decoration: BoxDecoration(
+                color: Theme.of(context).cardColor,
+                borderRadius: const BorderRadius.only(
+                  bottomLeft: Radius.circular(AppTheme.borderRadius),
+                  bottomRight: Radius.circular(AppTheme.borderRadius),
+                ),
+              ),
+              child: Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: isSmallScreen ? 8.0 : 16.0,
+                  vertical: 8.0,
+                ),
+                child: Column(
+                  children: children,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
+  
 
   Widget _buildDarkModeSwitch() {
     return Card(
@@ -1267,6 +1424,5 @@ class SettingsScreenState extends State<SettingsScreen> {
       ),
     );
   }
-
 
 }

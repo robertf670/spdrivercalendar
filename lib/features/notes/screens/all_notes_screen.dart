@@ -18,6 +18,7 @@ class AllNotesScreenState extends State<AllNotesScreen> {
   Map<String, List<Event>> _groupedNotes = {}; // Map for grouped notes
   bool _isLoading = true;
   final TextEditingController _searchController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
   String _searchQuery = ''; // Store search query state
   DateTime? _selectedMonth; // Add selected month state
   int _selectedYear = DateTime.now().year;
@@ -38,6 +39,7 @@ class AllNotesScreenState extends State<AllNotesScreen> {
   @override
   void dispose() {
     _searchController.dispose(); // Dispose controller
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -481,17 +483,24 @@ class AllNotesScreenState extends State<AllNotesScreen> {
       final bool isSearching = _searchQuery.isNotEmpty;
       return RefreshIndicator(
         onRefresh: _loadNotes, 
-        child: ListView( 
-          children: [
-             const SizedBox(height: 150), 
-             Center(
-              child: Text(
-                isSearching ? 'No notes match your search.' : 'No notes found.',
-                style: const TextStyle(fontSize: 16, color: Colors.grey),
-                textAlign: TextAlign.center,
+        child: Scrollbar(
+          controller: _scrollController,
+          thumbVisibility: true,
+          thickness: 6,
+          radius: const Radius.circular(3),
+          child: ListView(
+            controller: _scrollController,
+            children: [
+               const SizedBox(height: 150), 
+               Center(
+                child: Text(
+                  isSearching ? 'No notes match your search.' : 'No notes found.',
+                  style: const TextStyle(fontSize: 16, color: Colors.grey),
+                  textAlign: TextAlign.center,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       );
     }
@@ -503,10 +512,16 @@ class AllNotesScreenState extends State<AllNotesScreen> {
 
     return RefreshIndicator(
       onRefresh: _loadNotes,
-      child: ListView.builder(
-        padding: const EdgeInsets.symmetric(horizontal: 8.0), // Padding for the whole list
-        itemCount: dateGroups.length, // Number of date groups
-        itemBuilder: (context, groupIndex) {
+      child: Scrollbar(
+        controller: _scrollController,
+        thumbVisibility: true,
+        thickness: 6,
+        radius: const Radius.circular(3),
+        child: ListView.builder(
+          controller: _scrollController,
+          padding: const EdgeInsets.symmetric(horizontal: 8.0), // Padding for the whole list
+          itemCount: dateGroups.length, // Number of date groups
+          itemBuilder: (context, groupIndex) {
           final dateGroupKey = dateGroups[groupIndex];
           final notesInGroup = _groupedNotes[dateGroupKey]!;
 
@@ -588,6 +603,7 @@ class AllNotesScreenState extends State<AllNotesScreen> {
             ),
           );
         },
+        ),
       ),
     );
   }

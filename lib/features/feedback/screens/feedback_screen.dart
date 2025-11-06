@@ -12,10 +12,12 @@ class FeedbackScreen extends StatefulWidget {
 class FeedbackScreenState extends State<FeedbackScreen> {
   final _feedbackController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void dispose() {
     _feedbackController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -101,9 +103,15 @@ class FeedbackScreenState extends State<FeedbackScreen> {
       ),
       // Use SafeArea and SingleChildScrollView for better layout handling
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0), // Increased padding
-          child: Form(
+        child: Scrollbar(
+          controller: _scrollController,
+          thumbVisibility: true,
+          thickness: 6,
+          radius: const Radius.circular(3),
+          child: SingleChildScrollView(
+            controller: _scrollController,
+            padding: const EdgeInsets.all(24.0), // Increased padding
+            child: Form(
             key: _formKey,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -208,6 +216,7 @@ class FeedbackScreenState extends State<FeedbackScreen> {
               ],
             ),
           ),
+        ),
         ),
       ),
     );

@@ -1320,6 +1320,46 @@ class EventService {
      }
   }
 
+  // Get all events (for search functionality)
+  static Future<List<Event>> getAllEvents() async {
+    final prefs = await SharedPreferences.getInstance();
+    final eventsJson = prefs.getString(AppConstants.eventsStorageKey);
+    
+    if (eventsJson == null || eventsJson.isEmpty) {
+      return [];
+    }
+    
+    try {
+      final Map<String, dynamic> decodedData = jsonDecode(eventsJson);
+      final Set<String> seenIds = {}; // Track unique event IDs to avoid duplicates
+      List<Event> allEvents = [];
+      
+      for (final entry in decodedData.entries) {
+        final List<dynamic> eventsData = entry.value;
+        for (final eventData in eventsData) {
+          try {
+            final event = Event.fromMap(eventData);
+            // Only add if we haven't seen this event ID before
+            if (!seenIds.contains(event.id)) {
+              seenIds.add(event.id);
+              allEvents.add(event);
+            }
+          } catch (e) {
+            // Skip invalid events
+            continue;
+          }
+        }
+      }
+      
+      // Sort by date (newest first)
+      allEvents.sort((a, b) => b.startDate.compareTo(a.startDate));
+      return allEvents;
+    } catch (e) {
+      // Failed to parse events, return empty list
+      return [];
+    }
+  }
+
   // Get all events with notes (for the notes screen)
   static Future<List<Event>> getAllEventsWithNotes() async {
     final prefs = await SharedPreferences.getInstance();

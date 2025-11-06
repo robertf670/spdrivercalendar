@@ -23,6 +23,7 @@ import 'package:spdrivercalendar/features/calendar/services/event_service.dart';
 import 'package:spdrivercalendar/features/settings/screens/version_history_screen.dart';
 import 'package:spdrivercalendar/services/color_customization_service.dart';
 import 'package:spdrivercalendar/services/user_activity_service.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
 // Global Firebase Analytics instance
 late FirebaseAnalytics analytics;
@@ -33,6 +34,12 @@ Future<void> main() async {
   
   // Enable edge-to-edge display BEFORE other initializations
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+
+  // Initialize locale data for table_calendar (required for en_GB and en_US locales)
+  await Future.wait([
+    initializeDateFormatting('en_GB', null),
+    initializeDateFormatting('en_US', null),
+  ]);
 
   // Initialize cache service first
   final cacheService = CacheService();

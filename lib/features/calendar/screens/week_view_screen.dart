@@ -36,10 +36,8 @@ class WeekViewScreenState extends State<WeekViewScreen> {
   }
 
   void _calculateWeekStart() {
-    // Calculate the start of the week (Sunday)
-    // DateTime.weekday: Monday = 1, Sunday = 7
     final weekday = widget.selectedDate.weekday;
-    // For Sunday-first week: Sunday = 0 days back, Monday = 1 day back, etc.
+    // Sunday-first: Sunday = 0 days back, Monday = 1 day back, etc.
     final daysFromSunday = weekday % 7; // Sunday (7) becomes 0, Monday (1) becomes 1, etc.
     _currentWeekStart = widget.selectedDate.subtract(Duration(days: daysFromSunday));
   }

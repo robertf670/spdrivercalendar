@@ -1,6 +1,22 @@
 final Map<String, List<Map<String, String>>> changelogData = {
   '2.15.16': [
     {
+      'title': 'Search & Filter Feature',
+      'description': 'Added comprehensive search functionality to find shifts by duty code, bus number, title, notes, or date range. Filter by shift type, overtime, holidays, sick days, and more. Search results display with color-coded cards and quick navigation to calendar dates. Responsive design works perfectly on all screen sizes.',
+    },
+    {
+      'title': 'Contacts Page Redesign',
+      'description': 'Completely redesigned the contacts page with modern Material Design 3 styling. Added new contacts: Depot Manager (Tim Fitzgibbons) and Depot Administrator (Ed Moyles) with email functionality. Contacts are now organized into logical sections (Depot Management, Controllers, Services, Medical) with color-coded headers. Added visible scrollbar and responsive design for all screen sizes. Improved visual hierarchy and card styling for better usability.',
+    },
+    {
+      'title': 'Universal Scrollbar Indicators',
+      'description': 'Added visible scrollbar indicators to all scrollable pages throughout the app for improved user experience. Scrollbars are now consistently displayed on Calendar, Settings, Statistics, Notes, Version History, Feedback, Timing Points, About, and What\'s New screens.',
+    },
+    {
+      'title': 'Settings Screen Redesign',
+      'description': 'Completely redesigned the settings screen with expandable sections for better organization. Settings are now grouped into collapsible categories (Appearance, App, Google Calendar, Backup & Restore, Notifications, Admin) with intuitive icons. The screen remembers which sections you have expanded or collapsed. Fully responsive design adapts perfectly to all screen sizes with optimized padding, font sizes, and spacing.',
+    },
+    {
       'title': 'Code Cleanup and Optimization',
       'description': 'Removed all print statements from production code to improve performance. Fixed unused imports, fields, variables, and methods throughout the codebase.',
     },
@@ -20,7 +36,7 @@ final Map<String, List<Map<String, String>>> changelogData = {
     },
     {
       'title': 'Bills Screen Zone Update',
-      'description': 'Removed old Zone 4 (route 9/122) from Bills screen. Route 23/24 is now labeled as Zone 4.',
+      'description': 'Removed old Zone 4 (route 9/122) from Bills screen. Route 23/24 isr now labeled as Zone 4.',
     },
     {
       'title': 'Timing Points Update',

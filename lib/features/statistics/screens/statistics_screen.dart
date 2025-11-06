@@ -96,7 +96,12 @@ class StatisticsScreenState extends State<StatisticsScreen>
   
   // Tab Controller - Make nullable
   TabController? _tabController;
-
+  
+  // Scroll controllers for each tab
+  final ScrollController _workTimeScrollController = ScrollController();
+  final ScrollController _summaryScrollController = ScrollController();
+  final ScrollController _frequencyScrollController = ScrollController();
+  
   @override
   void initState() {
     super.initState();
@@ -118,6 +123,9 @@ class StatisticsScreenState extends State<StatisticsScreen>
   void dispose() {
     // Dispose TabController
     _tabController?.dispose();
+    _workTimeScrollController.dispose();
+    _summaryScrollController.dispose();
+    _frequencyScrollController.dispose();
     super.dispose();
   }
 
@@ -197,9 +205,15 @@ class StatisticsScreenState extends State<StatisticsScreen>
     final DateFormat listTitleDateFormatter = DateFormat('MMM d'); // For ListTile title
     final DateFormat detailDateFormatter = DateFormat('dd/MM/yy'); // For detail lines
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16.0), // Padding around the card
-      child: Column( // Use Column to allow multiple Cards/Widgets
+    return Scrollbar(
+      controller: _workTimeScrollController,
+      thumbVisibility: true,
+      thickness: 6,
+      radius: const Radius.circular(3),
+      child: SingleChildScrollView(
+        controller: _workTimeScrollController,
+        padding: const EdgeInsets.all(16.0), // Padding around the card
+        child: Column( // Use Column to allow multiple Cards/Widgets
         children: [
           Card( // Card for standard work time stats
             elevation: 2.0, 
@@ -365,13 +379,20 @@ class StatisticsScreenState extends State<StatisticsScreen>
           ),
         ],
       ),
+      ),
     );
   }
 
   Widget _buildSummaryTab() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
+    return Scrollbar(
+      controller: _summaryScrollController,
+      thumbVisibility: true,
+      thickness: 6,
+      radius: const Radius.circular(3),
+      child: SingleChildScrollView(
+        controller: _summaryScrollController,
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
         children: [
           // Shift Type Summary Card
           ShiftTypeSummaryCard(
@@ -409,13 +430,20 @@ class StatisticsScreenState extends State<StatisticsScreen>
           // ... existing code ...
         ],
       ),
+      ),
     );
   }
 
   Widget _buildFrequencyTab() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16.0),
-      child: Card( 
+    return Scrollbar(
+      controller: _frequencyScrollController,
+      thumbVisibility: true,
+      thickness: 6,
+      radius: const Radius.circular(3),
+      child: SingleChildScrollView(
+        controller: _frequencyScrollController,
+        padding: const EdgeInsets.all(16.0),
+        child: Card( 
         elevation: 2.0,
         child: Padding( 
           padding: const EdgeInsets.all(16.0),
@@ -568,6 +596,7 @@ class StatisticsScreenState extends State<StatisticsScreen>
           ),
         ),
       ),
+      ),
     );
   }
 
@@ -612,6 +641,7 @@ class StatisticsScreenState extends State<StatisticsScreen>
     DateTime endDate;
     
     // Determine date range based on selected time range
+    // Statistics always use Sunday-Saturday weeks regardless of calendar display preference
     switch (_timeRange) {
       case 'This Week':
         // Start from Sunday of current week
@@ -1262,7 +1292,7 @@ class StatisticsScreenState extends State<StatisticsScreen>
   Future<Map<String, Duration>> _calculateWorkTimeStatistics() async {
     final now = DateTime.now();
 
-    // This week (Sunday to Saturday)
+    // This week (Sunday to Saturday) - Statistics always use Sunday-Saturday weeks
     final thisWeekStart = DateTime(now.year, now.month, now.day).subtract(Duration(days: now.weekday % 7)); // Ensure start is at midnight
     final thisWeekEnd = DateTime(thisWeekStart.year, thisWeekStart.month, thisWeekStart.day).add(const Duration(days: 6)); // Ensure end is at start of day
 
@@ -1368,7 +1398,7 @@ class StatisticsScreenState extends State<StatisticsScreen>
   Future<Map<String, Duration>> _calculateSpreadStatistics() async {
     final now = DateTime.now();
 
-    // This week (Sunday to Saturday)
+    // This week (Sunday to Saturday) - Statistics always use Sunday-Saturday weeks
     final thisWeekStart = DateTime(now.year, now.month, now.day).subtract(Duration(days: now.weekday % 7));
     final thisWeekEnd = DateTime(thisWeekStart.year, thisWeekStart.month, thisWeekStart.day).add(const Duration(days: 6));
 

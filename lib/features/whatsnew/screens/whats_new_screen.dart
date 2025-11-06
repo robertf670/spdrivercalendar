@@ -21,11 +21,18 @@ class _WhatsNewScreenState extends State<WhatsNewScreen> {
   String _currentVersion = '';
   String? _lastSeenVersion;
   bool _isLoading = true;
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
     _loadVersion();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadVersion() async {
@@ -101,9 +108,15 @@ class _WhatsNewScreenState extends State<WhatsNewScreen> {
             : Column(
                 children: [
                   Expanded(
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
+                    child: Scrollbar(
+                      controller: _scrollController,
+                      thumbVisibility: true,
+                      thickness: 6,
+                      radius: const Radius.circular(3),
+                      child: SingleChildScrollView(
+                        controller: _scrollController,
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
@@ -124,6 +137,7 @@ class _WhatsNewScreenState extends State<WhatsNewScreen> {
                           ..._buildChangelogItems(),
                         ],
                       ),
+                    ),
                     ),
                   ),
                   Padding(

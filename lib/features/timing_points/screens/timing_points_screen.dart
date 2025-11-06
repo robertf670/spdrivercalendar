@@ -18,11 +18,18 @@ class TimingPointsScreenState extends State<TimingPointsScreen> {
   List<String> _availableRoutes = [];
   List<String> _availableDestinations = [];
   List<String> _currentTimingPoints = [];
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
     _loadTimingPoints();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadTimingPoints() async {
@@ -429,10 +436,16 @@ class TimingPointsScreenState extends State<TimingPointsScreen> {
           
                      // Timing points list
            Expanded(
-             child: ListView.builder(
-               padding: EdgeInsets.all(MediaQuery.of(context).size.width * 0.04),
-              itemCount: _currentTimingPoints.length,
-                             itemBuilder: (context, index) {
+             child: Scrollbar(
+               controller: _scrollController,
+               thumbVisibility: true,
+               thickness: 6,
+               radius: const Radius.circular(3),
+               child: ListView.builder(
+                 controller: _scrollController,
+                 padding: EdgeInsets.all(MediaQuery.of(context).size.width * 0.04),
+                 itemCount: _currentTimingPoints.length,
+                 itemBuilder: (context, index) {
                  final point = _currentTimingPoints[index];
                  
                  return Container(
@@ -476,8 +489,9 @@ class TimingPointsScreenState extends State<TimingPointsScreen> {
                      ],
                    ),
                  );
-              },
-            ),
+                 },
+               ),
+             ),
           ),
         ],
       ),

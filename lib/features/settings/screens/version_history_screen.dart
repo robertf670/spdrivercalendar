@@ -18,11 +18,18 @@ class _VersionHistoryScreenState extends State<VersionHistoryScreen> {
   bool _isLoading = true;
   bool _isCheckingUpdates = false;
   UpdateInfo? _updateInfo;
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
     _loadVersion();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadVersion() async {
@@ -113,10 +120,16 @@ class _VersionHistoryScreenState extends State<VersionHistoryScreen> {
                 
                 // Version list
                 Expanded(
-                  child: ListView.builder(
-                    padding: const EdgeInsets.all(16.0),
-                    itemCount: sortedVersions.length,
-                    itemBuilder: (context, index) {
+                  child: Scrollbar(
+                    controller: _scrollController,
+                    thumbVisibility: true,
+                    thickness: 6,
+                    radius: const Radius.circular(3),
+                    child: ListView.builder(
+                      controller: _scrollController,
+                      padding: const EdgeInsets.all(16.0),
+                      itemCount: sortedVersions.length,
+                      itemBuilder: (context, index) {
                       final version = sortedVersions[index];
                       final versionChanges = changelogData[version]!;
                       final isCurrentVersion = version == _currentVersion;
@@ -124,6 +137,7 @@ class _VersionHistoryScreenState extends State<VersionHistoryScreen> {
                       
                       return _buildVersionCard(version, versionChanges, isCurrentVersion, isLatestVersion);
                     },
+                    ),
                   ),
                 ),
               ],

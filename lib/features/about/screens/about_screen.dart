@@ -11,6 +11,14 @@ class AboutScreen extends StatefulWidget {
 }
 
 class AboutScreenState extends State<AboutScreen> with TextRenderingMixin {
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -18,9 +26,15 @@ class AboutScreenState extends State<AboutScreen> with TextRenderingMixin {
         title: const Text('About'),
         elevation: 0,
       ),
-      body: SingleChildScrollView(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
+      body: Scrollbar(
+        controller: _scrollController,
+        thumbVisibility: true,
+        thickness: 6,
+        radius: const Radius.circular(3),
+        child: SingleChildScrollView(
+          controller: _scrollController,
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
                 children: [
             // App Header
             _buildAppHeader(),
@@ -38,6 +52,7 @@ class AboutScreenState extends State<AboutScreen> with TextRenderingMixin {
             _buildDetailedFeatures(),
                   const SizedBox(height: 16),
           ],
+        ),
         ),
       ),
     );

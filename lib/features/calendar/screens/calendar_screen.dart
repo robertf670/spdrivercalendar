@@ -36,6 +36,7 @@ import 'package:spdrivercalendar/features/bills/screens/bills_screen.dart'; // I
 import 'package:spdrivercalendar/features/payscale/screens/payscale_screen.dart'; // Import the Payscale screen
 import 'package:spdrivercalendar/features/timing_points/screens/timing_points_screen.dart'; // Import the Timing Points screen
 import 'package:spdrivercalendar/features/calendar/screens/week_view_screen.dart'; // Import the Week View screen
+import 'package:spdrivercalendar/features/search/screens/search_screen.dart'; // Import the Search screen
 import 'package:uuid/uuid.dart';
 import 'package:spdrivercalendar/services/update_service.dart';
 import 'package:spdrivercalendar/core/widgets/enhanced_update_dialog.dart';
@@ -86,6 +87,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
   late AnimationController _animationController;
   bool _hasCheckedForUpdatesOnStartup = false;
   final Map<String, bool> _busTrackingLoading = {};
+  final ScrollController _scrollController = ScrollController();
   
   late Map<String, ShiftInfo> _shiftInfoMap;
 
@@ -306,6 +308,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
     }
   }
 
+
   Future<void> _loadSettings() async {
     final startDateString = await StorageService.getString(AppConstants.startDateKey);
     final startWeek = await StorageService.getInt(AppConstants.startWeekKey);
@@ -324,7 +327,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
       });
     }
   }
-
+  
   Future<void> _saveSettings() async {
     if (_startDate != null) {
       await StorageService.saveString(AppConstants.startDateKey, _startDate!.toIso8601String());
@@ -405,6 +408,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
   @override
   void dispose() {
     _animationController.dispose();
+    _scrollController.dispose();
     WidgetsBinding.instance.removeObserver(this);
     // Clear color change callback
     ColorCustomizationService.clearColorChangeCallback();
@@ -3203,8 +3207,15 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Spare Driver Calendar'),
+        title: Text(
+          MediaQuery.of(context).size.width < 400 ? 'Calendar' : 'Spare Driver Calendar',
+        ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.search),
+            tooltip: 'Search Shifts',
+            onPressed: _showSearchScreen,
+          ),
           IconButton(
             icon: const Icon(Icons.view_week),
             tooltip: 'Week View',
@@ -3286,33 +3297,40 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
               // Main content with dynamic padding based on banner presence
               Padding(
                 padding: EdgeInsets.only(top: hasActiveUpdates ? 90 : 0),
-                child: SingleChildScrollView(
-                  child: SafeArea(
-                    top: false, // Don't add top padding since we handle it with the banner
-                    child: Column(
-                      children: [
-                        // TableCalendar is now scrollable with the rest of the content
-                        _buildCalendar(),
-                        // The rest of the content
-                        const SizedBox(height: 16),
-                        if (_selectedDay != null && _startDate != null)
-                          Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
-                            child: ShiftDetailsCard(
-                              date: _selectedDay!,
-                              shift: getShiftForDate(_selectedDay!),
-                              shiftInfoMap: _shiftInfoMap,
-                              bankHoliday: getBankHoliday(_selectedDay!),
+                child: Scrollbar(
+                  controller: _scrollController,
+                  thumbVisibility: true,
+                  thickness: 6,
+                  radius: const Radius.circular(3),
+                  child: SingleChildScrollView(
+                    controller: _scrollController,
+                    child: SafeArea(
+                      top: false, // Don't add top padding since we handle it with the banner
+                      child: Column(
+                        children: [
+                          // TableCalendar is now scrollable with the rest of the content
+                          _buildCalendar(),
+                          // The rest of the content
+                          const SizedBox(height: 16),
+                          if (_selectedDay != null && _startDate != null)
+                            Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+                              child: ShiftDetailsCard(
+                                date: _selectedDay!,
+                                shift: getShiftForDate(_selectedDay!),
+                                shiftInfoMap: _shiftInfoMap,
+                                bankHoliday: getBankHoliday(_selectedDay!),
+                              ),
                             ),
-                          ),
-                        if (_selectedDay != null)
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                            child: _buildEventsList(),
-                          ),
-                        // Dynamic bottom padding that adapts to device navigation bar height
-                        SizedBox(height: MediaQuery.of(context).padding.bottom + 24),
-                      ],
+                          if (_selectedDay != null)
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                              child: _buildEventsList(),
+                            ),
+                          // Dynamic bottom padding that adapts to device navigation bar height
+                          SizedBox(height: MediaQuery.of(context).padding.bottom + 24),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -3810,7 +3828,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => SettingsScreen( // Ensure this points to SettingsScreen
+        builder: (context) => SettingsScreen(
           resetRestDaysCallback: _resetRestDays,
           isDarkModeNotifier: widget.isDarkModeNotifier, 
         ),
@@ -4679,6 +4697,22 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
     );
   }
   // --- END NEW TIMING POINTS FUNCTION ---
+
+  void _showSearchScreen() async {
+    final DateTime? selectedDate = await Navigator.of(context).push<DateTime>(
+      MaterialPageRoute(
+        builder: (context) => const SearchScreen(),
+      ),
+    );
+    
+    // If a date was returned from search, navigate to that date
+    if (selectedDate != null && mounted) {
+      setState(() {
+        _selectedDay = selectedDate;
+        _focusedDay = selectedDate;
+      });
+    }
+  }
 
   void _showWeekView() {
     Navigator.of(context).push(
