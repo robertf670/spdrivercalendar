@@ -1,9 +1,36 @@
 import 'package:flutter/material.dart';
 import 'admin_panel_screen.dart';
 import 'user_analytics_screen.dart';
+import '../../../core/services/storage_service.dart';
+import '../../../core/constants/app_constants.dart';
 
-class AdminDashboardScreen extends StatelessWidget {
+class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
+
+  @override
+  AdminDashboardScreenState createState() => AdminDashboardScreenState();
+}
+
+class AdminDashboardScreenState extends State<AdminDashboardScreen> {
+  bool _markedInEnabled = false;
+  String _markedInStatus = 'Shift';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadMarkedInSettings();
+  }
+
+  Future<void> _loadMarkedInSettings() async {
+    _markedInEnabled = await StorageService.getBool(AppConstants.markedInEnabledKey);
+    _markedInStatus = await StorageService.getString(AppConstants.markedInStatusKey) ?? 'Shift';
+    setState(() {});
+  }
+
+  Future<void> _saveMarkedInSettings() async {
+    await StorageService.saveBool(AppConstants.markedInEnabledKey, _markedInEnabled);
+    await StorageService.saveString(AppConstants.markedInStatusKey, _markedInStatus);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -74,6 +101,83 @@ class AdminDashboardScreen extends StatelessWidget {
                           color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
                         ),
                       ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+                // Marked In Settings Card
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: theme.cardColor,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: theme.shadowColor.withValues(alpha: 0.1),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.work_outline,
+                            color: theme.colorScheme.primary,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Marked In Status',
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      CheckboxListTile(
+                        title: const Text('Marked in:'),
+                        value: _markedInEnabled,
+                        onChanged: (value) {
+                          setState(() {
+                            _markedInEnabled = value ?? false;
+                          });
+                          _saveMarkedInSettings();
+                        },
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                      if (_markedInEnabled) ...[
+                        const SizedBox(height: 8),
+                        DropdownButtonFormField<String>(
+                          value: _markedInStatus,
+                          decoration: InputDecoration(
+                            labelText: 'Status Type',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          ),
+                          items: const [
+                            DropdownMenuItem(value: 'Shift', child: Text('Shift')),
+                            DropdownMenuItem(value: 'Bogey Static', child: Text('Bogey Static')),
+                            DropdownMenuItem(value: 'Bogey Rotate', child: Text('Bogey Rotate')),
+                            DropdownMenuItem(value: 'M-F', child: Text('M-F')),
+                            DropdownMenuItem(value: '4 Day', child: Text('4 Day')),
+                          ],
+                          onChanged: (value) {
+                            if (value != null) {
+                              setState(() {
+                                _markedInStatus = value;
+                              });
+                              _saveMarkedInSettings();
+                            }
+                          },
+                        ),
+                      ],
                     ],
                   ),
                 ),

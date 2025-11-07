@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import '../../../services/color_customization_service.dart';
+import '../../../core/services/storage_service.dart';
+import '../../../core/constants/app_constants.dart';
 import '../../../theme/app_theme.dart';
 
 class ColorCustomizationWidget extends StatefulWidget {
@@ -18,11 +20,28 @@ class ColorCustomizationWidget extends StatefulWidget {
 class _ColorCustomizationWidgetState extends State<ColorCustomizationWidget> {
   Map<String, Color> _currentColors = {};
   bool _hasCustomColors = false;
+  bool _isMFMarkedIn = false;
 
   @override
   void initState() {
     super.initState();
     _loadCurrentColors();
+    _loadMarkedInStatus();
+  }
+
+  Future<void> _loadMarkedInStatus() async {
+    final markedInEnabled = await StorageService.getBool(AppConstants.markedInEnabledKey);
+    final markedInStatus = await StorageService.getString(AppConstants.markedInStatusKey) ?? 'Shift';
+    setState(() {
+      _isMFMarkedIn = markedInEnabled && (markedInStatus == 'M-F' || markedInStatus == '4 Day');
+    });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Reload marked in status when screen becomes visible again
+    _loadMarkedInStatus();
   }
 
   void _loadCurrentColors() {
@@ -33,7 +52,7 @@ class _ColorCustomizationWidgetState extends State<ColorCustomizationWidget> {
   }
 
   Future<void> _showColorPicker(String shiftType, String shiftName) async {
-    Color selectedColor = _currentColors[shiftType]!;
+    Color selectedColor = _currentColors[shiftType] ?? _currentColors['E']!;
     
     await showDialog(
       context: context,
@@ -124,30 +143,93 @@ class _ColorCustomizationWidgetState extends State<ColorCustomizationWidget> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Show M-F or 4 Day marked in indicator if enabled
+                if (_isMFMarkedIn)
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
+                        width: 1,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.info_outline,
+                          size: 20,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: FutureBuilder<String?>(
+                            future: StorageService.getString(AppConstants.markedInStatusKey),
+                            builder: (context, snapshot) {
+                              final status = snapshot.data ?? 'Shift';
+                              String message;
+                              if (status == 'M-F') {
+                                message = 'M-F Marked In is active. The "Work" color will be used for Monday-Friday shifts.';
+                              } else if (status == '4 Day') {
+                                message = '4 Day Marked In is active. The "Work" color will be used for Friday-Monday shifts.';
+                              } else {
+                                message = 'Marked In is active. Only relevant shift colors are shown.';
+                              }
+                              return Text(
+                                message,
+                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: Theme.of(context).colorScheme.onSurface,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 // Color selection grid
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildColorTile('E', 'Early', _currentColors['E']!),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: _buildColorTile('L', 'Late', _currentColors['L']!),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildColorTile('M', 'Middle', _currentColors['M']!),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: _buildColorTile('R', 'Rest', _currentColors['R']!),
-                    ),
-                  ],
-                ),
+                // Show Early, Late, Middle only when M-F marked in is NOT enabled
+                if (!_isMFMarkedIn) ...[
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildColorTile('E', 'Early', _currentColors['E']!),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _buildColorTile('L', 'Late', _currentColors['L']!),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildColorTile('M', 'Middle', _currentColors['M']!),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _buildColorTile('R', 'Rest', _currentColors['R']!),
+                      ),
+                    ],
+                  ),
+                ] else ...[
+                  // When M-F marked in is enabled, only show Rest and Work
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildColorTile('R', 'Rest', _currentColors['R']!),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _buildColorTile('W', 'Work', _currentColors['W'] ?? _currentColors['E']!),
+                      ),
+                    ],
+                  ),
+                ],
                 const SizedBox(height: 16),
                 
                 // Reset button

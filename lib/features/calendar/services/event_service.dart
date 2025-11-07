@@ -154,7 +154,6 @@ class EventService {
             
             for (final eventData in eventsData) {
               try {
-                // DEBUG: Log busAssignments in the JSON data before Event.fromMap
                 if (eventData['title'] != null && eventData['title'].toString().startsWith('SP')) {
                   _logError('loadEventsForMonth', '📂 JSON DATA: ${eventData['title']} | busAssignments in JSON: ${eventData['busAssignments']} (${eventData['busAssignments'].runtimeType})');
                 }
@@ -163,7 +162,6 @@ class EventService {
                 if (_validateEventData(eventData)) {
                   final event = Event.fromMap(eventData);
                   
-                  // DEBUG: Log busAssignments after Event.fromMap
                   if (event.title.startsWith('SP')) {
                     _logError('loadEventsForMonth', '📂 AFTER FROMMAP: ${event.title} | busAssignments: ${event.busAssignments} (${event.busAssignments.runtimeType})');
                   }
@@ -1139,7 +1137,6 @@ class EventService {
           try {
             final eventMap = event.toMap();
             
-            // DEBUG: Log busAssignments in the map before JSON encoding
             if (event.title.startsWith('SP') && event.busAssignments != null) {
               _logError('saveEvents', '💾 EVENT MAP: ${event.title} | busAssignments in map: ${eventMap['busAssignments']} (${eventMap['busAssignments'].runtimeType})');
             }
@@ -1162,7 +1159,6 @@ class EventService {
       // Convert to JSON with error handling
       final jsonString = jsonEncode(encodedEvents);
       
-      // DEBUG: Check if any spare events with busAssignments exist in the JSON
       if (jsonString.contains('SP') && jsonString.contains('busAssignments')) {
         _logError('saveEvents', '💾 JSON CHECK: JSON contains SP events with busAssignments');
         // Look for a specific pattern to see if busAssignments are preserved

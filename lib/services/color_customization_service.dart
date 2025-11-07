@@ -7,12 +7,14 @@ class ColorCustomizationService {
   static const String _lateColorKey = 'custom_late_color';
   static const String _middleColorKey = 'custom_middle_color';
   static const String _restColorKey = 'custom_rest_color';
+  static const String _workColorKey = 'custom_work_color';
 
   // Default colors from AppTheme
   static const Color _defaultEarlyColor = Color(0xFF66BB6A);  // Green
   static const Color _defaultLateColor = Color(0xFFFF9800);   // Orange
   static const Color _defaultMiddleColor = Color(0xFF9575CD); // Purple
   static const Color _defaultRestColor = Color(0xFF42A5F5);   // Blue
+  static const Color _defaultWorkColor = Color(0xFF66BB6A);   // Green (same as Early)
 
   static Map<String, Color> _customColors = {};
   static bool _isInitialized = false;
@@ -31,6 +33,7 @@ class ColorCustomizationService {
       'L': Color(prefs.getInt(_lateColorKey) ?? _defaultLateColor.toARGB32()),
       'M': Color(prefs.getInt(_middleColorKey) ?? _defaultMiddleColor.toARGB32()),
       'R': Color(prefs.getInt(_restColorKey) ?? _defaultRestColor.toARGB32()),
+      'W': Color(prefs.getInt(_workColorKey) ?? _defaultWorkColor.toARGB32()),
     };
     
     _isInitialized = true;
@@ -50,7 +53,9 @@ class ColorCustomizationService {
   static Map<String, Color> getShiftColors() {
     if (!_isInitialized) {
       // Return default colors if not initialized
-      return Map.from(AppTheme.shiftColors);
+      final defaultColors = Map<String, Color>.from(AppTheme.shiftColors);
+      defaultColors['W'] = _defaultWorkColor;
+      return defaultColors;
     }
     return Map.from(_customColors);
   }
@@ -58,9 +63,10 @@ class ColorCustomizationService {
   /// Get color for a specific shift type
   static Color getColorForShift(String shiftType) {
     if (!_isInitialized) {
+      if (shiftType == 'W') return _defaultWorkColor;
       return AppTheme.shiftColors[shiftType] ?? _defaultRestColor;
     }
-    return _customColors[shiftType] ?? AppTheme.shiftColors[shiftType] ?? _defaultRestColor;
+    return _customColors[shiftType] ?? AppTheme.shiftColors[shiftType] ?? (shiftType == 'W' ? _defaultWorkColor : _defaultRestColor);
   }
 
   /// Set custom color for a shift type
@@ -83,6 +89,9 @@ class ColorCustomizationService {
       case 'R':
         await prefs.setInt(_restColorKey, color.toARGB32());
         break;
+      case 'W':
+        await prefs.setInt(_workColorKey, color.toARGB32());
+        break;
     }
     
     // Notify listeners of color changes
@@ -98,6 +107,7 @@ class ColorCustomizationService {
     await prefs.remove(_lateColorKey);
     await prefs.remove(_middleColorKey);
     await prefs.remove(_restColorKey);
+    await prefs.remove(_workColorKey);
     
     // Reset to default colors
     _customColors = {
@@ -105,6 +115,7 @@ class ColorCustomizationService {
       'L': _defaultLateColor,
       'M': _defaultMiddleColor,
       'R': _defaultRestColor,
+      'W': _defaultWorkColor,
     };
     
     // Notify listeners of color changes
@@ -118,7 +129,8 @@ class ColorCustomizationService {
     return _customColors['E'] != _defaultEarlyColor ||
            _customColors['L'] != _defaultLateColor ||
            _customColors['M'] != _defaultMiddleColor ||
-           _customColors['R'] != _defaultRestColor;
+           _customColors['R'] != _defaultRestColor ||
+           _customColors['W'] != _defaultWorkColor;
   }
 
   /// Get default colors map
@@ -128,6 +140,7 @@ class ColorCustomizationService {
       'L': _defaultLateColor,
       'M': _defaultMiddleColor,
       'R': _defaultRestColor,
+      'W': _defaultWorkColor,
     };
   }
 
@@ -139,6 +152,7 @@ class ColorCustomizationService {
         'L': _customColors['L']?.toARGB32(),
         'M': _customColors['M']?.toARGB32(),
         'R': _customColors['R']?.toARGB32(),
+        'W': _customColors['W']?.toARGB32(),
       }
     };
   }
@@ -152,6 +166,7 @@ class ColorCustomizationService {
       if (colorData['L'] != null) await setShiftColor('L', Color(colorData['L']));
       if (colorData['M'] != null) await setShiftColor('M', Color(colorData['M']));
       if (colorData['R'] != null) await setShiftColor('R', Color(colorData['R']));
+      if (colorData['W'] != null) await setShiftColor('W', Color(colorData['W']));
     }
   }
 } 

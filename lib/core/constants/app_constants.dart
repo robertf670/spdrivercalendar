@@ -27,6 +27,10 @@ class AppConstants {
   // Display Settings
   static const String showOvernightDutiesOnBothDaysKey = 'showOvernightDutiesOnBothDays';
 
+  // Marked In Status
+  static const String markedInEnabledKey = 'markedInEnabled';
+  static const String markedInStatusKey = 'markedInStatus';
+
   // Routes
   static const String splashRoute = '/splash';
   static const String welcomeRoute = '/welcome';

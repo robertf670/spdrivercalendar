@@ -96,8 +96,6 @@ class RosterService {
     // Get the shift for this day
     final shift = pattern[dayOfWeek];
 
-    // Debug info (using normalized dates)
-
 
 
     // if (daysSinceStart >= 0) {

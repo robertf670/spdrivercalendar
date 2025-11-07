@@ -36,10 +36,60 @@ class AddEventDialogState extends State<AddEventDialog> {
     );
   }
 
+  // Responsive sizing helper method
+  Map<String, double> _getResponsiveSizes(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    
+    // Very small screens (narrow phones)
+    if (screenWidth < 350) {
+      return {
+        'contentPadding': 12.0,        // Reduced from default ~16-20
+        'spacing': 12.0,                // Reduced from 16
+        'rowSpacing': 6.0,             // Reduced from 8
+        'dropdownPadding': 4.0,        // Reduced from 8
+        'titleSpacing': 10.0,           // Reduced spacing
+      };
+    }
+    // Small phones (like older iPhones)
+    else if (screenWidth < 400) {
+      return {
+        'contentPadding': 14.0,
+        'spacing': 14.0,
+        'rowSpacing': 7.0,
+        'dropdownPadding': 5.0,
+        'titleSpacing': 12.0,
+      };
+    }
+    // Mid-range phones (like Galaxy S23)
+    else if (screenWidth < 450) {
+      return {
+        'contentPadding': 16.0,
+        'spacing': 15.0,
+        'rowSpacing': 7.5,
+        'dropdownPadding': 6.0,
+        'titleSpacing': 14.0,
+      };
+    }
+    // Regular phones and larger
+    else {
+      return {
+        'contentPadding': 20.0,        // Default AlertDialog padding
+        'spacing': 16.0,                // Original size
+        'rowSpacing': 8.0,             // Original size
+        'dropdownPadding': 8.0,        // Original size
+        'titleSpacing': 16.0,          // Original size
+      };
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final sizes = _getResponsiveSizes(context);
+    final screenWidth = MediaQuery.of(context).size.width;
+    
     return AlertDialog(
       title: const Text('Add Event'),
+      contentPadding: EdgeInsets.all(sizes['contentPadding']!),
       content: SingleChildScrollView(
         child: Form(
           key: _formKey,
@@ -60,166 +110,344 @@ class AddEventDialogState extends State<AddEventDialog> {
                   return null;
                 },
               ),
-              const SizedBox(height: 16),
+              SizedBox(height: sizes['spacing']!),
               const Text('Start', style: TextStyle(fontWeight: FontWeight.bold)),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      child: Text(DateFormat('dd-MM-yyyy').format(_startDate)),
-                      onPressed: () async {
-                        final date = await showDatePicker(
-                          context: context,
-                          initialDate: _startDate,
-                          firstDate: DateTime.now().subtract(const Duration(days: 365)),
-                          lastDate: DateTime.now().add(const Duration(days: 365)),
-                        );
-                        if (date != null) {
-                          setState(() {
-                            _startDate = date;
-                            // Update end date if it's before start date
-                            if (_endDate.isBefore(_startDate)) {
-                              _endDate = _startDate;
+              SizedBox(height: sizes['titleSpacing']! * 0.25),
+              // Stack date and time vertically on very small screens
+              screenWidth < 350
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        OutlinedButton(
+                          child: Text(DateFormat('dd-MM-yyyy').format(_startDate)),
+                          onPressed: () async {
+                            final date = await showDatePicker(
+                              context: context,
+                              initialDate: _startDate,
+                              firstDate: DateTime.now().subtract(const Duration(days: 365)),
+                              lastDate: DateTime.now().add(const Duration(days: 365)),
+                            );
+                            if (date != null) {
+                              setState(() {
+                                _startDate = date;
+                                if (_endDate.isBefore(_startDate)) {
+                                  _endDate = _startDate;
+                                }
+                              });
                             }
-                          });
-                        }
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Row(
+                          },
+                        ),
+                        SizedBox(height: sizes['rowSpacing']!),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: DropdownButtonFormField<int>(
+                                decoration: InputDecoration(
+                                  labelText: 'H',
+                                  border: const OutlineInputBorder(),
+                                  contentPadding: EdgeInsets.symmetric(
+                                    horizontal: sizes['dropdownPadding']!,
+                                    vertical: sizes['dropdownPadding']!,
+                                  ),
+                                ),
+                                value: _startTime.hour,
+                                items: List.generate(24, (index) => index).map((hour) {
+                                  return DropdownMenuItem(
+                                    value: hour,
+                                    child: Text(hour.toString().padLeft(2, '0')),
+                                  );
+                                }).toList(),
+                                onChanged: (value) {
+                                  if (value != null) {
+                                    setState(() {
+                                      _startTime = TimeOfDay(hour: value, minute: _startTime.minute);
+                                    });
+                                  }
+                                },
+                              ),
+                            ),
+                            SizedBox(width: sizes['rowSpacing']! * 0.5),
+                            Expanded(
+                              child: DropdownButtonFormField<int>(
+                                decoration: InputDecoration(
+                                  labelText: 'M',
+                                  border: const OutlineInputBorder(),
+                                  contentPadding: EdgeInsets.symmetric(
+                                    horizontal: sizes['dropdownPadding']!,
+                                    vertical: sizes['dropdownPadding']!,
+                                  ),
+                                ),
+                                value: _startTime.minute,
+                                items: List.generate(60, (index) => index).map((minute) {
+                                  return DropdownMenuItem(
+                                    value: minute,
+                                    child: Text(minute.toString().padLeft(2, '0')),
+                                  );
+                                }).toList(),
+                                onChanged: (value) {
+                                  if (value != null) {
+                                    setState(() {
+                                      _startTime = TimeOfDay(hour: _startTime.hour, minute: value);
+                                    });
+                                  }
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    )
+                  : Row(
                       children: [
                         Expanded(
-                          child: DropdownButtonFormField<int>(
-                            decoration: const InputDecoration(
-                              labelText: 'H',
-                              border: OutlineInputBorder(),
-                              contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                            ),
-                            value: _startTime.hour,
-                            items: List.generate(24, (index) => index).map((hour) {
-                              return DropdownMenuItem(
-                                value: hour,
-                                child: Text(hour.toString().padLeft(2, '0')),
+                          child: OutlinedButton(
+                            child: Text(DateFormat('dd-MM-yyyy').format(_startDate)),
+                            onPressed: () async {
+                              final date = await showDatePicker(
+                                context: context,
+                                initialDate: _startDate,
+                                firstDate: DateTime.now().subtract(const Duration(days: 365)),
+                                lastDate: DateTime.now().add(const Duration(days: 365)),
                               );
-                            }).toList(),
-                            onChanged: (value) {
-                              if (value != null) {
+                              if (date != null) {
                                 setState(() {
-                                  _startTime = TimeOfDay(hour: value, minute: _startTime.minute);
+                                  _startDate = date;
+                                  if (_endDate.isBefore(_startDate)) {
+                                    _endDate = _startDate;
+                                  }
                                 });
                               }
                             },
                           ),
                         ),
-                        const SizedBox(width: 4),
+                        SizedBox(width: sizes['rowSpacing']!),
                         Expanded(
-                          child: DropdownButtonFormField<int>(
-                            decoration: const InputDecoration(
-                              labelText: 'M',
-                              border: OutlineInputBorder(),
-                              contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                            ),
-                            value: _startTime.minute,
-                            items: List.generate(60, (index) => index).map((minute) {
-                              return DropdownMenuItem(
-                                value: minute,
-                                child: Text(minute.toString().padLeft(2, '0')),
-                              );
-                            }).toList(),
-                            onChanged: (value) {
-                              if (value != null) {
-                                setState(() {
-                                  _startTime = TimeOfDay(hour: _startTime.hour, minute: value);
-                                });
-                              }
-                            },
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: DropdownButtonFormField<int>(
+                                  decoration: InputDecoration(
+                                    labelText: 'H',
+                                    border: const OutlineInputBorder(),
+                                    contentPadding: EdgeInsets.symmetric(
+                                      horizontal: sizes['dropdownPadding']!,
+                                      vertical: sizes['dropdownPadding']!,
+                                    ),
+                                  ),
+                                  value: _startTime.hour,
+                                  items: List.generate(24, (index) => index).map((hour) {
+                                    return DropdownMenuItem(
+                                      value: hour,
+                                      child: Text(hour.toString().padLeft(2, '0')),
+                                    );
+                                  }).toList(),
+                                  onChanged: (value) {
+                                    if (value != null) {
+                                      setState(() {
+                                        _startTime = TimeOfDay(hour: value, minute: _startTime.minute);
+                                      });
+                                    }
+                                  },
+                                ),
+                              ),
+                              SizedBox(width: sizes['rowSpacing']! * 0.5),
+                              Expanded(
+                                child: DropdownButtonFormField<int>(
+                                  decoration: InputDecoration(
+                                    labelText: 'M',
+                                    border: const OutlineInputBorder(),
+                                    contentPadding: EdgeInsets.symmetric(
+                                      horizontal: sizes['dropdownPadding']!,
+                                      vertical: sizes['dropdownPadding']!,
+                                    ),
+                                  ),
+                                  value: _startTime.minute,
+                                  items: List.generate(60, (index) => index).map((minute) {
+                                    return DropdownMenuItem(
+                                      value: minute,
+                                      child: Text(minute.toString().padLeft(2, '0')),
+                                    );
+                                  }).toList(),
+                                  onChanged: (value) {
+                                    if (value != null) {
+                                      setState(() {
+                                        _startTime = TimeOfDay(hour: _startTime.hour, minute: value);
+                                      });
+                                    }
+                                  },
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
+              SizedBox(height: sizes['spacing']!),
               const Text('End', style: TextStyle(fontWeight: FontWeight.bold)),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      child: Text(DateFormat('dd-MM-yyyy').format(_endDate)),
-                      onPressed: () async {
-                        final date = await showDatePicker(
-                          context: context,
-                          initialDate: _endDate,
-                          firstDate: _startDate,
-                          lastDate: DateTime.now().add(const Duration(days: 365)),
-                        );
-                        if (date != null) {
-                          setState(() {
-                            _endDate = date;
-                          });
-                        }
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Row(
+              SizedBox(height: sizes['titleSpacing']! * 0.25),
+              // Stack date and time vertically on very small screens
+              screenWidth < 350
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        OutlinedButton(
+                          child: Text(DateFormat('dd-MM-yyyy').format(_endDate)),
+                          onPressed: () async {
+                            final date = await showDatePicker(
+                              context: context,
+                              initialDate: _endDate,
+                              firstDate: _startDate,
+                              lastDate: DateTime.now().add(const Duration(days: 365)),
+                            );
+                            if (date != null) {
+                              setState(() {
+                                _endDate = date;
+                              });
+                            }
+                          },
+                        ),
+                        SizedBox(height: sizes['rowSpacing']!),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: DropdownButtonFormField<int>(
+                                decoration: InputDecoration(
+                                  labelText: 'H',
+                                  border: const OutlineInputBorder(),
+                                  contentPadding: EdgeInsets.symmetric(
+                                    horizontal: sizes['dropdownPadding']!,
+                                    vertical: sizes['dropdownPadding']!,
+                                  ),
+                                ),
+                                value: _endTime.hour,
+                                items: List.generate(24, (index) => index).map((hour) {
+                                  return DropdownMenuItem(
+                                    value: hour,
+                                    child: Text(hour.toString().padLeft(2, '0')),
+                                  );
+                                }).toList(),
+                                onChanged: (value) {
+                                  if (value != null) {
+                                    setState(() {
+                                      _endTime = TimeOfDay(hour: value, minute: _endTime.minute);
+                                    });
+                                  }
+                                },
+                              ),
+                            ),
+                            SizedBox(width: sizes['rowSpacing']! * 0.5),
+                            Expanded(
+                              child: DropdownButtonFormField<int>(
+                                decoration: InputDecoration(
+                                  labelText: 'M',
+                                  border: const OutlineInputBorder(),
+                                  contentPadding: EdgeInsets.symmetric(
+                                    horizontal: sizes['dropdownPadding']!,
+                                    vertical: sizes['dropdownPadding']!,
+                                  ),
+                                ),
+                                value: _endTime.minute,
+                                items: List.generate(60, (index) => index).map((minute) {
+                                  return DropdownMenuItem(
+                                    value: minute,
+                                    child: Text(minute.toString().padLeft(2, '0')),
+                                  );
+                                }).toList(),
+                                onChanged: (value) {
+                                  if (value != null) {
+                                    setState(() {
+                                      _endTime = TimeOfDay(hour: _endTime.hour, minute: value);
+                                    });
+                                  }
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    )
+                  : Row(
                       children: [
                         Expanded(
-                          child: DropdownButtonFormField<int>(
-                            decoration: const InputDecoration(
-                              labelText: 'H',
-                              border: OutlineInputBorder(),
-                              contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                            ),
-                            value: _endTime.hour,
-                            items: List.generate(24, (index) => index).map((hour) {
-                              return DropdownMenuItem(
-                                value: hour,
-                                child: Text(hour.toString().padLeft(2, '0')),
+                          child: OutlinedButton(
+                            child: Text(DateFormat('dd-MM-yyyy').format(_endDate)),
+                            onPressed: () async {
+                              final date = await showDatePicker(
+                                context: context,
+                                initialDate: _endDate,
+                                firstDate: _startDate,
+                                lastDate: DateTime.now().add(const Duration(days: 365)),
                               );
-                            }).toList(),
-                            onChanged: (value) {
-                              if (value != null) {
+                              if (date != null) {
                                 setState(() {
-                                  _endTime = TimeOfDay(hour: value, minute: _endTime.minute);
+                                  _endDate = date;
                                 });
                               }
                             },
                           ),
                         ),
-                        const SizedBox(width: 4),
+                        SizedBox(width: sizes['rowSpacing']!),
                         Expanded(
-                          child: DropdownButtonFormField<int>(
-                            decoration: const InputDecoration(
-                              labelText: 'M',
-                              border: OutlineInputBorder(),
-                              contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                            ),
-                            value: _endTime.minute,
-                            items: List.generate(60, (index) => index).map((minute) {
-                              return DropdownMenuItem(
-                                value: minute,
-                                child: Text(minute.toString().padLeft(2, '0')),
-                              );
-                            }).toList(),
-                            onChanged: (value) {
-                              if (value != null) {
-                                setState(() {
-                                  _endTime = TimeOfDay(hour: _endTime.hour, minute: value);
-                                });
-                              }
-                            },
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: DropdownButtonFormField<int>(
+                                  decoration: InputDecoration(
+                                    labelText: 'H',
+                                    border: const OutlineInputBorder(),
+                                    contentPadding: EdgeInsets.symmetric(
+                                      horizontal: sizes['dropdownPadding']!,
+                                      vertical: sizes['dropdownPadding']!,
+                                    ),
+                                  ),
+                                  value: _endTime.hour,
+                                  items: List.generate(24, (index) => index).map((hour) {
+                                    return DropdownMenuItem(
+                                      value: hour,
+                                      child: Text(hour.toString().padLeft(2, '0')),
+                                    );
+                                  }).toList(),
+                                  onChanged: (value) {
+                                    if (value != null) {
+                                      setState(() {
+                                        _endTime = TimeOfDay(hour: value, minute: _endTime.minute);
+                                      });
+                                    }
+                                  },
+                                ),
+                              ),
+                              SizedBox(width: sizes['rowSpacing']! * 0.5),
+                              Expanded(
+                                child: DropdownButtonFormField<int>(
+                                  decoration: InputDecoration(
+                                    labelText: 'M',
+                                    border: const OutlineInputBorder(),
+                                    contentPadding: EdgeInsets.symmetric(
+                                      horizontal: sizes['dropdownPadding']!,
+                                      vertical: sizes['dropdownPadding']!,
+                                    ),
+                                  ),
+                                  value: _endTime.minute,
+                                  items: List.generate(60, (index) => index).map((minute) {
+                                    return DropdownMenuItem(
+                                      value: minute,
+                                      child: Text(minute.toString().padLeft(2, '0')),
+                                    );
+                                  }).toList(),
+                                  onChanged: (value) {
+                                    if (value != null) {
+                                      setState(() {
+                                        _endTime = TimeOfDay(hour: _endTime.hour, minute: value);
+                                      });
+                                    }
+                                  },
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
                     ),
-                  ),
-                ],
-              ),
             ],
           ),
         ),

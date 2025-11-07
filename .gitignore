@@ -131,3 +131,11 @@ android/app/google-services.json
 
 # Security reminder files (local only)
 GOOGLE_API_KEY_SECURITY_REMINDER.md
+
+# Marked In Feature Progress (internal documentation)
+MARKED_IN_FEATURE_PROGRESS.md
+
+# Zone 1 Roster files (internal use, contains incorrect data)
+assets/zone1_shift_roster.csv
+assets/zone1rosterp1.jpg
+assets/zone1rosterp2.jpg

@@ -145,9 +145,54 @@ class StatisticsScreenState extends State<StatisticsScreen>
     }
   }
 
+  // Responsive sizing helper method
+  Map<String, double> _getResponsiveSizes(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    
+    // Very small screens (narrow phones)
+    if (screenWidth < 350) {
+      return {
+        'padding': 8.0,              // Reduced from 16
+        'cardPadding': 12.0,          // Reduced from 16
+        'cardSpacing': 12.0,          // Reduced from 16
+        'sectionSpacing': 8.0,        // Reduced spacing
+        'titleFontSize': 14.0,        // Reduced from 18
+      };
+    }
+    // Small phones (like older iPhones)
+    else if (screenWidth < 400) {
+      return {
+        'padding': 10.0,
+        'cardPadding': 14.0,
+        'cardSpacing': 14.0,
+        'sectionSpacing': 10.0,
+        'titleFontSize': 15.0,
+      };
+    }
+    // Mid-range phones (like Galaxy S23)
+    else if (screenWidth < 450) {
+      return {
+        'padding': 12.0,
+        'cardPadding': 15.0,
+        'cardSpacing': 15.0,
+        'sectionSpacing': 12.0,
+        'titleFontSize': 16.0,
+      };
+    }
+    // Regular phones and larger
+    else {
+      return {
+        'padding': 16.0,             // Original size
+        'cardPadding': 16.0,         // Original size
+        'cardSpacing': 16.0,         // Original size
+        'sectionSpacing': 16.0,      // Original size
+        'titleFontSize': 18.0,       // Original size
+      };
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    // REMOVE BASIC PRINT TEST
     super.build(context);
     
     // Check if TabController is initialized
@@ -193,6 +238,8 @@ class StatisticsScreenState extends State<StatisticsScreen>
   // --- Helper methods to build tab content --- 
 
   Widget _buildWorkTimeTab() {
+    final sizes = _getResponsiveSizes(context);
+    
     // Format helper for duration
     String formatDuration(Duration d) {
       if (d == Duration.zero) return "0h 0m";
@@ -212,13 +259,13 @@ class StatisticsScreenState extends State<StatisticsScreen>
       radius: const Radius.circular(3),
       child: SingleChildScrollView(
         controller: _workTimeScrollController,
-        padding: const EdgeInsets.all(16.0), // Padding around the card
+        padding: EdgeInsets.all(sizes['padding']!),
         child: Column( // Use Column to allow multiple Cards/Widgets
         children: [
           Card( // Card for standard work time stats
             elevation: 2.0, 
             child: Padding( 
-              padding: const EdgeInsets.all(16.0),
+              padding: EdgeInsets.all(sizes['cardPadding']!),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -245,12 +292,12 @@ class StatisticsScreenState extends State<StatisticsScreen>
               ),
             ),
           ),
-          const SizedBox(height: 16), // Spacing between cards
+          SizedBox(height: sizes['cardSpacing']!), // Spacing between cards
           // Card for Spread Statistics
           Card(
             elevation: 2.0, 
             child: Padding( 
-              padding: const EdgeInsets.all(16.0),
+              padding: EdgeInsets.all(sizes['cardPadding']!),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -277,12 +324,12 @@ class StatisticsScreenState extends State<StatisticsScreen>
               ),
             ),
           ),
-          const SizedBox(height: 16), // Spacing between cards
+          SizedBox(height: sizes['cardSpacing']!), // Spacing between cards
           // Card for Sunday Pair Statistics
           Card(
             elevation: 2.0,
             child: Padding(
-              padding: const EdgeInsets.all(16.0),
+              padding: EdgeInsets.all(sizes['cardPadding']!),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -384,6 +431,8 @@ class StatisticsScreenState extends State<StatisticsScreen>
   }
 
   Widget _buildSummaryTab() {
+    final sizes = _getResponsiveSizes(context);
+    
     return Scrollbar(
       controller: _summaryScrollController,
       thumbVisibility: true,
@@ -391,7 +440,7 @@ class StatisticsScreenState extends State<StatisticsScreen>
       radius: const Radius.circular(3),
       child: SingleChildScrollView(
         controller: _summaryScrollController,
-        padding: const EdgeInsets.all(16.0),
+        padding: EdgeInsets.all(sizes['padding']!),
         child: Column(
         children: [
           // Shift Type Summary Card
@@ -435,6 +484,8 @@ class StatisticsScreenState extends State<StatisticsScreen>
   }
 
   Widget _buildFrequencyTab() {
+    final sizes = _getResponsiveSizes(context);
+    
     return Scrollbar(
       controller: _frequencyScrollController,
       thumbVisibility: true,
@@ -442,11 +493,11 @@ class StatisticsScreenState extends State<StatisticsScreen>
       radius: const Radius.circular(3),
       child: SingleChildScrollView(
         controller: _frequencyScrollController,
-        padding: const EdgeInsets.all(16.0),
+        padding: EdgeInsets.all(sizes['padding']!),
         child: Card( 
         elevation: 2.0,
         child: Padding( 
-          padding: const EdgeInsets.all(16.0),
+          padding: EdgeInsets.all(sizes['cardPadding']!),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -456,10 +507,15 @@ class StatisticsScreenState extends State<StatisticsScreen>
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
-                      'Most Frequent Shifts (Mon-Fri)',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    Expanded(
+                      child: Text(
+                        'Most Frequent Shifts (Mon-Fri)',
+                        style: TextStyle(fontSize: sizes['titleFontSize']!, fontWeight: FontWeight.bold),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
+                    const SizedBox(width: 8),
                     DropdownButton<int>(
                       value: _numberOfShiftsToShow,
                       // Add styling for dark mode
@@ -500,10 +556,15 @@ class StatisticsScreenState extends State<StatisticsScreen>
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
-                      'Most Frequent Buses (All Time)',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    Expanded(
+                      child: Text(
+                        'Most Frequent Buses (All Time)',
+                        style: TextStyle(fontSize: sizes['titleFontSize']!, fontWeight: FontWeight.bold),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
+                    const SizedBox(width: 8),
                     DropdownButton<int>(
                       value: _numberOfBusesToShow,
                       // Add styling for dark mode
@@ -544,10 +605,15 @@ class StatisticsScreenState extends State<StatisticsScreen>
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
+                    Expanded(
+                      child: Text(
                         'Most Frequent Start Hours',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        style: TextStyle(fontSize: sizes['titleFontSize']!, fontWeight: FontWeight.bold),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
+                    ),
+                    const SizedBox(width: 8),
                     DropdownButton<int>(
                       value: _numberOfStartHoursToShow,
                       // Add styling for dark mode
@@ -768,18 +834,15 @@ class StatisticsScreenState extends State<StatisticsScreen>
   }
 
   Future<Duration> _calculateWorkTime(Event event) async {
-    // REMOVE start-of-function log
 
 
     if (!event.isWorkShift) {
-       // REMOVE log
 
       return Duration.zero;
     }
 
     // For spare duties (fixed 7h 38m) and 22B/01 (fixed 8h 30m)
     if (event.title.startsWith('SP')) {
-       // REMOVE log
 
       return const Duration(hours: 7, minutes: 38);
     }
@@ -791,13 +854,11 @@ class StatisticsScreenState extends State<StatisticsScreen>
 
     // For all other duties, rely on _loadWorkTimeFromCSV
     final dayOfWeek = await _getDayOfWeek(event.startDate);
-    // REMOVE log
 
     final workTime = await _loadWorkTimeFromCSV(event, dayOfWeek);
     
     // If CSV lookup succeeds, return the duration
     if (workTime != null) {
-       // REMOVE log
 
       return workTime;
     }
@@ -884,7 +945,6 @@ class StatisticsScreenState extends State<StatisticsScreen>
 
       // Ensure a filename was determined (or explicitly cleared by UNI logic)
       if (fileName.isEmpty && !isUniShift) { // Modified condition
-        // REMOVE log
 
         return null;
       }
@@ -899,7 +959,6 @@ class StatisticsScreenState extends State<StatisticsScreen>
       if (_csvWorkTimeCache.containsKey(fileName)) {
         final cachedFile = _csvWorkTimeCache[fileName]!;
         if (cachedFile.containsKey(shiftCode)) {
-          // REMOVE log
 
           return cachedFile[shiftCode];
         }
@@ -909,7 +968,6 @@ class StatisticsScreenState extends State<StatisticsScreen>
       }
 
       // 2. If not in cache (or shift not in cached file), load and parse the file
-      // REMOVE log
 
       final csvData = await rootBundle.loadString('assets/$fileName');
       final lines = csvData.split('\n'); 
@@ -941,8 +999,6 @@ class StatisticsScreenState extends State<StatisticsScreen>
                  if (startTime != null && endTime != null) {
                    duration = _calculateDuration(startTime, endTime);
                  } else {
-                    // REMOVE log
-
                  }
               }
             }
@@ -989,14 +1045,12 @@ class StatisticsScreenState extends State<StatisticsScreen>
 
       // 3. Store the parsed data in the cache (even if the specific shift wasn't found, cache the file)
       _csvWorkTimeCache[fileName] = parsedDurations;
-      // REMOVE log
 
 
       // 4. Return the requested duration from the now-cached data
       if (parsedDurations.containsKey(shiftCode)) {
          return parsedDurations[shiftCode];
       } else {
-         // REMOVE log
 
          return null;
       }
@@ -1215,8 +1269,7 @@ class StatisticsScreenState extends State<StatisticsScreen>
         }
       }
     } catch (e) {
-      // REMOVE log
-
+      // Silently handle time parsing errors - invalid format
     }
     return null;
   }
@@ -1283,7 +1336,6 @@ class StatisticsScreenState extends State<StatisticsScreen>
       return (yearEntry['holidays'] as List)
           .any((holiday) => holiday['date'] == dateStr);
     } catch (e) {
-      // REMOVE log
 
       return false;
     }
@@ -1795,7 +1847,6 @@ class StatisticsScreenState extends State<StatisticsScreen>
         });
       }
     } catch (e) {
-      // REMOVE log
 
       if (mounted) setState(() => _sundayStatsLoading = false);
     }

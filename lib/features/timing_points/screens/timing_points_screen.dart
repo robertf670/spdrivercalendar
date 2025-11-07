@@ -179,8 +179,76 @@ class TimingPointsScreenState extends State<TimingPointsScreen> {
     });
   }
 
+  // Responsive sizing helper method
+  Map<String, double> _getResponsiveSizes(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    
+    // Very small screens (narrow phones)
+    if (screenWidth < 350) {
+      return {
+        'padding': 8.0,              // Reduced from 5% (~17.5px)
+        'dropdownPadding': 6.0,      // Reduced from 4% (~14px)
+        'listPadding': 6.0,          // Reduced from 4% (~14px)
+        'headerPadding': 12.0,        // Reduced from 16
+        'spacing': 16.0,             // Reduced from 24
+      };
+    }
+    // Small phones (like older iPhones)
+    else if (screenWidth < 400) {
+      return {
+        'padding': 10.0,
+        'dropdownPadding': 8.0,
+        'listPadding': 8.0,
+        'headerPadding': 14.0,
+        'spacing': 18.0,
+      };
+    }
+    // Mid-range phones (like Galaxy S23)
+    else if (screenWidth < 450) {
+      return {
+        'padding': 12.0,
+        'dropdownPadding': 10.0,
+        'listPadding': 10.0,
+        'headerPadding': 15.0,
+        'spacing': 20.0,
+      };
+    }
+    // Regular phones
+    else if (screenWidth < 600) {
+      return {
+        'padding': 14.0,
+        'dropdownPadding': 12.0,
+        'listPadding': 12.0,
+        'headerPadding': 16.0,
+        'spacing': 22.0,
+      };
+    }
+    // Tablets
+    else if (screenWidth < 900) {
+      return {
+        'padding': 16.0,
+        'dropdownPadding': 14.0,
+        'listPadding': 14.0,
+        'headerPadding': 16.0,
+        'spacing': 24.0,
+      };
+    }
+    // Large tablets/desktop
+    else {
+      return {
+        'padding': 18.0,             // Slightly more than original 5%
+        'dropdownPadding': 16.0,     // Original 4% equivalent
+        'listPadding': 16.0,         // Original 4% equivalent
+        'headerPadding': 16.0,       // Original size
+        'spacing': 24.0,             // Original size
+      };
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final sizes = _getResponsiveSizes(context);
+    
     return Scaffold(
       appBar: AppBar(
         title: const Text('Route Timing Points'),
@@ -190,7 +258,7 @@ class TimingPointsScreenState extends State<TimingPointsScreen> {
         child: _isLoading
             ? const Center(child: CircularProgressIndicator())
             : Container(
-                padding: EdgeInsets.all(MediaQuery.of(context).size.width * 0.05),
+                padding: EdgeInsets.all(sizes['padding']!),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -208,7 +276,7 @@ class TimingPointsScreenState extends State<TimingPointsScreen> {
                           ),
                         ],
                       ),
-                                             padding: EdgeInsets.all(MediaQuery.of(context).size.width * 0.04),
+                      padding: EdgeInsets.all(sizes['dropdownPadding']!),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -231,15 +299,15 @@ class TimingPointsScreenState extends State<TimingPointsScreen> {
                               child: DropdownButton<String>(
                                 value: _selectedRoute.isEmpty ? null : _selectedRoute,
                                 isExpanded: true,
-                                icon: const Padding(
-                                  padding: EdgeInsets.only(right: 16.0),
-                                  child: Icon(Icons.arrow_drop_down_circle, color: AppTheme.primaryColor),
+                                icon: Padding(
+                                  padding: EdgeInsets.only(right: sizes['headerPadding']!),
+                                  child: const Icon(Icons.arrow_drop_down_circle, color: AppTheme.primaryColor),
                                 ),
                                 items: _availableRoutes.map((String value) {
                                   return DropdownMenuItem<String>(
                                     value: value,
                                     child: Padding(
-                                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                                      padding: EdgeInsets.symmetric(horizontal: sizes['headerPadding']!),
                                       child: Row(
                                         children: [
                                           const Icon(
@@ -287,15 +355,15 @@ class TimingPointsScreenState extends State<TimingPointsScreen> {
                               child: DropdownButton<String>(
                                 value: _selectedDestination.isEmpty ? null : _selectedDestination,
                                 isExpanded: true,
-                                icon: const Padding(
-                                  padding: EdgeInsets.only(right: 16.0),
-                                  child: Icon(Icons.arrow_drop_down_circle, color: AppTheme.primaryColor),
+                                icon: Padding(
+                                  padding: EdgeInsets.only(right: sizes['headerPadding']!),
+                                  child: const Icon(Icons.arrow_drop_down_circle, color: AppTheme.primaryColor),
                                 ),
                                 items: _availableDestinations.map((String value) {
                                   return DropdownMenuItem<String>(
                                     value: value,
                                     child: Padding(
-                                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                                      padding: EdgeInsets.symmetric(horizontal: sizes['headerPadding']!),
                                       child: Row(
                                         children: [
                                           const Icon(
@@ -330,7 +398,7 @@ class TimingPointsScreenState extends State<TimingPointsScreen> {
                       ),
                     ),
                     
-                    const SizedBox(height: 24),
+                    SizedBox(height: sizes['spacing']!),
                     
                     // Timing Points Display
                     Expanded(
@@ -344,6 +412,8 @@ class TimingPointsScreenState extends State<TimingPointsScreen> {
   }
 
   Widget _buildTimingPointsDisplay() {
+    final sizes = _getResponsiveSizes(context);
+    
     if (_selectedRoute.isEmpty) {
       return const Center(
         child: Text(
@@ -377,7 +447,7 @@ class TimingPointsScreenState extends State<TimingPointsScreen> {
         children: [
           // Header
           Container(
-            padding: const EdgeInsets.all(16.0),
+            padding: EdgeInsets.all(sizes['headerPadding']!),
             decoration: BoxDecoration(
               color: AppTheme.primaryColor.withValues(alpha: 0.1),
               borderRadius: const BorderRadius.only(
@@ -441,9 +511,9 @@ class TimingPointsScreenState extends State<TimingPointsScreen> {
                thumbVisibility: true,
                thickness: 6,
                radius: const Radius.circular(3),
-               child: ListView.builder(
-                 controller: _scrollController,
-                 padding: EdgeInsets.all(MediaQuery.of(context).size.width * 0.04),
+              child: ListView.builder(
+                controller: _scrollController,
+                padding: EdgeInsets.all(sizes['listPadding']!),
                  itemCount: _currentTimingPoints.length,
                  itemBuilder: (context, index) {
                  final point = _currentTimingPoints[index];

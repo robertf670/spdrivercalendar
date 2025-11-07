@@ -87,10 +87,61 @@ class _VersionHistoryScreenState extends State<VersionHistoryScreen> {
     }
   }
 
+  // Responsive sizing helper method
+  Map<String, double> _getResponsiveSizes(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    
+    // Very small screens (narrow phones)
+    if (screenWidth < 350) {
+      return {
+        'padding': 8.0,              // Reduced from 16
+        'cardPadding': 12.0,          // Reduced from 16
+        'cardMargin': 12.0,          // Reduced from 16
+        'bannerPadding': 12.0,       // Reduced from 16
+        'bannerMargin': 8.0,          // Reduced from 16
+        'spacing': 8.0,              // Reduced from 12
+      };
+    }
+    // Small phones (like older iPhones)
+    else if (screenWidth < 400) {
+      return {
+        'padding': 10.0,
+        'cardPadding': 14.0,
+        'cardMargin': 14.0,
+        'bannerPadding': 14.0,
+        'bannerMargin': 10.0,
+        'spacing': 10.0,
+      };
+    }
+    // Mid-range phones (like Galaxy S23)
+    else if (screenWidth < 450) {
+      return {
+        'padding': 12.0,
+        'cardPadding': 15.0,
+        'cardMargin': 15.0,
+        'bannerPadding': 15.0,
+        'bannerMargin': 12.0,
+        'spacing': 11.0,
+      };
+    }
+    // Regular phones and larger
+    else {
+      return {
+        'padding': 16.0,             // Original size
+        'cardPadding': 16.0,         // Original size
+        'cardMargin': 16.0,         // Original size
+        'bannerPadding': 16.0,      // Original size
+        'bannerMargin': 16.0,       // Original size
+        'spacing': 12.0,            // Original size
+      };
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final sortedVersions = changelogData.keys.toList()
       ..sort((a, b) => _compareVersions(b, a));
+    final sizes = _getResponsiveSizes(context);
 
     return Scaffold(
       appBar: AppBar(
@@ -116,7 +167,7 @@ class _VersionHistoryScreenState extends State<VersionHistoryScreen> {
               children: [
                 // Update availability banner
                 if (_updateInfo != null && _updateInfo!.hasUpdate)
-                  _buildUpdateBanner(),
+                  _buildUpdateBanner(sizes),
                 
                 // Version list
                 Expanded(
@@ -127,7 +178,7 @@ class _VersionHistoryScreenState extends State<VersionHistoryScreen> {
                     radius: const Radius.circular(3),
                     child: ListView.builder(
                       controller: _scrollController,
-                      padding: const EdgeInsets.all(16.0),
+                      padding: EdgeInsets.all(sizes['padding']!),
                       itemCount: sortedVersions.length,
                       itemBuilder: (context, index) {
                       final version = sortedVersions[index];
@@ -135,7 +186,7 @@ class _VersionHistoryScreenState extends State<VersionHistoryScreen> {
                       final isCurrentVersion = version == _currentVersion;
                       final isLatestVersion = _updateInfo?.latestVersion == version;
                       
-                      return _buildVersionCard(version, versionChanges, isCurrentVersion, isLatestVersion);
+                      return _buildVersionCard(version, versionChanges, isCurrentVersion, isLatestVersion, sizes);
                     },
                     ),
                   ),
@@ -145,12 +196,12 @@ class _VersionHistoryScreenState extends State<VersionHistoryScreen> {
     );
   }
 
-  Widget _buildUpdateBanner() {
+  Widget _buildUpdateBanner(Map<String, double> sizes) {
     if (_updateInfo == null || !_updateInfo!.hasUpdate) return const SizedBox.shrink();
     
     return Container(
-      margin: const EdgeInsets.all(16.0),
-      padding: const EdgeInsets.all(16.0),
+      margin: EdgeInsets.all(sizes['bannerMargin']!),
+      padding: EdgeInsets.all(sizes['bannerPadding']!),
       decoration: BoxDecoration(
         color: Colors.blue.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
@@ -192,9 +243,11 @@ class _VersionHistoryScreenState extends State<VersionHistoryScreen> {
     );
   }
 
-  Widget _buildVersionCard(String version, List<Map<String, String>> changes, bool isCurrentVersion, [bool isLatestVersion = false]) {
+  Widget _buildVersionCard(String version, List<Map<String, String>> changes, bool isCurrentVersion, [bool isLatestVersion = false, Map<String, double>? sizes]) {
+    final cardSizes = sizes ?? _getResponsiveSizes(context);
+    
     return Card(
-      margin: const EdgeInsets.only(bottom: 16.0),
+      margin: EdgeInsets.only(bottom: cardSizes['cardMargin']!),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppTheme.borderRadius),
         side: isCurrentVersion
@@ -202,7 +255,7 @@ class _VersionHistoryScreenState extends State<VersionHistoryScreen> {
             : BorderSide.none,
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: EdgeInsets.all(cardSizes['cardPadding']!),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -256,13 +309,13 @@ class _VersionHistoryScreenState extends State<VersionHistoryScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 12.0),
+            SizedBox(height: cardSizes['spacing']!),
             if (changes.isEmpty)
               const Text('No specific changes listed for this version.')
             else
               ...changes.map((change) {
                 return Padding(
-                  padding: const EdgeInsets.only(bottom: 8.0),
+                  padding: EdgeInsets.only(bottom: cardSizes['spacing']! * 0.67),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [

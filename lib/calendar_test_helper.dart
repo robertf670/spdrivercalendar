@@ -690,17 +690,6 @@ class CalendarTestHelper {
 
       final localEvents = _getEventsInRange(startDate, endDate);
 
-      
-      // Debug: Print first few local events
-      for (int i = 0; i < localEvents.take(3).length; i++) {
-        // Local event logged for debugging
-      }
-      
-      // Debug: Print first few Google events
-      for (int i = 0; i < googleEvents.take(3).length; i++) {
-        // Google event logged for debugging
-      }
-      
       // Compare and find missing events
       final missingSyncEvents = <Map<String, dynamic>>[];
       int matchedCount = 0;
