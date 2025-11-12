@@ -1,4 +1,10 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.15.19': [
+    {
+      'title': 'Updated Times for Universal Duty 307/05',
+      'description': 'Updated duty times for shift 307/05 in UNI_M-F.csv.',
+    },
+  ],
   '2.15.18': [
     {
       'title': 'Route Update for Universal Duty 807/18',
