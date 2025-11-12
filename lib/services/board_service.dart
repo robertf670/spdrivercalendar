@@ -10,14 +10,13 @@ class BoardService {
     final isBankHoliday = ShiftService.getBankHoliday(date, ShiftService.bankHolidays) != null;
     
     // Determine which CSV file to load based on the day of the week
+    // Saturday service dates take precedence over bank holidays
     String fileName;
-    if (isBankHoliday) {
-      // Use Sunday board for bank holidays
-      fileName = 'assets/Zone3BoardsSun.csv';
-    } else if (RosterService.isSaturdayService(date) || date.weekday == DateTime.saturday) {
+    if (RosterService.isSaturdayService(date) || date.weekday == DateTime.saturday) {
       // Use Saturday board for actual Saturdays and special Saturday service dates
       fileName = 'assets/Zone3BoardsSat.csv';
-    } else if (date.weekday == DateTime.sunday) {
+    } else if (isBankHoliday || date.weekday == DateTime.sunday) {
+      // Use Sunday board for bank holidays and actual Sundays
       fileName = 'assets/Zone3BoardsSun.csv';
     } else {
       fileName = 'assets/Zone3BoardsMF.csv';

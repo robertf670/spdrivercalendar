@@ -1288,14 +1288,15 @@ class StatisticsScreenState extends State<StatisticsScreen>
   }
 
   Future<String> _getDayOfWeek(DateTime date) async {
-    // First check if it's a Bank Holiday
-    if (await isBankHoliday(date)) {
-      return 'SUN';  // Bank Holidays use Sunday duty times
-    }
-    
-    // Check if this is a special Saturday service date (Dec 29-31, Jan 2)
+    // Check if this is a special Saturday service date first (takes precedence over bank holidays)
+    // Dec 29-31 run Saturday service even if they're bank holidays
     if (RosterService.isSaturdayService(date)) {
       return 'SAT';
+    }
+    
+    // Then check if it's a Bank Holiday
+    if (await isBankHoliday(date)) {
+      return 'SUN';  // Bank Holidays use Sunday duty times
     }
     
     // Then check regular weekdays

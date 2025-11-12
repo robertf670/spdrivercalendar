@@ -126,11 +126,6 @@ class RosterService {
       return true;
     }
     
-    // January 2 runs Saturday service
-    if (month == 1 && day == 2) {
-      return true;
-    }
-    
     return false;
   }
   
@@ -161,17 +156,19 @@ class RosterService {
     // Check if it's a bank holiday
     final isBankHoliday = ShiftService.bankHolidays.any((holiday) => holiday.matchesDate(date));
     
+    // Check if this date should run Saturday service (takes precedence over bank holiday)
+    // Special dates like Dec 29-31 run Saturday service even if they're bank holidays
+    final isSaturdayServiceDate = isSaturdayService(date);
+    
     // Zone 4 Route 23/24 changeover date: October 19, 2025
     final route2324ChangeoverDate = DateTime(2025, 10, 19);
     final isZone4NewSchedule = zoneNumber == '4' && !date.isBefore(route2324ChangeoverDate);
     
     // For Zone 4 on or after October 19, 2025, use Route 23/24 files
     if (isZone4NewSchedule) {
-      if (isBankHoliday) {
-        return 'SUN_ROUTE2324.csv';
-      } else if (dayOfWeek == 'SAT') {
+      if (isSaturdayServiceDate || dayOfWeek == 'SAT') {
         return 'SAT_ROUTE2324.csv';
-      } else if (dayOfWeek == 'SUN') {
+      } else if (isBankHoliday || dayOfWeek == 'SUN') {
         return 'SUN_ROUTE2324.csv';
       } else {
         return 'M-F_ROUTE2324.csv';
@@ -189,12 +186,11 @@ class RosterService {
         // or allow the file load to fail naturally later.
     }
     
-    if (isBankHoliday) {
-      // Use Sunday duties for bank holidays, with the direct PZ suffix
-      return 'SUN_DUTIES_$pzFileSuffix.csv';
-    } else if (dayOfWeek == 'SAT') {
+    // Saturday service dates take precedence over bank holidays
+    if (isSaturdayServiceDate || dayOfWeek == 'SAT') {
       return 'SAT_DUTIES_$pzFileSuffix.csv';
-    } else if (dayOfWeek == 'SUN') {
+    } else if (isBankHoliday || dayOfWeek == 'SUN') {
+      // Use Sunday duties for bank holidays, with the direct PZ suffix
       return 'SUN_DUTIES_$pzFileSuffix.csv';
     } else {
       return 'M-F_DUTIES_$pzFileSuffix.csv';

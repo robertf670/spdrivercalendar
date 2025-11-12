@@ -397,7 +397,12 @@ class RouteInfo {
         return '23/24';
       }
       
-      // Always show both routes with bullet separator (even if they're the same)
+      // If both routes are the same, show just one (e.g., "C • C" -> "C")
+      if (first == second && first.isNotEmpty) {
+        return first;
+      }
+      
+      // Show both routes with bullet separator
       return '$first • $second';
     }
   }
@@ -409,7 +414,8 @@ class RouteInfo {
     // Remove " N-Service" suffix
     String cleanRoute = route.replaceAll(' N-Service', '').trim();
     
-    // Convert "C1-C2" or "C1/C2" to "C"
+    // Convert "C1-C2" or "C1/C2" to "C" (only for compound routes with separators)
+    // This matches PZ1 behavior where location codes like "C1/C2-BWALK" become "C"
     if (cleanRoute.startsWith('C') && (cleanRoute.contains('-') || cleanRoute.contains('/'))) {
       return "C";
     }
