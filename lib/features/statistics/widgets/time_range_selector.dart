@@ -66,7 +66,11 @@ class TimeRangeSelector extends StatelessWidget {
       case 'Last Week':
       case 'This Month':
       case 'Last Month':
-        return Icons.calendar_month; // Consolidate similar icons
+      case 'Last 3 Months':
+      case 'Last 6 Months':
+        return Icons.calendar_month;
+      case 'This Year':
+        return Icons.calendar_today;
       case 'All Time':
         return Icons.history;
       default:

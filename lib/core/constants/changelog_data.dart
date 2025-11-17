@@ -1,4 +1,18 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.15.20': [
+    {
+      'title': 'Spread Pay Estimate Feature',
+      'description': 'Added pay estimate calculations to Spread Statistics. Users can now see estimated earnings for spread time worked (time over 10 hours on M-F duties). Pay estimates are displayed below the time duration for "This Week" and "Last Week" periods. Added pay rate selector in Settings (App section) with options for all years. Estimates are only shown when spread time is greater than zero.',
+    },
+    {
+      'title': 'Sick Days Statistics Feature',
+      'description': 'Implemented comprehensive sick days statistics tracking. Users can now view detailed breakdowns of sick days by type (Normal Sick, Self-Certified, Force Majeure) with totals and percentages. Statistics are available for multiple time periods: This Month, Last Month, Last 3 Months, Last 6 Months, Jan-Jun, Jul-Dec, This Year, and Last Year. Features visual breakdown bars with color-coded segments and percentage calculations.',
+    },
+    {
+      'title': 'Fixed Late Break Persistence',
+      'description': 'Fixed an issue where late break status (hasLateBreak, tookFullBreak, overtimeDuration) was not persisting correctly after app closure. The update now explicitly preserves all break-related fields during event updates.',
+    },
+  ],
   '2.15.19': [
     {
       'title': 'Updated Times for Universal Duty 307/05',

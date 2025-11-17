@@ -16,6 +16,7 @@ import 'package:intl/intl.dart'; // For DateFormat
 import 'package:spdrivercalendar/features/settings/widgets/color_customization_widget.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:spdrivercalendar/features/calendar/services/event_service.dart';
+import 'package:spdrivercalendar/services/pay_scale_service.dart';
 import '../../../config/app_config.dart';
 
 // Define Preference Keys for Notifications (Consider moving to AppConstants if not already there)
@@ -55,6 +56,9 @@ class SettingsScreenState extends State<SettingsScreen> {
   
   // Display settings
   bool _showOvernightDutiesOnBothDays = true; // Default to true to preserve current behavior
+  
+  // Pay rate setting
+  String _spreadPayRate = 'year1+2'; // Default to Year 1/2
   
   // Expandable sections state
   final Map<String, bool> _expandedSections = {
@@ -134,6 +138,9 @@ class SettingsScreenState extends State<SettingsScreen> {
     
     // Load display settings - default to true to preserve current behavior
     _showOvernightDutiesOnBothDays = prefs.getBool(AppConstants.showOvernightDutiesOnBothDaysKey) ?? true;
+    
+    // Load pay rate setting - default to Year 1/2
+    _spreadPayRate = prefs.getString(AppConstants.spreadPayRateKey) ?? 'year1+2';
 
     setState(() {
       _isLoading = false;
@@ -288,6 +295,7 @@ class SettingsScreenState extends State<SettingsScreen> {
                     title: 'App',
                     icon: Icons.apps,
                     children: [
+                      _buildPayRateDropdown(),
                       _buildFeedbackButton(),
                       _buildLiveUpdatesPreferencesButton(),
                       _buildVersionHistoryButton(),
@@ -622,6 +630,38 @@ class SettingsScreenState extends State<SettingsScreen> {
       context,
       MaterialPageRoute(
         builder: (context) => const GoogleCalendarHelpScreen(),
+      ),
+    );
+  }
+
+  Widget _buildPayRateDropdown() {
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 4.0),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppTheme.borderRadius),
+      ),
+      child: ListTile(
+        leading: const Icon(Icons.attach_money),
+        title: const Text('Spread Pay Rate'),
+        subtitle: const Text('Select your pay rate for spread calculations'),
+        trailing: DropdownButton<String>(
+          value: _spreadPayRate,
+          onChanged: (String? newValue) async {
+            if (newValue != null && newValue != _spreadPayRate) {
+              setState(() {
+                _spreadPayRate = newValue;
+              });
+              await StorageService.saveString(AppConstants.spreadPayRateKey, newValue);
+            }
+          },
+          items: PayScaleService.getYearLevelOptions()
+              .map<DropdownMenuItem<String>>((String value) {
+            return DropdownMenuItem<String>(
+              value: value,
+              child: Text(PayScaleService.getYearLevelDisplayName(value)),
+            );
+          }).toList(),
+        ),
       ),
     );
   }

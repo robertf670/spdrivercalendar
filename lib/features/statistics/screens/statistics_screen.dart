@@ -13,6 +13,7 @@ import '../widgets/shift_type_summary_card.dart';
 import '../widgets/work_time_stats_card.dart';
 import '../widgets/spread_statistics_card.dart';
 import '../widgets/break_statistics_card.dart';
+import '../widgets/sick_days_statistics_card.dart';
 
 enum ShiftType {
   early,   // 04:00 - 09:59
@@ -43,12 +44,23 @@ class StatisticsScreenState extends State<StatisticsScreen>
   
   String _timeRange = 'This Week';
   String _breakTimeRange = 'This Week';
+  String _sickDaysTimeRange = 'This Month';
   final List<String> _timeRanges = [
     'This Week', 
     'Last Week', 
     'This Month', 
     'Last Month', 
     'All Time'
+  ];
+  final List<String> _sickDaysTimeRanges = [
+    'This Month',
+    'Last Month',
+    'Last 3 Months',
+    'Last 6 Months',
+    'Jan-Jun',
+    'Jul-Dec',
+    'This Year',
+    'Last Year',
   ];
 
   // State for bus frequency display
@@ -472,8 +484,19 @@ class StatisticsScreenState extends State<StatisticsScreen>
             },
           ),
           
-          // Sick Days Statistics Card (Placeholder)
-          _buildSickDaysPlaceholderCard(),
+          // Sick Days Statistics Card
+          SickDaysStatisticsCard(
+            sickStats: _calculateSickDaysStatistics(),
+            currentRange: _sickDaysTimeRange,
+            availableRanges: _sickDaysTimeRanges,
+            onChanged: (newRange) {
+              if (newRange != null) {
+                setState(() {
+                  _sickDaysTimeRange = newRange;
+                });
+              }
+            },
+          ),
           
           // Work Time Stats Card
           // ... existing code ...
@@ -2025,77 +2048,108 @@ class StatisticsScreenState extends State<StatisticsScreen>
     };
   }
   
-  Widget _buildSickDaysPlaceholderCard() {
-    return Card(
-      elevation: 2,
-      margin: const EdgeInsets.symmetric(vertical: 8.0),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(
-                  Icons.sick,
-                  color: Theme.of(context).colorScheme.primary,
-                  size: 24,
-                ),
-                const SizedBox(width: 8),
-                const Text(
-                  'Sick Days Statistics',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Center(
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 24.0, horizontal: 16.0),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
-                    width: 1,
-                  ),
-                ),
-                child: Column(
-                  children: [
-                    Icon(
-                      Icons.construction,
-                      size: 48,
-                      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.6),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      'Coming Soon',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: Theme.of(context).colorScheme.onSurface,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Sick days statistics will be implemented shortly',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontStyle: FontStyle.italic,
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+  // Calculate sick days statistics
+  Map<String, dynamic> _calculateSickDaysStatistics() {
+    final DateTime now = DateTime.now();
+    
+    // This month
+    final thisMonthStart = DateTime(now.year, now.month, 1);
+    final thisMonthEnd = (now.month < 12)
+        ? DateTime(now.year, now.month + 1, 1).subtract(const Duration(days: 1))
+        : DateTime(now.year + 1, 1, 1).subtract(const Duration(days: 1));
+    
+    // Last month
+    DateTime lastMonthStart;
+    DateTime lastMonthEnd;
+    if (now.month > 1) {
+      lastMonthStart = DateTime(now.year, now.month - 1, 1);
+      lastMonthEnd = DateTime(now.year, now.month, 1).subtract(const Duration(days: 1));
+    } else {
+      lastMonthStart = DateTime(now.year - 1, 12, 1);
+      lastMonthEnd = DateTime(now.year, 1, 1).subtract(const Duration(days: 1));
+    }
+    
+    // Last 3 months (including current month)
+    DateTime last3MonthsStart;
+    if (now.month >= 3) {
+      last3MonthsStart = DateTime(now.year, now.month - 2, 1);
+    } else {
+      last3MonthsStart = DateTime(now.year - 1, 12 + now.month - 2, 1);
+    }
+    final last3MonthsEnd = thisMonthEnd;
+    
+    // Last 6 months (including current month)
+    DateTime last6MonthsStart;
+    if (now.month >= 6) {
+      last6MonthsStart = DateTime(now.year, now.month - 5, 1);
+    } else {
+      last6MonthsStart = DateTime(now.year - 1, 12 + now.month - 5, 1);
+    }
+    final last6MonthsEnd = thisMonthEnd;
+    
+    // Jan-Jun (January 1 to June 30 of current year)
+    final janJunStart = DateTime(now.year, 1, 1);
+    final janJunEnd = DateTime(now.year, 6, 30);
+    
+    // Jul-Dec (July 1 to December 31 of current year)
+    final julDecStart = DateTime(now.year, 7, 1);
+    final julDecEnd = DateTime(now.year, 12, 31);
+    
+    // This year (January 1 to December 31)
+    final thisYearStart = DateTime(now.year, 1, 1);
+    final thisYearEnd = DateTime(now.year, 12, 31);
+    
+    // Last year (January 1 to December 31 of previous year)
+    final lastYearStart = DateTime(now.year - 1, 1, 1);
+    final lastYearEnd = DateTime(now.year - 1, 12, 31);
+    
+    // Get all events with sick day status
+    final List<Event> eventsWithSickDays = [];
+    final Set<String> processedIds = {};
+    
+    widget.events.forEach((date, dayEvents) {
+      for (final event in dayEvents) {
+        // Only add events that have a sick day type and haven't been processed yet
+        if (event.sickDayType != null && !processedIds.contains(event.id)) {
+          processedIds.add(event.id);
+          eventsWithSickDays.add(event);
+        }
+      }
+    });
+    
+    // Calculate statistics for each period
+    return {
+      'thismonth': _calculateSickDaysStatsForPeriod(eventsWithSickDays, thisMonthStart, thisMonthEnd),
+      'lastmonth': _calculateSickDaysStatsForPeriod(eventsWithSickDays, lastMonthStart, lastMonthEnd),
+      'last3months': _calculateSickDaysStatsForPeriod(eventsWithSickDays, last3MonthsStart, last3MonthsEnd),
+      'last6months': _calculateSickDaysStatsForPeriod(eventsWithSickDays, last6MonthsStart, last6MonthsEnd),
+      'janjun': _calculateSickDaysStatsForPeriod(eventsWithSickDays, janJunStart, janJunEnd),
+      'juldec': _calculateSickDaysStatsForPeriod(eventsWithSickDays, julDecStart, julDecEnd),
+      'thisyear': _calculateSickDaysStatsForPeriod(eventsWithSickDays, thisYearStart, thisYearEnd),
+      'lastyear': _calculateSickDaysStatsForPeriod(eventsWithSickDays, lastYearStart, lastYearEnd),
+    };
+  }
+  
+  Map<String, dynamic> _calculateSickDaysStatsForPeriod(
+    List<Event> events, DateTime startDate, DateTime endDate) {
+    
+    // Filter by date range
+    final filteredEvents = events.where((event) {
+      final eventDate = DateTime(event.startDate.year, event.startDate.month, event.startDate.day);
+      return !eventDate.isBefore(startDate) && !eventDate.isAfter(endDate);
+    }).toList();
+    
+    // Count by type
+    int total = filteredEvents.length;
+    int normal = filteredEvents.where((e) => e.sickDayType == 'normal').length;
+    int selfCertified = filteredEvents.where((e) => e.sickDayType == 'self-certified').length;
+    int forceMajeure = filteredEvents.where((e) => e.sickDayType == 'force-majeure').length;
+    
+    return {
+      'total': total,
+      'normal': normal,
+      'selfCertified': selfCertified,
+      'forceMajeure': forceMajeure,
+    };
   }
 }

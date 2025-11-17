@@ -819,7 +819,16 @@ class EventService {
     
     // Ensure new event has an ID, preferably the same as the old one
     final eventId = oldEvent.id.isNotEmpty ? oldEvent.id : newEvent.id.isNotEmpty ? newEvent.id : DateTime.now().millisecondsSinceEpoch.toString();
-    final newEventWithId = newEvent.copyWith(id: eventId);
+    
+    // CRITICAL FIX: Ensure all fields from newEvent are preserved, especially hasLateBreak, tookFullBreak, overtimeDuration
+    // Use copyWith to ensure we have a clean copy with all fields properly set
+    final newEventWithId = newEvent.copyWith(
+      id: eventId,
+      // Explicitly preserve all break-related fields
+      hasLateBreak: newEvent.hasLateBreak,
+      tookFullBreak: newEvent.tookFullBreak,
+      overtimeDuration: newEvent.overtimeDuration,
+    );
 
     // Normalize dates for searching in the cache
     final normalizedOldStartDate = DateTime(oldEvent.startDate.year, oldEvent.startDate.month, oldEvent.startDate.day);
@@ -1000,11 +1009,14 @@ class EventService {
     if (_events.containsKey(_dateToKey(normalizedNewStartDate))) {
       for (int i = 0; i < _events[_dateToKey(normalizedNewStartDate)]!.length; i++) {
         final event = _events[_dateToKey(normalizedNewStartDate)]![i];
-        _logError('updateEvent', '  [$i] ${event.id} (${event.title}) | duties: ${event.assignedDuties} | buses: ${event.busAssignments}');
+        _logError('updateEvent', '  [$i] ${event.id} (${event.title}) | duties: ${event.assignedDuties} | buses: ${event.busAssignments} | hasLateBreak: ${event.hasLateBreak}');
       }
     } else {
       _logError('updateEvent', '  No events found for ${normalizedNewStartDate.toIso8601String()}');
     }
+    
+    // CRITICAL FIX: Verify that newEventWithId has the correct break fields before saving
+    _logError('updateEvent', 'VERIFYING newEventWithId: hasLateBreak=${newEventWithId.hasLateBreak}, tookFullBreak=${newEventWithId.tookFullBreak}, overtimeDuration=${newEventWithId.overtimeDuration}');
 
     // 3. Save the updated cache with enhanced error handling
     try {
@@ -1016,7 +1028,7 @@ class EventService {
       if (_events.containsKey(_dateToKey(normalizedNewStartDate))) {
         for (int i = 0; i < _events[_dateToKey(normalizedNewStartDate)]!.length; i++) {
           final event = _events[_dateToKey(normalizedNewStartDate)]![i];
-          _logError('updateEvent', '  [$i] ${event.id} (${event.title}) | duties: ${event.assignedDuties} | buses: ${event.busAssignments}');
+          _logError('updateEvent', '  [$i] ${event.id} (${event.title}) | duties: ${event.assignedDuties} | buses: ${event.busAssignments} | hasLateBreak: ${event.hasLateBreak}');
         }
       } else {
         _logError('updateEvent', '  WARNING: No events found for ${normalizedNewStartDate.toIso8601String()} after save!');
@@ -1041,6 +1053,15 @@ class EventService {
       }
       
       rethrow;
+    }
+    
+    // CRITICAL FIX: After saving, ensure the monthly cache is refreshed to prevent stale data
+    // This is especially important for break-related fields that might not persist correctly
+    // Note: newMonthKey is already defined above, so we reuse it here
+    if (_monthlyCache.containsKey(newMonthKey)) {
+      // Remove the old event and ensure the new one is in the cache
+      _monthlyCache[newMonthKey]!.removeWhere((e) => e.id == eventId);
+      _monthlyCache[newMonthKey]!.add(newEventWithId);
     }
     
     if (!eventFoundAndRemoved) {
