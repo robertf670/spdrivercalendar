@@ -782,6 +782,9 @@ class _EventCardState extends State<EventCard> {
     final bankHoliday = ShiftService.getBankHoliday(widget.event.startDate, ShiftService.bankHolidays);
     
     for (String dutyCode in widget.event.assignedDuties!) {
+      // Save the original duty code before any modifications (needed for matching in dialog)
+      final originalDutyCode = dutyCode;
+      
       // Check if it's a UNI/EURO duty
       bool isUniDuty = false;
       if (dutyCode.startsWith('UNI:')) {
@@ -838,8 +841,9 @@ class _EventCardState extends State<EventCard> {
               // For half duties, adjust the times
               if (isFirstHalf) {
                 // For first half, use original start time but use break start for end time
+                // CRITICAL FIX: Use originalDutyCode (with UNI: prefix) for matching in dialog
                 _allDutyDetails.add({
-                  'dutyCode': dutyCode,
+                  'dutyCode': originalDutyCode,
                   'startTime': startTimeStr,
                   'endTime': breakStartStr.toLowerCase() != 'nan' ? breakStartStr : DateFormat('HH:mm:ss').format(startTime.add(Duration(minutes: (endTime.difference(startTime).inMinutes ~/ 2)))),
                   'location': 'UNI/EURO',
@@ -850,8 +854,9 @@ class _EventCardState extends State<EventCard> {
                 break;
               } else if (isSecondHalf) {
                 // For second half, use break end for start time and original end time
+                // CRITICAL FIX: Use originalDutyCode (with UNI: prefix) for matching in dialog
                 _allDutyDetails.add({
-                  'dutyCode': dutyCode,
+                  'dutyCode': originalDutyCode,
                   'startTime': breakEndStr.toLowerCase() != 'nan' ? breakEndStr : DateFormat('HH:mm:ss').format(startTime.add(Duration(minutes: (endTime.difference(startTime).inMinutes ~/ 2)))),
                   'endTime': endTimeStr,
                   'location': 'UNI/EURO',
@@ -862,8 +867,9 @@ class _EventCardState extends State<EventCard> {
                 break;
               } else {
                 // Full duty - use original times
+                // CRITICAL FIX: Use originalDutyCode (with UNI: prefix) for matching in dialog
                 final Map<String, String?> dutyDetail = {
-                  'dutyCode': dutyCode,
+                  'dutyCode': originalDutyCode,
                   'startTime': startTimeStr,
                   'endTime': endTimeStr,
                   'location': 'UNI/EURO',
@@ -916,8 +922,9 @@ class _EventCardState extends State<EventCard> {
                 // For half duties, adjust the times
                 if (isFirstHalf) {
                   // For first half, use original start time but use break start for end time
+                  // CRITICAL FIX: Use originalDutyCode (with UNI: prefix) for matching in dialog
                   _allDutyDetails.add({
-                    'dutyCode': dutyCode,
+                    'dutyCode': originalDutyCode,
                     'startTime': startTimeStr,
                     'endTime': breakStartStr.toLowerCase() != 'nan' ? breakStartStr : DateFormat('HH:mm:ss').format(startTime.add(Duration(minutes: (endTime.difference(startTime).inMinutes ~/ 2)))),
                     'location': 'UNI/EURO',
@@ -928,8 +935,9 @@ class _EventCardState extends State<EventCard> {
                   break;
                 } else if (isSecondHalf) {
                   // For second half, use break end for start time and original end time
+                  // CRITICAL FIX: Use originalDutyCode (with UNI: prefix) for matching in dialog
                   _allDutyDetails.add({
-                    'dutyCode': dutyCode,
+                    'dutyCode': originalDutyCode,
                     'startTime': breakEndStr.toLowerCase() != 'nan' ? breakEndStr : DateFormat('HH:mm:ss').format(startTime.add(Duration(minutes: (endTime.difference(startTime).inMinutes ~/ 2)))),
                     'endTime': endTimeStr,
                     'location': 'UNI/EURO',
@@ -940,8 +948,9 @@ class _EventCardState extends State<EventCard> {
                   break;
                 } else {
                   // Full duty - use original times
+                  // CRITICAL FIX: Use originalDutyCode (with UNI: prefix) for matching in dialog
                   final Map<String, String?> dutyDetail = {
-                    'dutyCode': dutyCode,
+                    'dutyCode': originalDutyCode,
                     'startTime': startTimeStr,
                     'endTime': endTimeStr,
                     'location': 'UNI/EURO',
@@ -965,8 +974,9 @@ class _EventCardState extends State<EventCard> {
           
           // If the duty wasn't found in either file
           if (!dutyFound) {
+            // CRITICAL FIX: Use originalDutyCode (with UNI: prefix) for matching in dialog
             _allDutyDetails.add({
-              'dutyCode': dutyCode,
+              'dutyCode': originalDutyCode,
               'startTime': '00:00:00',
               'endTime': '00:00:00',
               'location': 'UNI/EURO - Not found',
@@ -976,9 +986,9 @@ class _EventCardState extends State<EventCard> {
             });
           }
         } catch (e) {
-
+          // CRITICAL FIX: Use originalDutyCode (with UNI: prefix) for matching in dialog
           _allDutyDetails.add({
-            'dutyCode': dutyCode,
+            'dutyCode': originalDutyCode,
             'startTime': '00:00:00',
             'endTime': '00:00:00',
             'location': 'UNI/EURO - Error',
@@ -2288,6 +2298,7 @@ class _EventCardState extends State<EventCard> {
                   ? null
                   : () async {
                       // Update the event with the assigned duty
+                      // CRITICAL FIX: Create proper copies of mutable collections to prevent reference sharing
                       final oldEvent = Event(
                         id: widget.event.id,
                         title: widget.event.title,
@@ -2298,8 +2309,15 @@ class _EventCardState extends State<EventCard> {
                         workTime: widget.event.workTime,
                         breakStartTime: widget.event.breakStartTime,
                         breakEndTime: widget.event.breakEndTime,
-                        assignedDuties: widget.event.assignedDuties,
-                        busAssignments: widget.event.busAssignments, // CRITICAL: Preserve bus assignments
+                        assignedDuties: widget.event.assignedDuties?.map((d) => d).toList(),
+                        busAssignments: widget.event.busAssignments?.map((k, v) => MapEntry(k, v)),
+                        enhancedAssignedDuties: widget.event.enhancedAssignedDuties?.map((d) => d.copyWith()).toList(),
+                        firstHalfBus: widget.event.firstHalfBus,
+                        secondHalfBus: widget.event.secondHalfBus,
+                        notes: widget.event.notes,
+                        hasLateBreak: widget.event.hasLateBreak,
+                        tookFullBreak: widget.event.tookFullBreak,
+                        overtimeDuration: widget.event.overtimeDuration,
                       );
                       
                       // Add the half indicator if this is a half duty
@@ -2687,6 +2705,7 @@ class _EventCardState extends State<EventCard> {
                           final navigator = Navigator.of(context);
                           
                           // Create a copy of the old event
+                          // CRITICAL FIX: Create proper copies of mutable collections to prevent reference sharing
                           final oldEvent = Event(
                             id: widget.event.id,
                             title: widget.event.title,
@@ -2697,8 +2716,15 @@ class _EventCardState extends State<EventCard> {
                             workTime: widget.event.workTime,
                             breakStartTime: widget.event.breakStartTime,
                             breakEndTime: widget.event.breakEndTime,
-                            assignedDuties: widget.event.assignedDuties,
-                                   busAssignments: widget.event.busAssignments,
+                            assignedDuties: widget.event.assignedDuties?.map((d) => d).toList(),
+                            busAssignments: widget.event.busAssignments?.map((k, v) => MapEntry(k, v)),
+                            enhancedAssignedDuties: widget.event.enhancedAssignedDuties?.map((d) => d.copyWith()).toList(),
+                            firstHalfBus: widget.event.firstHalfBus,
+                            secondHalfBus: widget.event.secondHalfBus,
+                            notes: widget.event.notes,
+                            hasLateBreak: widget.event.hasLateBreak,
+                            tookFullBreak: widget.event.tookFullBreak,
+                            overtimeDuration: widget.event.overtimeDuration,
                           );
                           
                                  // Remove the specific duty and its bus assignment
@@ -2709,6 +2735,7 @@ class _EventCardState extends State<EventCard> {
                                  newAssignedDuties.remove(dutyCode);
                                  
                                  // Create a new event object with updated duties
+                                 // CRITICAL FIX: Copy busAssignments to prevent modifying the original event's map
                                  final updatedEvent = Event(
                                    id: widget.event.id,
                                    title: widget.event.title,
@@ -2720,7 +2747,7 @@ class _EventCardState extends State<EventCard> {
                                    breakStartTime: widget.event.breakStartTime,
                                    breakEndTime: widget.event.breakEndTime,
                                    assignedDuties: newAssignedDuties.isEmpty ? null : newAssignedDuties,
-                                   busAssignments: widget.event.busAssignments,
+                                   busAssignments: widget.event.busAssignments?.map((k, v) => MapEntry(k, v)),
                                    notes: widget.event.notes,
                                    firstHalfBus: widget.event.firstHalfBus,
                                    secondHalfBus: widget.event.secondHalfBus,
@@ -4027,6 +4054,7 @@ class _EventCardState extends State<EventCard> {
                     icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
                     onPressed: () async {
                       // Remove duty and clear bus assignments
+                      // CRITICAL FIX: Create proper copies of mutable collections to prevent reference sharing
                       final oldEvent = Event(
                         id: widget.event.id,
                         title: widget.event.title,
@@ -4034,9 +4062,15 @@ class _EventCardState extends State<EventCard> {
                         startTime: widget.event.startTime,
                         endDate: widget.event.endDate,
                         endTime: widget.event.endTime,
-                        assignedDuties: widget.event.assignedDuties,
+                        assignedDuties: widget.event.assignedDuties?.map((d) => d).toList(),
+                        busAssignments: widget.event.busAssignments?.map((k, v) => MapEntry(k, v)),
+                        enhancedAssignedDuties: widget.event.enhancedAssignedDuties?.map((d) => d.copyWith()).toList(),
                         firstHalfBus: widget.event.firstHalfBus,
                         secondHalfBus: widget.event.secondHalfBus,
+                        notes: widget.event.notes,
+                        hasLateBreak: widget.event.hasLateBreak,
+                        tookFullBreak: widget.event.tookFullBreak,
+                        overtimeDuration: widget.event.overtimeDuration,
                       );
 
                       final updatedEvent = Event(

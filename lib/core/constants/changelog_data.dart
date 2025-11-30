@@ -1,4 +1,22 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.15.21': [
+    {
+      'title': 'Holiday Days Statistics Feature',
+      'description': 'Added holiday days statistics tracking to the Statistics screen. Users can now view detailed breakdowns of booked holiday days by type (Summer Weeks, Winter Weeks, Other Holidays) with totals and percentages. Statistics are available for multiple years (current year ± 2 years) with year selection dropdown. Features visual breakdown bars with color-coded segments showing the distribution of holiday types. Summer and winter weeks are calculated as 5 days per week (accounting for rest days), while other holidays count all days normally.',
+    },
+    {
+      'title': 'Critical Spare Duty Persistence Fixes',
+      'description': 'Fixed multiple critical issues with spare duty assignments. Resolved bug where duties would disappear when buses were added due to reference sharing in event snapshots. Fixed duties disappearing after app restart by ensuring assignedDuties and enhancedAssignedDuties stay synchronized during migration. Fixed issue where second half duties couldn\'t be added by improving sync logic to detect when new duties are added. All duty assignments now persist correctly across app restarts and bus assignment operations.',
+    },
+    {
+      'title': 'Spare Duty Dialog Time Display Fix',
+      'description': 'Fixed issue where duty times were not displaying correctly in the spare shift dialog (showing "00:00 to --:--" instead of actual times). The problem was caused by duty code format mismatch - UNI duties with "UNI:" prefix were being stored without the prefix, causing lookup failures. Now duty codes are properly preserved with their prefixes for correct matching and time display.',
+    },
+    {
+      'title': 'Sunday Duty PZ1/42 Finish Break Location Fix',
+      'description': 'Fixed incorrect finish break location for duty PZ1/42 on Sunday. Updated from 39-ASTONQ to the correct value of 39-BWALK.',
+    },
+  ],
   '2.15.20': [
     {
       'title': 'Spread Pay Estimate Feature',

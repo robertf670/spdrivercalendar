@@ -6,6 +6,8 @@ import 'dart:convert';
 import 'package:spdrivercalendar/features/calendar/services/roster_service.dart';
 import 'package:spdrivercalendar/core/services/storage_service.dart';
 import 'package:spdrivercalendar/core/constants/app_constants.dart';
+import 'package:spdrivercalendar/features/calendar/services/holiday_service.dart';
+import 'package:spdrivercalendar/models/holiday.dart';
 
 // Import the new widgets
 import '../widgets/frequency_chart.dart';
@@ -14,6 +16,7 @@ import '../widgets/work_time_stats_card.dart';
 import '../widgets/spread_statistics_card.dart';
 import '../widgets/break_statistics_card.dart';
 import '../widgets/sick_days_statistics_card.dart';
+import '../widgets/holiday_days_statistics_card.dart';
 
 enum ShiftType {
   early,   // 04:00 - 09:59
@@ -45,6 +48,7 @@ class StatisticsScreenState extends State<StatisticsScreen>
   String _timeRange = 'This Week';
   String _breakTimeRange = 'This Week';
   String _sickDaysTimeRange = 'This Month';
+  String _holidayDaysTimeRange = DateTime.now().year.toString();
   final List<String> _timeRanges = [
     'This Week', 
     'Last Week', 
@@ -62,6 +66,13 @@ class StatisticsScreenState extends State<StatisticsScreen>
     'This Year',
     'Last Year',
   ];
+  
+  // Generate holiday days time ranges dynamically based on current year
+  List<String> get _holidayDaysTimeRanges {
+    final currentYear = DateTime.now().year;
+    // Include current year and 2 years before and after
+    return List.generate(5, (index) => (currentYear - 2 + index).toString());
+  }
 
   // State for bus frequency display
   int _numberOfBusesToShow = 3;
@@ -93,6 +104,9 @@ class StatisticsScreenState extends State<StatisticsScreen>
   
   // State variable to hold the future for spread stats
   Future<Map<String, Duration>>? _spreadStatsFuture;
+  
+  // State variable to hold the future for holiday days stats
+  Future<Map<String, dynamic>>? _holidayDaysStatsFuture;
 
   // State variables for Sunday Pair Statistics
   DateTime? _currentBlockLsunDate, _currentBlockEsunDate;
@@ -151,6 +165,7 @@ class StatisticsScreenState extends State<StatisticsScreen>
        setState(() {
          _workTimeStatsFuture = _calculateWorkTimeStatistics();
          _spreadStatsFuture = _calculateSpreadStatistics();
+         _holidayDaysStatsFuture = _calculateHolidayDaysStatistics();
          // Trigger Sunday pair calculation (no need to await here, UI will update)
          _calculateSundayPairStatistics(); 
        });
@@ -483,6 +498,60 @@ class StatisticsScreenState extends State<StatisticsScreen>
               }
             },
           ),
+          
+          // Holiday Days Statistics Card
+          _holidayDaysStatsFuture == null
+            ? const Card(
+                margin: EdgeInsets.symmetric(vertical: 8.0),
+                child: Padding(
+                  padding: EdgeInsets.all(16.0),
+                  child: Center(child: CircularProgressIndicator()),
+                ),
+              )
+            : FutureBuilder<Map<String, dynamic>>(
+                future: _holidayDaysStatsFuture,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Card(
+                      margin: EdgeInsets.symmetric(vertical: 8.0),
+                      child: Padding(
+                        padding: EdgeInsets.all(16.0),
+                        child: Center(child: CircularProgressIndicator()),
+                      ),
+                    );
+                  }
+                  
+                  if (snapshot.hasError) {
+                    return Card(
+                      margin: const EdgeInsets.symmetric(vertical: 8.0),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Text(
+                          'Error loading holiday statistics: ${snapshot.error}',
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.error,
+                          ),
+                        ),
+                      ),
+                    );
+                  }
+                  
+                  final holidayStats = snapshot.data ?? {};
+                  
+                  return HolidayDaysStatisticsCard(
+                    holidayStats: holidayStats,
+                    currentRange: _holidayDaysTimeRange,
+                    availableRanges: _holidayDaysTimeRanges,
+                    onChanged: (newRange) {
+                      if (newRange != null) {
+                        setState(() {
+                          _holidayDaysTimeRange = newRange;
+                        });
+                      }
+                    },
+                  );
+                },
+              ),
           
           // Sick Days Statistics Card
           SickDaysStatisticsCard(
@@ -2150,6 +2219,90 @@ class StatisticsScreenState extends State<StatisticsScreen>
       'normal': normal,
       'selfCertified': selfCertified,
       'forceMajeure': forceMajeure,
+    };
+  }
+
+  // Calculate holiday days statistics
+  Future<Map<String, dynamic>> _calculateHolidayDaysStatistics() async {
+    final DateTime now = DateTime.now();
+    
+    // Get all holidays
+    final List<Holiday> holidays = await HolidayService.getHolidays();
+    
+    // Calculate statistics for each year (current year ± 2 years)
+    final Map<String, dynamic> stats = {};
+    final currentYear = now.year;
+    
+    for (int yearOffset = -2; yearOffset <= 2; yearOffset++) {
+      final year = currentYear + yearOffset;
+      final yearStart = DateTime(year, 1, 1);
+      final yearEnd = DateTime(year, 12, 31);
+      stats[year.toString()] = _calculateHolidayDaysStatsForPeriod(holidays, yearStart, yearEnd);
+    }
+    
+    return stats;
+  }
+  
+  Map<String, dynamic> _calculateHolidayDaysStatsForPeriod(
+    List<Holiday> holidays, DateTime startDate, DateTime endDate) {
+    
+    int totalDays = 0;
+    int summerDays = 0;
+    int winterDays = 0;
+    int otherDays = 0;
+    
+    // Normalize dates to midnight for comparison
+    final normalizedStart = DateTime(startDate.year, startDate.month, startDate.day);
+    final normalizedEnd = DateTime(endDate.year, endDate.month, endDate.day);
+    
+    for (final holiday in holidays) {
+      // Normalize holiday dates
+      final holidayStart = DateTime(holiday.startDate.year, holiday.startDate.month, holiday.startDate.day);
+      final holidayEnd = DateTime(holiday.endDate.year, holiday.endDate.month, holiday.endDate.day);
+      
+      // Check if holiday overlaps with the period
+      if (holidayEnd.isBefore(normalizedStart) || holidayStart.isAfter(normalizedEnd)) {
+        continue; // No overlap
+      }
+      
+      // Calculate the overlap
+      final overlapStart = holidayStart.isAfter(normalizedStart) ? holidayStart : normalizedStart;
+      final overlapEnd = holidayEnd.isBefore(normalizedEnd) ? holidayEnd : normalizedEnd;
+      
+      // Calculate days in overlap (inclusive)
+      final daysInOverlap = overlapEnd.difference(overlapStart).inDays + 1;
+      
+      if (daysInOverlap > 0) {
+        int countedDays;
+        
+        // For summer and winter weeks: count 5 days per week (since 2 rest days are already accounted for)
+        // For other holidays: count all days normally
+        if (holiday.type == 'summer' || holiday.type == 'winter') {
+          // Calculate as 5 days per week
+          // For a full week (7 days), count as 5 days
+          // For partial weeks, calculate proportionally: (days / 7) * 5
+          countedDays = ((daysInOverlap / 7) * 5).round();
+          
+          if (holiday.type == 'summer') {
+            summerDays += countedDays;
+          } else {
+            winterDays += countedDays;
+          }
+        } else {
+          // Other holidays count all days normally
+          countedDays = daysInOverlap;
+          otherDays += countedDays;
+        }
+        
+        totalDays += countedDays;
+      }
+    }
+    
+    return {
+      'total': totalDays,
+      'summer': summerDays,
+      'winter': winterDays,
+      'other': otherDays,
     };
   }
 }

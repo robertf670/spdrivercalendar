@@ -143,8 +143,13 @@ class Event {
         }
       }
       
-      // Clear legacy fields after migration
-      assignedDuties = null;
+      // CRITICAL FIX: Keep assignedDuties in sync with enhancedAssignedDuties
+      // Don't clear assignedDuties - the codebase still relies on it for display and operations
+      // This ensures duties persist correctly after app restart
+      assignedDuties = enhancedAssignedDuties!.map((duty) => duty.dutyCode).toList();
+    } else if (hasEnhancedDuties && (assignedDuties == null || assignedDuties!.isEmpty)) {
+      // If we have enhanced duties but no legacy duties, sync them
+      assignedDuties = enhancedAssignedDuties!.map((duty) => duty.dutyCode).toList();
     }
   }
 
@@ -154,6 +159,47 @@ class Event {
       return enhancedAssignedDuties!.map((duty) => duty.dutyCode).toList();
     }
     return assignedDuties ?? [];
+  }
+
+  // CRITICAL FIX: Sync assignedDuties with enhancedAssignedDuties to ensure persistence
+  // Call this whenever assignedDuties is modified to keep both formats in sync
+  void syncDutyFormats() {
+    // CRITICAL FIX: Check if assignedDuties has been modified (has more items than enhancedAssignedDuties)
+    // This handles the case where a duty was added directly to assignedDuties
+    if (hasEnhancedDuties && assignedDuties != null) {
+      final enhancedCount = enhancedAssignedDuties!.length;
+      final assignedCount = assignedDuties!.length;
+      
+      // If assignedDuties has more items, it means a new duty was added - sync TO enhancedAssignedDuties
+      if (assignedCount > enhancedCount) {
+        // Update enhancedAssignedDuties to include the new duty
+        // Store the original enhancedAssignedDuties before modifying
+        final originalEnhancedDuties = List<AssignedDuty>.from(enhancedAssignedDuties!);
+        final enhancedDutyCodes = originalEnhancedDuties.map((d) => d.dutyCode).toList();
+        enhancedAssignedDuties = assignedDuties!.map((dutyString) {
+          // Check if this duty already exists in enhancedAssignedDuties
+          final existingIndex = enhancedDutyCodes.indexOf(dutyString);
+          if (existingIndex >= 0) {
+            // Duty exists - keep the existing enhanced duty object
+            return originalEnhancedDuties[existingIndex];
+          } else {
+            // New duty - create a new AssignedDuty from the string
+            return AssignedDuty.fromLegacyString(dutyString);
+          }
+        }).toList();
+      } else if (assignedCount == enhancedCount) {
+        // Same count - sync assignedDuties from enhancedAssignedDuties to ensure consistency
+        assignedDuties = enhancedAssignedDuties!.map((duty) => duty.dutyCode).toList();
+      } else {
+        // assignedDuties has fewer items - sync from enhancedAssignedDuties
+        assignedDuties = enhancedAssignedDuties!.map((duty) => duty.dutyCode).toList();
+      }
+    } else if (assignedDuties != null && assignedDuties!.isNotEmpty) {
+      // No enhanced duties yet - create them from assignedDuties
+      if (!hasEnhancedDuties) {
+        enhancedAssignedDuties = assignedDuties!.map((dutyString) => AssignedDuty.fromLegacyString(dutyString)).toList();
+      }
+    }
   }
 
   // Get assigned bus for a specific duty
@@ -227,6 +273,9 @@ class Event {
 
   // Convert to map for storage
   Map<String, dynamic> toMap() {
+    // CRITICAL FIX: Sync duty formats before saving to ensure persistence
+    syncDutyFormats();
+    
     return {
       'id': id,
       'title': title,
