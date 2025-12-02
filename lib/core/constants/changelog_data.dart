@@ -1,4 +1,14 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.15.22': [
+    {
+      'title': 'New App Icon',
+      'description': 'Updated app icon with a refreshed design, more relatable perhaps :-)',
+    },
+    {
+      'title': 'Updated CPC Training Duty Times',
+      'description': 'Updated CPC training duty times from 07:30-15:30 to 07:45-15:45.',
+    },
+  ],
   '2.15.21': [
     {
       'title': 'Holiday Days Statistics Feature',
