@@ -8,6 +8,8 @@ import 'package:spdrivercalendar/core/services/storage_service.dart';
 import 'package:spdrivercalendar/core/constants/app_constants.dart';
 import 'package:spdrivercalendar/features/calendar/services/holiday_service.dart';
 import 'package:spdrivercalendar/models/holiday.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:spdrivercalendar/theme/app_theme.dart';
 
 // Import the new widgets
 import '../widgets/frequency_chart.dart';
@@ -128,12 +130,83 @@ class StatisticsScreenState extends State<StatisticsScreen>
   final ScrollController _summaryScrollController = ScrollController();
   final ScrollController _frequencyScrollController = ScrollController();
   
+  // Expandable sections state
+  final Map<String, bool> _expandedSections = {
+    'Work Time Statistics': false,
+    'Spread Statistics': false,
+    'Rostered Sunday Pair Hours': false,
+    'Shift Type Summary': false,
+    'Break Statistics': false,
+    'Holiday Days Statistics': false,
+    'Sick Days Statistics': false,
+    'Most Frequent Shifts': false,
+    'Most Frequent Buses': false,
+    'Most Frequent Start Hours': false,
+  };
+  
   @override
   void initState() {
     super.initState();
     // Ensure TabController length is 3
     _tabController = TabController(length: 3, vsync: this);
+    _loadExpandedSections();
     _initializeStatistics();
+  }
+  
+  Future<void> _loadExpandedSections() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _expandedSections['Work Time Statistics'] = prefs.getBool('stats_expanded_work_time') ?? false;
+      _expandedSections['Spread Statistics'] = prefs.getBool('stats_expanded_spread') ?? false;
+      _expandedSections['Rostered Sunday Pair Hours'] = prefs.getBool('stats_expanded_sunday_pair') ?? false;
+      _expandedSections['Shift Type Summary'] = prefs.getBool('stats_expanded_shift_summary') ?? false;
+      _expandedSections['Break Statistics'] = prefs.getBool('stats_expanded_break') ?? false;
+      _expandedSections['Holiday Days Statistics'] = prefs.getBool('stats_expanded_holiday') ?? false;
+      _expandedSections['Sick Days Statistics'] = prefs.getBool('stats_expanded_sick') ?? false;
+      _expandedSections['Most Frequent Shifts'] = prefs.getBool('stats_expanded_frequent_shifts') ?? false;
+      _expandedSections['Most Frequent Buses'] = prefs.getBool('stats_expanded_frequent_buses') ?? false;
+      _expandedSections['Most Frequent Start Hours'] = prefs.getBool('stats_expanded_frequent_hours') ?? false;
+    });
+  }
+  
+  Future<void> _saveExpandedSection(String section, bool expanded) async {
+    final prefs = await SharedPreferences.getInstance();
+    String key;
+    switch (section) {
+      case 'Work Time Statistics':
+        key = 'stats_expanded_work_time';
+        break;
+      case 'Spread Statistics':
+        key = 'stats_expanded_spread';
+        break;
+      case 'Rostered Sunday Pair Hours':
+        key = 'stats_expanded_sunday_pair';
+        break;
+      case 'Shift Type Summary':
+        key = 'stats_expanded_shift_summary';
+        break;
+      case 'Break Statistics':
+        key = 'stats_expanded_break';
+        break;
+      case 'Holiday Days Statistics':
+        key = 'stats_expanded_holiday';
+        break;
+      case 'Sick Days Statistics':
+        key = 'stats_expanded_sick';
+        break;
+      case 'Most Frequent Shifts':
+        key = 'stats_expanded_frequent_shifts';
+        break;
+      case 'Most Frequent Buses':
+        key = 'stats_expanded_frequent_buses';
+        break;
+      case 'Most Frequent Start Hours':
+        key = 'stats_expanded_frequent_hours';
+        break;
+      default:
+        return;
+    }
+    await prefs.setBool(key, expanded);
   }
 
   @override
@@ -218,6 +291,86 @@ class StatisticsScreenState extends State<StatisticsScreen>
     }
   }
 
+  Widget _buildExpandableSection({
+    required String title,
+    required List<Widget> children,
+    IconData? icon,
+    String? subtitle,
+  }) {
+    final isExpanded = _expandedSections[title] ?? false;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isSmallScreen = screenWidth < 600;
+    
+    return Card(
+      margin: EdgeInsets.symmetric(
+        vertical: 4.0,
+        horizontal: isSmallScreen ? 0.0 : 4.0,
+      ),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppTheme.borderRadius),
+      ),
+      child: Theme(
+        data: Theme.of(context).copyWith(
+          dividerColor: Colors.transparent,
+        ),
+        child: ExpansionTile(
+          leading: icon != null
+              ? Icon(icon, color: AppTheme.primaryColor)
+              : null,
+          title: Text(
+            title,
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              color: AppTheme.primaryColor,
+              fontSize: isSmallScreen ? 18 : 20,
+            ),
+          ),
+          subtitle: subtitle != null
+              ? Text(
+                  subtitle,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                    fontStyle: FontStyle.italic,
+                  ),
+                )
+              : null,
+          initiallyExpanded: isExpanded,
+          onExpansionChanged: (expanded) {
+            setState(() {
+              _expandedSections[title] = expanded;
+            });
+            _saveExpandedSection(title, expanded);
+          },
+          tilePadding: EdgeInsets.symmetric(
+            horizontal: isSmallScreen ? 12.0 : 16.0,
+            vertical: 8.0,
+          ),
+          childrenPadding: EdgeInsets.zero,
+          children: [
+            Container(
+              decoration: BoxDecoration(
+                color: Theme.of(context).cardColor,
+                borderRadius: const BorderRadius.only(
+                  bottomLeft: Radius.circular(AppTheme.borderRadius),
+                  bottomRight: Radius.circular(AppTheme.borderRadius),
+                ),
+              ),
+              child: Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: isSmallScreen ? 8.0 : 16.0,
+                  vertical: 8.0,
+                ),
+                child: Column(
+                  children: children,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     super.build(context);
@@ -289,167 +442,105 @@ class StatisticsScreenState extends State<StatisticsScreen>
         padding: EdgeInsets.all(sizes['padding']!),
         child: Column( // Use Column to allow multiple Cards/Widgets
         children: [
-          Card( // Card for standard work time stats
-            elevation: 2.0, 
-            child: Padding( 
-              padding: EdgeInsets.all(sizes['cardPadding']!),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                   const Text(
-                    'Work Time Statistics',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          _buildExpandableSection(
+            title: 'Work Time Statistics',
+            subtitle: 'Break times and Rest Days not included in calculation',
+            icon: Icons.access_time,
+            children: [
+              const SizedBox(height: 8),
+              _workTimeStatsFuture == null
+                ? const Center(child: CircularProgressIndicator())
+                : WorkTimeStatisticsCard(
+                    workTimeStatsFuture: _workTimeStatsFuture!,
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Break times and Rest Days not included in calculation',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                      fontStyle: FontStyle.italic,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  _workTimeStatsFuture == null
-                    ? const Center(child: CircularProgressIndicator())
-                    : WorkTimeStatisticsCard(
-                        workTimeStatsFuture: _workTimeStatsFuture!,
-                      ),
-                ],
-              ),
-            ),
+            ],
           ),
           SizedBox(height: sizes['cardSpacing']!), // Spacing between cards
-          // Card for Spread Statistics
-          Card(
-            elevation: 2.0, 
-            child: Padding( 
-              padding: EdgeInsets.all(sizes['cardPadding']!),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Spread Statistics',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          _buildExpandableSection(
+            title: 'Spread Statistics',
+            subtitle: 'Time worked over 10 hours on M-F duties only',
+            icon: Icons.timer,
+            children: [
+              const SizedBox(height: 8),
+              _spreadStatsFuture == null
+                ? const Center(child: CircularProgressIndicator())
+                : SpreadStatisticsCard(
+                    spreadStatsFuture: _spreadStatsFuture!,
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Time worked over 10 hours on M-F duties only',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                      fontStyle: FontStyle.italic,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  _spreadStatsFuture == null
-                    ? const Center(child: CircularProgressIndicator())
-                    : SpreadStatisticsCard(
-                        spreadStatsFuture: _spreadStatsFuture!,
-                      ),
-                ],
-              ),
-            ),
+            ],
           ),
           SizedBox(height: sizes['cardSpacing']!), // Spacing between cards
-          // Card for Sunday Pair Statistics
-          Card(
-            elevation: 2.0,
-            child: Padding(
-              padding: EdgeInsets.all(sizes['cardPadding']!),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Rostered Sunday Pair Hours',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          _buildExpandableSection(
+            title: 'Rostered Sunday Pair Hours',
+            subtitle: 'Sum of hours worked on specific rostered Late & Early Sundays (Max 14h 30m). Entitled to overtime if time is more than 14h 30m. If the second Sunday has not happened yet, and the time is more than 14h 30m, you have the right to finish in the garage',
+            icon: Icons.calendar_today,
+            children: [
+              const SizedBox(height: 8),
+              if (_sundayStatsLoading)
+                const Center(child: Padding(
+                  padding: EdgeInsets.symmetric(vertical: 16.0),
+                  child: CircularProgressIndicator(),
+                ))
+              else ...[
+                // Current Block Display
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(
+                    'Current Sundays${(_currentBlockLsunDate != null && _currentBlockEsunDate != null) ? ' (${listTitleDateFormatter.format(_currentBlockLsunDate!)} + ${listTitleDateFormatter.format(_currentBlockEsunDate!)})' : ''}',
+                    style: const TextStyle(fontWeight: FontWeight.bold)
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Sum of hours worked on specific rostered Late & Early Sundays (Max 14h 30m)',
+                  trailing: Text(
+                    formatDuration(_currentBlockTotalSunHours), // Use total duration
                     style: TextStyle(
-                      fontSize: 12,
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                      fontStyle: FontStyle.italic,
+                      fontWeight: FontWeight.bold,
+                      color: _currentBlockLimitExceeded ? Theme.of(context).colorScheme.error : null,
                     ),
                   ),
-                  const SizedBox(height: 4),
-                                      Text(
-                    'Entitled to overtime if time is more than 14h 30m. If the second Sunday has not happened yet, and the time is more than 14h 30m, you have the right to finish in the garage',
-                     style: TextStyle(
-                      fontSize: 12,
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                      fontStyle: FontStyle.italic,
+                  leading: _currentBlockLimitExceeded 
+                    ? Icon(Icons.warning_amber_rounded, color: Theme.of(context).colorScheme.error) 
+                    : Icon(Icons.check_circle_outline, color: Theme.of(context).colorScheme.primary),
+                  // Move shift details into the subtitle
+                  subtitle: _currentBlockSundayShifts.isNotEmpty
+                      ? Padding(
+                          padding: const EdgeInsets.only(top: 4.0), // Add padding above details
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: _buildShiftDetailRows(_currentBlockSundayShifts, detailDateFormatter, formatDuration),
+                          ),
+                        )
+                      : null, // No subtitle if no shifts
+                ),
+                
+                // Previous Block Display
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(
+                    'Previous Sundays${(_previousBlockLsunDate != null && _previousBlockEsunDate != null) ? ' (${listTitleDateFormatter.format(_previousBlockLsunDate!)} + ${listTitleDateFormatter.format(_previousBlockEsunDate!)})' : ''}',
+                    style: const TextStyle(fontWeight: FontWeight.bold)
+                  ),
+                  trailing: Text(
+                    formatDuration(_previousBlockTotalSunHours), // Use total duration
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: _previousBlockLimitExceeded ? Theme.of(context).colorScheme.error : null,
                     ),
                   ),
-                  const Divider(height: 24),
-                  if (_sundayStatsLoading)
-                    const Center(child: Padding(
-                      padding: EdgeInsets.symmetric(vertical: 16.0),
-                      child: CircularProgressIndicator(),
-                    ))
-                  else ...[
-                    // Current Block Display
-                    ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: Text(
-                        'Current Sundays${(_currentBlockLsunDate != null && _currentBlockEsunDate != null) ? ' (${listTitleDateFormatter.format(_currentBlockLsunDate!)} + ${listTitleDateFormatter.format(_currentBlockEsunDate!)})' : ''}',
-                        style: const TextStyle(fontWeight: FontWeight.bold)
-                      ),
-                      trailing: Text(
-                        formatDuration(_currentBlockTotalSunHours), // Use total duration
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: _currentBlockLimitExceeded ? Theme.of(context).colorScheme.error : null,
-                        ),
-                      ),
-                      leading: _currentBlockLimitExceeded 
-                        ? Icon(Icons.warning_amber_rounded, color: Theme.of(context).colorScheme.error) 
-                        : Icon(Icons.check_circle_outline, color: Theme.of(context).colorScheme.primary),
-                      // Move shift details into the subtitle
-                      subtitle: _currentBlockSundayShifts.isNotEmpty
-                          ? Padding(
-                              padding: const EdgeInsets.only(top: 4.0), // Add padding above details
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: _buildShiftDetailRows(_currentBlockSundayShifts, detailDateFormatter, formatDuration),
-                              ),
-                            )
-                          : null, // No subtitle if no shifts
-                    ),
-                    
-                    // Previous Block Display
-                    ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: Text(
-                        'Previous Sundays${(_previousBlockLsunDate != null && _previousBlockEsunDate != null) ? ' (${listTitleDateFormatter.format(_previousBlockLsunDate!)} + ${listTitleDateFormatter.format(_previousBlockEsunDate!)})' : ''}',
-                        style: const TextStyle(fontWeight: FontWeight.bold)
-                      ),
-                      trailing: Text(
-                        formatDuration(_previousBlockTotalSunHours), // Use total duration
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: _previousBlockLimitExceeded ? Theme.of(context).colorScheme.error : null,
-                        ),
-                      ),
-                      leading: _previousBlockLimitExceeded 
-                        ? Icon(Icons.warning_amber_rounded, color: Theme.of(context).colorScheme.error) 
-                        : Icon(Icons.check_circle_outline, color: Theme.of(context).colorScheme.primary),
-                      // Move shift details into the subtitle
-                      subtitle: _previousBlockSundayShifts.isNotEmpty
-                          ? Padding(
-                              padding: const EdgeInsets.only(top: 4.0),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: _buildShiftDetailRows(_previousBlockSundayShifts, detailDateFormatter, formatDuration),
-                              ),
-                            )
-                          : null, // No subtitle if no shifts
-                    ),
-                  ]
-                ],
-              ),
-            ),
+                  leading: _previousBlockLimitExceeded 
+                    ? Icon(Icons.warning_amber_rounded, color: Theme.of(context).colorScheme.error) 
+                    : Icon(Icons.check_circle_outline, color: Theme.of(context).colorScheme.primary),
+                  // Move shift details into the subtitle
+                  subtitle: _previousBlockSundayShifts.isNotEmpty
+                      ? Padding(
+                          padding: const EdgeInsets.only(top: 4.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: _buildShiftDetailRows(_previousBlockSundayShifts, detailDateFormatter, formatDuration),
+                          ),
+                        )
+                      : null, // No subtitle if no shifts
+                ),
+              ]
+            ],
           ),
         ],
       ),
@@ -471,104 +562,127 @@ class StatisticsScreenState extends State<StatisticsScreen>
         child: Column(
         children: [
           // Shift Type Summary Card
-          ShiftTypeSummaryCard(
-            stats: _calculateSummaryStatistics(),
-            currentRange: _timeRange,
-            availableRanges: _timeRanges,
-            onChanged: (newRange) {
-              if (newRange != null) {
-                setState(() {
-                  _timeRange = newRange;
-                });
-              }
-            },
-          ),
-          
-          // Break Statistics Card
-          BreakStatisticsCard(
-            breakStats: _calculateBreakStatistics(),
-            currentRange: _breakTimeRange,
-            availableRanges: _timeRanges,
-            onChanged: (newRange) {
-              if (newRange != null) {
-                setState(() {
-                  _breakTimeRange = newRange;
-                });
-                // Break stats time range changed
-              }
-            },
-          ),
-          
-          // Holiday Days Statistics Card
-          _holidayDaysStatsFuture == null
-            ? const Card(
-                margin: EdgeInsets.symmetric(vertical: 8.0),
-                child: Padding(
-                  padding: EdgeInsets.all(16.0),
-                  child: Center(child: CircularProgressIndicator()),
-                ),
-              )
-            : FutureBuilder<Map<String, dynamic>>(
-                future: _holidayDaysStatsFuture,
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Card(
-                      margin: EdgeInsets.symmetric(vertical: 8.0),
-                      child: Padding(
-                        padding: EdgeInsets.all(16.0),
-                        child: Center(child: CircularProgressIndicator()),
-                      ),
-                    );
+          _buildExpandableSection(
+            title: 'Shift Type Summary',
+            subtitle: 'Rest Days not included in calculation',
+            icon: Icons.bar_chart,
+            children: [
+              const SizedBox(height: 8),
+              ShiftTypeSummaryCard(
+                stats: _calculateSummaryStatistics(),
+                currentRange: _timeRange,
+                availableRanges: _timeRanges,
+                onChanged: (newRange) {
+                  if (newRange != null) {
+                    setState(() {
+                      _timeRange = newRange;
+                    });
                   }
-                  
-                  if (snapshot.hasError) {
-                    return Card(
-                      margin: const EdgeInsets.symmetric(vertical: 8.0),
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Text(
-                          'Error loading holiday statistics: ${snapshot.error}',
-                          style: TextStyle(
-                            color: Theme.of(context).colorScheme.error,
-                          ),
-                        ),
-                      ),
-                    );
-                  }
-                  
-                  final holidayStats = snapshot.data ?? {};
-                  
-                  return HolidayDaysStatisticsCard(
-                    holidayStats: holidayStats,
-                    currentRange: _holidayDaysTimeRange,
-                    availableRanges: _holidayDaysTimeRanges,
-                    onChanged: (newRange) {
-                      if (newRange != null) {
-                        setState(() {
-                          _holidayDaysTimeRange = newRange;
-                        });
-                      }
-                    },
-                  );
                 },
               ),
-          
-          // Sick Days Statistics Card
-          SickDaysStatisticsCard(
-            sickStats: _calculateSickDaysStatistics(),
-            currentRange: _sickDaysTimeRange,
-            availableRanges: _sickDaysTimeRanges,
-            onChanged: (newRange) {
-              if (newRange != null) {
-                setState(() {
-                  _sickDaysTimeRange = newRange;
-                });
-              }
-            },
+            ],
           ),
           
-          // Work Time Stats Card
-          // ... existing code ...
+          SizedBox(height: sizes['cardSpacing']!),
+          
+          // Break Statistics Card
+          _buildExpandableSection(
+            title: 'Break Statistics',
+            icon: Icons.free_breakfast,
+            children: [
+              const SizedBox(height: 8),
+              BreakStatisticsCard(
+                breakStats: _calculateBreakStatistics(),
+                currentRange: _breakTimeRange,
+                availableRanges: _timeRanges,
+                onChanged: (newRange) {
+                  if (newRange != null) {
+                    setState(() {
+                      _breakTimeRange = newRange;
+                    });
+                    // Break stats time range changed
+                  }
+                },
+              ),
+            ],
+          ),
+          
+          SizedBox(height: sizes['cardSpacing']!),
+          
+          // Holiday Days Statistics Card
+          _buildExpandableSection(
+            title: 'Holiday Days Statistics',
+            icon: Icons.beach_access,
+            children: [
+              const SizedBox(height: 8),
+              _holidayDaysStatsFuture == null
+                ? const Center(child: Padding(
+                    padding: EdgeInsets.symmetric(vertical: 16.0),
+                    child: CircularProgressIndicator(),
+                  ))
+                : FutureBuilder<Map<String, dynamic>>(
+                    future: _holidayDaysStatsFuture,
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(child: Padding(
+                          padding: EdgeInsets.symmetric(vertical: 16.0),
+                          child: CircularProgressIndicator(),
+                        ));
+                      }
+                      
+                      if (snapshot.hasError) {
+                        return Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Text(
+                            'Error loading holiday statistics: ${snapshot.error}',
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.error,
+                            ),
+                          ),
+                        );
+                      }
+                      
+                      final holidayStats = snapshot.data ?? {};
+                      
+                      return HolidayDaysStatisticsCard(
+                        holidayStats: holidayStats,
+                        currentRange: _holidayDaysTimeRange,
+                        availableRanges: _holidayDaysTimeRanges,
+                        onChanged: (newRange) {
+                          if (newRange != null) {
+                            setState(() {
+                              _holidayDaysTimeRange = newRange;
+                            });
+                          }
+                        },
+                      );
+                    },
+                  ),
+            ],
+          ),
+          
+          SizedBox(height: sizes['cardSpacing']!),
+          
+          // Sick Days Statistics Card
+          _buildExpandableSection(
+            title: 'Sick Days Statistics',
+            icon: Icons.medical_services,
+            children: [
+              const SizedBox(height: 8),
+              SickDaysStatisticsCard(
+                sickStats: _calculateSickDaysStatistics(),
+                currentRange: _sickDaysTimeRange,
+                availableRanges: _sickDaysTimeRanges,
+                onChanged: (newRange) {
+                  if (newRange != null) {
+                    setState(() {
+                      _sickDaysTimeRange = newRange;
+                    });
+                  }
+                },
+              ),
+            ],
+          ),
         ],
       ),
       ),
@@ -586,38 +700,26 @@ class StatisticsScreenState extends State<StatisticsScreen>
       child: SingleChildScrollView(
         controller: _frequencyScrollController,
         padding: EdgeInsets.all(sizes['padding']!),
-        child: Card( 
-        elevation: 2.0,
-        child: Padding( 
-          padding: EdgeInsets.all(sizes['cardPadding']!),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // --- Shifts Section ---
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8.0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        child: Column(
+          children: [
+            // --- Shifts Section ---
+            _buildExpandableSection(
+              title: 'Most Frequent Shifts',
+              subtitle: 'Mon-Fri shifts only',
+              icon: Icons.work,
+              children: [
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
                   children: [
-                    Expanded(
-                      child: Text(
-                        'Most Frequent Shifts (Mon-Fri)',
-                        style: TextStyle(fontSize: sizes['titleFontSize']!, fontWeight: FontWeight.bold),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
                     DropdownButton<int>(
                       value: _numberOfShiftsToShow,
-                      // Add styling for dark mode
-                      style: TextStyle(color: Theme.of(context).colorScheme.onSurface), // Style for selected item text
-                      iconEnabledColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7), // Arrow color
-                      dropdownColor: Theme.of(context).colorScheme.surface, // Menu background color
+                      style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                      iconEnabledColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                      dropdownColor: Theme.of(context).colorScheme.surface,
                       items: _shiftNumberOptions.map((int value) {
                         return DropdownMenuItem<int>(
                           value: value,
-                          // Ensure item text is readable
                           child: Text('Top $value', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
                         );
                       }).toList(),
@@ -631,42 +733,36 @@ class StatisticsScreenState extends State<StatisticsScreen>
                     ),
                   ],
                 ),
-              ),
-              FrequencyChart(
-                frequencyData: Map.fromEntries(
-                   _getAllTimeFrequentShifts().entries.take(_numberOfShiftsToShow)
+                const SizedBox(height: 8),
+                FrequencyChart(
+                  frequencyData: Map.fromEntries(
+                     _getAllTimeFrequentShifts().entries.take(_numberOfShiftsToShow)
+                  ),
+                  emptyDataMessage: 'No Mon-Fri shift data available',
                 ),
-                emptyDataMessage: 'No Mon-Fri shift data available',
-              ),
+              ],
+            ),
+            
+            SizedBox(height: sizes['cardSpacing']!),
 
-              // Divider between sections
-              const Divider(height: 32, thickness: 1, indent: 16, endIndent: 16),
-
-              // --- Buses Section ---
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8.0, top: 16.0), // Add top padding for separation
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            // --- Buses Section ---
+            _buildExpandableSection(
+              title: 'Most Frequent Buses',
+              subtitle: 'All time',
+              icon: Icons.directions_bus,
+              children: [
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
                   children: [
-                    Expanded(
-                      child: Text(
-                        'Most Frequent Buses (All Time)',
-                        style: TextStyle(fontSize: sizes['titleFontSize']!, fontWeight: FontWeight.bold),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
                     DropdownButton<int>(
                       value: _numberOfBusesToShow,
-                      // Add styling for dark mode
-                      style: TextStyle(color: Theme.of(context).colorScheme.onSurface), // Style for selected item text
-                      iconEnabledColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7), // Arrow color
-                      dropdownColor: Theme.of(context).colorScheme.surface, // Menu background color
+                      style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                      iconEnabledColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                      dropdownColor: Theme.of(context).colorScheme.surface,
                       items: _busNumberOptions.map((int value) {
                         return DropdownMenuItem<int>(
                           value: value,
-                          // Ensure item text is readable
                           child: Text('Top $value', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
                         );
                       }).toList(),
@@ -680,42 +776,36 @@ class StatisticsScreenState extends State<StatisticsScreen>
                     ),
                   ],
                 ),
-              ),
-              FrequencyChart(
-                frequencyData: Map.fromEntries(
-                  _getMostFrequentBuses().entries.take(_numberOfBusesToShow)
+                const SizedBox(height: 8),
+                FrequencyChart(
+                  frequencyData: Map.fromEntries(
+                    _getMostFrequentBuses().entries.take(_numberOfBusesToShow)
+                  ),
+                  emptyDataMessage: 'No bus assignment data available',
                 ),
-                emptyDataMessage: 'No bus assignment data available',
-              ),
+              ],
+            ),
 
-              // --- Add Start Hour Frequency Chart --- 
-              const Divider(height: 32, thickness: 1, indent: 16, endIndent: 16),
-              
-              // Add Row with Title and Dropdown
-              Padding(
-                padding: const EdgeInsets.only(top: 16.0, bottom: 8.0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            SizedBox(height: sizes['cardSpacing']!),
+
+            // --- Start Hour Frequency Chart ---
+            _buildExpandableSection(
+              title: 'Most Frequent Start Hours',
+              subtitle: 'Groups logged work shifts by their starting hour (e.g., 06:00-06:59)',
+              icon: Icons.schedule,
+              children: [
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
                   children: [
-                    Expanded(
-                      child: Text(
-                        'Most Frequent Start Hours',
-                        style: TextStyle(fontSize: sizes['titleFontSize']!, fontWeight: FontWeight.bold),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
                     DropdownButton<int>(
                       value: _numberOfStartHoursToShow,
-                      // Add styling for dark mode
-                      style: TextStyle(color: Theme.of(context).colorScheme.onSurface), // Style for selected item text
-                      iconEnabledColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7), // Arrow color
-                      dropdownColor: Theme.of(context).colorScheme.surface, // Menu background color
+                      style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                      iconEnabledColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                      dropdownColor: Theme.of(context).colorScheme.surface,
                       items: _startHourNumberOptions.map((int value) {
                         return DropdownMenuItem<int>(
                           value: value,
-                          // Ensure item text is readable
                           child: Text('Top $value', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
                         );
                       }).toList(),
@@ -729,31 +819,17 @@ class StatisticsScreenState extends State<StatisticsScreen>
                     ),
                   ],
                 ),
-              ),
-              // Move explanatory note here, below title/dropdown row
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8.0), // Add padding below note
-                child: Text(
-                  'Groups logged work shifts by their starting hour (e.g., 06:00-06:59).', // Updated explanation
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                    fontStyle: FontStyle.italic,
+                const SizedBox(height: 8),
+                FrequencyChart(
+                  frequencyData: Map.fromEntries(
+                    _getMostFrequentStartHours().entries.take(_numberOfStartHoursToShow)
                   ),
+                  emptyDataMessage: 'No shift start time data available',
                 ),
-              ),
-              FrequencyChart(
-                frequencyData: Map.fromEntries(
-                  _getMostFrequentStartHours().entries.take(_numberOfStartHoursToShow)
-                ),
-                emptyDataMessage: 'No shift start time data available',
-              ),
-              // --- End Start Hour Section ---
-
-            ],
-          ),
+              ],
+            ),
+          ],
         ),
-      ),
       ),
     );
   }

@@ -1,4 +1,10 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.15.23': [
+    {
+      'title': 'Statistics Sections Now Expandable',
+      'description': 'All sections in the Statistics screen are now collapsible dropdowns, matching the Settings screen design.',
+    },
+  ],
   '2.15.22': [
     {
       'title': 'New App Icon',
