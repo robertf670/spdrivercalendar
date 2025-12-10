@@ -1,4 +1,18 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.16.0': [
+    {
+      'title': 'View Board Feature - Uni/Euro duties',
+      'description': 'Added "View Board" button in event edit dialog for universals/euro duties. Shows board details when available. Missing boards: 307/01, 307/02, 807/17, 807/20, 807/500.',
+    },
+    {
+      'title': 'Poll & Voting System',
+      'description': 'Added poll and voting functionality! Polls can be created that appear in banners alongside live updates. Users can vote once per poll, and results are displayed with vote counts and percentages.',
+    },
+    {
+      'title': 'Settings Cleanup',
+      'description': 'Removed "Show Welcome Page" option from Settings screen. Temporarily removed Notifications section while working on a fix.',
+    },
+  ],
   '2.15.23': [
     {
       'title': 'Statistics Sections Now Expandable',

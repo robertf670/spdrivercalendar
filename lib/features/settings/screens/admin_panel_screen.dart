@@ -62,7 +62,7 @@ class AdminPanelScreenState extends State<AdminPanelScreen> {
                 // Updates list
                 Expanded(
                   child: StreamBuilder<List<LiveUpdate>>(
-                    stream: LiveUpdatesService.getUpdatesStream(),
+                    stream: LiveUpdatesService.getUpdatesOnlyStream(),
                     builder: (context, snapshot) {
                       if (snapshot.connectionState == ConnectionState.waiting) {
                         return const Center(child: CircularProgressIndicator());
@@ -105,6 +105,7 @@ class AdminPanelScreenState extends State<AdminPanelScreen> {
               ],
             ),
       floatingActionButton: FloatingActionButton.extended(
+        heroTag: 'addUpdate',
         onPressed: _showAddUpdateDialog,
         backgroundColor: theme.colorScheme.primary,
         foregroundColor: theme.colorScheme.onPrimary,
@@ -311,22 +312,23 @@ class AdminPanelScreenState extends State<AdminPanelScreen> {
                 // Force visible badge if applicable
                 if (additionalBadge != null) additionalBadge,
                 const Spacer(),
-                // Priority indicator
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: _getPriorityColor(update.priority).withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    update.priority.toUpperCase(),
-                    style: TextStyle(
-                      color: _getPriorityColor(update.priority),
-                      fontWeight: FontWeight.bold,
-                      fontSize: 10,
+                // Priority indicator (only for updates)
+                if (!update.isPoll)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: _getPriorityColor(update.priority).withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      update.priority.toUpperCase(),
+                      style: TextStyle(
+                        color: _getPriorityColor(update.priority),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 10,
+                      ),
                     ),
                   ),
-                ),
                 const SizedBox(width: 8),
                 PopupMenuButton<String>(
                   onSelected: (value) {
@@ -433,8 +435,8 @@ class AdminPanelScreenState extends State<AdminPanelScreen> {
                 ],
               ],
             ),
-            // Routes affected (if any)
-            if (update.routesAffected.isNotEmpty) ...[
+            // Routes affected (if any) - only for updates
+            if (!update.isPoll && update.routesAffected.isNotEmpty) ...[
               const SizedBox(height: 8),
               Wrap(
                 spacing: 4,
@@ -460,6 +462,8 @@ class AdminPanelScreenState extends State<AdminPanelScreen> {
       ),
     );
   }
+
+  // Poll card removed - polls are now managed in PollManagementScreen
 
   Color _getPriorityColor(String priority) {
     switch (priority.toLowerCase()) {
@@ -524,6 +528,8 @@ class AdminPanelScreenState extends State<AdminPanelScreen> {
       ),
     );
   }
+
+  // Reset votes method removed - polls are now managed in PollManagementScreen
 
   void _confirmDelete(LiveUpdate update) {
     showDialog(
@@ -1308,5 +1314,393 @@ class UpdateDialogState extends State<UpdateDialog> {
   }
 }
 
- 
+// Dialog for creating/editing polls
+class PollDialog extends StatefulWidget {
+  final LiveUpdate? existingPoll;
+  final Function(LiveUpdate) onSave;
+
+  const PollDialog({
+    super.key,
+    this.existingPoll,
+    required this.onSave,
+  });
+
+  @override
+  PollDialogState createState() => PollDialogState();
+}
+
+class PollDialogState extends State<PollDialog> {
+  final _formKey = GlobalKey<FormState>();
+  final _titleController = TextEditingController();
+  final _descriptionController = TextEditingController();
+  final List<TextEditingController> _optionControllers = [];
+  
+  String _voteVisibility = 'always';
+  DateTime _startTime = DateTime.now();
+  DateTime _endTime = DateTime.now().add(const Duration(days: 7));
+  int _resultsVisibleDays = 7;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.existingPoll != null) {
+      final poll = widget.existingPoll!;
+      _titleController.text = poll.title;
+      _descriptionController.text = poll.description;
+      _voteVisibility = poll.voteVisibility ?? 'always';
+      _startTime = poll.startTime;
+      _endTime = poll.endTime;
+      _resultsVisibleDays = poll.resultsVisibleUntil != null
+          ? poll.resultsVisibleUntil!.difference(poll.endTime).inDays
+          : 7;
+      
+      if (poll.pollOptions != null) {
+        for (var option in poll.pollOptions!) {
+          _optionControllers.add(TextEditingController(text: option));
+        }
+      }
+    } else {
+      // Default: 2 options
+      _optionControllers.add(TextEditingController());
+      _optionControllers.add(TextEditingController());
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 500, maxHeight: 700),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Header
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Colors.deepPurple.shade600,
+                    Colors.deepPurple.shade800,
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(12),
+                  topRight: Radius.circular(12),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.deepPurple.withValues(alpha: 0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.poll, color: Colors.white),
+                  const SizedBox(width: 8),
+                  Text(
+                    widget.existingPoll != null ? 'Edit Poll' : 'Create New Poll',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close, color: Colors.white),
+                  ),
+                ],
+              ),
+            ),
+            // Form
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    children: [
+                      TextFormField(
+                        controller: _titleController,
+                        decoration: const InputDecoration(
+                          labelText: 'Poll Question',
+                          hintText: 'e.g., Which route do you prefer?',
+                          border: OutlineInputBorder(),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return 'Question is required';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _descriptionController,
+                        decoration: const InputDecoration(
+                          labelText: 'Description (Optional)',
+                          hintText: 'Additional context for the poll',
+                          border: OutlineInputBorder(),
+                        ),
+                        maxLines: 2,
+                      ),
+                      const SizedBox(height: 16),
+                      // Poll Options
+                      Row(
+                        children: [
+                          const Text(
+                            'Poll Options',
+                            style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+                          ),
+                          const Spacer(),
+                          IconButton(
+                            icon: const Icon(Icons.add),
+                            onPressed: () {
+                              setState(() {
+                                _optionControllers.add(TextEditingController());
+                              });
+                            },
+                            tooltip: 'Add Option',
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      ..._optionControllers.asMap().entries.map((entry) {
+                        final index = entry.key;
+                        final controller = entry.value;
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: TextFormField(
+                                  controller: controller,
+                                  decoration: InputDecoration(
+                                    labelText: 'Option ${index + 1}',
+                                    border: const OutlineInputBorder(),
+                                  ),
+                                  validator: (value) {
+                                    if (value == null || value.trim().isEmpty) {
+                                      return 'Required';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                              ),
+                              if (_optionControllers.length > 2)
+                                IconButton(
+                                  icon: const Icon(Icons.delete, color: Colors.red),
+                                  onPressed: () {
+                                    setState(() {
+                                      controller.dispose();
+                                      _optionControllers.removeAt(index);
+                                    });
+                                  },
+                                ),
+                            ],
+                          ),
+                        );
+                      }),
+                      const SizedBox(height: 16),
+                      DropdownButtonFormField<String>(
+                        value: _voteVisibility,
+                        decoration: const InputDecoration(
+                          labelText: 'Vote Visibility',
+                          border: OutlineInputBorder(),
+                        ),
+                        items: const [
+                          DropdownMenuItem(
+                            value: 'always',
+                            child: Text('Always show counts'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'after_vote',
+                            child: Text('Show after user votes'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'after_end',
+                            child: Text('Show after poll ends'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'never',
+                            child: Text('Never show counts'),
+                          ),
+                        ],
+                        onChanged: (value) => setState(() => _voteVisibility = value!),
+                      ),
+                      const SizedBox(height: 16),
+                      // Start time
+                      ListTile(
+                        title: const Text('Start Time'),
+                        subtitle: Text(DateFormat('MMM d, yyyy HH:mm').format(_startTime)),
+                        trailing: const Icon(Icons.schedule),
+                        onTap: () => _selectDateTime(true),
+                      ),
+                      // End time
+                      ListTile(
+                        title: const Text('End Time'),
+                        subtitle: Text(DateFormat('MMM d, yyyy HH:mm').format(_endTime)),
+                        trailing: const Icon(Icons.schedule),
+                        onTap: () => _selectDateTime(false),
+                      ),
+                      const SizedBox(height: 16),
+                      // Results visible duration
+                      TextFormField(
+                        initialValue: _resultsVisibleDays.toString(),
+                        decoration: const InputDecoration(
+                          labelText: 'Show Results For (Days)',
+                          hintText: 'How many days to show results after poll ends',
+                          border: OutlineInputBorder(),
+                        ),
+                        keyboardType: TextInputType.number,
+                        onChanged: (value) {
+                          final days = int.tryParse(value);
+                          if (days != null && days > 0) {
+                            setState(() => _resultsVisibleDays = days);
+                          }
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            // Actions
+            Container(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Cancel'),
+                  ),
+                  const SizedBox(width: 8),
+                  ElevatedButton(
+                    onPressed: _savePoll,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.deepPurple.shade600,
+                      foregroundColor: Colors.white,
+                      elevation: 2,
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    child: Text(widget.existingPoll != null ? 'Update' : 'Create'),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _selectDateTime(bool isStartTime) async {
+    final currentDateTime = isStartTime ? _startTime : _endTime;
+    
+    final date = await showDatePicker(
+      context: context,
+      initialDate: currentDateTime,
+      firstDate: DateTime.now().subtract(const Duration(days: 1)),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+    );
+    
+    if (date != null && mounted) {
+      final time = await showTimePicker(
+        context: context,
+        initialTime: TimeOfDay.fromDateTime(currentDateTime),
+      );
+      
+      if (time != null) {
+        final newDateTime = DateTime(
+          date.year,
+          date.month,
+          date.day,
+          time.hour,
+          time.minute,
+        );
+        
+        setState(() {
+          if (isStartTime) {
+            _startTime = newDateTime;
+            if (_endTime.isBefore(_startTime)) {
+              _endTime = _startTime.add(const Duration(days: 7));
+            }
+          } else {
+            _endTime = newDateTime;
+          }
+        });
+      }
+    }
+  }
+
+  void _savePoll() {
+    if (_formKey.currentState!.validate()) {
+      if (_optionControllers.length < 2) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please add at least 2 options'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      final options = _optionControllers
+          .map((controller) => controller.text.trim())
+          .where((text) => text.isNotEmpty)
+          .toList();
+
+      if (options.length < 2) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please add at least 2 valid options'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      final poll = LiveUpdate(
+        id: widget.existingPoll?.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
+        title: _titleController.text.trim(),
+        description: _descriptionController.text.trim(),
+        priority: 'info', // Not used for polls
+        startTime: _startTime,
+        endTime: _endTime,
+        routesAffected: [], // Polls are app-wide
+        type: 'poll',
+        pollOptions: options,
+        voteVisibility: _voteVisibility,
+        voteCounts: widget.existingPoll?.voteCounts ?? List.filled(options.length, 0),
+        totalVotes: widget.existingPoll?.totalVotes ?? 0,
+        resultsVisibleUntil: _endTime.add(Duration(days: _resultsVisibleDays)),
+      );
+
+      widget.onSave(poll);
+      Navigator.pop(context);
+    }
+  }
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _descriptionController.dispose();
+    for (var controller in _optionControllers) {
+      controller.dispose();
+    }
+    super.dispose();
+  }
+}
+
  

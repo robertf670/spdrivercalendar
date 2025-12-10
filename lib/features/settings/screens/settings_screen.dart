@@ -18,6 +18,8 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:spdrivercalendar/features/calendar/services/event_service.dart';
 import 'package:spdrivercalendar/services/pay_scale_service.dart';
 import '../../../config/app_config.dart';
+import 'package:spdrivercalendar/services/universal_board_service.dart';
+import 'package:spdrivercalendar/models/universal_board.dart';
 
 // Define Preference Keys for Notifications (Consider moving to AppConstants if not already there)
 const String kNotificationsEnabledKey = 'notificationsEnabled';
@@ -48,8 +50,8 @@ class SettingsScreenState extends State<SettingsScreen> {
   String _appVersion = '';
   final ScrollController _scrollController = ScrollController();
 
-  // Notification state variables
-  int _notificationOffsetHours = 1; // Default offset
+  // Notification state variables - Temporarily disabled
+  // int _notificationOffsetHours = 1; // Default offset
 
   // Auto-Backup state variable
   bool _autoBackupEnabled = false;
@@ -131,7 +133,8 @@ class SettingsScreenState extends State<SettingsScreen> {
     _includeBustimesLinksInGoogleCalendar = prefs.getBool(AppConstants.includeBustimesLinksInGoogleCalendarKey) ?? true;
     
     // Load notification settings
-    _notificationOffsetHours = prefs.getInt(kNotificationOffsetHoursKey) ?? 1;
+    // Temporarily disabled - Notifications section removed
+    // _notificationOffsetHours = prefs.getInt(kNotificationOffsetHoursKey) ?? 1;
 
     // Load auto-backup setting - default to true
     _autoBackupEnabled = prefs.getBool(AppConstants.autoBackupEnabledKey) ?? true;
@@ -300,7 +303,7 @@ class SettingsScreenState extends State<SettingsScreen> {
                       _buildLiveUpdatesPreferencesButton(),
                       _buildVersionHistoryButton(),
                       _buildResetRestDaysButton(),
-                      _buildShowWelcomePageButton(),
+                      _buildTestBoardButton(),
                     ],
                   ),
                   
@@ -358,30 +361,6 @@ class SettingsScreenState extends State<SettingsScreen> {
                       _buildRestoreButton(),
                       _buildAutoBackupToggle(),
                       _buildRestoreFromAutoBackupButton(),
-                    ],
-                  ),
-                  
-                  const SizedBox(height: 8),
-                  
-                  _buildExpandableSection(
-                    title: 'Notifications',
-                    icon: Icons.notifications,
-                    children: [
-                      // Add the warning message here
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
-                        child: Text(
-                          'Shift notifications are temporarily disabled due to technical issues. We are working on a fix.',
-                          style: TextStyle(
-                            color: Theme.of(context).colorScheme.error,
-                            fontSize: MediaQuery.of(context).size.width < 600 ? 12 : null,
-                          ),
-                        ),
-                      ),
-                      _buildShiftNotificationToggle(),
-                      _buildNotificationOffsetDropdown(),
-                      _buildTestNotificationButton(),
-                      _buildViewPendingNotificationsButton(),
                     ],
                   ),
                   
@@ -681,27 +660,6 @@ class SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _buildShowWelcomePageButton() {
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 4.0),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppTheme.borderRadius),
-      ),
-      child: ListTile(
-        leading: const Icon(Icons.help_outline),
-        title: const Text('Show Welcome Page'),
-        subtitle: const Text('View app introduction'),
-        onTap: () {
-          Navigator.pushNamed(
-            context, 
-            '/welcome',
-            arguments: true, // This indicates it's opened from settings
-          );
-        },
-      ),
-    );
-  }
-
   Widget _buildFeedbackButton() {
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 4.0),
@@ -724,114 +682,115 @@ class SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _buildShiftNotificationToggle() {
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 4.0),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppTheme.borderRadius),
-      ),
-      child: SwitchListTile(
-        title: const Text('Enable Shift Notifications'),
-        subtitle: const Text('Get notified before your shift starts'),
-        secondary: const Icon(
-          Icons.notifications_off, // Force off icon
-          color: Colors.grey, // Force grey
-        ),
-        value: false, // Force off value
-        onChanged: null, // *** Disable the switch ***
-      ),
-    );
-  }
+  // Temporarily disabled - Notifications section removed while working on a fix
+  // Widget _buildShiftNotificationToggle() {
+  //   return Card(
+  //     margin: const EdgeInsets.symmetric(vertical: 4.0),
+  //     shape: RoundedRectangleBorder(
+  //       borderRadius: BorderRadius.circular(AppTheme.borderRadius),
+  //     ),
+  //     child: SwitchListTile(
+  //       title: const Text('Enable Shift Notifications'),
+  //       subtitle: const Text('Get notified before your shift starts'),
+  //       secondary: const Icon(
+  //         Icons.notifications_off, // Force off icon
+  //         color: Colors.grey, // Force grey
+  //       ),
+  //       value: false, // Force off value
+  //       onChanged: null, // *** Disable the switch ***
+  //     ),
+  //   );
+  // }
 
-  Widget _buildNotificationOffsetDropdown() {
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 4.0),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppTheme.borderRadius),
-      ),
-      child: ListTile(
-        enabled: false, // Disable the ListTile visually
-        leading: const Icon(
-          Icons.timer_outlined,
-          color: Colors.grey, // Force grey
-        ),
-        title: const Text(
-          'Notify Before Shift',
-          style: TextStyle(color: Colors.grey), // Force grey text
-        ),
-        trailing: DropdownButton<int>(
-          value: _notificationOffsetHours,
-          onChanged: null, // *** Disable the dropdown ***
-          items: <int>[1, 2, 4]
-              .map<DropdownMenuItem<int>>((int value) {
-            return DropdownMenuItem<int>(
-              value: value,
-              child: Text(
-                 '$value hour${value > 1 ? 's' : ''}',
-                 style: const TextStyle(color: Colors.grey), // Force grey item text
-              ),
-            );
-          }).toList(),
-          disabledHint: Text( // Show hint when disabled
-             '$_notificationOffsetHours hour${_notificationOffsetHours > 1 ? 's' : ''}',
-             style: const TextStyle(color: Colors.grey), 
-          ),
-        ),
-      ),
-    );
-  }
+  // Widget _buildNotificationOffsetDropdown() {
+  //   return Card(
+  //     margin: const EdgeInsets.symmetric(vertical: 4.0),
+  //     shape: RoundedRectangleBorder(
+  //       borderRadius: BorderRadius.circular(AppTheme.borderRadius),
+  //     ),
+  //     child: ListTile(
+  //       enabled: false, // Disable the ListTile visually
+  //       leading: const Icon(
+  //         Icons.timer_outlined,
+  //         color: Colors.grey, // Force grey
+  //       ),
+  //       title: const Text(
+  //         'Notify Before Shift',
+  //         style: TextStyle(color: Colors.grey), // Force grey text
+  //       ),
+  //       trailing: DropdownButton<int>(
+  //         value: _notificationOffsetHours,
+  //         onChanged: null, // *** Disable the dropdown ***
+  //         items: <int>[1, 2, 4]
+  //             .map<DropdownMenuItem<int>>((int value) {
+  //           return DropdownMenuItem<int>(
+  //             value: value,
+  //             child: Text(
+  //                '$value hour${value > 1 ? 's' : ''}',
+  //                style: const TextStyle(color: Colors.grey), // Force grey item text
+  //             ),
+  //           );
+  //         }).toList(),
+  //         disabledHint: Text( // Show hint when disabled
+  //            '$_notificationOffsetHours hour${_notificationOffsetHours > 1 ? 's' : ''}',
+  //            style: const TextStyle(color: Colors.grey), 
+  //         ),
+  //       ),
+  //     ),
+  //   );
+  // }
 
-  Widget _buildTestNotificationButton() {
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 4.0),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppTheme.borderRadius),
-      ),
-      child: ListTile(
-        enabled: false, // Disable the ListTile visually
-        leading: const Icon(
-          Icons.notification_important_outlined,
-          color: Colors.grey, // Force grey
-        ),
-        title: const Text(
-          'Test Notification',
-          style: TextStyle(color: Colors.grey), // Force grey text
-        ),
-        trailing: ElevatedButton(
-          onPressed: null, // *** Disable the button ***
-          style: ElevatedButton.styleFrom(
-             backgroundColor: Colors.grey[300],
-             foregroundColor: Colors.grey[600],
-          ),
-          child: const Text('Send Test'),
-        ),
-      ),
-    );
-  }
+  // Widget _buildTestNotificationButton() {
+  //   return Card(
+  //     margin: const EdgeInsets.symmetric(vertical: 4.0),
+  //     shape: RoundedRectangleBorder(
+  //       borderRadius: BorderRadius.circular(AppTheme.borderRadius),
+  //     ),
+  //     child: ListTile(
+  //       enabled: false, // Disable the ListTile visually
+  //       leading: const Icon(
+  //         Icons.notification_important_outlined,
+  //         color: Colors.grey, // Force grey
+  //       ),
+  //       title: const Text(
+  //         'Test Notification',
+  //         style: TextStyle(color: Colors.grey), // Force grey text
+  //       ),
+  //       trailing: ElevatedButton(
+  //         onPressed: null, // *** Disable the button ***
+  //         style: ElevatedButton.styleFrom(
+  //            backgroundColor: Colors.grey[300],
+  //            foregroundColor: Colors.grey[600],
+  //         ),
+  //         child: const Text('Send Test'),
+  //       ),
+  //     ),
+  //   );
+  // }
 
-  Widget _buildViewPendingNotificationsButton() {
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 4.0),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppTheme.borderRadius),
-      ),
-      child: ListTile(
-        enabled: false, // Disable the ListTile visually
-        leading: const Icon(
-          Icons.pending_actions_outlined,
-          color: Colors.grey, // Force grey
-        ),
-        title: const Text(
-          'View Pending Notifications',
-          style: TextStyle(color: Colors.grey), // Force grey text
-        ),
-        trailing: IconButton(
-          icon: const Icon(Icons.arrow_forward_ios, color: Colors.grey),
-          onPressed: null, // *** Disable the button ***
-        ),
-      ),
-    );
-  }
+  // Widget _buildViewPendingNotificationsButton() {
+  //   return Card(
+  //     margin: const EdgeInsets.symmetric(vertical: 4.0),
+  //     shape: RoundedRectangleBorder(
+  //       borderRadius: BorderRadius.circular(AppTheme.borderRadius),
+  //     ),
+  //     child: ListTile(
+  //       enabled: false, // Disable the ListTile visually
+  //       leading: const Icon(
+  //         Icons.pending_actions_outlined,
+  //         color: Colors.grey, // Force grey
+  //       ),
+  //       title: const Text(
+  //         'View Pending Notifications',
+  //         style: TextStyle(color: Colors.grey), // Force grey text
+  //       ),
+  //       trailing: IconButton(
+  //         icon: const Icon(Icons.arrow_forward_ios, color: Colors.grey),
+  //         onPressed: null, // *** Disable the button ***
+  //       ),
+  //     ),
+  //   );
+  // }
 
   Future<void> _handleGoogleSignIn() async {
     // Capture ScaffoldMessenger before async operations
@@ -1349,73 +1308,112 @@ class SettingsScreenState extends State<SettingsScreen> {
         ),
         title: const Text('Admin Panel'),
         subtitle: const Text('Manage live updates and diversions'),
-        onTap: _showAdminPasswordDialog,
+        onTap: _checkAdminAccess,
       ),
     );
   }
 
+  Future<void> _checkAdminAccess() async {
+    // Check if device is remembered
+    final isRemembered = await StorageService.getBool(AppConstants.adminRememberDeviceKey);
+    if (isRemembered) {
+      // Device is remembered, skip password dialog
+      _navigateToAdminPanel();
+      return;
+    }
+    // Show password dialog
+    _showAdminPasswordDialog();
+  }
+
   void _showAdminPasswordDialog() {
     final passwordController = TextEditingController();
+    bool rememberDevice = false;
     
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Row(
-          children: [
-            Icon(Icons.lock, color: Colors.red.shade600),
-            const SizedBox(width: 8),
-            const Text('Admin Access'),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('Enter admin password to access the control panel:'),
-            const SizedBox(height: 16),
-            TextField(
-              controller: passwordController,
-              obscureText: true,
-              decoration: const InputDecoration(
-                labelText: 'Password',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.lock_outline),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: Row(
+            children: [
+              Icon(Icons.lock, color: Colors.red.shade600),
+              const SizedBox(width: 8),
+              const Text('Admin Access'),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('Enter admin password to access the control panel:'),
+              const SizedBox(height: 16),
+              TextField(
+                controller: passwordController,
+                obscureText: true,
+                decoration: const InputDecoration(
+                  labelText: 'Password',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.lock_outline),
+                ),
+                onSubmitted: (value) {
+                  if (AppConfig.isValidAdminPassword(value)) {
+                    _handleAdminLogin(rememberDevice);
+                    Navigator.pop(context);
+                  } else {
+                    Navigator.pop(context);
+                    _showIncorrectPasswordDialog();
+                  }
+                },
               ),
-              onSubmitted: (value) {
-                                  if (AppConfig.isValidAdminPassword(value)) {
+              const SizedBox(height: 16),
+              CheckboxListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Remember this device'),
+                subtitle: const Text('Skip password on this device'),
+                value: rememberDevice,
+                onChanged: (value) {
+                  setState(() {
+                    rememberDevice = value ?? false;
+                  });
+                },
+                controlAffinity: ListTileControlAffinity.leading,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (AppConfig.isValidAdminPassword(passwordController.text)) {
+                  _handleAdminLogin(rememberDevice);
                   Navigator.pop(context);
-                  _navigateToAdminPanel();
                 } else {
                   Navigator.pop(context);
                   _showIncorrectPasswordDialog();
                 }
               },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red.shade600,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Access'),
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-                              if (AppConfig.isValidAdminPassword(passwordController.text)) {
-                Navigator.pop(context);
-                _navigateToAdminPanel();
-              } else {
-                Navigator.pop(context);
-                _showIncorrectPasswordDialog();
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red.shade600,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Access'),
-          ),
-        ],
       ),
     );
+  }
+
+  Future<void> _handleAdminLogin(bool rememberDevice) async {
+    if (rememberDevice) {
+      // Store remember device flag (indefinitely)
+      await StorageService.saveBool(
+        AppConstants.adminRememberDeviceKey,
+        true,
+      );
+    }
+    _navigateToAdminPanel();
   }
 
   void _showIncorrectPasswordDialog() {
@@ -1463,6 +1461,493 @@ class SettingsScreenState extends State<SettingsScreen> {
         onChanged: _toggleOvernightDutiesDisplay,
       ),
     );
+  }
+
+  Widget _buildTestBoardButton() {
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 4.0),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppTheme.borderRadius),
+      ),
+      child: ListTile(
+        leading: const Icon(Icons.route),
+        title: const Text('Test Board Viewer'),
+        subtitle: const Text('View boards in JSON format'),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: _showBoardSelection,
+      ),
+    );
+  }
+
+  Future<void> _showBoardSelection() async {
+    try {
+      final boards = await UniversalBoardService.loadBoards();
+      if (boards.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('No boards found')),
+          );
+        }
+        return;
+      }
+
+      // Filter to only show boards that have sections (not empty)
+      final boardsWithData = boards.where((b) => b.sections.isNotEmpty).toList();
+      
+      if (boardsWithData.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('No boards with data found')),
+          );
+        }
+        return;
+      }
+
+      if (mounted) {
+        // Show selection dialog
+        final selectedBoard = await showDialog<UniversalBoard>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Select Board'),
+            content: SizedBox(
+              width: double.maxFinite,
+              child: ListView.builder(
+                shrinkWrap: true,
+                itemCount: boardsWithData.length,
+                itemBuilder: (context, index) {
+                  final board = boardsWithData[index];
+                  return ListTile(
+                    title: Text('Board ${board.shift}'),
+                    subtitle: board.duty != null ? Text('Duty ${board.duty}') : null,
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => Navigator.of(context).pop(board),
+                  );
+                },
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Cancel'),
+              ),
+            ],
+          ),
+        );
+
+        if (selectedBoard != null) {
+          _showBoard(selectedBoard);
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading boards: $e')),
+        );
+      }
+    }
+  }
+
+  void _showBoard(UniversalBoard board) {
+    showDialog(
+          context: context,
+          builder: (context) => Dialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Container(
+              constraints: BoxConstraints(
+                maxWidth: MediaQuery.of(context).size.width * 0.95,
+                maxHeight: MediaQuery.of(context).size.height * 0.85,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Header
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.primary,
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(20),
+                        topRight: Radius.circular(20),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Board ${board.shift}',
+                                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                  color: Theme.of(context).colorScheme.onPrimary,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                              if (board.duty != null) ...[
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Duty ${board.duty}',
+                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.9),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          icon: Icon(
+                            Icons.close,
+                            color: Theme.of(context).colorScheme.onPrimary,
+                          ),
+                          onPressed: () => Navigator.of(context).pop(),
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Content
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: board.sections.map((section) {
+                          final sectionType = section.type;
+                          final isFirstHalf = sectionType == 'firstHalf';
+                          final sectionColor = isFirstHalf ? Colors.orange : Colors.blue;
+                          
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 28),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // Section header with subtle background
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                  decoration: BoxDecoration(
+                                    color: sectionColor.withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Container(
+                                        width: 4,
+                                        height: 24,
+                                        decoration: BoxDecoration(
+                                          color: sectionColor,
+                                          borderRadius: BorderRadius.circular(2),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Text(
+                                        isFirstHalf ? 'First Half' : 'Second Half',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 17,
+                                          color: sectionColor.shade800,
+                                          letterSpacing: 0.3,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                                // Entries with subtle timeline
+                                ...section.entries.asMap().entries.map((entryEntry) {
+                                  final entry = entryEntry.value;
+                                  final isLast = entryEntry.key == section.entries.length - 1;
+                                  
+                                  // Calculate if this entry has content below the action
+                                  final hasDetails = entry.location != null || 
+                                                     entry.notes != null || 
+                                                     (entry.action.toLowerCase() != 'route' && entry.route != null);
+                                  
+                                  // Check if action is Route (to combine with route badge)
+                                  final isRouteAction = entry.action.toLowerCase() == 'route' && entry.route != null;
+                                  
+                                  return Padding(
+                                    padding: EdgeInsets.only(bottom: isLast ? 0 : 12),
+                                    child: Row(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        // Time column - fixed width and alignment
+                                        SizedBox(
+                                          width: 70,
+                                          child: Column(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              if (entry.time != null)
+                                                Container(
+                                                  width: 70,
+                                                  padding: const EdgeInsets.symmetric(
+                                                    horizontal: 8,
+                                                    vertical: 6,
+                                                  ),
+                                                  decoration: BoxDecoration(
+                                                    color: sectionColor.shade50,
+                                                    borderRadius: BorderRadius.circular(8),
+                                                    border: Border.all(
+                                                      color: sectionColor.withValues(alpha: 0.3),
+                                                      width: 1,
+                                                    ),
+                                                  ),
+                                                  child: Text(
+                                                    entry.time!,
+                                                    textAlign: TextAlign.center,
+                                                    style: TextStyle(
+                                                      fontWeight: FontWeight.bold,
+                                                      fontSize: 14,
+                                                      color: sectionColor.shade800,
+                                                      height: 1.2,
+                                                    ),
+                                                  ),
+                                                )
+                                              else
+                                                SizedBox(
+                                                  width: 70,
+                                                  height: 30, // Match badge height
+                                                ),
+                                              if (!isLast) ...[
+                                                const SizedBox(height: 6),
+                                                Container(
+                                                  width: 2,
+                                                  height: hasDetails ? 35 : 15,
+                                                  color: sectionColor.withValues(alpha: 0.2),
+                                                ),
+                                              ],
+                                            ],
+                                          ),
+                                        ),
+                                        const SizedBox(width: 16),
+                                        // Content column
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              // Action - aligned with time badge by matching height
+                                              SizedBox(
+                                                height: entry.time != null ? 30 : null,
+                                                child: Align(
+                                                  alignment: Alignment.centerLeft,
+                                                  child: isRouteAction
+                                                      ? Row(
+                                                          mainAxisSize: MainAxisSize.min,
+                                                          crossAxisAlignment: CrossAxisAlignment.center,
+                                                          children: [
+                                                            Text(
+                                                              'Route ',
+                                                              style: TextStyle(
+                                                                fontWeight: FontWeight.w600,
+                                                                fontSize: 16,
+                                                                color: Theme.of(context).colorScheme.onSurface,
+                                                              ),
+                                                            ),
+                                                            Container(
+                                                              padding: const EdgeInsets.symmetric(
+                                                                horizontal: 8,
+                                                                vertical: 4,
+                                                              ),
+                                                              decoration: BoxDecoration(
+                                                                color: Colors.blue.shade50,
+                                                                borderRadius: BorderRadius.circular(6),
+                                                              ),
+                                                              child: Text(
+                                                                entry.route!,
+                                                                style: TextStyle(
+                                                                  fontSize: 16,
+                                                                  color: Colors.blue.shade700,
+                                                                  fontWeight: FontWeight.bold,
+                                                                ),
+                                                              ),
+                                                            ),
+                                                          ],
+                                                        )
+                                                      : Text(
+                                                          entry.action,
+                                                          style: TextStyle(
+                                                            fontWeight: FontWeight.w600,
+                                                            fontSize: 16,
+                                                            color: Theme.of(context).colorScheme.onSurface,
+                                                          ),
+                                                        ),
+                                                ),
+                                              ),
+                                              if (hasDetails) const SizedBox(height: 6),
+                                              // Route path information - just "From [location]"
+                                              if (isRouteAction && entry.location != null) ...[
+                                                Padding(
+                                                  padding: const EdgeInsets.only(top: 2),
+                                                  child: Row(
+                                                    children: [
+                                                      Icon(
+                                                        Icons.location_on,
+                                                        size: 16,
+                                                        color: Theme.of(context)
+                                                            .colorScheme.onSurface
+                                                            .withValues(alpha: 0.5),
+                                                      ),
+                                                      const SizedBox(width: 6),
+                                                      Expanded(
+                                                        child: Text(
+                                                          'From ${entry.location}',
+                                                          style: TextStyle(
+                                                            fontSize: 14,
+                                                            color: Theme.of(context)
+                                                                .colorScheme.onSurface
+                                                                .withValues(alpha: 0.7),
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                                // Show notes if they exist (like "via Celbridge")
+                                                if (entry.notes != null) ...[
+                                                  Padding(
+                                                    padding: const EdgeInsets.only(top: 4),
+                                                    child: Row(
+                                                      children: [
+                                                        Icon(
+                                                          Icons.info_outline,
+                                                          size: 16,
+                                                          color: Theme.of(context)
+                                                              .colorScheme.onSurface
+                                                              .withValues(alpha: 0.5),
+                                                        ),
+                                                        const SizedBox(width: 6),
+                                                        Expanded(
+                                                          child: Text(
+                                                            entry.notes!,
+                                                            style: TextStyle(
+                                                              fontSize: 13,
+                                                              fontStyle: FontStyle.italic,
+                                                              color: Theme.of(context)
+                                                                  .colorScheme.onSurface
+                                                                  .withValues(alpha: 0.7),
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                ],
+                                              ] else ...[
+                                                // Route badge (only if action is not "Route")
+                                                if (entry.route != null) ...[
+                                                  Container(
+                                                    padding: const EdgeInsets.symmetric(
+                                                      horizontal: 10,
+                                                      vertical: 5,
+                                                    ),
+                                                    decoration: BoxDecoration(
+                                                      color: Colors.blue.shade50,
+                                                      borderRadius: BorderRadius.circular(6),
+                                                    ),
+                                                    child: Text(
+                                                      'Route ${entry.route}',
+                                                      style: TextStyle(
+                                                        fontSize: 13,
+                                                        color: Colors.blue.shade700,
+                                                        fontWeight: FontWeight.w600,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  const SizedBox(height: 4),
+                                                ],
+                                                // Location (for non-Route entries)
+                                                if (entry.location != null) ...[
+                                                  Padding(
+                                                    padding: const EdgeInsets.only(top: 2),
+                                                    child: Row(
+                                                      children: [
+                                                        Icon(
+                                                          Icons.location_on,
+                                                          size: 16,
+                                                          color: Theme.of(context)
+                                                              .colorScheme.onSurface
+                                                              .withValues(alpha: 0.5),
+                                                        ),
+                                                        const SizedBox(width: 6),
+                                                        Expanded(
+                                                          child: Text(
+                                                            entry.location!,
+                                                            style: TextStyle(
+                                                              fontSize: 14,
+                                                              color: Theme.of(context)
+                                                                  .colorScheme.onSurface
+                                                                  .withValues(alpha: 0.7),
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                ],
+                                              ],
+                                              // Notes (exclude Route entries as they're handled above)
+                                              if (entry.notes != null && !isRouteAction) ...[
+                                                Padding(
+                                                  padding: EdgeInsets.only(
+                                                    top: entry.location != null ? 4 : 2,
+                                                  ),
+                                                  child: Container(
+                                                    padding: const EdgeInsets.all(8),
+                                                    decoration: BoxDecoration(
+                                                      color: Theme.of(context)
+                                                          .colorScheme.surfaceContainerHighest
+                                                          .withValues(alpha: 0.5),
+                                                      borderRadius: BorderRadius.circular(8),
+                                                    ),
+                                                    child: Row(
+                                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                                      children: [
+                                                        Icon(
+                                                          Icons.info_outline,
+                                                          size: 16,
+                                                          color: Theme.of(context)
+                                                              .colorScheme.onSurface
+                                                              .withValues(alpha: 0.5),
+                                                        ),
+                                                        const SizedBox(width: 8),
+                                                        Expanded(
+                                                          child: Text(
+                                                            entry.notes!,
+                                                            style: TextStyle(
+                                                              fontSize: 13,
+                                                              color: Theme.of(context)
+                                                                  .colorScheme.onSurface
+                                                                  .withValues(alpha: 0.7),
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                }).toList(),
+                              ],
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
   }
 
 }

@@ -9,6 +9,17 @@ service cloud.firestore {
     match /live_updates/{document} {
       allow read: if true;
       allow write: if true;
+      
+      // Votes subcollection for polls
+      // Users can create votes (one per user per poll enforced by transaction)
+      // Users can read votes (for checking if they voted)
+      // Delete allowed for admin vote resets (admin access controlled at app level)
+      match /votes/{voteId} {
+        allow read: if true;
+        allow create: if true;
+        allow update: if false; // Votes are immutable once created
+        allow delete: if true; // Allow deletion for admin vote resets
+      }
     }
     
     // User Activity Collections  

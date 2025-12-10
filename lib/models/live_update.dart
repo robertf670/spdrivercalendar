@@ -1,17 +1,25 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-// Data model for live updates
+// Data model for live updates and polls
 class LiveUpdate {
   final String id;
   final String title;
   final String description;
-  final String priority; // 'critical', 'warning', 'info'
+  final String priority; // 'critical', 'warning', 'info' (for updates only)
   final DateTime startTime;
   final DateTime endTime;
   final List<String> routesAffected;
-  final bool forceVisible; // Show immediately regardless of start time
-  final bool enableScheduledVisibility; // Enable scheduled visibility feature
-  final int hoursBeforeStart; // Hours before startTime to display (0 = at start time)
+  final bool forceVisible; // Show immediately regardless of start time (for updates only)
+  final bool enableScheduledVisibility; // Enable scheduled visibility feature (for updates only)
+  final int hoursBeforeStart; // Hours before startTime to display (0 = at start time) (for updates only)
+  
+  // Poll-specific fields
+  final String type; // 'update' or 'poll'
+  final List<String>? pollOptions; // Poll options (null for updates)
+  final String? voteVisibility; // 'always', 'after_vote', 'after_end', 'never' (for polls only)
+  final List<int>? voteCounts; // Vote counts matching pollOptions length (for polls only)
+  final int? totalVotes; // Total votes cast (for polls only)
+  final DateTime? resultsVisibleUntil; // When to stop showing results after poll ends (for polls only)
 
   LiveUpdate({
     required this.id,
@@ -24,6 +32,12 @@ class LiveUpdate {
     this.forceVisible = false,
     this.enableScheduledVisibility = false,
     this.hoursBeforeStart = 0,
+    this.type = 'update',
+    this.pollOptions,
+    this.voteVisibility,
+    this.voteCounts,
+    this.totalVotes,
+    this.resultsVisibleUntil,
   });
 
   LiveUpdate copyWith({
@@ -37,6 +51,12 @@ class LiveUpdate {
     bool? forceVisible,
     bool? enableScheduledVisibility,
     int? hoursBeforeStart,
+    String? type,
+    List<String>? pollOptions,
+    String? voteVisibility,
+    List<int>? voteCounts,
+    int? totalVotes,
+    DateTime? resultsVisibleUntil,
   }) {
     return LiveUpdate(
       id: id ?? this.id,
@@ -49,8 +69,20 @@ class LiveUpdate {
       forceVisible: forceVisible ?? this.forceVisible,
       enableScheduledVisibility: enableScheduledVisibility ?? this.enableScheduledVisibility,
       hoursBeforeStart: hoursBeforeStart ?? this.hoursBeforeStart,
+      type: type ?? this.type,
+      pollOptions: pollOptions ?? this.pollOptions,
+      voteVisibility: voteVisibility ?? this.voteVisibility,
+      voteCounts: voteCounts ?? this.voteCounts,
+      totalVotes: totalVotes ?? this.totalVotes,
+      resultsVisibleUntil: resultsVisibleUntil ?? this.resultsVisibleUntil,
     );
   }
+  
+  /// Check if this is a poll
+  bool get isPoll => type == 'poll';
+  
+  /// Check if this is an update
+  bool get isUpdate => type == 'update';
 
   /// Convert to JSON for local storage/backup
   Map<String, dynamic> toJson() {
@@ -65,6 +97,12 @@ class LiveUpdate {
       'forceVisible': forceVisible,
       'enableScheduledVisibility': enableScheduledVisibility,
       'hoursBeforeStart': hoursBeforeStart,
+      'type': type,
+      'pollOptions': pollOptions,
+      'voteVisibility': voteVisibility,
+      'voteCounts': voteCounts,
+      'totalVotes': totalVotes,
+      'resultsVisibleUntil': resultsVisibleUntil?.toIso8601String(),
     };
   }
 
@@ -81,6 +119,12 @@ class LiveUpdate {
       forceVisible: json['forceVisible'] ?? false,
       enableScheduledVisibility: json['enableScheduledVisibility'] ?? false,
       hoursBeforeStart: json['hoursBeforeStart'] ?? 0,
+      type: json['type'] ?? 'update',
+      pollOptions: json['pollOptions'] != null ? List<String>.from(json['pollOptions']) : null,
+      voteVisibility: json['voteVisibility'],
+      voteCounts: json['voteCounts'] != null ? List<int>.from(json['voteCounts']) : null,
+      totalVotes: json['totalVotes'],
+      resultsVisibleUntil: json['resultsVisibleUntil'] != null ? DateTime.parse(json['resultsVisibleUntil']) : null,
     );
   }
 
@@ -97,12 +141,18 @@ class LiveUpdate {
       forceVisible: data['forceVisible'] ?? false,
       enableScheduledVisibility: data['enableScheduledVisibility'] ?? false,
       hoursBeforeStart: data['hoursBeforeStart'] ?? 0,
+      type: data['type'] ?? 'update',
+      pollOptions: data['pollOptions'] != null ? List<String>.from(data['pollOptions']) : null,
+      voteVisibility: data['voteVisibility'],
+      voteCounts: data['voteCounts'] != null ? List<int>.from(data['voteCounts']) : null,
+      totalVotes: data['totalVotes'],
+      resultsVisibleUntil: data['resultsVisibleUntil'] != null ? (data['resultsVisibleUntil'] as Timestamp).toDate() : null,
     );
   }
 
   /// Convert to Firestore document data
   Map<String, dynamic> toFirestore() {
-    return {
+    final map = {
       'title': title,
       'description': description,
       'priority': priority,
@@ -112,15 +162,34 @@ class LiveUpdate {
       'forceVisible': forceVisible,
       'enableScheduledVisibility': enableScheduledVisibility,
       'hoursBeforeStart': hoursBeforeStart,
+      'type': type,
       'createdAt': Timestamp.fromDate(DateTime.now()),
     };
+    
+    // Add poll-specific fields if this is a poll
+    if (isPoll) {
+      map['pollOptions'] = pollOptions ?? [];
+      map['voteVisibility'] = voteVisibility ?? 'always';
+      map['voteCounts'] = voteCounts ?? List.filled(pollOptions?.length ?? 0, 0);
+      map['totalVotes'] = totalVotes ?? 0;
+      if (resultsVisibleUntil != null) {
+        map['resultsVisibleUntil'] = Timestamp.fromDate(resultsVisibleUntil!);
+      }
+    }
+    
+    return map;
   }
 
-  /// Check if this update is currently active
+  /// Check if this update/poll is currently active
   bool get isActive {
     final now = DateTime.now();
     
-    // Calculate scheduled visibility time if enabled
+    // For polls, simple time-based check
+    if (isPoll) {
+      return now.isAfter(startTime) && now.isBefore(endTime);
+    }
+    
+    // For updates, calculate scheduled visibility time if enabled
     DateTime effectiveStartTime = startTime;
     if (enableScheduledVisibility && hoursBeforeStart > 0) {
       effectiveStartTime = startTime.subtract(Duration(hours: hoursBeforeStart));
@@ -130,6 +199,22 @@ class LiveUpdate {
     // during scheduled time window (which may be before actual start time)
     return (forceVisible && now.isBefore(endTime)) ||
            (now.isAfter(effectiveStartTime) && now.isBefore(endTime));
+  }
+  
+  /// Check if poll should be shown (active or within results window)
+  bool get shouldShowPoll {
+    if (!isPoll) return false;
+    final now = DateTime.now();
+    
+    // Show if active
+    if (isActive) return true;
+    
+    // Show if ended but within results window
+    if (resultsVisibleUntil != null && now.isBefore(resultsVisibleUntil!)) {
+      return true;
+    }
+    
+    return false;
   }
 
   /// Check if this update is scheduled for the future

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'admin_panel_screen.dart';
 import 'user_analytics_screen.dart';
+import 'poll_management_screen.dart';
 import '../../../core/services/storage_service.dart';
 import '../../../core/constants/app_constants.dart';
 
@@ -200,6 +201,14 @@ class AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       ),
                       _buildAdminCard(
                         context,
+                        title: 'Polls',
+                        subtitle: 'Manage polls and votes',
+                        icon: Icons.poll,
+                        color: Colors.deepPurple,
+                        onTap: () => _navigateToPolls(context),
+                      ),
+                      _buildAdminCard(
+                        context,
                         title: 'User Analytics',
                         subtitle: 'View usage statistics',
                         icon: Icons.analytics,
@@ -289,6 +298,15 @@ class AdminDashboardScreenState extends State<AdminDashboardScreen> {
       context,
       MaterialPageRoute(
         builder: (context) => const UserAnalyticsScreen(),
+      ),
+    );
+  }
+
+  void _navigateToPolls(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const PollManagementScreen(),
       ),
     );
   }

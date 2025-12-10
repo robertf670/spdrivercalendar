@@ -1,0 +1,1090 @@
+{
+  "boards": [
+    {
+      "shift": "307/01",
+      "duty": null,
+      "sections": []
+    },
+    {
+      "shift": "307/02",
+      "duty": null,
+      "sections": []
+    },
+    {
+      "shift": "307/03",
+      "duty": "007511",
+      "sections": [
+        {
+          "type": "firstHalf",
+          "entries": [
+            {
+              "action": "Report",
+              "time": "06:28",
+              "location": null,
+              "route": null,
+              "notes": null
+            },
+            {
+              "action": "Depart Garage",
+              "time": "06:36",
+              "location": "Garage",
+              "route": null,
+              "notes": null
+            },
+            {
+              "action": "Route",
+              "time": "07:20",
+              "location": "Salesian College",
+              "route": "X28",
+              "notes": "via Celbridge"
+            },
+            {
+              "action": "Arrive",
+              "time": "09:30",
+              "location": "Belfield",
+              "route": null,
+              "notes": null
+            },
+            {
+              "action": "Work as Directed",
+              "time": null,
+              "location": null,
+              "route": null,
+              "notes": "Call Control - Work as Directed"
+            },
+            {
+              "action": "Break",
+              "time": "11:05",
+              "location": "Phibsboro Garage",
+              "route": null,
+              "notes": null
+            }
+          ]
+        },
+        {
+          "type": "secondHalf",
+          "entries": [
+            {
+              "action": "Report",
+              "time": "15:27",
+              "location": null,
+              "route": null,
+              "notes": null
+            },
+            {
+              "action": "Depart Garage",
+              "time": "15:30",
+              "location": "Garage",
+              "route": null,
+              "notes": null
+            },
+            {
+              "action": "Route",
+              "time": "16:15",
+              "location": "Sandymount",
+              "route": "C1",
+              "notes": null
+            },
+            {
+              "action": "Arrive",
+              "time": "17:55",
+              "location": "Adamstown Stn",
+              "route": null,
+              "notes": null
+            },
+            {
+              "action": "Finish",
+              "time": "18:28",
+              "location": "Phibsboro Garage",
+              "route": null,
+              "notes": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "shift": "307/04",
+      "duty": "007532",
+      "sections": [
+        {
+          "type": "firstHalf",
+          "entries": [
+            {
+              "action": "Report",
+              "time": "06:18",
+              "location": null,
+              "route": null,
+              "notes": null
+            },
+            {
+              "action": "Depart Garage",
+              "time": "06:26",
+              "location": "Garage",
+              "route": null,
+              "notes": null
+            },
+            {
+              "action": "Route",
+              "time": "07:15",
+              "location": "Maynooth",
+              "route": "X25",
+              "notes": "Via Easton Rd"
+            },
+            {
+              "action": "Arrive",
+              "time": "09:30",
+              "location": "UCD Belfield",
+              "route": null,
+              "notes": null
+            },
+            {
+              "action": "Break",
+              "time": "10:15",
+              "location": "Phibsboro Garage",
+              "route": null,
+              "notes": null
+            }
+          ]
+        },
+        {
+          "type": "secondHalf",
+          "entries": [
+            {
+              "action": "Report",
+              "time": "15:27",
+              "location": null,
+              "route": null,
+              "notes": null
+            },
+            {
+              "action": "Depart Garage",
+              "time": "15:30",
+              "location": "Garage",
+              "route": null,
+              "notes": null
+            },
+            {
+              "action": "Route",
+              "time": "16:39",
+              "location": "UCD Belfield",
+              "route": "X25",
+              "notes": "via Easton Road"
+            },
+            {
+              "action": "Arrive",
+              "time": "18:25",
+              "location": "Maynooth",
+              "route": null,
+              "notes": null
+            },
+            {
+              "action": "Finish",
+              "time": "19:08",
+              "location": "Phibsboro Garage",
+              "route": null,
+              "notes": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "shift": "307/05",
+      "duty": "534",
+      "sections": [
+        {
+          "type": "firstHalf",
+          "entries": [
+            {
+              "action": "Report",
+              "time": "06:22",
+              "location": null,
+              "route": null,
+              "notes": null
+            },
+            {
+              "action": "Depart Garage",
+              "time": "06:30",
+              "location": "Phibsboro Garage",
+              "route": null,
+              "notes": null
+            },
+            {
+              "action": "Route",
+              "time": "07:05",
+              "location": "Castletown",
+              "route": "X32",
+              "notes": "Via Lucan Village"
+            },
+            {
+              "action": "Arrive",
+              "time": "09:10",
+              "location": "UCD Belfield",
+              "route": null,
+              "notes": null
+            },
+            {
+              "action": "Break",
+              "time": "10:00",
+              "location": "Phibsboro Garage",
+              "route": null,
+              "notes": null
+            }
+          ]
+        },
+        {
+          "type": "secondHalf",
+          "entries": [
+            {
+              "action": "Report",
+              "time": "15:42",
+              "location": null,
+              "route": null,
+              "notes": null
+            },
+            {
+              "action": "Depart Garage",
+              "time": "15:45",
+              "location": "Phibsboro Garage",
+              "route": null,
+              "notes": null
+            },
+            {
+              "action": "Route",
+              "time": "16:45",
+              "location": "UCD Belfield",
+              "route": "X32",
+              "notes": "Via Lucan Village"
+            },
+            {
+              "action": "Arrive",
+              "time": "18:39",
+              "location": "Castletown",
+              "route": null,
+              "notes": null
+            },
+            {
+              "action": "Finish",
+              "time": "19:17",
+              "location": "Phibsboro Garage",
+              "route": null,
+              "notes": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "shift": "807/12",
+      "duty": "512",
+      "sections": [
+        {
+          "type": "firstHalf",
+          "entries": [
+            {
+              "action": "Report",
+              "time": "06:47",
+              "location": null,
+              "route": null,
+              "notes": null
+            },
+            {
+              "action": "Depart Garage",
+              "time": "06:55",
+              "location": "Phibsboro Garage",
+              "route": null,
+              "notes": null
+            },
+            {
+              "action": "Route",
+              "time": "07:30",
+              "location": "Blanchardstown SC",
+              "route": "37",
+              "notes": null
+            },
+            {
+              "action": "Arrive",
+              "time": "09:10",
+              "location": "Baggot Street",
+              "route": null,
+              "notes": null
+            },
+            {
+              "action": "Break",
+              "time": "09:55",
+              "location": "Phibsboro Garage",
+              "route": null,
+              "notes": null
+            }
+          ]
+        },
+        {
+          "type": "secondHalf",
+          "entries": [
+            {
+              "action": "Report",
+              "time": "16:17",
+              "location": null,
+              "route": null,
+              "notes": null
+            },
+            {
+              "action": "Depart Garage",
+              "time": "16:20",
+              "location": "Phibsboro Garage",
+              "route": null,
+              "notes": null
+            },
+            {
+              "action": "Route",
+              "time": "17:10",
+              "location": "Burlington Road",
+              "route": "38",
+              "notes": null
+            },
+            {
+              "action": "Arrive",
+              "time": "19:00",
+              "location": "Damastown",
+              "route": null,
+              "notes": null
+            },
+            {
+              "action": "Finish",
+              "time": "19:30",
+              "location": "Phibsboro Garage",
+              "route": null,
+              "notes": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "shift": "807/13",
+      "duty": "513",
+      "sections": [
+        {
+          "type": "firstHalf",
+          "entries": [
+            {
+              "action": "Report",
+              "time": "06:22",
+              "location": null,
+              "route": null,
+              "notes": null
+            },
+            {
+              "action": "Depart Garage",
+              "time": "06:30",
+              "location": "Phibsboro Garage",
+              "route": null,
+              "notes": null
+            },
+            {
+              "action": "Route",
+              "time": "07:00",
+              "location": "Blanchardstown SC",
+              "route": "37",
+              "notes": null
+            },
+            {
+              "action": "Arrive",
+              "time": "08:40",
+              "location": "Baggot Street",
+              "route": null,
+              "notes": null
+            },
+            {
+              "action": "Break",
+              "time": "09:25",
+              "location": "Phibsboro Garage",
+              "route": null,
+              "notes": null
+            }
+          ]
+        },
+        {
+          "type": "secondHalf",
+          "entries": [
+            {
+              "action": "Report",
+              "time": "14:27",
+              "location": null,
+              "route": null,
+              "notes": null
+            },
+            {
+              "action": "Depart Garage",
+              "time": "14:30",
+              "location": "Phibsboro Garage",
+              "route": null,
+              "notes": null
+            },
+            {
+              "action": "Route",
+              "time": "15:25",
+              "location": "Belfield",
+              "route": "39A",
+              "notes": null
+            },
+            {
+              "action": "Arrive",
+              "time": "17:25",
+              "location": "Ongar",
+              "route": null,
+              "notes": null
+            },
+            {
+              "action": "Finish",
+              "time": "18:30",
+              "location": "Phibsboro Garage",
+              "route": null,
+              "notes": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "shift": "807/14",
+      "duty": "514",
+      "sections": [
+        {
+          "type": "firstHalf",
+          "entries": [
+            {
+              "action": "Report",
+              "time": "06:40",
+              "location": null,
+              "route": null,
+              "notes": null
+            },
+            {
+              "action": "Depart Garage",
+              "time": "06:48",
+              "location": "Phibsboro Garage",
+              "route": null,
+              "notes": null
+            },
+            {
+              "action": "Route",
+              "time": "07:38",
+              "location": "Adamstown",
+              "route": "C2",
+              "notes": null
+            },
+            {
+              "action": "Arrive",
+              "time": "09:28",
+              "location": "Sandymount",
+              "route": null,
+              "notes": null
+            },
+            {
+              "action": "Break",
+              "time": "09:58",
+              "location": "Phibsboro Garage",
+              "route": null,
+              "notes": null
+            }
+          ]
+        },
+        {
+          "type": "secondHalf",
+          "entries": [
+            {
+              "action": "Report",
+              "time": "16:37",
+              "location": null,
+              "route": null,
+              "notes": null
+            },
+            {
+              "action": "Depart Garage",
+              "time": "16:40",
+              "location": "Phibsboro Garage",
+              "route": null,
+              "notes": null
+            },
+            {
+              "action": "Route",
+              "time": "17:10",
+              "location": "Baggot Street",
+              "route": "37",
+              "notes": null
+            },
+            {
+              "action": "Arrive",
+              "time": "18:55",
+              "location": "Blanchardstown SC",
+              "route": null,
+              "notes": null
+            },
+            {
+              "action": "Finish",
+              "time": "19:35",
+              "location": "Phibsboro Garage",
+              "route": null,
+              "notes": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "shift": "807/15",
+      "duty": "515",
+      "sections": [
+        {
+          "type": "firstHalf",
+          "entries": [
+            {
+              "action": "Report",
+              "time": "05:27",
+              "location": null,
+              "route": null,
+              "notes": null
+            },
+            {
+              "action": "Depart Garage",
+              "time": "05:35",
+              "location": "Phibsboro Garage",
+              "route": null,
+              "notes": null
+            },
+            {
+              "action": "Route",
+              "time": "06:05",
+              "location": "Ongar",
+              "route": "39A",
+              "notes": null
+            },
+            {
+              "action": "Arrive",
+              "time": "08:05",
+              "location": "Belfield",
+              "route": null,
+              "notes": null
+            },
+            {
+              "action": "Break",
+              "time": "09:02",
+              "location": "Phibsboro Garage",
+              "route": null,
+              "notes": null
+            }
+          ]
+        },
+        {
+          "type": "secondHalf",
+          "entries": [
+            {
+              "action": "Report",
+              "time": "14:07",
+              "location": null,
+              "route": null,
+              "notes": null
+            },
+            {
+              "action": "Depart Garage",
+              "time": "14:10",
+              "location": "Phibsboro Garage",
+              "route": null,
+              "notes": null
+            },
+            {
+              "action": "Route",
+              "time": "15:05",
+              "location": "Belfield",
+              "route": "39A",
+              "notes": null
+            },
+            {
+              "action": "Arrive",
+              "time": "17:25",
+              "location": "Ongar",
+              "route": null,
+              "notes": null
+            },
+            {
+              "action": "Finish",
+              "time": "18:10",
+              "location": "Phibsboro Garage",
+              "route": null,
+              "notes": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "shift": "807/16",
+      "duty": "516",
+      "sections": [
+        {
+          "type": "firstHalf",
+          "entries": [
+            {
+              "action": "Report",
+              "time": "06:32",
+              "location": null,
+              "route": null,
+              "notes": null
+            },
+            {
+              "action": "Depart Garage",
+              "time": "06:40",
+              "location": "Phibsboro Garage",
+              "route": null,
+              "notes": null
+            },
+            {
+              "action": "Route",
+              "time": "07:25",
+              "location": "Adamstown",
+              "route": "C1",
+              "notes": null
+            },
+            {
+              "action": "Arrive",
+              "time": "09:15",
+              "location": "Sandymount",
+              "route": null,
+              "notes": null
+            },
+            {
+              "action": "Break",
+              "time": "09:45",
+              "location": "Phibsboro Garage",
+              "route": null,
+              "notes": null
+            }
+          ]
+        },
+        {
+          "type": "secondHalf",
+          "entries": [
+            {
+              "action": "Report",
+              "time": "16:07",
+              "location": null,
+              "route": null,
+              "notes": null
+            },
+            {
+              "action": "Depart Garage",
+              "time": "16:10",
+              "location": "Phibsboro Garage",
+              "route": null,
+              "notes": null
+            },
+            {
+              "action": "Route",
+              "time": "16:55",
+              "location": "Sandymount",
+              "route": "C1",
+              "notes": null
+            },
+            {
+              "action": "Arrive",
+              "time": "18:35",
+              "location": "Adamstown",
+              "route": null,
+              "notes": null
+            },
+            {
+              "action": "Finish",
+              "time": "19:20",
+              "location": "Phibsboro Garage",
+              "route": null,
+              "notes": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "shift": "807/17",
+      "duty": null,
+      "sections": []
+    },
+    {
+      "shift": "807/18",
+      "duty": "518",
+      "sections": [
+        {
+          "type": "firstHalf",
+          "entries": [
+            {
+              "action": "Report",
+              "time": "06:20",
+              "location": null,
+              "route": null,
+              "notes": null
+            },
+            {
+              "action": "Depart Garage",
+              "time": "06:28",
+              "location": "Phibsboro Garage",
+              "route": null,
+              "notes": null
+            },
+            {
+              "action": "Route",
+              "time": "07:13",
+              "location": "Adamstown",
+              "route": "C2",
+              "notes": null
+            },
+            {
+              "action": "Arrive",
+              "time": "09:03",
+              "location": "Sandymount",
+              "route": null,
+              "notes": null
+            },
+            {
+              "action": "Break",
+              "time": "09:43",
+              "location": "Phibsboro Garage",
+              "route": null,
+              "notes": null
+            }
+          ]
+        },
+        {
+          "type": "secondHalf",
+          "entries": [
+            {
+              "action": "Report",
+              "time": "15:03",
+              "location": null,
+              "route": null,
+              "notes": null
+            },
+            {
+              "action": "Depart Garage",
+              "time": "15:06",
+              "location": "Phibsboro Garage",
+              "route": null,
+              "notes": null
+            },
+            {
+              "action": "Route",
+              "time": "15:46",
+              "location": "Sandymount",
+              "route": "C2",
+              "notes": null
+            },
+            {
+              "action": "Arrive",
+              "time": "17:36",
+              "location": "Adamstown",
+              "route": null,
+              "notes": null
+            },
+            {
+              "action": "Finish",
+              "time": "18:20",
+              "location": "Phibsboro Garage",
+              "route": null,
+              "notes": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "shift": "807/19",
+      "duty": "519",
+      "sections": [
+        {
+          "type": "firstHalf",
+          "entries": [
+            {
+              "action": "Report",
+              "time": "16:42",
+              "location": null,
+              "route": null,
+              "notes": null
+            },
+            {
+              "action": "Depart Garage",
+              "time": "16:50",
+              "location": "Phibsboro Garage",
+              "route": null,
+              "notes": null
+            },
+            {
+              "action": "Route",
+              "time": "17:41",
+              "location": "Sandymount",
+              "route": "C2",
+              "notes": null
+            },
+            {
+              "action": "Route",
+              "time": "19:51",
+              "location": "Adamstown",
+              "route": "C1",
+              "notes": null
+            },
+            {
+              "action": "Arrive",
+              "time": "21:10",
+              "location": "Sandymount",
+              "route": null,
+              "notes": null
+            },
+            {
+              "action": "Break",
+              "time": "21:37",
+              "location": "Phibsboro Garage",
+              "route": null,
+              "notes": null
+            }
+          ]
+        },
+        {
+          "type": "secondHalf",
+          "entries": [
+            {
+              "action": "Report",
+              "time": "22:37",
+              "location": null,
+              "route": null,
+              "notes": null
+            },
+            {
+              "action": "Depart Garage",
+              "time": "22:40",
+              "location": "Phibsboro Garage",
+              "route": null,
+              "notes": null
+            },
+            {
+              "action": "Work as Directed",
+              "time": null,
+              "location": null,
+              "route": null,
+              "notes": "Call Control"
+            },
+            {
+              "action": "Finish",
+              "time": "00:27",
+              "location": "Phibsboro Garage",
+              "route": null,
+              "notes": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "shift": "807/20",
+      "duty": null,
+      "sections": []
+    },
+    {
+      "shift": "807/21",
+      "duty": "521",
+      "sections": [
+        {
+          "type": "firstHalf",
+          "entries": [
+            {
+              "action": "Report",
+              "time": "06:32",
+              "location": null,
+              "route": null,
+              "notes": null
+            },
+            {
+              "action": "Depart Garage",
+              "time": "06:40",
+              "location": "Phibsboro Garage",
+              "route": null,
+              "notes": null
+            },
+            {
+              "action": "Route",
+              "time": "07:15",
+              "location": "Ongar",
+              "route": "39A",
+              "notes": null
+            },
+            {
+              "action": "Arrive",
+              "time": "09:20",
+              "location": "Belfield",
+              "route": null,
+              "notes": null
+            },
+            {
+              "action": "Break",
+              "time": "10:02",
+              "location": "Phibsboro Garage",
+              "route": null,
+              "notes": null
+            }
+          ]
+        },
+        {
+          "type": "secondHalf",
+          "entries": [
+            {
+              "action": "Report",
+              "time": "14:22",
+              "location": null,
+              "route": null,
+              "notes": null
+            },
+            {
+              "action": "Depart Garage",
+              "time": "14:25",
+              "location": "Phibsboro Garage",
+              "route": null,
+              "notes": null
+            },
+            {
+              "action": "Route",
+              "time": "15:15",
+              "location": "Belfield",
+              "route": "39A",
+              "notes": null
+            },
+            {
+              "action": "Arrive",
+              "time": "17:40",
+              "location": "Ongar",
+              "route": null,
+              "notes": null
+            },
+            {
+              "action": "Finish",
+              "time": "18:30",
+              "location": "Phibsboro Garage",
+              "route": null,
+              "notes": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "shift": "807/31",
+      "duty": "531",
+      "sections": [
+        {
+          "type": "firstHalf",
+          "entries": [
+            {
+              "action": "Report",
+              "time": "06:40",
+              "location": null,
+              "route": null,
+              "notes": null
+            },
+            {
+              "action": "Depart Garage",
+              "time": "06:48",
+              "location": "Phibsboro Garage",
+              "route": null,
+              "notes": null
+            },
+            {
+              "action": "Route",
+              "time": "07:33",
+              "location": "Hazelhatch",
+              "route": "L59",
+              "notes": null
+            },
+            {
+              "action": "Arrive",
+              "time": "08:18",
+              "location": "Riverforest",
+              "route": null,
+              "notes": null
+            },
+            {
+              "action": "Work as Directed",
+              "time": null,
+              "location": null,
+              "route": null,
+              "notes": "Call Control"
+            },
+            {
+              "action": "Break",
+              "time": "10:00",
+              "location": "Phibsboro Garage",
+              "route": null,
+              "notes": null
+            }
+          ]
+        },
+        {
+          "type": "secondHalf",
+          "entries": [
+            {
+              "action": "Report",
+              "time": "15:12",
+              "location": null,
+              "route": null,
+              "notes": null
+            },
+            {
+              "action": "Depart Garage",
+              "time": "15:15",
+              "location": "Phibsboro Garage",
+              "route": null,
+              "notes": null
+            },
+            {
+              "action": "Route",
+              "time": "16:00",
+              "location": "Riverforest",
+              "route": "L58",
+              "notes": null
+            },
+            {
+              "action": "Arrive",
+              "time": "16:40",
+              "location": "Hazelhatch",
+              "route": null,
+              "notes": null
+            },
+            {
+              "action": "Route",
+              "time": "17:00",
+              "location": "Maynooth",
+              "route": "C3",
+              "notes": null
+            },
+            {
+              "action": "Arrive",
+              "time": "18:55",
+              "location": "Ringsend",
+              "route": null,
+              "notes": null
+            },
+            {
+              "action": "Finish",
+              "time": "19:30",
+              "location": "Phibsboro Garage",
+              "route": null,
+              "notes": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "shift": "807/500",
+      "duty": null,
+      "sections": []
+    }
+  ]
+}
+

@@ -44,6 +44,8 @@ import '../../../widgets/live_updates_banner.dart';
 import '../../../screens/live_updates_details_screen.dart';
 import '../../../services/live_updates_service.dart';
 import '../../../models/live_update.dart';
+import '../../../services/universal_board_service.dart';
+import '../../../models/universal_board.dart';
 
 // Add this new widget class before the CalendarScreen class
 class _StableLiveUpdatesBanner extends StatefulWidget {
@@ -1701,6 +1703,35 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
               // Action buttons
               Column(
                 children: [
+                  // View Board button (if board exists for this shift)
+                  FutureBuilder<UniversalBoard?>(
+                    future: UniversalBoardService.getBoardByShift(event.title),
+                    builder: (context, snapshot) {
+                      final board = snapshot.data;
+                      final hasBoard = board != null && board.sections.isNotEmpty;
+                      
+                      if (!hasBoard) {
+                        return const SizedBox.shrink();
+                      }
+                      
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            TextButton.icon(
+                              onPressed: () {
+                                Navigator.of(context).pop();
+                                _showBoard(board);
+                              },
+                              icon: const Icon(Icons.description, size: 18),
+                              label: const Text('View Board'),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
                   // First row - Notes and Break Status
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -2420,6 +2451,409 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                     child: const Text('Cancel'),
                   ),
                 ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showBoard(UniversalBoard board) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Container(
+          constraints: BoxConstraints(
+            maxWidth: MediaQuery.of(context).size.width * 0.95,
+            maxHeight: MediaQuery.of(context).size.height * 0.85,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Header
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primary,
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(20),
+                    topRight: Radius.circular(20),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Board ${board.shift}',
+                            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                              color: Theme.of(context).colorScheme.onPrimary,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                          if (board.duty != null) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              'Duty ${board.duty}',
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.9),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      icon: Icon(
+                        Icons.close,
+                        color: Theme.of(context).colorScheme.onPrimary,
+                      ),
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
+                  ],
+                ),
+              ),
+              // Content
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: board.sections.map((section) {
+                      final sectionType = section.type;
+                      final isFirstHalf = sectionType == 'firstHalf';
+                      final sectionColor = isFirstHalf ? Colors.orange : Colors.blue;
+                      
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 28),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Section header with subtle background
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              decoration: BoxDecoration(
+                                color: sectionColor.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 4,
+                                    height: 24,
+                                    decoration: BoxDecoration(
+                                      color: sectionColor,
+                                      borderRadius: BorderRadius.circular(2),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Text(
+                                    isFirstHalf ? 'First Half' : 'Second Half',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 17,
+                                      color: sectionColor.shade800,
+                                      letterSpacing: 0.3,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            // Entries with subtle timeline
+                            ...section.entries.asMap().entries.map((entryEntry) {
+                              final entry = entryEntry.value;
+                              final isLast = entryEntry.key == section.entries.length - 1;
+                              
+                              // Calculate if this entry has content below the action
+                              final hasDetails = entry.location != null || 
+                                                 entry.notes != null || 
+                                                 (entry.action.toLowerCase() != 'route' && entry.route != null);
+                              
+                              // Check if action is Route (to combine with route badge)
+                              final isRouteAction = entry.action.toLowerCase() == 'route' && entry.route != null;
+                              
+                              return Padding(
+                                padding: EdgeInsets.only(bottom: isLast ? 0 : 12),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    // Time column - fixed width and alignment
+                                    SizedBox(
+                                      width: 70,
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          if (entry.time != null)
+                                            Container(
+                                              width: 70,
+                                              padding: const EdgeInsets.symmetric(
+                                                horizontal: 8,
+                                                vertical: 6,
+                                              ),
+                                              decoration: BoxDecoration(
+                                                color: sectionColor.shade50,
+                                                borderRadius: BorderRadius.circular(8),
+                                                border: Border.all(
+                                                  color: sectionColor.withValues(alpha: 0.3),
+                                                  width: 1,
+                                                ),
+                                              ),
+                                              child: Text(
+                                                entry.time!,
+                                                textAlign: TextAlign.center,
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 14,
+                                                  color: sectionColor.shade800,
+                                                  height: 1.2,
+                                                ),
+                                              ),
+                                            )
+                                          else
+                                            SizedBox(
+                                              width: 70,
+                                              height: 30, // Match badge height
+                                            ),
+                                          if (!isLast) ...[
+                                            const SizedBox(height: 6),
+                                            Container(
+                                              width: 2,
+                                              height: hasDetails ? 35 : 15,
+                                              color: sectionColor.withValues(alpha: 0.2),
+                                            ),
+                                          ],
+                                        ],
+                                      ),
+                                    ),
+                                    const SizedBox(width: 16),
+                                    // Content column
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          // Action - aligned with time badge by matching height
+                                          SizedBox(
+                                            height: entry.time != null ? 30 : null,
+                                            child: Align(
+                                              alignment: Alignment.centerLeft,
+                                              child: isRouteAction
+                                                  ? Row(
+                                                      mainAxisSize: MainAxisSize.min,
+                                                      crossAxisAlignment: CrossAxisAlignment.center,
+                                                      children: [
+                                                        Text(
+                                                          'Route ',
+                                                          style: TextStyle(
+                                                            fontWeight: FontWeight.w600,
+                                                            fontSize: 16,
+                                                            color: Theme.of(context).colorScheme.onSurface,
+                                                          ),
+                                                        ),
+                                                        Container(
+                                                          padding: const EdgeInsets.symmetric(
+                                                            horizontal: 8,
+                                                            vertical: 4,
+                                                          ),
+                                                          decoration: BoxDecoration(
+                                                            color: Colors.blue.shade50,
+                                                            borderRadius: BorderRadius.circular(6),
+                                                          ),
+                                                          child: Text(
+                                                            entry.route!,
+                                                            style: TextStyle(
+                                                              fontSize: 16,
+                                                              color: Colors.blue.shade700,
+                                                              fontWeight: FontWeight.bold,
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    )
+                                                  : Text(
+                                                      entry.action,
+                                                      style: TextStyle(
+                                                        fontWeight: FontWeight.w600,
+                                                        fontSize: 16,
+                                                        color: Theme.of(context).colorScheme.onSurface,
+                                                      ),
+                                                    ),
+                                            ),
+                                          ),
+                                          if (hasDetails) const SizedBox(height: 6),
+                                          // Route path information - just "From [location]"
+                                          if (isRouteAction && entry.location != null) ...[
+                                            Padding(
+                                              padding: const EdgeInsets.only(top: 2),
+                                              child: Row(
+                                                children: [
+                                                  Icon(
+                                                    Icons.location_on,
+                                                    size: 16,
+                                                    color: Theme.of(context)
+                                                        .colorScheme.onSurface
+                                                        .withValues(alpha: 0.5),
+                                                  ),
+                                                  const SizedBox(width: 6),
+                                                  Expanded(
+                                                    child: Text(
+                                                      'From ${entry.location}',
+                                                      style: TextStyle(
+                                                        fontSize: 14,
+                                                        color: Theme.of(context)
+                                                            .colorScheme.onSurface
+                                                            .withValues(alpha: 0.7),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                            // Show notes if they exist (like "via Celbridge")
+                                            if (entry.notes != null) ...[
+                                              Padding(
+                                                padding: const EdgeInsets.only(top: 4),
+                                                child: Row(
+                                                  children: [
+                                                    Icon(
+                                                      Icons.info_outline,
+                                                      size: 16,
+                                                      color: Theme.of(context)
+                                                          .colorScheme.onSurface
+                                                          .withValues(alpha: 0.5),
+                                                    ),
+                                                    const SizedBox(width: 6),
+                                                    Expanded(
+                                                      child: Text(
+                                                        entry.notes!,
+                                                        style: TextStyle(
+                                                          fontSize: 13,
+                                                          fontStyle: FontStyle.italic,
+                                                          color: Theme.of(context)
+                                                              .colorScheme.onSurface
+                                                              .withValues(alpha: 0.7),
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ],
+                                          ] else ...[
+                                            // Route badge (only if action is not "Route")
+                                            if (entry.route != null) ...[
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(
+                                                  horizontal: 10,
+                                                  vertical: 5,
+                                                ),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.blue.shade50,
+                                                  borderRadius: BorderRadius.circular(6),
+                                                ),
+                                                child: Text(
+                                                  'Route ${entry.route}',
+                                                  style: TextStyle(
+                                                    fontSize: 13,
+                                                    color: Colors.blue.shade700,
+                                                    fontWeight: FontWeight.w600,
+                                                  ),
+                                                ),
+                                              ),
+                                              const SizedBox(height: 4),
+                                            ],
+                                            // Location (for non-Route entries)
+                                            if (entry.location != null) ...[
+                                              Padding(
+                                                padding: const EdgeInsets.only(top: 2),
+                                                child: Row(
+                                                  children: [
+                                                    Icon(
+                                                      Icons.location_on,
+                                                      size: 16,
+                                                      color: Theme.of(context)
+                                                          .colorScheme.onSurface
+                                                          .withValues(alpha: 0.5),
+                                                    ),
+                                                    const SizedBox(width: 6),
+                                                    Expanded(
+                                                      child: Text(
+                                                        entry.location!,
+                                                        style: TextStyle(
+                                                          fontSize: 14,
+                                                          color: Theme.of(context)
+                                                              .colorScheme.onSurface
+                                                              .withValues(alpha: 0.7),
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ],
+                                          ],
+                                          // Notes (exclude Route entries as they're handled above)
+                                          if (entry.notes != null && !isRouteAction) ...[
+                                            Padding(
+                                              padding: EdgeInsets.only(
+                                                top: entry.location != null ? 4 : 2,
+                                              ),
+                                              child: Container(
+                                                padding: const EdgeInsets.all(8),
+                                                decoration: BoxDecoration(
+                                                  color: Theme.of(context)
+                                                      .colorScheme.surfaceContainerHighest
+                                                      .withValues(alpha: 0.5),
+                                                  borderRadius: BorderRadius.circular(8),
+                                                ),
+                                                child: Row(
+                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                  children: [
+                                                    Icon(
+                                                      Icons.info_outline,
+                                                      size: 16,
+                                                      color: Theme.of(context)
+                                                          .colorScheme.onSurface
+                                                          .withValues(alpha: 0.5),
+                                                    ),
+                                                    const SizedBox(width: 8),
+                                                    Expanded(
+                                                      child: Text(
+                                                        entry.notes!,
+                                                        style: TextStyle(
+                                                          fontSize: 13,
+                                                          color: Theme.of(context)
+                                                              .colorScheme.onSurface
+                                                              .withValues(alpha: 0.7),
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }).toList(),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
               ),
             ],
           ),

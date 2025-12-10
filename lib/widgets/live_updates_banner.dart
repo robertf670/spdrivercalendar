@@ -50,16 +50,24 @@ class LiveUpdatesBannerState extends State<LiveUpdatesBanner> {
         }
 
         final updates = snapshot.data ?? [];
-        final activeUpdates = updates.where((update) => update.isActive).toList();
+        // Filter: active updates + active polls + ended polls in results window
+        final visibleItems = updates.where((update) {
+          if (update.isUpdate) {
+            return update.isActive;
+          } else if (update.isPoll) {
+            return update.shouldShowPoll;
+          }
+          return false;
+        }).toList();
         
-        // Return empty widget when no updates - this will collapse the space
-        if (activeUpdates.isEmpty) {
+        // Return empty widget when no updates/polls - this will collapse the space
+        if (visibleItems.isEmpty) {
           return const SizedBox.shrink();
         }
 
-        // Pass the updates to a separate display widget
+        // Pass the updates/polls to a separate display widget
         return LiveUpdatesBannerDisplay(
-          updates: activeUpdates,
+          updates: visibleItems,
           onTap: widget.onTap,
         );
       },
@@ -159,7 +167,10 @@ class LiveUpdatesBannerDisplayState extends State<LiveUpdatesBannerDisplay> {
     }
   }
 
-  Color _getPriorityColor(String priority) {
+  Color _getPriorityColor(String priority, bool isPoll) {
+    if (isPoll) {
+      return Colors.deepPurple.shade600;
+    }
     switch (priority.toLowerCase()) {
       case 'critical':
         return Colors.red;
@@ -172,7 +183,10 @@ class LiveUpdatesBannerDisplayState extends State<LiveUpdatesBannerDisplay> {
     }
   }
 
-  IconData _getPriorityIcon(String priority) {
+  IconData _getPriorityIcon(String priority, bool isPoll) {
+    if (isPoll) {
+      return Icons.poll;
+    }
     switch (priority.toLowerCase()) {
       case 'critical':
         return Icons.error;
@@ -199,11 +213,12 @@ class LiveUpdatesBannerDisplayState extends State<LiveUpdatesBannerDisplay> {
     }
 
     // For multiple banners, use PageView for scrolling
+    final sizes = _getBannerSizes(context);
     return Container(
       width: double.infinity,
-      constraints: const BoxConstraints(
-        minHeight: 70,
-        maxHeight: 90,
+      constraints: BoxConstraints(
+        minHeight: sizes['minHeight']!,
+        maxHeight: sizes['maxHeight']!,
       ),
       child: PageView.builder(
         controller: _pageController,
@@ -216,7 +231,70 @@ class LiveUpdatesBannerDisplayState extends State<LiveUpdatesBannerDisplay> {
     );
   }
 
+  // Responsive sizing helper method for banners
+  Map<String, double> _getBannerSizes(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    
+    if (screenWidth < 350) {
+      return {
+        'horizontalPadding': 10.0,
+        'verticalPadding': 8.0,
+        'minHeight': 65.0,
+        'maxHeight': 85.0,
+        'iconSize': 14.0,
+        'titleFontSize': 12.0,
+        'subtitleFontSize': 10.0,
+        'iconPadding': 5.0,
+        'spacing': 10.0,
+      };
+    } else if (screenWidth < 400) {
+      return {
+        'horizontalPadding': 12.0,
+        'verticalPadding': 9.0,
+        'minHeight': 68.0,
+        'maxHeight': 88.0,
+        'iconSize': 15.0,
+        'titleFontSize': 12.5,
+        'subtitleFontSize': 10.5,
+        'iconPadding': 6.0,
+        'spacing': 11.0,
+      };
+    } else if (screenWidth < 600) {
+      return {
+        'horizontalPadding': 16.0,
+        'verticalPadding': 10.0,
+        'minHeight': 70.0,
+        'maxHeight': 90.0,
+        'iconSize': 16.0,
+        'titleFontSize': 13.0,
+        'subtitleFontSize': 11.0,
+        'iconPadding': 6.0,
+        'spacing': 12.0,
+      };
+    } else {
+      return {
+        'horizontalPadding': 18.0,
+        'verticalPadding': 11.0,
+        'minHeight': 72.0,
+        'maxHeight': 92.0,
+        'iconSize': 17.0,
+        'titleFontSize': 13.5,
+        'subtitleFontSize': 11.5,
+        'iconPadding': 7.0,
+        'spacing': 12.0,
+      };
+    }
+  }
+
   Widget _buildSingleBanner(LiveUpdate update, bool isDark) {
+    final isPoll = update.isPoll;
+    final priorityColor = _getPriorityColor(update.priority, isPoll);
+    final priorityIcon = _getPriorityIcon(update.priority, isPoll);
+    final statusText = isPoll 
+        ? (update.isActive ? 'POLL' : 'RESULTS')
+        : update.priority.toUpperCase();
+    final sizes = _getBannerSizes(context);
+    
     return GestureDetector(
       onTap: () {
         if (widget.updates.length > 1) {
@@ -227,13 +305,13 @@ class LiveUpdatesBannerDisplayState extends State<LiveUpdatesBannerDisplay> {
       onPanStart: widget.updates.length > 1 ? (_) => _onUserScroll() : null,
       child: Container(
         width: double.infinity,
-        constraints: const BoxConstraints(
-          minHeight: 70,
-          maxHeight: 90,
+        constraints: BoxConstraints(
+          minHeight: sizes['minHeight']!,
+          maxHeight: sizes['maxHeight']!,
         ),
         padding: EdgeInsets.symmetric(
-          horizontal: MediaQuery.of(context).size.width < 400 ? 12 : 16,
-          vertical: 10,
+          horizontal: sizes['horizontalPadding']!,
+          vertical: sizes['verticalPadding']!,
         ),
         decoration: BoxDecoration(
           color: isDark ? Theme.of(context).colorScheme.surfaceContainerHighest : Theme.of(context).colorScheme.surfaceContainerLow,
@@ -251,8 +329,8 @@ class LiveUpdatesBannerDisplayState extends State<LiveUpdatesBannerDisplay> {
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [
-                _getPriorityColor(update.priority).withValues(alpha: 0.1),
-                _getPriorityColor(update.priority).withValues(alpha: 0.05),
+                priorityColor.withValues(alpha: 0.1),
+                priorityColor.withValues(alpha: 0.05),
               ],
               begin: Alignment.centerLeft,
               end: Alignment.centerRight,
@@ -260,28 +338,28 @@ class LiveUpdatesBannerDisplayState extends State<LiveUpdatesBannerDisplay> {
             borderRadius: BorderRadius.circular(6),
             border: Border(
               left: BorderSide(
-                color: _getPriorityColor(update.priority),
+                color: priorityColor,
                 width: 3,
               ),
             ),
           ),
-          padding: const EdgeInsets.all(6),
+          padding: EdgeInsets.all(sizes['spacing']! * 0.5),
           child: Row(
             children: [
-              // Priority icon
+              // Priority/Poll icon
               Container(
-                padding: const EdgeInsets.all(6),
+                padding: EdgeInsets.all(sizes['iconPadding']!),
                 decoration: BoxDecoration(
-                  color: _getPriorityColor(update.priority).withValues(alpha: 0.2),
+                  color: priorityColor.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(
-                  _getPriorityIcon(update.priority),
-                  color: _getPriorityColor(update.priority),
-                  size: 16,
+                  priorityIcon,
+                  color: priorityColor,
+                  size: sizes['iconSize'],
                 ),
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: sizes['spacing']!),
               // Content
               Expanded(
                 child: Column(
@@ -289,7 +367,7 @@ class LiveUpdatesBannerDisplayState extends State<LiveUpdatesBannerDisplay> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Title with priority indicator
+                    // Title with priority/poll indicator
                     Flexible(
                       child: Row(
                         children: [
@@ -297,7 +375,7 @@ class LiveUpdatesBannerDisplayState extends State<LiveUpdatesBannerDisplay> {
                             child: Text(
                               update.title,
                               style: TextStyle(
-                                fontSize: 13,
+                                fontSize: sizes['titleFontSize'],
                                 fontWeight: FontWeight.w600,
                                 color: Theme.of(context).colorScheme.onSurface,
                               ),
@@ -306,30 +384,36 @@ class LiveUpdatesBannerDisplayState extends State<LiveUpdatesBannerDisplay> {
                             ),
                           ),
                           Container(
-                            margin: const EdgeInsets.only(left: 4),
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            margin: EdgeInsets.only(left: sizes['spacing']! * 0.33),
+                            padding: EdgeInsets.symmetric(
+                              horizontal: sizes['spacing']! * 0.5,
+                              vertical: sizes['spacing']! * 0.17,
+                            ),
                             decoration: BoxDecoration(
-                              color: _getPriorityColor(update.priority).withValues(alpha: 0.2),
+                              color: priorityColor.withValues(alpha: 0.2),
                               borderRadius: BorderRadius.circular(8),
                               border: Border.all(
-                                color: _getPriorityColor(update.priority).withValues(alpha: 0.4),
+                                color: priorityColor.withValues(alpha: 0.4),
                                 width: 1,
                               ),
                             ),
                             child: Text(
-                              update.priority.toUpperCase(),
+                              statusText,
                               style: TextStyle(
-                                color: _getPriorityColor(update.priority),
-                                fontSize: 9,
+                                color: priorityColor,
+                                fontSize: sizes['subtitleFontSize']! * 0.82,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
                           ),
                           // Indicators - only show if not too narrow and multiple banners
                           if (MediaQuery.of(context).size.width > 350 && widget.updates.length > 1) ...[
-                            const SizedBox(width: 4),
+                            SizedBox(width: sizes['spacing']! * 0.33),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                              padding: EdgeInsets.symmetric(
+                                horizontal: sizes['spacing']! * 0.33,
+                                vertical: sizes['spacing']! * 0.17,
+                              ),
                               decoration: BoxDecoration(
                                 color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(6),
@@ -338,7 +422,7 @@ class LiveUpdatesBannerDisplayState extends State<LiveUpdatesBannerDisplay> {
                                 '${_currentIndex + 1}/${widget.updates.length}',
                                 style: TextStyle(
                                   color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                                  fontSize: 9,
+                                  fontSize: sizes['subtitleFontSize']! * 0.82,
                                   fontWeight: FontWeight.w500,
                                 ),
                               ),
@@ -351,11 +435,11 @@ class LiveUpdatesBannerDisplayState extends State<LiveUpdatesBannerDisplay> {
                     // Always show tap to view details
                     Flexible(
                       child: Padding(
-                        padding: const EdgeInsets.only(top: 1),
+                        padding: EdgeInsets.only(top: sizes['spacing']! * 0.08),
                         child: Text(
-                          'Tap to view details',
+                          isPoll ? 'Tap to vote' : 'Tap to view details',
                           style: TextStyle(
-                            fontSize: 11,
+                            fontSize: sizes['subtitleFontSize'],
                             color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                             fontStyle: FontStyle.italic,
                           ),
