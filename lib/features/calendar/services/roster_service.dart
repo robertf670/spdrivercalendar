@@ -121,8 +121,8 @@ class RosterService {
     final month = date.month;
     final day = date.day;
     
-    // December 29, 30, 31 run Saturday service
-    if (month == 12 && (day == 29 || day == 30 || day == 31)) {
+    // December 24, 27, 29, 30, 31 run Saturday service
+    if (month == 12 && (day == 24 || day == 27 || day == 29 || day == 30 || day == 31)) {
       return true;
     }
     

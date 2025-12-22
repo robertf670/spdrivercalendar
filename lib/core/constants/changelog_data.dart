@@ -1,4 +1,10 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.16.1': [
+    {
+      'title': 'Christmas Operating Times Update',
+      'description': 'Updated Saturday service dates for Christmas period. December 24, 27, 29, 30, and 31 now automatically load Saturday duties regardless of actual day of week. December 26 remains correctly configured as a bank holiday (St. Stephen\'s Day) using Sunday service.',
+    },
+  ],
   '2.16.0': [
     {
       'title': 'View Board Feature - Uni/Euro duties',
