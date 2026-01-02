@@ -57,7 +57,7 @@ class HolidayService {
       DateTime.parse(data['endDate']);
       
       // Validate type
-      if (!['winter', 'summer', 'other'].contains(data['type'])) {
+      if (!['winter', 'summer', 'other', 'unpaid_leave'].contains(data['type'])) {
         return false;
       }
       

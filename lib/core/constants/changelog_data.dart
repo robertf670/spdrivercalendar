@@ -1,4 +1,10 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.17.1': [
+    {
+      'title': 'Fixed Unpaid Leave Validation',
+      'description': 'Fixed an issue where unpaid leave entries were not being saved due to validation rejecting the unpaid_leave holiday type. Unpaid leave can now be added and displayed correctly on the calendar.',
+    },
+  ],
   '2.17.0': [
     {
       'title': 'Android Home Screen Widgets',
