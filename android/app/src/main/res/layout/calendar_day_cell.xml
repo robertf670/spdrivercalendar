@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="0dp"
+    android:layout_height="wrap_content"
+    android:layout_weight="1"
+    android:padding="2dp"
+    android:minHeight="32dp">
+    
+    <!-- Day number -->
+    <TextView
+        android:id="@+id/day_number"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="1"
+        android:textSize="11sp"
+        android:textColor="@color/widget_text_primary"
+        android:layout_alignParentTop="true"
+        android:layout_centerHorizontal="true" />
+    
+    <!-- Roster pattern (E, L, R, M) -->
+    <TextView
+        android:id="@+id/pattern_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text=""
+        android:textSize="9sp"
+        android:textStyle="bold"
+        android:layout_below="@id/day_number"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="1dp"
+        android:visibility="gone" />
+    
+    <!-- Event indicator dot -->
+    <View
+        android:id="@+id/event_indicator"
+        android:layout_width="4dp"
+        android:layout_height="4dp"
+        android:background="@color/widget_text_accent"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentEnd="true"
+        android:layout_marginTop="2dp"
+        android:layout_marginEnd="2dp"
+        android:visibility="gone" />
+
+</RelativeLayout>
+

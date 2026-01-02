@@ -248,14 +248,42 @@ class WeekViewScreenState extends State<WeekViewScreen> {
             ),
             child: Column(
               children: [
-                Text(
-                  DateFormat('EEEE').format(day),
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: sizes['dayName']!,
-                    color: _isToday(day) ? AppTheme.primaryColor : null,
-                  ),
-                  textAlign: TextAlign.center,
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Flexible(
+                      child: Text(
+                        DateFormat('EEEE').format(day),
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: sizes['dayName']!,
+                          color: _isToday(day) ? AppTheme.primaryColor : null,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                    if (RosterService.isSaturdayService(day)) ...[
+                      SizedBox(width: sizes['dayName']! * 0.2),
+                      Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: sizes['dayName']! * 0.3,
+                          vertical: sizes['dayName']! * 0.1,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.shade600,
+                          borderRadius: BorderRadius.circular(sizes['dayName']! * 0.3),
+                        ),
+                        child: Text(
+                          'SAT',
+                          style: TextStyle(
+                            fontSize: sizes['dayName']! * 0.5,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
                 Text(
                   DateFormat('MMM d').format(day),

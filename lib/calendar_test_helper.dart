@@ -802,6 +802,8 @@ class CalendarTestHelper {
         return 'Winter Holiday';
       case 'summer':
         return 'Summer Holiday';
+      case 'unpaid_leave':
+        return 'Unpaid Leave';
       case 'other':
         return 'Holiday';
       default:

@@ -25,11 +25,16 @@ class ShiftDetailsCard extends StatelessWidget {
     
     // Determine if it's a Saturday or Saturday service date
     final isSaturday = RosterService.isSaturdayService(date) || date.weekday == DateTime.saturday;
+    final isSaturdayService = RosterService.isSaturdayService(date);
     
     // Get display name for the shift - show "Relief Shift" for Middle shifts on Saturdays
     final String shiftDisplayName = (shift == 'M' && isSaturday) 
         ? 'Relief' 
         : shiftInfo?.name ?? 'Unknown';
+    
+    // Calculate responsive badge sizes
+    final screenWidth = MediaQuery.of(context).size.width;
+    final badgeSizes = _getBadgeSizes(screenWidth);
     
     return Card(
       elevation: 2,
@@ -71,9 +76,36 @@ class ShiftDetailsCard extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min, // Important to keep card compact
                       children: [
-                        Text(
-                          '$shiftDisplayName Shift',
-                          style: Theme.of(context).textTheme.titleMedium,
+                        Row(
+                          children: [
+                            Flexible(
+                              child: Text(
+                                '$shiftDisplayName Shift',
+                                style: Theme.of(context).textTheme.titleMedium,
+                              ),
+                            ),
+                            if (isSaturdayService) ...[
+                              SizedBox(width: badgeSizes['spacing']!),
+                              Container(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: badgeSizes['paddingH']!,
+                                  vertical: badgeSizes['paddingV']!,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.orange.shade600,
+                                  borderRadius: BorderRadius.circular(badgeSizes['radius']!),
+                                ),
+                                child: Text(
+                                  'SAT Service',
+                                  style: TextStyle(
+                                    fontSize: badgeSizes['fontSize']!,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
                         ),
                       ],
                     ),
@@ -111,5 +143,50 @@ class ShiftDetailsCard extends StatelessWidget {
         ),
       ),
     );
+  }
+  
+  // Helper method to calculate responsive badge sizes
+  Map<String, double> _getBadgeSizes(double screenWidth) {
+    if (screenWidth < 350) {
+      return {
+        'fontSize': 8.0,
+        'paddingH': 4.0,
+        'paddingV': 1.0,
+        'radius': 3.0,
+        'spacing': 4.0,
+      };
+    } else if (screenWidth < 450) {
+      return {
+        'fontSize': 9.0,
+        'paddingH': 5.0,
+        'paddingV': 1.5,
+        'radius': 4.0,
+        'spacing': 6.0,
+      };
+    } else if (screenWidth < 600) {
+      return {
+        'fontSize': 10.0,
+        'paddingH': 6.0,
+        'paddingV': 2.0,
+        'radius': 4.0,
+        'spacing': 8.0,
+      };
+    } else if (screenWidth < 900) {
+      return {
+        'fontSize': 11.0,
+        'paddingH': 7.0,
+        'paddingV': 2.5,
+        'radius': 5.0,
+        'spacing': 10.0,
+      };
+    } else {
+      return {
+        'fontSize': 12.0,
+        'paddingH': 8.0,
+        'paddingV': 3.0,
+        'radius': 5.0,
+        'spacing': 12.0,
+      };
+    }
   }
 }

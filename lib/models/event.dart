@@ -83,8 +83,9 @@ class Event {
   DateTime endDate;
   TimeOfDay endTime;
   Duration? workTime;  // For PZ shifts
-  TimeOfDay? breakStartTime;  // For UNI shifts
-  TimeOfDay? breakEndTime;    // For UNI shifts
+  TimeOfDay? breakStartTime;  // For UNI shifts and PZ shifts
+  TimeOfDay? breakEndTime;    // For UNI shifts and PZ shifts
+  List<String>? routes;  // Route information for PZ shifts (e.g., ["39A", "C1"])
   List<String>? assignedDuties;  // For storing multiple duties assigned to spare shifts (legacy)
   List<AssignedDuty>? enhancedAssignedDuties;  // New enhanced duty tracking
   String? firstHalfBus;  // For storing the first half bus number
@@ -110,6 +111,7 @@ class Event {
     this.workTime,
     this.breakStartTime,
     this.breakEndTime,
+    this.routes,
     this.assignedDuties,
     this.enhancedAssignedDuties,
     this.firstHalfBus,
@@ -245,6 +247,7 @@ class Event {
     bool? tookFullBreak,
     int? overtimeDuration,
     String? sickDayType,
+    List<String>? routes,
   }) {
     return Event(
       id: id ?? this.id,
@@ -256,6 +259,7 @@ class Event {
       workTime: workTime ?? this.workTime,
       breakStartTime: breakStartTime ?? this.breakStartTime,
       breakEndTime: breakEndTime ?? this.breakEndTime,
+      routes: routes ?? this.routes,
       assignedDuties: assignedDuties ?? this.assignedDuties,
       enhancedAssignedDuties: enhancedAssignedDuties ?? this.enhancedAssignedDuties,
       firstHalfBus: firstHalfBus ?? this.firstHalfBus,
@@ -290,6 +294,7 @@ class Event {
       'breakEndTime': breakEndTime != null
         ? {'hour': breakEndTime!.hour, 'minute': breakEndTime!.minute}
         : null,
+      'routes': routes,
       'assignedDuties': assignedDuties,
       'enhancedAssignedDuties': enhancedAssignedDuties?.map((duty) => duty.toMap()).toList(),
       'firstHalfBus': firstHalfBus,
@@ -334,6 +339,9 @@ class Event {
             hour: map['breakEndTime']['hour'],
             minute: map['breakEndTime']['minute'],
           )
+        : null,
+      routes: map['routes'] != null
+        ? List<String>.from(map['routes'])
         : null,
       assignedDuties: map['assignedDuties'] != null 
         ? List<String>.from(map['assignedDuties'])

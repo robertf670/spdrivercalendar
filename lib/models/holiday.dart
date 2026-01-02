@@ -2,7 +2,7 @@ class Holiday {
   final String id;
   final DateTime startDate;
   final DateTime endDate;
-  final String type; // 'winter', 'summer', or 'other'
+  final String type; // 'winter', 'summer', 'unpaid_leave', or 'other'
 
   Holiday({
     required this.id,

@@ -225,7 +225,6 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
 
   Future<void> _scheduleAutomaticUpdateCheck() async {
     // Check for updates immediately when calendar loads - no delay
-    // await Future.delayed(const Duration(seconds: 2)); // REMOVED: No delay for instant detection
     
     if (mounted && !_hasCheckedForUpdatesOnStartup) {
       _hasCheckedForUpdatesOnStartup = true;
@@ -320,12 +319,18 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
       final cacheService = CacheService();
       cacheService.remove(cacheKey);
       
+      // Also clear StorageService cache to ensure fresh data
+      StorageService.clearCacheForKey('holidays');
+      
       final holidays = await HolidayService.getHolidays();
-      setState(() {
-        _holidays = holidays;
-      });
+      if (mounted) {
+        setState(() {
+          _holidays = holidays;
+        });
+      }
     } catch (e) {
-      // Handle error gracefully
+      // Handle error gracefully - but log it for debugging
+      print('Error reloading holidays: $e');
     }
   }
 
@@ -508,11 +513,25 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
         );
         
         if (!holidayExists) {
+          String holidayTitle;
+          switch (holiday.type) {
+            case 'winter':
+              holidayTitle = 'Winter Holiday';
+              break;
+            case 'summer':
+              holidayTitle = 'Summer Holiday';
+              break;
+            case 'unpaid_leave':
+              holidayTitle = 'Unpaid Leave';
+              break;
+            case 'other':
+            default:
+              holidayTitle = 'Other Holiday';
+          }
+          
           final holidayEvent = Event(
             id: 'holiday_${holiday.id}_${day.millisecondsSinceEpoch}',
-            title: holiday.type == 'winter' ? 'Winter Holiday' : 
-                   holiday.type == 'summer' ? 'Summer Holiday' : 
-                   'Other Holiday',
+            title: holidayTitle,
             startDate: day,
             startTime: const TimeOfDay(hour: 0, minute: 0),
             endDate: day,
@@ -1078,7 +1097,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                          return; // Stop execution if times are null
                       }
                       
-                      // Create the event with non-null assurances
+                      // Create the event with non-null assurances, including break times, work time, and routes
                       final event = Event(
                         id: DateTime.now().millisecondsSinceEpoch.toString(),
                         title: title,
@@ -1088,6 +1107,10 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                             ? shiftDate.add(const Duration(days: 1))  // Next day
                             : shiftDate,
                         endTime: shiftTimes['endTime']!,
+                        breakStartTime: shiftTimes['breakStartTime'] as TimeOfDay?,
+                        breakEndTime: shiftTimes['breakEndTime'] as TimeOfDay?,
+                        workTime: shiftTimes['workTime'] as Duration?,
+                        routes: shiftTimes['routes'] as List<String>?,
                       );
                       
                       // Add event and close dialog
@@ -1216,10 +1239,57 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                           if (startTime != null && endTime != null) {
                               final isNextDay = endTime.hour < startTime.hour || 
                                                 (endTime.hour == startTime.hour && endTime.minute < startTime.minute);
+                              
+                              // Extract break times
+                              // UNI format: shift,duty,report,depart,location,startbreak,startbreaklocation,breakreport,finishbreak,finishbreaklocation,finish,finishlocation,signoff,spread,work,relief,routes
+                              // So startbreak is column 5, finishbreak is column 8
+                              TimeOfDay? breakStart;
+                              TimeOfDay? breakEnd;
+                              final uniStartBreak = parts.length > 5 ? parts[5].trim() : '';
+                              final uniFinishBreak = parts.length > 8 ? parts[8].trim() : '';
+                              
+                              final isWorkout = uniStartBreak.toLowerCase() == 'nan' || 
+                                               uniStartBreak.toLowerCase() == 'workout' ||
+                                               uniStartBreak.isEmpty ||
+                                               uniFinishBreak.toLowerCase() == 'nan' ||
+                                               uniFinishBreak.toLowerCase() == 'workout' ||
+                                               uniFinishBreak.isEmpty ||
+                                               uniStartBreak == uniFinishBreak;
+                              
+                              if (!isWorkout) {
+                                breakStart = _parseTimeOfDay(uniStartBreak);
+                                breakEnd = _parseTimeOfDay(uniFinishBreak);
+                              }
+                              
+                              // Extract work time (column 14)
+                              Duration? workTime;
+                              final workTimeStr = parts.length > 14 ? parts[14].trim() : '';
+                              if (workTimeStr.isNotEmpty && workTimeStr.toLowerCase() != 'nan') {
+                                final timeParts = workTimeStr.split(':');
+                                if (timeParts.length >= 2) {
+                                  final hours = int.tryParse(timeParts[0]);
+                                  final minutes = int.tryParse(timeParts[1]);
+                                  if (hours != null && minutes != null) {
+                                    workTime = Duration(hours: hours, minutes: minutes);
+                                  }
+                                }
+                              }
+                              
+                              // Extract routes (column 16)
+                              List<String> routes = [];
+                              final routesStr = parts.length > 16 ? parts[16].trim() : '';
+                              if (routesStr.isNotEmpty && routesStr.toLowerCase() != 'nan') {
+                                routes.add(routesStr);
+                              }
+                              
                               return {
                                   'startTime': startTime,
                                   'endTime': endTime,
                                   'isNextDay': isNextDay,
+                                  'breakStartTime': breakStart,
+                                  'breakEndTime': breakEnd,
+                                  'workTime': workTime,
+                                  'routes': routes,
                               };
                           } else {
                           }
@@ -1284,10 +1354,55 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
               if (startTime != null && endTime != null) {
                  final isNextDay = endTime.hour < startTime.hour || 
                                    (endTime.hour == startTime.hour && endTime.minute < startTime.minute);
+                 
+                 // Extract break times
+                 TimeOfDay? breakStart;
+                 TimeOfDay? breakEnd;
+                 final startBreakStr = parts.length > 5 ? parts[5].trim() : '';
+                 final finishBreakStr = parts.length > 8 ? parts[8].trim() : '';
+                 
+                 final isWorkout = startBreakStr.toLowerCase() == 'nan' || 
+                                  startBreakStr.toLowerCase() == 'workout' ||
+                                  startBreakStr.isEmpty ||
+                                  finishBreakStr.toLowerCase() == 'nan' ||
+                                  finishBreakStr.toLowerCase() == 'workout' ||
+                                  finishBreakStr.isEmpty ||
+                                  startBreakStr == finishBreakStr;
+                 
+                 if (!isWorkout) {
+                   breakStart = _parseTimeOfDay(startBreakStr);
+                   breakEnd = _parseTimeOfDay(finishBreakStr);
+                 }
+                 
+                 // Extract work time
+                 Duration? workTime;
+                 final workTimeStr = parts.length > 14 ? parts[14].trim() : '';
+                 if (workTimeStr.isNotEmpty && workTimeStr.toLowerCase() != 'nan') {
+                   final timeParts = workTimeStr.split(':');
+                   if (timeParts.length >= 2) {
+                     final hours = int.tryParse(timeParts[0]);
+                     final minutes = int.tryParse(timeParts[1]);
+                     if (hours != null && minutes != null) {
+                       workTime = Duration(hours: hours, minutes: minutes);
+                     }
+                   }
+                 }
+                 
+                 // Extract route (column 16)
+                 List<String> routes = [];
+                 final routeStr = parts.length > 16 ? parts[16].trim() : '';
+                 if (routeStr.isNotEmpty && routeStr.toLowerCase() != 'nan') {
+                   routes.add(routeStr);
+                 }
+                 
                  return {
                    'startTime': startTime,
                    'endTime': endTime,
                    'isNextDay': isNextDay,
+                   'breakStartTime': breakStart,
+                   'breakEndTime': breakEnd,
+                   'workTime': workTime,
+                   'routes': routes,
                  };
               } else {
               }
@@ -1318,8 +1433,8 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
         }
         // === Handle Regular Zone CSV format ===
         else {
-          // Expecting PZ format (index 0 is shift, 2 is report, 3 is depart, 12 is signOff)
-          if (parts.length >= 13) { 
+          // Expecting PZ format (index 0 is shift, 2 is report, 3 is depart, 5 is startbreak, 8 is finishbreak, 12 is signOff, 14 is work)
+          if (parts.length >= 15) { 
              final csvShiftCode = parts[0].trim();
              // No need to normalize PZ codes if shiftNumber is passed correctly (e.g. PZ1/01)
              if (csvShiftCode == shiftNumber) {
@@ -1333,10 +1448,92 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                 if (startTime != null && endTime != null) {
                     final isNextDay = endTime.hour < startTime.hour || 
                                       (endTime.hour == startTime.hour && endTime.minute < startTime.minute);
+                    
+                    // Extract break times (columns 5 and 8)
+                    TimeOfDay? breakStart;
+                    TimeOfDay? breakEnd;
+                    final startBreakStr = parts.length > 5 ? parts[5].trim() : '';
+                    final finishBreakStr = parts.length > 8 ? parts[8].trim() : '';
+                    
+                    // Check if it's a workout (break times are 'nan' or 'workout')
+                    final isWorkout = startBreakStr.toLowerCase() == 'nan' || 
+                                     startBreakStr.toLowerCase() == 'workout' ||
+                                     startBreakStr.isEmpty ||
+                                     finishBreakStr.toLowerCase() == 'nan' ||
+                                     finishBreakStr.toLowerCase() == 'workout' ||
+                                     finishBreakStr.isEmpty;
+                    
+                    if (!isWorkout) {
+                      breakStart = _parseTimeOfDay(startBreakStr);
+                      breakEnd = _parseTimeOfDay(finishBreakStr);
+                    }
+                    
+                    // Extract work time (column 14)
+                    Duration? workTime;
+                    final workTimeStr = parts.length > 14 ? parts[14].trim() : '';
+                    if (workTimeStr.isNotEmpty && workTimeStr.toLowerCase() != 'nan') {
+                      final timeParts = workTimeStr.split(':');
+                      if (timeParts.length >= 2) {
+                        final hours = int.tryParse(timeParts[0]);
+                        final minutes = int.tryParse(timeParts[1]);
+                        if (hours != null && minutes != null) {
+                          workTime = Duration(hours: hours, minutes: minutes);
+                        }
+                      }
+                    }
+                    
+                    // Extract routes from locations (columns 4, 6, 9, 11)
+                    List<String> routes = [];
+                    final startLocation = parts.length > 4 ? parts[4].trim() : '';
+                    final breakStartLoc = parts.length > 6 ? parts[6].trim() : '';
+                    final breakFinishLoc = parts.length > 9 ? parts[9].trim() : '';
+                    final finishLoc = parts.length > 11 ? parts[11].trim() : '';
+                    
+                    // Extract route from location codes (e.g., "39A-BWALK" -> "39A")
+                    String? extractRoute(String loc) {
+                      if (loc.isEmpty || loc.toLowerCase() == 'nan' || loc.toUpperCase() == 'GARAGE') {
+                        return null;
+                      }
+                      final dashIndex = loc.indexOf('-');
+                      if (dashIndex > 0) {
+                        String route = loc.substring(0, dashIndex);
+                        // Simplify compound routes like "C1/C2" to just "C"
+                        if (route.contains('/')) {
+                          final match = RegExp(r'([A-Z]+)').firstMatch(route);
+                          if (match != null) {
+                            return match.group(1);
+                          }
+                        }
+                        return route;
+                      }
+                      // For PZ4, check for route in parentheses (e.g., "PSQW-PE(9)" -> "9")
+                      final parenMatch = RegExp(r'\((\d+)\)').firstMatch(loc);
+                      if (parenMatch != null) {
+                        return parenMatch.group(1);
+                      }
+                      return null;
+                    }
+                    
+                    if (!isWorkout) {
+                      // For regular shifts, get routes from break locations
+                      final firstRoute = extractRoute(breakStartLoc) ?? extractRoute(startLocation);
+                      final secondRoute = extractRoute(breakFinishLoc) ?? extractRoute(finishLoc);
+                      if (firstRoute != null && !routes.contains(firstRoute)) routes.add(firstRoute);
+                      if (secondRoute != null && !routes.contains(secondRoute)) routes.add(secondRoute);
+                    } else {
+                      // For workouts, get route from any location
+                      final route = extractRoute(startLocation) ?? extractRoute(finishLoc) ?? extractRoute(breakStartLoc);
+                      if (route != null && !routes.contains(route)) routes.add(route);
+                    }
+                    
                     return {
                       'startTime': startTime,
                       'endTime': endTime,
                       'isNextDay': isNextDay,
+                      'breakStartTime': breakStart,
+                      'breakEndTime': breakEnd,
+                      'workTime': workTime,
+                      'routes': routes,
                     };
                       } else {
                 }
@@ -4093,6 +4290,11 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
     final bankHoliday = getBankHoliday(date);
     final isBankHoliday = bankHoliday != null;
     final isHoliday = _holidays.any((h) => h.containsDate(date));
+    final isSaturdayService = RosterService.isSaturdayService(date);
+    
+    // Calculate responsive badge sizes
+    final screenWidth = MediaQuery.of(context).size.width;
+    final badgeSizes = _getCalendarBadgeSizes(screenWidth);
 
     // Wrap the content in Opacity if it's an outside day
     return Opacity(
@@ -4156,6 +4358,31 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                 ],
               ),
             ),
+            // Saturday service indicator positioned in top-left corner
+            if (isSaturdayService)
+              Positioned(
+                top: badgeSizes['top']!,
+                left: badgeSizes['left']!,
+                child: Container(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: badgeSizes['paddingH']!,
+                    vertical: badgeSizes['paddingV']!,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.shade600,
+                    borderRadius: BorderRadius.circular(badgeSizes['radius']!),
+                  ),
+                  child: Text(
+                    'SAT',
+                    style: TextStyle(
+                      fontSize: badgeSizes['fontSize']!,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                      height: 1.0,
+                    ),
+                  ),
+                ),
+              ),
             // Event indicator positioned in bottom-right corner
             if (hasEvents)
               Positioned(
@@ -4176,6 +4403,56 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
         ),
       ),
     );
+  }
+  
+  // Helper method to calculate responsive badge sizes for calendar day
+  Map<String, double> _getCalendarBadgeSizes(double screenWidth) {
+    if (screenWidth < 350) {
+      return {
+        'fontSize': 6.0,
+        'paddingH': 2.0,
+        'paddingV': 0.5,
+        'radius': 3.0,
+        'top': 1.0,
+        'left': 1.0,
+      };
+    } else if (screenWidth < 450) {
+      return {
+        'fontSize': 7.0,
+        'paddingH': 3.0,
+        'paddingV': 1.0,
+        'radius': 4.0,
+        'top': 2.0,
+        'left': 2.0,
+      };
+    } else if (screenWidth < 600) {
+      return {
+        'fontSize': 8.0,
+        'paddingH': 3.5,
+        'paddingV': 1.0,
+        'radius': 4.0,
+        'top': 2.0,
+        'left': 2.0,
+      };
+    } else if (screenWidth < 900) {
+      return {
+        'fontSize': 9.0,
+        'paddingH': 4.0,
+        'paddingV': 1.5,
+        'radius': 5.0,
+        'top': 3.0,
+        'left': 3.0,
+      };
+    } else {
+      return {
+        'fontSize': 10.0,
+        'paddingH': 5.0,
+        'paddingV': 2.0,
+        'radius': 5.0,
+        'top': 3.0,
+        'left': 3.0,
+      };
+    }
   }
 
   Widget _buildEventsList() {
@@ -4533,6 +4810,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
     // Count holidays by type for this year
     final winterCount = yearHolidays.where((h) => h.type == 'winter').length;
     final summerCount = yearHolidays.where((h) => h.type == 'summer').length;
+    final unpaidLeaveCount = yearHolidays.where((h) => h.type == 'unpaid_leave').length;
     final otherCount = yearHolidays.where((h) => h.type == 'other').length;
     
     return Container(
@@ -4593,6 +4871,8 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                           _buildTypeBadge('Winter', winterCount, Colors.blue, sizes),
                         if (summerCount > 0)
                           _buildTypeBadge('Summer', summerCount, Colors.orange, sizes),
+                        if (unpaidLeaveCount > 0)
+                          _buildTypeBadge('Unpaid Leave', unpaidLeaveCount, Colors.purple, sizes),
                         if (otherCount > 0)
                           _buildTypeBadge('Other', otherCount, Colors.grey, sizes),
                       ],
@@ -4656,6 +4936,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
           Icon(
             type == 'Winter' ? Icons.ac_unit :
             type == 'Summer' ? Icons.wb_sunny :
+            type == 'Unpaid Leave' ? Icons.money_off :
             Icons.event,
             size: sizes['badgeIconSize']!,
             color: color,
@@ -4682,11 +4963,14 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
     
     final isWinter = holiday.type == 'winter';
     final isSummer = holiday.type == 'summer';
+    final isUnpaidLeave = holiday.type == 'unpaid_leave';
     final iconColor = isWinter 
         ? Colors.blue 
         : isSummer 
             ? Colors.orange 
-            : Colors.grey;
+            : isUnpaidLeave
+                ? Colors.purple
+                : Colors.grey;
     
     return Container(
       padding: EdgeInsets.all(sizes['itemPadding']!),
@@ -4709,6 +4993,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
             child: Icon(
               isWinter ? Icons.ac_unit :
               isSummer ? Icons.wb_sunny :
+              isUnpaidLeave ? Icons.money_off :
               Icons.event,
               color: iconColor,
               size: sizes['iconSize']!,
@@ -4723,6 +5008,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                 Text(
                   isWinter ? 'Winter Holiday' :
                   isSummer ? 'Summer Holiday' :
+                  isUnpaidLeave ? 'Unpaid Leave' :
                   'Other Holiday',
                   style: TextStyle(
                     fontWeight: FontWeight.w600,
@@ -4837,10 +5123,11 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        return Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
+        return StatefulBuilder(
+          builder: (context, setDialogState) => Dialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
           child: Container(
             constraints: BoxConstraints(
               maxHeight: MediaQuery.of(context).size.height * 0.8,
@@ -4934,7 +5221,24 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                             children: [
                               const Icon(Icons.event, size: 22),
                               const SizedBox(width: 12),
-                              const Text('Other', style: TextStyle(fontSize: 14)),
+                              const Text('Other Holiday', style: TextStyle(fontSize: 14)),
+                            ],
+                          ),
+                        ),
+                      ),
+                      InkWell(
+                        onTap: () {
+                          scrollController.dispose();
+                          Navigator.of(context).pop();
+                          _showUnpaidLeaveDialog();
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.money_off, size: 22, color: Colors.purple),
+                              const SizedBox(width: 12),
+                              const Text('Unpaid Leave', style: TextStyle(fontSize: 14)),
                             ],
                           ),
                         ),
@@ -4983,6 +5287,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                 ),
               ],
             ),
+          ),
           ),
         );
       },
@@ -5941,110 +6246,244 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
     
     showDialog(
       context: context,
-      builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Container(
-          constraints: BoxConstraints(
-            maxHeight: MediaQuery.of(context).size.height * 0.8,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.green.shade50,
-                        borderRadius: BorderRadius.circular(12),
+          child: Container(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.8,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.green.shade50,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(Icons.event, color: Colors.green),
                       ),
-                      child: const Icon(Icons.event, color: Colors.green),
-                    ),
-                    const SizedBox(width: 12),
-                    const Text(
-                      'Select Holiday Date',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
+                      const SizedBox(width: 12),
+                      const Expanded(
+                        child: Text(
+                          'Select Holiday Date',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
-                    ),
-                    const Spacer(),
-                    IconButton(
-                      icon: const Icon(Icons.close),
-                      onPressed: () => Navigator.of(context).pop(),
-                    ),
-                  ],
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.of(context).pop(),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              const Divider(height: 0),
-              Flexible(
-                child: SingleChildScrollView(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: CalendarDatePicker(
-                      initialDate: selectedDate,
-                      firstDate: DateTime.now().subtract(const Duration(days: 365)),
-                      lastDate: DateTime.now().add(const Duration(days: 365)),
-                      onDateChanged: (date) {
-                        selectedDate = date;
-                      },
+                const Divider(height: 0),
+                Flexible(
+                  child: SingleChildScrollView(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: CalendarDatePicker(
+                        initialDate: selectedDate,
+                        firstDate: DateTime.now().subtract(const Duration(days: 365)),
+                        lastDate: DateTime.now().add(const Duration(days: 365)),
+                        onDateChanged: (date) {
+                          setState(() {
+                            selectedDate = date;
+                          });
+                        },
+                      ),
                     ),
                   ),
                 ),
-              ),
-              const Divider(height: 0),
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    TextButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      child: const Text('Cancel'),
-                    ),
-                    const SizedBox(width: 8),
-                    ElevatedButton(
-                      onPressed: () async {
-                        final holiday = Holiday(
-                          id: 'other_${selectedDate.millisecondsSinceEpoch}',
-                          startDate: selectedDate,
-                          endDate: selectedDate,
-                          type: 'other',
-                        );
-                        
-                        // Add the holiday
-                        await HolidayService.addHoliday(holiday);
-                        
-                        // Reload holidays from storage to ensure consistency
-                        await _reloadHolidays();
-                        
-                        // Close the dialog
-                        Navigator.of(context).pop();
-                        
-                        // Show success message
-                        if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Holiday added successfully'),
-                              backgroundColor: Colors.green,
-                            ),
-                          );
-                        }
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
-                        foregroundColor: Colors.white,
+                const Divider(height: 0),
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: const Text('Cancel'),
                       ),
-                      child: const Text('Add Holiday'),
-                    ),
-                  ],
+                      const SizedBox(width: 8),
+                      ElevatedButton(
+                        onPressed: () async {
+                          final holiday = Holiday(
+                            id: 'other_${selectedDate.millisecondsSinceEpoch}',
+                            startDate: selectedDate,
+                            endDate: selectedDate,
+                            type: 'other',
+                          );
+                          
+                          // Add the holiday
+                          await HolidayService.addHoliday(holiday);
+                          
+                          // Reload holidays from storage to ensure consistency
+                          await _reloadHolidays();
+                          
+                          // Close the dialog
+                          Navigator.of(context).pop();
+                          
+                          // Show success message
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Holiday added successfully'),
+                                backgroundColor: Colors.green,
+                              ),
+                            );
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green,
+                          foregroundColor: Colors.white,
+                        ),
+                        child: const Text('Add Holiday'),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showUnpaidLeaveDialog() {
+    DateTime selectedDate = DateTime.now();
+    
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Container(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.8,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.purple.shade50,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(Icons.money_off, color: Colors.purple),
+                      ),
+                      const SizedBox(width: 12),
+                      const Expanded(
+                        child: Text(
+                          'Select Unpaid Leave Date',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.of(context).pop(),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
+                    ],
+                  ),
+                ),
+                const Divider(height: 0),
+                Flexible(
+                  child: SingleChildScrollView(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: CalendarDatePicker(
+                        initialDate: selectedDate,
+                        firstDate: DateTime.now().subtract(const Duration(days: 365)),
+                        lastDate: DateTime.now().add(const Duration(days: 365)),
+                        onDateChanged: (date) {
+                          setState(() {
+                            selectedDate = date;
+                          });
+                        },
+                      ),
+                    ),
+                  ),
+                ),
+                const Divider(height: 0),
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: const Text('Cancel'),
+                      ),
+                      const SizedBox(width: 8),
+                      ElevatedButton(
+                        onPressed: () async {
+                          final holiday = Holiday(
+                            id: 'unpaid_leave_${selectedDate.millisecondsSinceEpoch}',
+                            startDate: selectedDate,
+                            endDate: selectedDate,
+                            type: 'unpaid_leave',
+                          );
+                          
+                          // Add the holiday
+                          await HolidayService.addHoliday(holiday);
+                          
+                          // Reload holidays from storage to ensure consistency
+                          await _reloadHolidays();
+                          
+                          // Close the dialog
+                          Navigator.of(context).pop();
+                          
+                          // Force calendar rebuild to show the new unpaid leave
+                          if (mounted) {
+                            setState(() {});
+                          }
+                          
+                          // Show success message
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Unpaid leave added successfully'),
+                                backgroundColor: Colors.purple,
+                              ),
+                            );
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.purple,
+                          foregroundColor: Colors.white,
+                        ),
+                        child: const Text('Add Unpaid Leave'),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

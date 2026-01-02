@@ -1,4 +1,22 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.17.0': [
+    {
+      'title': 'Android Home Screen Widgets',
+      'description': 'Added two new home screen widgets! "Today\'s Shift" widget displays your current shift details including start/finish times, break times, routes, and work time. "Monthly Calendar" widget shows a full month view with your roster pattern (E/L/R/M), scheduled events, holidays, and month navigation arrows. Widgets automatically update and can be resized to fit your home screen layout (within reason).',
+    },
+    {
+      'title': 'Unpaid Leave Feature',
+      'description': 'Added support for unpaid leave as a new holiday type! You can now add unpaid leave days through the holidays section, and they will appear on your calendar with a distinct purple color and money-off icon. Unpaid leave is displayed separately from other holidays and appears in both the calendar view and the holidays list.s.',
+    },
+    {
+      'title': 'Saturday Service Visual Indicators',
+      'description': 'Added visual indicators to clearly show when Saturday service is in effect on special dates around Christmas. Orange "SAT" badges now appear on calendar day views, shift details cards, and week view screens for dates running Saturday service (December 24, 27, 29, 30, 31).',
+    },
+    {
+      'title': 'Universal Board Data Added',
+      'description': 'Added complete board data for previously missing universal boards: 307/01, 307/02, 807/17, and 807/20.',
+    },
+  ],
   '2.16.1': [
     {
       'title': 'Christmas Operating Times Update',

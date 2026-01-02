@@ -2,13 +2,175 @@
   "boards": [
     {
       "shift": "307/01",
-      "duty": null,
-      "sections": []
+      "duty": "007509",
+      "sections": [
+        {
+          "type": "firstHalf",
+          "entries": [
+            {
+              "action": "Report",
+              "time": "06:47",
+              "location": null,
+              "route": null,
+              "notes": null
+            },
+            {
+              "action": "Depart Garage",
+              "time": "06:55",
+              "location": "Garage",
+              "route": null,
+              "notes": null
+            },
+            {
+              "action": "Route",
+              "time": "07:40",
+              "location": "Maynooth",
+              "route": "X26",
+              "notes": "Via Louisa Bridge"
+            },
+            {
+              "action": "Arrive",
+              "time": "10:00",
+              "location": "UCD - Belfield",
+              "route": null,
+              "notes": null
+            },
+            {
+              "action": "Break",
+              "time": "11:00",
+              "location": "Phibsboro Garage",
+              "route": null,
+              "notes": null
+            }
+          ]
+        },
+        {
+          "type": "secondHalf",
+          "entries": [
+            {
+              "action": "Report",
+              "time": "14:47",
+              "location": null,
+              "route": null,
+              "notes": null
+            },
+            {
+              "action": "Depart Garage",
+              "time": "14:50",
+              "location": "Garage",
+              "route": null,
+              "notes": null
+            },
+            {
+              "action": "Route",
+              "time": "15:47",
+              "location": "Sandymount",
+              "route": "C1",
+              "notes": null
+            },
+            {
+              "action": "Arrive",
+              "time": "17:30",
+              "location": "Adamstown Stn",
+              "route": null,
+              "notes": null
+            },
+            {
+              "action": "Finish",
+              "time": "18:12",
+              "location": "Phibsboro Garage",
+              "route": null,
+              "notes": null
+            }
+          ]
+        }
+      ]
     },
     {
       "shift": "307/02",
-      "duty": null,
-      "sections": []
+      "duty": "007510",
+      "sections": [
+        {
+          "type": "firstHalf",
+          "entries": [
+            {
+              "action": "Report",
+              "time": "06:25",
+              "location": null,
+              "route": null,
+              "notes": null
+            },
+            {
+              "action": "Depart Garage",
+              "time": "06:33",
+              "location": "Garage",
+              "route": null,
+              "notes": null
+            },
+            {
+              "action": "Route",
+              "time": "07:20",
+              "location": "UCD - Belfield",
+              "route": "X26",
+              "notes": "Maynooth Via Louisa Bridge"
+            },
+            {
+              "action": "Arrive",
+              "time": "09:30",
+              "location": "UCD - Belfield",
+              "route": null,
+              "notes": null
+            },
+            {
+              "action": "Break",
+              "time": "11:35",
+              "location": "Phibsboro Garage",
+              "route": null,
+              "notes": null
+            }
+          ]
+        },
+        {
+          "type": "secondHalf",
+          "entries": [
+            {
+              "action": "Report",
+              "time": "16:42",
+              "location": null,
+              "route": null,
+              "notes": null
+            },
+            {
+              "action": "Depart Garage",
+              "time": "16:45",
+              "location": "Garage",
+              "route": null,
+              "notes": null
+            },
+            {
+              "action": "Route",
+              "time": "17:24",
+              "location": "Ringsend Garage",
+              "route": "C2",
+              "notes": null
+            },
+            {
+              "action": "Arrive",
+              "time": "18:33",
+              "location": "Adamstown",
+              "route": null,
+              "notes": null
+            },
+            {
+              "action": "Finish",
+              "time": "19:10",
+              "location": "Phibsboro Garage",
+              "route": null,
+              "notes": null
+            }
+          ]
+        }
+      ]
     },
     {
       "shift": "307/03",
@@ -707,8 +869,89 @@
     },
     {
       "shift": "807/17",
-      "duty": null,
-      "sections": []
+      "duty": "007517",
+      "sections": [
+        {
+          "type": "firstHalf",
+          "entries": [
+            {
+              "action": "Report",
+              "time": "06:35",
+              "location": null,
+              "route": null,
+              "notes": null
+            },
+            {
+              "action": "Depart Garage",
+              "time": "06:43",
+              "location": "Garage",
+              "route": null,
+              "notes": null
+            },
+            {
+              "action": "Route",
+              "time": "07:33",
+              "location": "Adamstown",
+              "route": "C1",
+              "notes": null
+            },
+            {
+              "action": "Arrive",
+              "time": "09:23",
+              "location": "Sandymount",
+              "route": null,
+              "notes": null
+            },
+            {
+              "action": "Break",
+              "time": "10:03",
+              "location": "Phibsboro Garage",
+              "route": null,
+              "notes": null
+            }
+          ]
+        },
+        {
+          "type": "secondHalf",
+          "entries": [
+            {
+              "action": "Report",
+              "time": "13:32",
+              "location": null,
+              "route": null,
+              "notes": null
+            },
+            {
+              "action": "Depart Garage",
+              "time": "13:35",
+              "location": "Garage",
+              "route": null,
+              "notes": null
+            },
+            {
+              "action": "Route",
+              "time": "14:15",
+              "location": "Sandymount",
+              "route": "C1",
+              "notes": null
+            },
+            {
+              "action": "Arrive",
+              "time": "16:05",
+              "location": "Adamstown",
+              "route": null,
+              "notes": null
+            },
+            {
+              "action": "Finish",
+              "time": "17:00",
+              "location": "Phibsboro Garage",
+              "route": null,
+              "notes": null
+            }
+          ]
+        }
+      ]
     },
     {
       "shift": "807/18",
@@ -884,8 +1127,89 @@
     },
     {
       "shift": "807/20",
-      "duty": null,
-      "sections": []
+      "duty": "007520",
+      "sections": [
+        {
+          "type": "firstHalf",
+          "entries": [
+            {
+              "action": "Report",
+              "time": "06:57",
+              "location": null,
+              "route": null,
+              "notes": null
+            },
+            {
+              "action": "Depart Garage",
+              "time": "07:05",
+              "location": "Garage",
+              "route": null,
+              "notes": null
+            },
+            {
+              "action": "Route",
+              "time": "07:50",
+              "location": "Salesian College",
+              "route": "X28",
+              "notes": "Via Celbridge Main St"
+            },
+            {
+              "action": "Arrive",
+              "time": "09:55",
+              "location": "UCD - Belfield",
+              "route": null,
+              "notes": null
+            },
+            {
+              "action": "Break",
+              "time": "10:45",
+              "location": "Phibsboro Garage",
+              "route": null,
+              "notes": null
+            }
+          ]
+        },
+        {
+          "type": "secondHalf",
+          "entries": [
+            {
+              "action": "Report",
+              "time": "16:22",
+              "location": null,
+              "route": null,
+              "notes": null
+            },
+            {
+              "action": "Depart Garage",
+              "time": "16:25",
+              "location": "Garage",
+              "route": null,
+              "notes": null
+            },
+            {
+              "action": "Route",
+              "time": "17:15",
+              "location": "UCD - Belfield",
+              "route": "X28",
+              "notes": null
+            },
+            {
+              "action": "Arrive",
+              "time": "19:10",
+              "location": "Salesian College",
+              "route": null,
+              "notes": null
+            },
+            {
+              "action": "Finish",
+              "time": "19:55",
+              "location": "Phibsboro Garage",
+              "route": null,
+              "notes": null
+            }
+          ]
+        }
+      ]
     },
     {
       "shift": "807/21",

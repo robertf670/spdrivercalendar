@@ -1240,6 +1240,10 @@ class _EventCardState extends State<EventCard> {
           holidayColor = Colors.green;
           holidayIcon = Icons.event;
           break;
+        case 'unpaid_leave':
+          holidayColor = Colors.purple;
+          holidayIcon = Icons.money_off;
+          break;
         default:
           holidayColor = Colors.grey;
           holidayIcon = Icons.event;

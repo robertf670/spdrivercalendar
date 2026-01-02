@@ -1,0 +1,288 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/widget_background"
+    android:orientation="vertical"
+    android:padding="0dp">
+
+    <!-- Header with refresh button -->
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/widget_header_bg"
+        android:paddingLeft="12dp"
+        android:paddingRight="10dp"
+        android:paddingTop="10dp"
+        android:paddingBottom="10dp">
+        
+        <TextView
+            android:id="@+id/widget_header"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Today's Shift"
+            android:textStyle="bold"
+            android:textSize="15sp"
+            android:textColor="@color/widget_header_text"
+            android:layout_centerInParent="true" />
+        
+        <TextView
+            android:id="@+id/widget_refresh_button"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_alignParentEnd="true"
+            android:layout_centerVertical="true"
+            android:text="↻"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:textColor="@color/widget_header_text"
+            android:gravity="center"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Refresh"
+            android:clickable="true"
+            android:focusable="true" />
+    </RelativeLayout>
+
+    <!-- Content container -->
+    <LinearLayout
+        android:id="@+id/widget_content"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="12dp"
+        android:visibility="visible">
+
+        <!-- Shift Title -->
+        <TextView
+            android:id="@+id/widget_title"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="No shift"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:textColor="@color/widget_text_primary"
+            android:gravity="center"
+            android:layout_marginBottom="6dp"
+            android:maxLines="1"
+            android:ellipsize="end" />
+
+        <!-- Time with Duration -->
+        <TextView
+            android:id="@+id/widget_time"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="00:00 - 00:00"
+            android:textSize="14sp"
+            android:textColor="@color/widget_text_accent"
+            android:textStyle="bold"
+            android:gravity="center"
+            android:layout_marginBottom="8dp"
+            android:maxLines="1"
+            android:ellipsize="end" />
+
+        <!-- Divider -->
+        <TextView
+            android:id="@+id/widget_divider"
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="@color/widget_divider"
+            android:layout_marginBottom="8dp"
+            android:visibility="visible" />
+
+        <!-- Info sections container -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:id="@+id/widget_info_container">
+
+            <!-- Break Time -->
+            <LinearLayout
+                android:id="@+id/widget_break_container"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="6dp"
+                android:visibility="gone">
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Break"
+                    android:textSize="12sp"
+                    android:textColor="@color/widget_text_secondary"
+                    android:textStyle="bold"
+                    android:maxLines="1"
+                    android:ellipsize="end" />
+                <TextView
+                    android:id="@+id/widget_break"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text=""
+                    android:textSize="12sp"
+                    android:textColor="@color/widget_text_primary"
+                    android:textStyle="bold"
+                    android:maxLines="1"
+                    android:ellipsize="end" />
+            </LinearLayout>
+
+            <!-- Routes -->
+            <LinearLayout
+                android:id="@+id/widget_routes_container"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="6dp"
+                android:visibility="gone">
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Routes"
+                    android:textSize="12sp"
+                    android:textColor="@color/widget_text_secondary"
+                    android:textStyle="bold"
+                    android:maxLines="1"
+                    android:ellipsize="end" />
+                <TextView
+                    android:id="@+id/widget_routes"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text=""
+                    android:textSize="12sp"
+                    android:textColor="@color/widget_text_primary"
+                    android:textStyle="bold"
+                    android:maxLines="2"
+                    android:ellipsize="end"
+                    android:gravity="end" />
+            </LinearLayout>
+
+            <!-- Work Time -->
+            <LinearLayout
+                android:id="@+id/widget_work_time_container"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="6dp"
+                android:visibility="gone">
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Work"
+                    android:textSize="12sp"
+                    android:textColor="@color/widget_text_secondary"
+                    android:textStyle="bold"
+                    android:maxLines="1"
+                    android:ellipsize="end" />
+                <TextView
+                    android:id="@+id/widget_work_time"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text=""
+                    android:textSize="12sp"
+                    android:textColor="@color/widget_text_primary"
+                    android:textStyle="bold"
+                    android:maxLines="1"
+                    android:ellipsize="end" />
+            </LinearLayout>
+
+            <!-- Duties -->
+            <LinearLayout
+                android:id="@+id/widget_duties_container"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="6dp"
+                android:visibility="gone">
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Duties"
+                    android:textSize="12sp"
+                    android:textColor="@color/widget_text_secondary"
+                    android:textStyle="bold"
+                    android:maxLines="1"
+                    android:ellipsize="end" />
+                <TextView
+                    android:id="@+id/widget_duties"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text=""
+                    android:textSize="12sp"
+                    android:textColor="@color/widget_text_primary"
+                    android:textStyle="bold"
+                    android:maxLines="2"
+                    android:ellipsize="end"
+                    android:gravity="end" />
+            </LinearLayout>
+
+            <!-- Buses -->
+            <LinearLayout
+                android:id="@+id/widget_buses_container"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:visibility="gone">
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Buses"
+                    android:textSize="12sp"
+                    android:textColor="@color/widget_text_secondary"
+                    android:textStyle="bold"
+                    android:maxLines="1"
+                    android:ellipsize="end" />
+                <TextView
+                    android:id="@+id/widget_buses"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text=""
+                    android:textSize="12sp"
+                    android:textColor="@color/widget_text_primary"
+                    android:textStyle="bold"
+                    android:maxLines="2"
+                    android:ellipsize="end"
+                    android:gravity="end" />
+            </LinearLayout>
+
+        </LinearLayout>
+
+        <!-- Combined Info Line (fallback for compact display) -->
+        <TextView
+            android:id="@+id/widget_info"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text=""
+            android:textSize="12sp"
+            android:textColor="@color/widget_text_secondary"
+            android:gravity="center"
+            android:layout_marginTop="8dp"
+            android:maxLines="3"
+            android:ellipsize="end"
+            android:visibility="gone" />
+
+    </LinearLayout>
+
+    <!-- No shift message -->
+    <TextView
+        android:id="@+id/widget_no_shift"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="No shift scheduled"
+        android:textSize="15sp"
+        android:textColor="@color/widget_text_secondary"
+        android:gravity="center"
+        android:padding="24dp"
+        android:visibility="gone" />
+
+</LinearLayout>
+
