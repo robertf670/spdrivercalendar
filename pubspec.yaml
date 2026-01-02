@@ -45,6 +45,7 @@ dependencies:
   table_calendar: ^3.0.9
   month_year_picker: ^0.5.0+1
   flutter_colorpicker: ^1.0.3
+  fl_chart: ^0.69.0
   
   # Internationalization
   intl: ^0.20.2
@@ -56,6 +57,9 @@ dependencies:
   
   # In-app APK downloads (new)
   open_filex: ^4.3.4
+  
+  # Sharing
+  share_plus: ^10.1.2
 
   # State Management
   provider: ^6.1.2

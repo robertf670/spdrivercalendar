@@ -6,15 +6,19 @@ final Map<String, List<Map<String, String>>> changelogData = {
     },
     {
       'title': 'Unpaid Leave Feature',
-      'description': 'Added support for unpaid leave as a new holiday type! You can now add unpaid leave days through the holidays section, and they will appear on your calendar with a distinct purple color and money-off icon. Unpaid leave is displayed separately from other holidays and appears in both the calendar view and the holidays list.s.',
-    },
-    {
-      'title': 'Saturday Service Visual Indicators',
-      'description': 'Added visual indicators to clearly show when Saturday service is in effect on special dates around Christmas. Orange "SAT" badges now appear on calendar day views, shift details cards, and week view screens for dates running Saturday service (December 24, 27, 29, 30, 31).',
+      'description': 'Added support for unpaid leave as a new holiday type! You can now add unpaid leave days through the holidays section, and they will appear on your calendar with a distinct purple color and money-off icon. Unpaid leave is displayed separately from other holidays and appears in both the calendar view and the holidays list.',
     },
     {
       'title': 'Universal Board Data Added',
       'description': 'Added complete board data for previously missing universal boards: 307/01, 307/02, 807/17, and 807/20.',
+    },
+    {
+      'title': 'Enhanced Statistics with Visual Charts',
+      'description': 'Added visual statistics enhancements including a monthly work time trend chart (12 months), shift type distribution pie chart, spread over payment calculator (time over 10 hours only), and export functionality. All visualizations are integrated into the Statistics screen with expandable sections.',
+    },
+    {
+      'title': 'Saturday Service Visual Indicators',
+      'description': 'Added visual indicators to clearly show when Saturday service is in effect on special dates around Christmas. Orange "SAT" badges now appear on calendar day views, shift details cards, and week view screens for dates running Saturday service (December 24, 27, 29, 30, 31).',
     },
   ],
   '2.16.1': [

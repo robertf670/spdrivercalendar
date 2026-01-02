@@ -19,6 +19,11 @@ import '../widgets/spread_statistics_card.dart';
 import '../widgets/break_statistics_card.dart';
 import '../widgets/sick_days_statistics_card.dart';
 import '../widgets/holiday_days_statistics_card.dart';
+import '../widgets/work_time_trend_chart.dart';
+import '../widgets/shift_type_pie_chart.dart';
+import '../widgets/earnings_calculator_card.dart';
+import '../widgets/statistics_export_service.dart';
+import 'package:share_plus/share_plus.dart';
 
 enum ShiftType {
   early,   // 04:00 - 09:59
@@ -109,6 +114,9 @@ class StatisticsScreenState extends State<StatisticsScreen>
   
   // State variable to hold the future for holiday days stats
   Future<Map<String, dynamic>>? _holidayDaysStatsFuture;
+  
+  // State variable for monthly trend data
+  Future<Map<String, Duration>>? _monthlyTrendFuture;
 
   // State variables for Sunday Pair Statistics
   DateTime? _currentBlockLsunDate, _currentBlockEsunDate;
@@ -239,6 +247,7 @@ class StatisticsScreenState extends State<StatisticsScreen>
          _workTimeStatsFuture = _calculateWorkTimeStatistics();
          _spreadStatsFuture = _calculateSpreadStatistics();
          _holidayDaysStatsFuture = _calculateHolidayDaysStatistics();
+         _monthlyTrendFuture = _calculateMonthlyTrends();
          // Trigger Sunday pair calculation (no need to await here, UI will update)
          _calculateSundayPairStatistics(); 
        });
@@ -388,6 +397,13 @@ class StatisticsScreenState extends State<StatisticsScreen>
     return Scaffold(
       appBar: AppBar(
         title: const Text('Shift Statistics'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.share),
+            tooltip: 'Export Statistics',
+            onPressed: _exportStatistics,
+          ),
+        ],
         // Add TabBar to the bottom of the AppBar
         bottom: TabBar(
           controller: _tabController!, // Use null assertion
@@ -466,6 +482,32 @@ class StatisticsScreenState extends State<StatisticsScreen>
                 ? const Center(child: CircularProgressIndicator())
                 : SpreadStatisticsCard(
                     spreadStatsFuture: _spreadStatsFuture!,
+                  ),
+            ],
+          ),
+          SizedBox(height: sizes['cardSpacing']!),
+          // Monthly Trend Chart
+          _buildExpandableSection(
+            title: 'Monthly Work Time Trend',
+            subtitle: 'Last 12 months',
+            icon: Icons.trending_up,
+            children: [
+              const SizedBox(height: 8),
+              _monthlyTrendFuture == null
+                ? const Center(child: CircularProgressIndicator())
+                : FutureBuilder<Map<String, Duration>>(
+                    future: _monthlyTrendFuture,
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+                      if (snapshot.hasError || !snapshot.hasData) {
+                        return const Center(child: Text('Unable to load trend data'));
+                      }
+                      return WorkTimeTrendChart(
+                        monthlyData: snapshot.data!,
+                      );
+                    },
                   ),
             ],
           ),
@@ -561,6 +603,29 @@ class StatisticsScreenState extends State<StatisticsScreen>
         padding: EdgeInsets.all(sizes['padding']!),
         child: Column(
         children: [
+          // Shift Type Pie Chart
+          _buildExpandableSection(
+            title: 'Shift Type Distribution',
+            subtitle: 'Visual breakdown of shift types',
+            icon: Icons.pie_chart,
+            children: [
+              const SizedBox(height: 8),
+              ShiftTypePieChart(
+                shiftCounts: {
+                  'Early': _calculateSummaryStatistics()['earlyShifts'] ?? 0,
+                  'Relief': _calculateSummaryStatistics()['reliefShifts'] ?? 0,
+                  'Late': _calculateSummaryStatistics()['lateShifts'] ?? 0,
+                  'Night': _calculateSummaryStatistics()['nightShifts'] ?? 0,
+                  'Spare': _calculateSummaryStatistics()['spareShifts'] ?? 0,
+                  'Bogey': _calculateSummaryStatistics()['bogeyShifts'] ?? 0,
+                  'Overtime': _calculateSummaryStatistics()['overtimeShifts'] ?? 0,
+                },
+              ),
+            ],
+          ),
+          
+          SizedBox(height: sizes['cardSpacing']!),
+          
           // Shift Type Summary Card
           _buildExpandableSection(
             title: 'Shift Type Summary',
@@ -580,6 +645,45 @@ class StatisticsScreenState extends State<StatisticsScreen>
                   }
                 },
               ),
+            ],
+          ),
+          
+          SizedBox(height: sizes['cardSpacing']!),
+          
+          // Earnings Calculator
+          _buildExpandableSection(
+            title: 'Earnings Calculator',
+            subtitle: 'Estimated earnings based on spread pay',
+            icon: Icons.calculate,
+            children: [
+              const SizedBox(height: 8),
+              _workTimeStatsFuture == null || _spreadStatsFuture == null
+                ? const Center(child: CircularProgressIndicator())
+                : FutureBuilder(
+                    future: Future.wait([
+                      _workTimeStatsFuture!,
+                      _spreadStatsFuture!,
+                    ]),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+                      if (snapshot.hasError || !snapshot.hasData) {
+                        return const Center(child: Text('Unable to load earnings data'));
+                      }
+                      final workTimeStats = snapshot.data![0];
+                      final spreadStats = snapshot.data![1];
+                      final summaryStats = _calculateSummaryStatistics();
+                      return EarningsCalculatorCard(
+                        totalWorkTime: workTimeStats['total'] ?? Duration.zero,
+                        spreadTime: (spreadStats['thisWeek'] ?? Duration.zero) +
+                                   (spreadStats['lastWeek'] ?? Duration.zero) +
+                                   (spreadStats['thisMonth'] ?? Duration.zero),
+                        overtimeShifts: summaryStats['overtimeShifts'] ?? 0,
+                        overtimeDuration: const Duration(),
+                      );
+                    },
+                  ),
             ],
           ),
           
@@ -2380,5 +2484,104 @@ class StatisticsScreenState extends State<StatisticsScreen>
       'winter': winterDays,
       'other': otherDays,
     };
+  }
+
+  // Calculate monthly trends for the last 12 months
+  Future<Map<String, Duration>> _calculateMonthlyTrends() async {
+    final now = DateTime.now();
+    final Map<String, Duration> monthlyData = {};
+    
+    // Calculate for last 12 months
+    for (int i = 11; i >= 0; i--) {
+      final monthDate = DateTime(now.year, now.month - i, 1);
+      final monthStart = DateTime(monthDate.year, monthDate.month, 1);
+      final monthEnd = monthDate.month < 12
+          ? DateTime(monthDate.year, monthDate.month + 1, 1)
+          : DateTime(monthDate.year + 1, 1, 1);
+      
+      Duration monthWork = Duration.zero;
+      Set<String> processedIds = {};
+      
+      for (final entry in widget.events.entries) {
+        final date = entry.key;
+        final events = entry.value;
+        final normalizedDate = DateTime.utc(date.year, date.month, date.day);
+        
+        // Skip rest days
+        final String shiftType = (_startDate != null)
+            ? RosterService.getShiftForDate(normalizedDate, _startDate!, _startWeek)
+            : '';
+        if (shiftType == 'R') continue;
+        
+        for (final event in events) {
+          final eventNormalizedStartDate = DateTime.utc(
+            event.startDate.year,
+            event.startDate.month,
+            event.startDate.day,
+          );
+          
+          if (!event.isWorkShift ||
+              event.title.contains('(OT)') ||
+              processedIds.contains(event.id)) {
+            continue;
+          }
+          processedIds.add(event.id);
+          
+          // Check if event is in this month
+          if (!eventNormalizedStartDate.isBefore(monthStart) &&
+              eventNormalizedStartDate.isBefore(monthEnd)) {
+            final workTime = await _calculateWorkTime(event);
+            monthWork += workTime;
+          }
+        }
+      }
+      
+      final monthKey = '${monthDate.year}-${monthDate.month.toString().padLeft(2, '0')}';
+      monthlyData[monthKey] = monthWork;
+    }
+    
+    return monthlyData;
+  }
+
+  // Export statistics
+  Future<void> _exportStatistics() async {
+    try {
+      // Get current statistics
+      final workTimeStats = await _workTimeStatsFuture ?? {};
+      final shiftTypeStats = _calculateSummaryStatistics();
+      final breakStats = _calculateBreakStatistics();
+      
+      // Convert shift type stats to Map<String, int>
+      final shiftTypeMap = <String, int>{
+        'Early': shiftTypeStats['earlyShifts'] ?? 0,
+        'Relief': shiftTypeStats['reliefShifts'] ?? 0,
+        'Late': shiftTypeStats['lateShifts'] ?? 0,
+        'Night': shiftTypeStats['nightShifts'] ?? 0,
+        'Spare': shiftTypeStats['spareShifts'] ?? 0,
+        'Bogey': shiftTypeStats['bogeyShifts'] ?? 0,
+        'Overtime': shiftTypeStats['overtimeShifts'] ?? 0,
+      };
+      
+      // Generate text summary
+      final summary = StatisticsExportService.generateTextSummary(
+        workTimeStats: workTimeStats,
+        shiftTypeStats: shiftTypeMap,
+        breakStats: breakStats,
+      );
+      
+      // Share the summary
+      if (mounted) {
+        await Share.share(summary, subject: 'Shift Statistics Export');
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error exporting statistics: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 }
