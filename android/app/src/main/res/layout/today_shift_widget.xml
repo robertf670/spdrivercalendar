@@ -81,6 +81,21 @@
             android:maxLines="1"
             android:ellipsize="end" />
 
+        <!-- Break Time (moved right after time, smaller font for less emphasis) -->
+        <TextView
+            android:id="@+id/widget_break_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text=""
+            android:textSize="12sp"
+            android:textColor="@color/widget_text_accent"
+            android:textStyle="bold"
+            android:gravity="center"
+            android:layout_marginBottom="8dp"
+            android:maxLines="1"
+            android:ellipsize="end"
+            android:visibility="gone" />
+
         <!-- Divider -->
         <TextView
             android:id="@+id/widget_divider"
@@ -97,67 +112,77 @@
             android:orientation="vertical"
             android:id="@+id/widget_info_container">
 
-            <!-- Break Time -->
-            <LinearLayout
-                android:id="@+id/widget_break_container"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:layout_marginBottom="6dp"
-                android:visibility="gone">
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="Break"
-                    android:textSize="12sp"
-                    android:textColor="@color/widget_text_secondary"
-                    android:textStyle="bold"
-                    android:maxLines="1"
-                    android:ellipsize="end" />
-                <TextView
-                    android:id="@+id/widget_break"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text=""
-                    android:textSize="12sp"
-                    android:textColor="@color/widget_text_primary"
-                    android:textStyle="bold"
-                    android:maxLines="1"
-                    android:ellipsize="end" />
-            </LinearLayout>
-
-            <!-- Routes -->
+            <!-- Locations -->
             <LinearLayout
                 android:id="@+id/widget_routes_container"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:layout_marginBottom="6dp"
+                android:orientation="vertical"
+                android:layout_marginBottom="10dp"
                 android:visibility="gone">
-                <TextView
-                    android:layout_width="0dp"
+                
+                <!-- Start and Finish Locations -->
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="Routes"
-                    android:textSize="12sp"
-                    android:textColor="@color/widget_text_secondary"
-                    android:textStyle="bold"
-                    android:maxLines="1"
-                    android:ellipsize="end" />
-                <TextView
-                    android:id="@+id/widget_routes"
-                    android:layout_width="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="6dp">
+                    <TextView
+                        android:id="@+id/widget_start_location"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text=""
+                        android:textSize="11sp"
+                        android:textColor="@color/widget_text_primary"
+                        android:maxLines="1"
+                        android:ellipsize="end"
+                        android:gravity="start"
+                        android:visibility="gone" />
+                    <TextView
+                        android:id="@+id/widget_finish_location"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text=""
+                        android:textSize="11sp"
+                        android:textColor="@color/widget_text_primary"
+                        android:maxLines="1"
+                        android:ellipsize="end"
+                        android:gravity="end"
+                        android:visibility="gone" />
+                </LinearLayout>
+                
+                <!-- Break Start and Finish Locations -->
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text=""
-                    android:textSize="12sp"
-                    android:textColor="@color/widget_text_primary"
-                    android:textStyle="bold"
-                    android:maxLines="2"
-                    android:ellipsize="end"
-                    android:gravity="end" />
+                    android:orientation="horizontal">
+                    <TextView
+                        android:id="@+id/widget_break_start_location"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text=""
+                        android:textSize="11sp"
+                        android:textColor="@color/widget_text_primary"
+                        android:maxLines="1"
+                        android:ellipsize="end"
+                        android:gravity="start"
+                        android:visibility="gone" />
+                    <TextView
+                        android:id="@+id/widget_break_finish_location"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text=""
+                        android:textSize="11sp"
+                        android:textColor="@color/widget_text_primary"
+                        android:maxLines="1"
+                        android:ellipsize="end"
+                        android:gravity="end"
+                        android:visibility="gone" />
+                </LinearLayout>
             </LinearLayout>
 
             <!-- Work Time -->
@@ -167,7 +192,7 @@
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
-                android:layout_marginBottom="6dp"
+                android:layout_marginBottom="0dp"
                 android:visibility="gone">
                 <TextView
                     android:layout_width="0dp"

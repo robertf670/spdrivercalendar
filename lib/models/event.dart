@@ -9,6 +9,10 @@ class AssignedDuty {
   final String? location;
   final bool? isHalfDuty;
   final bool? isSecondHalf;
+  final String? startLocation;
+  final String? finishLocation;
+  final String? startBreakLocation;
+  final String? finishBreakLocation;
 
   AssignedDuty({
     required this.dutyCode,
@@ -18,6 +22,10 @@ class AssignedDuty {
     this.location,
     this.isHalfDuty,
     this.isSecondHalf,
+    this.startLocation,
+    this.finishLocation,
+    this.startBreakLocation,
+    this.finishBreakLocation,
   });
 
   // Convert to map for storage
@@ -30,6 +38,10 @@ class AssignedDuty {
       'location': location,
       'isHalfDuty': isHalfDuty,
       'isSecondHalf': isSecondHalf,
+      'startLocation': startLocation,
+      'finishLocation': finishLocation,
+      'startBreakLocation': startBreakLocation,
+      'finishBreakLocation': finishBreakLocation,
     };
   }
 
@@ -43,6 +55,10 @@ class AssignedDuty {
       location: map['location'],
       isHalfDuty: map['isHalfDuty'],
       isSecondHalf: map['isSecondHalf'],
+      startLocation: map['startLocation'],
+      finishLocation: map['finishLocation'],
+      startBreakLocation: map['startBreakLocation'],
+      finishBreakLocation: map['finishBreakLocation'],
     );
   }
 
@@ -62,6 +78,10 @@ class AssignedDuty {
     String? location,
     bool? isHalfDuty,
     bool? isSecondHalf,
+    String? startLocation,
+    String? finishLocation,
+    String? startBreakLocation,
+    String? finishBreakLocation,
   }) {
     return AssignedDuty(
       dutyCode: dutyCode ?? this.dutyCode,
@@ -71,6 +91,10 @@ class AssignedDuty {
       location: location ?? this.location,
       isHalfDuty: isHalfDuty ?? this.isHalfDuty,
       isSecondHalf: isSecondHalf ?? this.isSecondHalf,
+      startLocation: startLocation ?? this.startLocation,
+      finishLocation: finishLocation ?? this.finishLocation,
+      startBreakLocation: startBreakLocation ?? this.startBreakLocation,
+      finishBreakLocation: finishBreakLocation ?? this.finishBreakLocation,
     );
   }
 }
@@ -86,6 +110,11 @@ class Event {
   TimeOfDay? breakStartTime;  // For UNI shifts and PZ shifts
   TimeOfDay? breakEndTime;    // For UNI shifts and PZ shifts
   List<String>? routes;  // Route information for PZ shifts (e.g., ["39A", "C1"])
+  String? startLocation;  // Start location for the shift
+  String? finishLocation;  // Finish location for the shift
+  String? startBreakLocation;  // Start break location
+  String? finishBreakLocation;  // Finish break location
+  String? dutyStartTime;  // Actual duty start time (depart time, different from report time)
   List<String>? assignedDuties;  // For storing multiple duties assigned to spare shifts (legacy)
   List<AssignedDuty>? enhancedAssignedDuties;  // New enhanced duty tracking
   String? firstHalfBus;  // For storing the first half bus number
@@ -112,6 +141,11 @@ class Event {
     this.breakStartTime,
     this.breakEndTime,
     this.routes,
+    this.startLocation,
+    this.finishLocation,
+    this.startBreakLocation,
+    this.finishBreakLocation,
+    this.dutyStartTime,
     this.assignedDuties,
     this.enhancedAssignedDuties,
     this.firstHalfBus,
@@ -248,6 +282,11 @@ class Event {
     int? overtimeDuration,
     String? sickDayType,
     List<String>? routes,
+    String? startLocation,
+    String? finishLocation,
+    String? startBreakLocation,
+    String? finishBreakLocation,
+    String? dutyStartTime,
   }) {
     return Event(
       id: id ?? this.id,
@@ -260,6 +299,11 @@ class Event {
       breakStartTime: breakStartTime ?? this.breakStartTime,
       breakEndTime: breakEndTime ?? this.breakEndTime,
       routes: routes ?? this.routes,
+      startLocation: startLocation ?? this.startLocation,
+      finishLocation: finishLocation ?? this.finishLocation,
+      startBreakLocation: startBreakLocation ?? this.startBreakLocation,
+      finishBreakLocation: finishBreakLocation ?? this.finishBreakLocation,
+      dutyStartTime: dutyStartTime ?? this.dutyStartTime,
       assignedDuties: assignedDuties ?? this.assignedDuties,
       enhancedAssignedDuties: enhancedAssignedDuties ?? this.enhancedAssignedDuties,
       firstHalfBus: firstHalfBus ?? this.firstHalfBus,
@@ -295,6 +339,11 @@ class Event {
         ? {'hour': breakEndTime!.hour, 'minute': breakEndTime!.minute}
         : null,
       'routes': routes,
+      'startLocation': startLocation,
+      'finishLocation': finishLocation,
+      'startBreakLocation': startBreakLocation,
+      'finishBreakLocation': finishBreakLocation,
+      'dutyStartTime': dutyStartTime,
       'assignedDuties': assignedDuties,
       'enhancedAssignedDuties': enhancedAssignedDuties?.map((duty) => duty.toMap()).toList(),
       'firstHalfBus': firstHalfBus,
@@ -343,6 +392,11 @@ class Event {
       routes: map['routes'] != null
         ? List<String>.from(map['routes'])
         : null,
+      startLocation: map['startLocation'],
+      finishLocation: map['finishLocation'],
+      startBreakLocation: map['startBreakLocation'],
+      finishBreakLocation: map['finishBreakLocation'],
+      dutyStartTime: map['dutyStartTime'],
       assignedDuties: map['assignedDuties'] != null 
         ? List<String>.from(map['assignedDuties'])
         : null,

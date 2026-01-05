@@ -1,4 +1,26 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.17.2': [
+    {
+      'title': 'Enhanced Today\'s Shift Widget Header',
+      'description': 'Improved the widget header to display duty code, routes, and work time in a compact format (e.g., "PZ1/74 (C:39) 8h 22m"). The header now shows all essential shift information at a glance.',
+    },
+    {
+      'title': 'Location Information on Today\'s Shift Widget',
+      'description': 'Added comprehensive location display to the Today\'s Shift widget. The widget now shows start location, finish location, start break location, and finish break location.',
+    },
+    {
+      'title': 'Workout Duty Indicator on Today\'s Shift Widget',
+      'description': 'Added workout duty detection and display to the Today\'s Shift widget.',
+    },
+    {
+      'title': 'Dark Mode Support for Widgets',
+      'description': 'Added dark mode support for Android home screen widgets. Widgets now automatically adapt to both system dark mode and the app\'s dark mode setting, with muted colors that match the app\'s dark theme for a consistent experience.',
+    },
+    {
+      'title': 'Dark Mode Fixes for Dialogs and UI Components',
+      'description': 'Fixed dark mode display issues in Edit Event dialog, holiday selection dialogs, and various UI components to properly use theme-aware colors instead of hardcoded light colors.',
+    },
+  ],
   '2.17.1': [
     {
       'title': 'Fixed Unpaid Leave Validation',

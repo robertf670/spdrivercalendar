@@ -4,6 +4,7 @@ import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
 import android.content.Context
 import android.content.SharedPreferences
+import android.content.res.Configuration
 import android.widget.RemoteViews
 import org.json.JSONObject
 import org.json.JSONArray
@@ -18,6 +19,24 @@ class TodayShiftWidgetProvider : AppWidgetProvider() {
         private const val HOLIDAYS_KEY = "flutter.holidays"
         const val ACTION_REFRESH = "ie.qqrxi.spdrivercalendar.ACTION_REFRESH"
         
+        // Check if system is in dark mode
+        private fun isSystemDarkMode(context: Context): Boolean {
+            return (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+        }
+        
+        // Check if dark mode should be enabled (system dark mode OR app dark mode setting)
+        private fun isDarkModeEnabled(context: Context): Boolean {
+            // Check system dark mode
+            val systemDarkMode = isSystemDarkMode(context)
+            
+            // Check app's dark mode setting from SharedPreferences
+            val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            val appDarkMode = prefs.getBoolean("flutter.isDarkMode", false)
+            
+            // Use dark mode if either system or app setting is enabled
+            return systemDarkMode || appDarkMode
+        }
+        
         // Update widget
         fun updateAppWidget(
             context: Context,
@@ -26,6 +45,31 @@ class TodayShiftWidgetProvider : AppWidgetProvider() {
         ) {
             val views = RemoteViews(context.packageName, R.layout.today_shift_widget)
             
+            // Apply dark mode colors if app's dark mode is enabled (even if system isn't)
+            val isDarkMode = isDarkModeEnabled(context)
+            if (isDarkMode && !isSystemDarkMode(context)) {
+                // Only apply programmatically if app dark mode is on but system isn't
+                // Create a configuration with dark mode enabled to get dark colors
+                val config = Configuration(context.resources.configuration)
+                config.uiMode = (config.uiMode and Configuration.UI_MODE_NIGHT_MASK.inv()) or Configuration.UI_MODE_NIGHT_YES
+                val darkContext = context.createConfigurationContext(config)
+                
+                // Apply dark mode colors programmatically using dark context
+                views.setTextColor(R.id.widget_header, darkContext.getColor(R.color.widget_header_text))
+                views.setTextColor(R.id.widget_time, darkContext.getColor(R.color.widget_text_accent))
+                views.setTextColor(R.id.widget_break_container, darkContext.getColor(R.color.widget_text_accent))
+                views.setTextColor(R.id.widget_title, darkContext.getColor(R.color.widget_text_primary))
+                views.setTextColor(R.id.widget_start_location, darkContext.getColor(R.color.widget_text_primary))
+                views.setTextColor(R.id.widget_finish_location, darkContext.getColor(R.color.widget_text_primary))
+                views.setTextColor(R.id.widget_buses, darkContext.getColor(R.color.widget_text_primary))
+                views.setTextColor(R.id.widget_no_shift, darkContext.getColor(R.color.widget_text_secondary))
+                
+                // Set background colors using setInt with setBackgroundColor
+                views.setInt(R.id.widget_root, "setBackgroundColor", darkContext.getColor(R.color.widget_background))
+                // Note: Header background is set via RelativeLayout background attribute in XML
+                // We can't easily change it programmatically, but it should use dark colors automatically
+            }
+            
             // Get today's events
             val todayEvent = getTodayEvent(context)
             
@@ -33,54 +77,116 @@ class TodayShiftWidgetProvider : AppWidgetProvider() {
             val holidayType = getTodayHolidayType(context)
             
             if (todayEvent != null) {
-                // Display shift information
-                views.setTextViewText(R.id.widget_title, todayEvent.title)
+                // Set header to show duty code and routes instead of "Today's Shift"
+                val dutyCode = todayEvent.dutyCode
+                val routes = todayEvent.routes.filter { !it.isNullOrEmpty() && it != "null" }
+                
+                if (!dutyCode.isNullOrEmpty()) {
+                    // Build header text with duty code and routes in format: "PZ1/74 (C • 39A)"
+                    val headerText = if (routes.isNotEmpty()) {
+                        val routesText = routes.joinToString(" • ")
+                        "$dutyCode ($routesText)"
+                    } else {
+                        dutyCode
+                    }
+                    views.setTextViewText(R.id.widget_header, headerText)
+                    // Hide title since duty code is in header
+                    views.setViewVisibility(R.id.widget_title, android.view.View.GONE)
+                } else {
+                    views.setTextViewText(R.id.widget_header, "Today's Shift")
+                    // Show title if no duty code available
+                    views.setTextViewText(R.id.widget_title, todayEvent.title)
+                    views.setViewVisibility(R.id.widget_title, android.view.View.VISIBLE)
+                }
+                
+                // Routes container will be used for locations display
                 
                 // Calculate duration from times
                 val duration = calculateDuration(todayEvent.startTime, todayEvent.endTime)
                 val timeText = if (duration != null) {
-                    "${todayEvent.startTime} - ${todayEvent.endTime} ($duration)"
+                    "Report ${todayEvent.startTime} - ${todayEvent.endTime} Finish ($duration)"
                 } else {
-                    "${todayEvent.startTime} - ${todayEvent.endTime}"
+                    "Report ${todayEvent.startTime} - ${todayEvent.endTime} Finish"
                 }
                 views.setTextViewText(R.id.widget_time, timeText)
                 
-                // Show break times if available
+                // Calculate and show break times with duration and locations (matching time line style)
+                val isWorkout = todayEvent.isWorkout
                 val hasBreak = !todayEvent.breakStartTime.isNullOrEmpty() && !todayEvent.breakEndTime.isNullOrEmpty()
-                if (hasBreak) {
-                    views.setTextViewText(R.id.widget_break, "${todayEvent.breakStartTime}-${todayEvent.breakEndTime}")
+                if (isWorkout) {
+                    views.setTextViewText(R.id.widget_break_container, "Workout")
+                    views.setViewVisibility(R.id.widget_break_container, android.view.View.VISIBLE)
+                } else if (hasBreak) {
+                    // Get break locations
+                    val breakStartLoc = if (!todayEvent.startBreakLocation.isNullOrEmpty()) todayEvent.startBreakLocation else ""
+                    val breakFinishLoc = if (!todayEvent.finishBreakLocation.isNullOrEmpty()) todayEvent.finishBreakLocation else ""
+                    
+                    // Calculate break duration
+                    val breakDuration = calculateDuration(todayEvent.breakStartTime, todayEvent.breakEndTime)
+                    
+                    // Build break text with locations: "B Walk 19:07 - 20:07 B Walk (1h 0m)"
+                    val breakText = buildString {
+                        if (breakStartLoc.isNotEmpty()) {
+                            append("$breakStartLoc ")
+                        }
+                        append("${todayEvent.breakStartTime} - ${todayEvent.breakEndTime}")
+                        if (breakFinishLoc.isNotEmpty()) {
+                            append(" $breakFinishLoc")
+                        }
+                        if (breakDuration != null) {
+                            append(" ($breakDuration)")
+                        }
+                    }
+                    views.setTextViewText(R.id.widget_break_container, breakText)
                     views.setViewVisibility(R.id.widget_break_container, android.view.View.VISIBLE)
                 } else {
                     views.setViewVisibility(R.id.widget_break_container, android.view.View.GONE)
                 }
                 
-                // Show routes/locations if available
-                val routes = todayEvent.routes.filter { !it.isNullOrEmpty() && it != "null" }
-                if (routes.isNotEmpty()) {
-                    val routesText = routes.joinToString(", ")
-                    views.setTextViewText(R.id.widget_routes, routesText)
+                // Show start/finish locations (break locations are now in break time line)
+                val startLoc = if (!todayEvent.startLocation.isNullOrEmpty()) todayEvent.startLocation else ""
+                val finishLoc = if (!todayEvent.finishLocation.isNullOrEmpty()) todayEvent.finishLocation else ""
+                val dutyStartTime = todayEvent.dutyStartTime
+                
+                val hasLocations = startLoc.isNotEmpty() || finishLoc.isNotEmpty()
+                
+                if (hasLocations) {
+                    // Set start/finish locations
+                    if (startLoc.isNotEmpty()) {
+                        // Include duty start time if available: "Start Location: B Walk @ 15:21"
+                        val startLocText = if (!dutyStartTime.isNullOrEmpty()) {
+                            "<b>Start Location:</b> $startLoc @ $dutyStartTime"
+                        } else {
+                            "<b>Start Location:</b> $startLoc"
+                        }
+                        views.setTextViewText(R.id.widget_start_location, android.text.Html.fromHtml(startLocText, android.text.Html.FROM_HTML_MODE_LEGACY))
+                        views.setViewVisibility(R.id.widget_start_location, android.view.View.VISIBLE)
+                    } else {
+                        views.setViewVisibility(R.id.widget_start_location, android.view.View.GONE)
+                    }
+                    
+                    if (finishLoc.isNotEmpty()) {
+                        views.setTextViewText(R.id.widget_finish_location, android.text.Html.fromHtml("<b>Finish Location:</b> $finishLoc", android.text.Html.FROM_HTML_MODE_LEGACY))
+                        views.setViewVisibility(R.id.widget_finish_location, android.view.View.VISIBLE)
+                    } else {
+                        views.setViewVisibility(R.id.widget_finish_location, android.view.View.GONE)
+                    }
+                    
+                    // Hide break location lines since they're now in the break time
+                    views.setViewVisibility(R.id.widget_break_start_location, android.view.View.GONE)
+                    views.setViewVisibility(R.id.widget_break_finish_location, android.view.View.GONE)
+                    
                     views.setViewVisibility(R.id.widget_routes_container, android.view.View.VISIBLE)
                 } else {
+                    // Hide the entire locations section if no locations available
                     views.setViewVisibility(R.id.widget_routes_container, android.view.View.GONE)
                 }
                 
-                // Show work time if available
-                if (!todayEvent.workTime.isNullOrEmpty()) {
-                    views.setTextViewText(R.id.widget_work_time, todayEvent.workTime)
-                    views.setViewVisibility(R.id.widget_work_time_container, android.view.View.VISIBLE)
-                } else {
-                    views.setViewVisibility(R.id.widget_work_time_container, android.view.View.GONE)
-                }
+                // Hide work time section - it's now shown in the header
+                views.setViewVisibility(R.id.widget_work_time_container, android.view.View.GONE)
                 
-                // Show duties if available
-                val duties = todayEvent.duties.filter { !it.isNullOrEmpty() }
-                if (duties.isNotEmpty()) {
-                    val dutiesText = duties.joinToString(", ")
-                    views.setTextViewText(R.id.widget_duties, dutiesText)
-                    views.setViewVisibility(R.id.widget_duties_container, android.view.View.VISIBLE)
-                } else {
-                    views.setViewVisibility(R.id.widget_duties_container, android.view.View.GONE)
-                }
+                // Hide duties section - duty code is now shown in header
+                views.setViewVisibility(R.id.widget_duties_container, android.view.View.GONE)
                 
                 // Show bus assignments if available
                 val buses = todayEvent.buses.filter { !it.isNullOrEmpty() && it != "null" }
@@ -96,8 +202,8 @@ class TodayShiftWidgetProvider : AppWidgetProvider() {
                 views.setViewVisibility(R.id.widget_info, android.view.View.GONE)
                 
                 // Show divider only if we have info to show
-                val hasInfo = hasBreak || routes.isNotEmpty() || !todayEvent.workTime.isNullOrEmpty() || 
-                             duties.isNotEmpty() || buses.isNotEmpty()
+                val hasInfo = (isWorkout || hasBreak) || !todayEvent.workTime.isNullOrEmpty() || 
+                             buses.isNotEmpty() || hasLocations
                 views.setViewVisibility(R.id.widget_divider, if (hasInfo) android.view.View.VISIBLE else android.view.View.GONE)
                 
                 // Show holiday indicator if today is a holiday
@@ -115,6 +221,7 @@ class TodayShiftWidgetProvider : AppWidgetProvider() {
                 views.setViewVisibility(R.id.widget_content, android.view.View.VISIBLE)
             } else {
                 // No shift today - check if it's a holiday
+                views.setTextViewText(R.id.widget_header, "Today's Shift")
                 if (holidayType != null) {
                     views.setViewVisibility(R.id.widget_content, android.view.View.VISIBLE)
                     views.setViewVisibility(R.id.widget_no_shift, android.view.View.GONE)
@@ -129,7 +236,6 @@ class TodayShiftWidgetProvider : AppWidgetProvider() {
                     views.setViewVisibility(R.id.widget_break_container, android.view.View.GONE)
                     views.setViewVisibility(R.id.widget_routes_container, android.view.View.GONE)
                     views.setViewVisibility(R.id.widget_work_time_container, android.view.View.GONE)
-                    views.setViewVisibility(R.id.widget_duties_container, android.view.View.GONE)
                     views.setViewVisibility(R.id.widget_buses_container, android.view.View.GONE)
                     views.setViewVisibility(R.id.widget_divider, android.view.View.GONE)
                 } else {
@@ -246,7 +352,32 @@ class TodayShiftWidgetProvider : AppWidgetProvider() {
                             }
                         }
                         
-                        // Also check enhanced duties for routes/locations (for spare shifts)
+                        // Get locations directly from event (same as routes)
+                        var startLocation: String? = eventObj.optString("startLocation", null)
+                        if (startLocation.isNullOrEmpty() || startLocation == "null") {
+                            startLocation = null
+                        }
+                        var finishLocation: String? = eventObj.optString("finishLocation", null)
+                        if (finishLocation.isNullOrEmpty() || finishLocation == "null") {
+                            finishLocation = null
+                        }
+                        var startBreakLocation: String? = eventObj.optString("startBreakLocation", null)
+                        if (startBreakLocation.isNullOrEmpty() || startBreakLocation == "null") {
+                            startBreakLocation = null
+                        }
+                        var finishBreakLocation: String? = eventObj.optString("finishBreakLocation", null)
+                        if (finishBreakLocation.isNullOrEmpty() || finishBreakLocation == "null") {
+                            finishBreakLocation = null
+                        }
+                        
+                        // Get duty start time (actual start time, different from report time)
+                        // First try to get it directly from event, then fallback to enhanced duties
+                        var dutyStartTime: String? = eventObj.optString("dutyStartTime", null)
+                        if (dutyStartTime.isNullOrEmpty() || dutyStartTime == "null") {
+                            dutyStartTime = null
+                        }
+                        
+                        // Also check enhanced duties for routes (for spare shifts)
                         val enhancedDuties = eventObj.optJSONArray("enhancedAssignedDuties")
                         if (enhancedDuties != null && enhancedDuties.length() > 0) {
                             for (j in 0 until enhancedDuties.length()) {
@@ -255,6 +386,14 @@ class TodayShiftWidgetProvider : AppWidgetProvider() {
                                     val dutyCode = dutyObj.optString("dutyCode", null)
                                     if (!dutyCode.isNullOrEmpty() && !duties.contains(dutyCode)) {
                                         duties.add(dutyCode)
+                                    }
+                                    
+                                    // Extract duty start time from first duty if not already found (fallback)
+                                    if (dutyStartTime == null) {
+                                        val extractedStartTime = dutyObj.optString("startTime", null)
+                                        if (!extractedStartTime.isNullOrEmpty() && extractedStartTime != "null") {
+                                            dutyStartTime = extractedStartTime
+                                        }
                                     }
                                     
                                     // Extract location/route if available - check multiple ways
@@ -304,9 +443,26 @@ class TodayShiftWidgetProvider : AppWidgetProvider() {
                         // Get break times - check for both UNI shifts and PZ shifts
                         var breakStartTime: String? = null
                         var breakEndTime: String? = null
-                        val breakStartTimeObj = eventObj.optJSONObject("breakStartTime")
-                        val breakEndTimeObj = eventObj.optJSONObject("breakEndTime")
-                        if (breakStartTimeObj != null && !breakStartTimeObj.toString().equals("null")) {
+                        var isWorkout = false
+                        val breakStartTimeObj = eventObj.opt("breakStartTime")
+                        val breakEndTimeObj = eventObj.opt("breakEndTime")
+                        
+                        // Check if break times are stored as strings (for workouts)
+                        if (breakStartTimeObj is String) {
+                            val breakStartStr = breakStartTimeObj.lowercase()
+                            if (breakStartStr == "workout" || breakStartStr == "nan" || breakStartStr.isEmpty()) {
+                                isWorkout = true
+                            }
+                        }
+                        if (breakEndTimeObj is String) {
+                            val breakEndStr = breakEndTimeObj.lowercase()
+                            if (breakEndStr == "workout" || breakEndStr == "nan" || breakEndStr.isEmpty()) {
+                                isWorkout = true
+                            }
+                        }
+                        
+                        // Try to parse as JSON objects (normal break times)
+                        if (!isWorkout && breakStartTimeObj is JSONObject && !breakStartTimeObj.toString().equals("null")) {
                             try {
                                 breakStartTime = String.format(
                                     "%02d:%02d",
@@ -317,7 +473,7 @@ class TodayShiftWidgetProvider : AppWidgetProvider() {
                                 // Break time not available
                             }
                         }
-                        if (breakEndTimeObj != null && !breakEndTimeObj.toString().equals("null")) {
+                        if (!isWorkout && breakEndTimeObj is JSONObject && !breakEndTimeObj.toString().equals("null")) {
                             try {
                                 breakEndTime = String.format(
                                     "%02d:%02d",
@@ -327,6 +483,27 @@ class TodayShiftWidgetProvider : AppWidgetProvider() {
                             } catch (e: Exception) {
                                 // Break time not available
                             }
+                        }
+                        
+                        // Check if break times are null for PZ duties (indicates workout)
+                        // PZ duties should have break times unless they're workouts
+                        if (!isWorkout) {
+                            val breakStartIsNull = breakStartTimeObj == null || breakStartTimeObj == JSONObject.NULL || eventObj.isNull("breakStartTime")
+                            val breakEndIsNull = breakEndTimeObj == null || breakEndTimeObj == JSONObject.NULL || eventObj.isNull("breakEndTime")
+                            
+                            if (breakStartIsNull || breakEndIsNull) {
+                                // Check if this is a PZ duty
+                                val isPZDuty = title.startsWith("PZ") || title.matches(Regex("^\\d+/.*"))
+                                if (isPZDuty) {
+                                    // PZ duty with no break times is likely a workout
+                                    isWorkout = true
+                                }
+                            }
+                        }
+                        
+                        // Also check if break times are equal (indicates workout)
+                        if (!isWorkout && breakStartTime != null && breakEndTime != null && breakStartTime == breakEndTime) {
+                            isWorkout = true
                         }
                         
                         // Get work time (for PZ shifts) - stored in minutes
@@ -346,6 +523,24 @@ class TodayShiftWidgetProvider : AppWidgetProvider() {
                             // Work time not available
                         }
                         
+                        // Extract duty code for header display
+                        // For PZ duties, title is usually the duty code (e.g., "PZ1/74")
+                        // Remove "Shift: " prefix if present
+                        var dutyCode: String? = null
+                        var cleanTitle = title.replace("Shift: ", "").trim()
+                        
+                        // Check if title is a PZ duty code (starts with PZ or matches pattern like "1/74")
+                        if (cleanTitle.startsWith("PZ") || cleanTitle.matches(Regex("^\\d+/.*"))) {
+                            dutyCode = cleanTitle
+                        } else if (duties.isNotEmpty()) {
+                            // For spare shifts or other shifts, use first duty code
+                            dutyCode = duties[0]
+                            // Remove "UNI:" prefix if present
+                            if (dutyCode.startsWith("UNI:")) {
+                                dutyCode = dutyCode.substring(4)
+                            }
+                        }
+                        
                         return TodayEvent(
                             title = title,
                             startTime = startTime,
@@ -356,7 +551,14 @@ class TodayShiftWidgetProvider : AppWidgetProvider() {
                             breakEndTime = breakEndTime,
                             workTime = workTime,
                             routes = routes,
-                            notes = null  // Don't store notes
+                            notes = null,  // Don't store notes
+                            isWorkout = isWorkout,
+                            dutyCode = dutyCode,
+                            startLocation = startLocation,
+                            finishLocation = finishLocation,
+                            startBreakLocation = startBreakLocation,
+                            finishBreakLocation = finishBreakLocation,
+                            dutyStartTime = dutyStartTime
                         )
                     }
                 }
@@ -522,6 +724,13 @@ data class TodayEvent(
     val breakEndTime: String?,
     val workTime: String?,
     val routes: List<String>,
-    val notes: String?
+    val notes: String?,
+    val isWorkout: Boolean = false,
+    val dutyCode: String? = null,
+    val startLocation: String? = null,
+    val finishLocation: String? = null,
+    val startBreakLocation: String? = null,
+    val finishBreakLocation: String? = null,
+    val dutyStartTime: String? = null
 )
 

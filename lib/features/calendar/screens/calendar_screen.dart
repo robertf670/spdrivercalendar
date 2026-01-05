@@ -1982,22 +1982,28 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Theme.of(context).cardColor
+                        : Colors.grey.shade100,
                     borderRadius: BorderRadius.circular(8),
+                    border: Theme.of(context).brightness == Brightness.dark
+                        ? Border.all(color: Theme.of(context).dividerColor)
+                        : null,
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Row(
+                      Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Icon(Icons.directions_bus, size: 20, color: AppTheme.primaryColor),
-                          SizedBox(width: 8),
+                          const SizedBox(width: 8),
                           Text(
                             'Bus Assignment',
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 16,
+                              color: Theme.of(context).textTheme.bodyLarge?.color,
                             ),
                           ),
                         ],
@@ -2012,9 +2018,15 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                               return Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                                 decoration: BoxDecoration(
-                                  color: Colors.white,
+                                  color: Theme.of(context).brightness == Brightness.dark
+                                      ? Theme.of(context).cardColor.withOpacity(0.5)
+                                      : Colors.white,
                                   borderRadius: BorderRadius.circular(6),
-                                  border: Border.all(color: Colors.grey.shade300),
+                                  border: Border.all(
+                                    color: Theme.of(context).brightness == Brightness.dark
+                                        ? Theme.of(context).dividerColor
+                                        : Colors.grey.shade300,
+                                  ),
                                 ),
                                 child: Row(
                                   children: [
@@ -2023,7 +2035,10 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                                     Expanded(
                                       child: Text(
                                         (isWorkout || event.title.contains('(OT)')) ? 'Assigned Bus: ${event.firstHalfBus}' : 'First Half: ${event.firstHalfBus}',
-                                        style: const TextStyle(fontSize: 14),
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          color: Theme.of(context).textTheme.bodyMedium?.color,
+                                        ),
                                       ),
                                     ),
                                     // Track button for first half bus
@@ -2110,9 +2125,15 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                               return Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                                 decoration: BoxDecoration(
-                                  color: Colors.white,
+                                  color: Theme.of(context).brightness == Brightness.dark
+                                      ? Theme.of(context).cardColor.withOpacity(0.5)
+                                      : Colors.white,
                                   borderRadius: BorderRadius.circular(6),
-                                  border: Border.all(color: Colors.grey.shade300),
+                                  border: Border.all(
+                                    color: Theme.of(context).brightness == Brightness.dark
+                                        ? Theme.of(context).dividerColor
+                                        : Colors.grey.shade300,
+                                  ),
                                 ),
                                 child: Row(
                                   children: [
@@ -2121,7 +2142,10 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                                     Expanded(
                                       child: Text(
                                         (isWorkout || event.title.contains('(OT)')) ? 'Assigned Bus: ${event.secondHalfBus}' : 'Second Half: ${event.secondHalfBus}',
-                                        style: const TextStyle(fontSize: 14),
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          color: Theme.of(context).textTheme.bodyMedium?.color,
+                                        ),
                                       ),
                                     ),
                                     // Track button for second half bus
@@ -4716,10 +4740,14 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
             Container(
               padding: EdgeInsets.all(sizes['headerPadding']!),
               decoration: BoxDecoration(
-                color: holidayColor.withValues(alpha: 0.1),
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? holidayColor.withValues(alpha: 0.15)
+                    : holidayColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(sizes['borderRadius']!),
                 border: Border.all(
-                  color: holidayColor.withValues(alpha: 0.3),
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? holidayColor.withValues(alpha: 0.4)
+                      : holidayColor.withValues(alpha: 0.3),
                   width: 1,
                 ),
               ),
@@ -4728,7 +4756,9 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                   Container(
                     padding: EdgeInsets.all(sizes['padding']!),
                     decoration: BoxDecoration(
-                      color: holidayColor.withValues(alpha: 0.2),
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? holidayColor.withValues(alpha: 0.25)
+                          : holidayColor.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(sizes['borderRadius']! * 0.67),
                     ),
                     child: Icon(
@@ -4747,6 +4777,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: sizes['headerFontSize']!,
+                            color: Theme.of(context).textTheme.bodyLarge?.color,
                           ),
                         ),
                         SizedBox(height: 2),
@@ -4754,7 +4785,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                           '$totalHolidays ${totalHolidays == 1 ? 'holiday' : 'holidays'} across $totalYears ${totalYears == 1 ? 'year' : 'years'}',
                           style: TextStyle(
                             fontSize: sizes['subtitleFontSize']!,
-                            color: Colors.grey.shade600,
+                            color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
                           ),
                         ),
                       ],
@@ -4815,10 +4846,14 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
     
     return Container(
       decoration: BoxDecoration(
-        color: Colors.grey.shade50,
+        color: Theme.of(context).brightness == Brightness.dark
+            ? Theme.of(context).cardColor
+            : Colors.grey.shade50,
         borderRadius: BorderRadius.circular(sizes['borderRadius']!),
         border: Border.all(
-          color: Colors.grey.shade200,
+          color: Theme.of(context).brightness == Brightness.dark
+              ? Theme.of(context).dividerColor
+              : Colors.grey.shade200,
           width: 1,
         ),
       ),
@@ -4848,7 +4883,9 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                         vertical: sizes['padding']! * 0.5,
                       ),
                       decoration: BoxDecoration(
-                        color: holidayColor.withValues(alpha: 0.15),
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? holidayColor.withValues(alpha: 0.2)
+                            : holidayColor.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(sizes['borderRadius']! * 0.67),
                       ),
                       child: Text(
@@ -4882,7 +4919,9 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                   Container(
                     padding: EdgeInsets.all(sizes['padding']! * 0.33),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Theme.of(context).cardColor
+                          : Colors.white,
                       borderRadius: BorderRadius.circular(sizes['borderRadius']! * 0.5),
                     ),
                     child: Icon(
@@ -4890,7 +4929,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                           ? Icons.keyboard_arrow_up
                           : Icons.keyboard_arrow_down,
                       size: sizes['iconSize']!,
-                      color: Colors.grey.shade600,
+                      color: Theme.of(context).textTheme.bodyMedium?.color,
                     ),
                   ),
                 ],
@@ -4921,13 +4960,14 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
 
   // Build type badge for holiday counts
   Widget _buildTypeBadge(String type, int count, Color color, Map<String, double> sizes) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       padding: EdgeInsets.symmetric(
         horizontal: sizes['padding']! * 0.5,
         vertical: sizes['padding']! * 0.17,
       ),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.15),
+        color: isDark ? color.withValues(alpha: 0.2) : color.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(sizes['borderRadius']! * 0.5),
       ),
       child: Row(
@@ -4972,13 +5012,14 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                 ? Colors.purple
                 : Colors.grey;
     
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       padding: EdgeInsets.all(sizes['itemPadding']!),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? Theme.of(context).cardColor : Colors.white,
         borderRadius: BorderRadius.circular(sizes['borderRadius']! * 0.67),
         border: Border.all(
-          color: Colors.grey.shade200,
+          color: isDark ? Theme.of(context).dividerColor : Colors.grey.shade200,
           width: 1,
         ),
       ),
@@ -4987,7 +5028,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
           Container(
             padding: EdgeInsets.all(sizes['padding']! * 0.8),
             decoration: BoxDecoration(
-              color: iconColor.withValues(alpha: 0.1),
+              color: isDark ? iconColor.withValues(alpha: 0.2) : iconColor.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(sizes['borderRadius']! * 0.67),
             ),
             child: Icon(
@@ -5013,6 +5054,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                   style: TextStyle(
                     fontWeight: FontWeight.w600,
                     fontSize: sizes['itemTitleFontSize']!,
+                    color: Theme.of(context).textTheme.bodyLarge?.color,
                   ),
                 ),
                 SizedBox(height: 2),
@@ -5020,7 +5062,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                   dateText,
                   style: TextStyle(
                     fontSize: sizes['itemSubtitleFontSize']!,
-                    color: Colors.grey.shade600,
+                    color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
                   ),
                 ),
               ],
@@ -5139,11 +5181,12 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   child: Row(
                     children: [
-                      const Text(
+                      Text(
                         'Add Holidays',
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
+                          color: Theme.of(context).textTheme.titleLarge?.color,
                         ),
                       ),
                       const Spacer(),
@@ -5167,11 +5210,12 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
+                      Text(
                         'Add New Holiday',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 14,
+                          color: Theme.of(context).textTheme.bodyLarge?.color,
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -5187,7 +5231,13 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                             children: [
                               const Icon(Icons.wb_sunny, size: 22),
                               const SizedBox(width: 12),
-                              const Text('Summer (2 Weeks)', style: TextStyle(fontSize: 14)),
+                              Text(
+                                'Summer (2 Weeks)',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Theme.of(context).textTheme.bodyMedium?.color,
+                                ),
+                              ),
                             ],
                           ),
                         ),
@@ -5204,7 +5254,13 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                             children: [
                               const Icon(Icons.ac_unit, size: 22),
                               const SizedBox(width: 12),
-                              const Text('Winter (1 Week)', style: TextStyle(fontSize: 14)),
+                              Text(
+                                'Winter (1 Week)',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Theme.of(context).textTheme.bodyMedium?.color,
+                                ),
+                              ),
                             ],
                           ),
                         ),
@@ -5221,7 +5277,13 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                             children: [
                               const Icon(Icons.event, size: 22),
                               const SizedBox(width: 12),
-                              const Text('Other Holiday', style: TextStyle(fontSize: 14)),
+                              Text(
+                                'Other Holiday',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Theme.of(context).textTheme.bodyMedium?.color,
+                                ),
+                              ),
                             ],
                           ),
                         ),
@@ -5238,7 +5300,13 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                             children: [
                               const Icon(Icons.money_off, size: 22, color: Colors.purple),
                               const SizedBox(width: 12),
-                              const Text('Unpaid Leave', style: TextStyle(fontSize: 14)),
+                              Text(
+                                'Unpaid Leave',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Theme.of(context).textTheme.bodyMedium?.color,
+                                ),
+                              ),
                             ],
                           ),
                         ),
@@ -5353,16 +5421,21 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                       Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: Colors.blue.shade50,
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.blue.shade900.withOpacity(0.3)
+                              : Colors.blue.shade50,
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: const Icon(Icons.ac_unit, color: Colors.blue, size: 20),
                       ),
                       const SizedBox(width: 12),
-                      const Expanded(
+                      Expanded(
                         child: Text(
                           'Select Year for Winter Holiday',
-                          style: TextStyle(fontSize: 16),
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Theme.of(context).textTheme.titleLarge?.color,
+                          ),
                         ),
                       ),
                     ],
@@ -5399,14 +5472,22 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                                 borderRadius: BorderRadius.circular(12),
                                 child: Container(
                                   decoration: BoxDecoration(
-                                    color: hasHolidays 
-                                      ? Colors.blue.shade50 
-                                      : Colors.grey.shade50,
+                                    color: Theme.of(context).brightness == Brightness.dark
+                                        ? (hasHolidays 
+                                            ? Colors.blue.shade900.withOpacity(0.3)
+                                            : Theme.of(context).cardColor)
+                                        : (hasHolidays 
+                                            ? Colors.blue.shade50 
+                                            : Colors.grey.shade50),
                                     borderRadius: BorderRadius.circular(12),
                                     border: Border.all(
-                                      color: hasHolidays 
-                                        ? Colors.blue.shade200 
-                                        : Colors.grey.shade300,
+                                      color: Theme.of(context).brightness == Brightness.dark
+                                          ? (hasHolidays 
+                                              ? Colors.blue.shade700 
+                                              : Theme.of(context).dividerColor)
+                                          : (hasHolidays 
+                                              ? Colors.blue.shade200 
+                                              : Colors.grey.shade300),
                                       width: hasHolidays ? 2 : 1,
                                     ),
                                     boxShadow: hasHolidays ? [
@@ -5425,9 +5506,11 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                                         style: TextStyle(
                                           fontSize: 18,
                                           fontWeight: FontWeight.bold,
-                                          color: hasHolidays 
-                                            ? Colors.blue.shade700 
-                                            : Colors.grey.shade700,
+                                          color: Theme.of(context).brightness == Brightness.dark
+                                              ? Theme.of(context).textTheme.bodyLarge?.color
+                                              : (hasHolidays 
+                                                  ? Colors.blue.shade700 
+                                                  : Colors.grey.shade700),
                                         ),
                                       ),
                                       if (hasHolidays) ...[
@@ -5438,14 +5521,18 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                                             vertical: 2,
                                           ),
                                           decoration: BoxDecoration(
-                                            color: Colors.blue.shade100,
+                                            color: Theme.of(context).brightness == Brightness.dark
+                                                ? Colors.blue.shade800.withOpacity(0.5)
+                                                : Colors.blue.shade100,
                                             borderRadius: BorderRadius.circular(8),
                                           ),
                                           child: Text(
                                             '$count ${count == 1 ? 'holiday' : 'holidays'}',
                                             style: TextStyle(
                                               fontSize: 10,
-                                              color: Colors.blue.shade700,
+                                              color: Theme.of(context).brightness == Brightness.dark
+                                                  ? Colors.blue.shade300
+                                                  : Colors.blue.shade700,
                                               fontWeight: FontWeight.w600,
                                             ),
                                           ),
@@ -5462,14 +5549,19 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                         Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: Colors.blue.shade50,
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? Colors.blue.shade900.withOpacity(0.3)
+                                : Colors.blue.shade50,
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Row(
                             children: [
-                              Icon(Icons.info_outline, 
+                              Icon(
+                                Icons.info_outline, 
                                 size: 16, 
-                                color: Colors.blue.shade700,
+                                color: Theme.of(context).brightness == Brightness.dark
+                                    ? Colors.blue.shade300
+                                    : Colors.blue.shade700,
                               ),
                               const SizedBox(width: 8),
                               Expanded(
@@ -5477,7 +5569,9 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                                   'Select a year to choose your winter holiday start date',
                                   style: TextStyle(
                                     fontSize: 12,
-                                    color: Colors.blue.shade700,
+                                    color: Theme.of(context).brightness == Brightness.dark
+                                        ? Colors.blue.shade300
+                                        : Colors.blue.shade700,
                                   ),
                                 ),
                               ),
@@ -5493,7 +5587,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                       icon: const Icon(Icons.close),
                       label: const Text('Cancel'),
                       style: TextButton.styleFrom(
-                        foregroundColor: Colors.grey.shade700,
+                        foregroundColor: Theme.of(context).textTheme.bodyMedium?.color,
                       ),
                     ),
                   ],
@@ -5548,7 +5642,9 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: Colors.blue.shade50,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.blue.shade900.withOpacity(0.3)
+                          : Colors.blue.shade50,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: const Icon(Icons.ac_unit, color: Colors.blue, size: 20),
@@ -5559,16 +5655,19 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Text(
+                        Text(
                           'Select Winter Holiday Start Date',
-                          style: TextStyle(fontSize: 16),
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Theme.of(context).textTheme.titleLarge?.color,
+                          ),
                         ),
                         const SizedBox(height: 2),
                         Text(
                           'Year: $year',
                           style: TextStyle(
                             fontSize: 12,
-                            color: Colors.grey.shade600,
+                            color: Theme.of(context).textTheme.bodySmall?.color,
                             fontWeight: FontWeight.normal,
                           ),
                         ),
@@ -5591,9 +5690,15 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                 children: [
                   Container(
                     decoration: BoxDecoration(
-                      color: Colors.grey.shade50,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Theme.of(context).cardColor
+                          : Colors.grey.shade50,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.grey.shade200),
+                      border: Border.all(
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Theme.of(context).dividerColor
+                            : Colors.grey.shade200,
+                      ),
                     ),
                     child: SizedBox(
                       width: double.maxFinite,
@@ -5608,14 +5713,22 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                           return Container(
                             margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
-                              color: alreadyHasHoliday 
-                                ? Colors.grey.shade100 
-                                : Colors.white,
+                              color: Theme.of(context).brightness == Brightness.dark
+                                  ? (alreadyHasHoliday 
+                                      ? Theme.of(context).cardColor.withOpacity(0.5)
+                                      : Theme.of(context).cardColor)
+                                  : (alreadyHasHoliday 
+                                      ? Colors.grey.shade100 
+                                      : Colors.white),
                               borderRadius: BorderRadius.circular(8),
                               border: Border.all(
-                                color: alreadyHasHoliday 
-                                  ? Colors.grey.shade300 
-                                  : Colors.blue.shade100,
+                                color: Theme.of(context).brightness == Brightness.dark
+                                    ? (alreadyHasHoliday 
+                                        ? Theme.of(context).dividerColor
+                                        : Colors.blue.shade700)
+                                    : (alreadyHasHoliday 
+                                        ? Colors.grey.shade300 
+                                        : Colors.blue.shade100),
                                 width: 1,
                               ),
                               boxShadow: [
@@ -5665,17 +5778,25 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                                       Container(
                                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                                         decoration: BoxDecoration(
-                                          color: alreadyHasHoliday 
-                                            ? Colors.grey.shade300 
-                                            : Colors.blue.shade50,
+                                          color: Theme.of(context).brightness == Brightness.dark
+                                              ? (alreadyHasHoliday 
+                                                  ? Theme.of(context).dividerColor
+                                                  : Colors.blue.shade900.withOpacity(0.3))
+                                              : (alreadyHasHoliday 
+                                                  ? Colors.grey.shade300 
+                                                  : Colors.blue.shade50),
                                           borderRadius: BorderRadius.circular(4),
                                         ),
                                         child: Text(
                                           'Sun',
                                           style: TextStyle(
-                                            color: alreadyHasHoliday 
-                                              ? Colors.grey.shade600 
-                                              : Colors.blue.shade700,
+                                            color: Theme.of(context).brightness == Brightness.dark
+                                                ? (alreadyHasHoliday 
+                                                    ? Theme.of(context).textTheme.bodySmall?.color
+                                                    : Colors.blue.shade300)
+                                                : (alreadyHasHoliday 
+                                                    ? Colors.grey.shade600 
+                                                    : Colors.blue.shade700),
                                             fontWeight: FontWeight.bold,
                                             fontSize: 12,
                                           ),
@@ -5690,9 +5811,11 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                                               DateFormat('MMM d, yyyy').format(date),
                                               style: TextStyle(
                                                 fontSize: 13,
-                                                color: alreadyHasHoliday 
-                                                  ? Colors.grey.shade600 
-                                                  : Colors.black87,
+                                                color: Theme.of(context).brightness == Brightness.dark
+                                                    ? Theme.of(context).textTheme.bodyLarge?.color
+                                                    : (alreadyHasHoliday 
+                                                        ? Colors.grey.shade600 
+                                                        : Colors.black87),
                                               ),
                                             ),
                                             if (alreadyHasHoliday)
@@ -5700,7 +5823,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                                                 'Already added',
                                                 style: TextStyle(
                                                   fontSize: 11,
-                                                  color: Colors.grey.shade500,
+                                                  color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
                                                   fontStyle: FontStyle.italic,
                                                 ),
                                               ),
@@ -5763,7 +5886,9 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                       icon: const Icon(Icons.arrow_back, size: 16),
                       label: const Text('Change Year'),
                       style: TextButton.styleFrom(
-                        foregroundColor: Colors.blue.shade700,
+                        foregroundColor: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.blue.shade300
+                            : Colors.blue.shade700,
                       ),
                     ),
                     TextButton.icon(
@@ -5771,7 +5896,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                       icon: const Icon(Icons.close),
                       label: const Text('Cancel'),
                       style: TextButton.styleFrom(
-                        foregroundColor: Colors.grey.shade700,
+                        foregroundColor: Theme.of(context).textTheme.bodyMedium?.color,
                       ),
                     ),
                   ],
@@ -5808,16 +5933,21 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                       Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: Colors.orange.shade50,
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.orange.shade900.withOpacity(0.3)
+                              : Colors.orange.shade50,
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: const Icon(Icons.wb_sunny, color: Colors.orange, size: 20),
                       ),
                       const SizedBox(width: 12),
-                      const Expanded(
+                      Expanded(
                         child: Text(
                           'Select Year for Summer Holiday',
-                          style: TextStyle(fontSize: 16),
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Theme.of(context).textTheme.titleLarge?.color,
+                          ),
                         ),
                       ),
                     ],
@@ -5854,14 +5984,22 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                                 borderRadius: BorderRadius.circular(12),
                                 child: Container(
                                   decoration: BoxDecoration(
-                                    color: hasHolidays 
-                                      ? Colors.orange.shade50 
-                                      : Colors.grey.shade50,
+                                    color: Theme.of(context).brightness == Brightness.dark
+                                        ? (hasHolidays 
+                                            ? Colors.orange.shade900.withOpacity(0.3)
+                                            : Theme.of(context).cardColor)
+                                        : (hasHolidays 
+                                            ? Colors.orange.shade50 
+                                            : Colors.grey.shade50),
                                     borderRadius: BorderRadius.circular(12),
                                     border: Border.all(
-                                      color: hasHolidays 
-                                        ? Colors.orange.shade200 
-                                        : Colors.grey.shade300,
+                                      color: Theme.of(context).brightness == Brightness.dark
+                                          ? (hasHolidays 
+                                              ? Colors.orange.shade700 
+                                              : Theme.of(context).dividerColor)
+                                          : (hasHolidays 
+                                              ? Colors.orange.shade200 
+                                              : Colors.grey.shade300),
                                       width: hasHolidays ? 2 : 1,
                                     ),
                                     boxShadow: hasHolidays ? [
@@ -5880,9 +6018,11 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                                         style: TextStyle(
                                           fontSize: 18,
                                           fontWeight: FontWeight.bold,
-                                          color: hasHolidays 
-                                            ? Colors.orange.shade700 
-                                            : Colors.grey.shade700,
+                                          color: Theme.of(context).brightness == Brightness.dark
+                                              ? Theme.of(context).textTheme.bodyLarge?.color
+                                              : (hasHolidays 
+                                                  ? Colors.orange.shade700 
+                                                  : Colors.grey.shade700),
                                         ),
                                       ),
                                       if (hasHolidays) ...[
@@ -5893,14 +6033,18 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                                             vertical: 2,
                                           ),
                                           decoration: BoxDecoration(
-                                            color: Colors.orange.shade100,
+                                            color: Theme.of(context).brightness == Brightness.dark
+                                                ? Colors.orange.shade800.withOpacity(0.5)
+                                                : Colors.orange.shade100,
                                             borderRadius: BorderRadius.circular(8),
                                           ),
                                           child: Text(
                                             '$count ${count == 1 ? 'holiday' : 'holidays'}',
                                             style: TextStyle(
                                               fontSize: 10,
-                                              color: Colors.orange.shade700,
+                                              color: Theme.of(context).brightness == Brightness.dark
+                                                  ? Colors.orange.shade300
+                                                  : Colors.orange.shade700,
                                               fontWeight: FontWeight.w600,
                                             ),
                                           ),
@@ -5917,14 +6061,19 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                         Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: Colors.orange.shade50,
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? Colors.orange.shade900.withOpacity(0.3)
+                                : Colors.orange.shade50,
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Row(
                             children: [
-                              Icon(Icons.info_outline, 
+                              Icon(
+                                Icons.info_outline, 
                                 size: 16, 
-                                color: Colors.orange.shade700,
+                                color: Theme.of(context).brightness == Brightness.dark
+                                    ? Colors.orange.shade300
+                                    : Colors.orange.shade700,
                               ),
                               const SizedBox(width: 8),
                               Expanded(
@@ -5932,7 +6081,9 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                                   'Select a year to choose your summer holiday start date',
                                   style: TextStyle(
                                     fontSize: 12,
-                                    color: Colors.orange.shade700,
+                                    color: Theme.of(context).brightness == Brightness.dark
+                                        ? Colors.orange.shade300
+                                        : Colors.orange.shade700,
                                   ),
                                 ),
                               ),
@@ -5948,7 +6099,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                       icon: const Icon(Icons.close),
                       label: const Text('Cancel'),
                       style: TextButton.styleFrom(
-                        foregroundColor: Colors.grey.shade700,
+                        foregroundColor: Theme.of(context).textTheme.bodyMedium?.color,
                       ),
                     ),
                   ],
@@ -5987,7 +6138,9 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: Colors.orange.shade50,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.orange.shade900.withOpacity(0.3)
+                          : Colors.orange.shade50,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: const Icon(Icons.wb_sunny, color: Colors.orange, size: 20),
@@ -5998,16 +6151,19 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Text(
+                        Text(
                           'Select Summer Holiday Start Date',
-                          style: TextStyle(fontSize: 16),
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Theme.of(context).textTheme.titleLarge?.color,
+                          ),
                         ),
                         const SizedBox(height: 2),
                         Text(
                           'Year: $year',
                           style: TextStyle(
                             fontSize: 12,
-                            color: Colors.grey.shade600,
+                            color: Theme.of(context).textTheme.bodySmall?.color,
                             fontWeight: FontWeight.normal,
                           ),
                         ),
@@ -6030,9 +6186,15 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                 children: [
                   Container(
                     decoration: BoxDecoration(
-                      color: Colors.grey.shade50,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Theme.of(context).cardColor
+                          : Colors.grey.shade50,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.grey.shade200),
+                      border: Border.all(
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Theme.of(context).dividerColor
+                            : Colors.grey.shade200,
+                      ),
                     ),
                     child: SizedBox(
                       width: double.maxFinite,
@@ -6047,14 +6209,22 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                           return Container(
                             margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
-                              color: alreadyHasHoliday 
-                                ? Colors.grey.shade100 
-                                : Colors.white,
+                              color: Theme.of(context).brightness == Brightness.dark
+                                  ? (alreadyHasHoliday 
+                                      ? Theme.of(context).cardColor.withOpacity(0.5)
+                                      : Theme.of(context).cardColor)
+                                  : (alreadyHasHoliday 
+                                      ? Colors.grey.shade100 
+                                      : Colors.white),
                               borderRadius: BorderRadius.circular(8),
                               border: Border.all(
-                                color: alreadyHasHoliday 
-                                  ? Colors.grey.shade300 
-                                  : Colors.orange.shade100,
+                                color: Theme.of(context).brightness == Brightness.dark
+                                    ? (alreadyHasHoliday 
+                                        ? Theme.of(context).dividerColor
+                                        : Colors.orange.shade700)
+                                    : (alreadyHasHoliday 
+                                        ? Colors.grey.shade300 
+                                        : Colors.orange.shade100),
                                 width: 1,
                               ),
                               boxShadow: [
@@ -6104,17 +6274,25 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                                       Container(
                                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                                         decoration: BoxDecoration(
-                                          color: alreadyHasHoliday 
-                                            ? Colors.grey.shade300 
-                                            : Colors.orange.shade50,
+                                          color: Theme.of(context).brightness == Brightness.dark
+                                              ? (alreadyHasHoliday 
+                                                  ? Theme.of(context).dividerColor
+                                                  : Colors.orange.shade900.withOpacity(0.3))
+                                              : (alreadyHasHoliday 
+                                                  ? Colors.grey.shade300 
+                                                  : Colors.orange.shade50),
                                           borderRadius: BorderRadius.circular(4),
                                         ),
                                         child: Text(
                                           'Sun',
                                           style: TextStyle(
-                                            color: alreadyHasHoliday 
-                                              ? Colors.grey.shade600 
-                                              : Colors.orange.shade700,
+                                            color: Theme.of(context).brightness == Brightness.dark
+                                                ? (alreadyHasHoliday 
+                                                    ? Theme.of(context).textTheme.bodySmall?.color
+                                                    : Colors.orange.shade300)
+                                                : (alreadyHasHoliday 
+                                                    ? Colors.grey.shade600 
+                                                    : Colors.orange.shade700),
                                             fontWeight: FontWeight.bold,
                                             fontSize: 12,
                                           ),
@@ -6129,18 +6307,18 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                                               DateFormat('MMM d, yyyy').format(date),
                                               style: TextStyle(
                                                 fontSize: 13,
-                                                color: alreadyHasHoliday 
-                                                  ? Colors.grey.shade600 
-                                                  : Colors.black87,
+                                                color: Theme.of(context).brightness == Brightness.dark
+                                                    ? Theme.of(context).textTheme.bodyLarge?.color
+                                                    : (alreadyHasHoliday 
+                                                        ? Colors.grey.shade600 
+                                                        : Colors.black87),
                                               ),
                                             ),
                                             Text(
                                               'Ends: ${DateFormat('MMM d, yyyy').format(date.add(const Duration(days: 13)))}',
                                               style: TextStyle(
                                                 fontSize: 11,
-                                                color: alreadyHasHoliday 
-                                                  ? Colors.grey.shade500 
-                                                  : Colors.grey.shade600,
+                                                color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
                                               ),
                                             ),
                                             if (alreadyHasHoliday)
@@ -6148,7 +6326,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                                                 'Already added',
                                                 style: TextStyle(
                                                   fontSize: 11,
-                                                  color: Colors.grey.shade500,
+                                                  color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
                                                   fontStyle: FontStyle.italic,
                                                 ),
                                               ),
@@ -6184,13 +6362,13 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                       Icon(
                         Icons.swipe,
                         size: 16,
-                        color: Colors.grey.shade400,
+                        color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.6),
                       ),
                       const SizedBox(width: 4),
                       Text(
                         'Scroll to see more dates',
                         style: TextStyle(
-                          color: Colors.grey.shade600,
+                          color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
                           fontSize: 12,
                         ),
                       ),
@@ -6211,7 +6389,9 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                       icon: const Icon(Icons.arrow_back, size: 16),
                       label: const Text('Change Year'),
                       style: TextButton.styleFrom(
-                        foregroundColor: Colors.orange.shade700,
+                        foregroundColor: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.orange.shade300
+                            : Colors.orange.shade700,
                       ),
                     ),
                     TextButton.icon(
@@ -6219,7 +6399,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                       icon: const Icon(Icons.close),
                       label: const Text('Cancel'),
                       style: TextButton.styleFrom(
-                        foregroundColor: Colors.grey.shade700,
+                        foregroundColor: Theme.of(context).textTheme.bodyMedium?.color,
                       ),
                     ),
                   ],

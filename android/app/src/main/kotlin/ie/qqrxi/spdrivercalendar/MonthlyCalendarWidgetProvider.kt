@@ -4,6 +4,7 @@ import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
 import android.content.Context
 import android.content.SharedPreferences
+import android.content.res.Configuration
 import android.widget.RemoteViews
 import org.json.JSONObject
 import org.json.JSONArray
@@ -24,6 +25,24 @@ class MonthlyCalendarWidgetProvider : AppWidgetProvider() {
         private const val WIDGET_MONTH_PREFIX = "widget_month_"
         private const val WIDGET_YEAR_PREFIX = "widget_year_"
         
+        // Check if system is in dark mode
+        private fun isSystemDarkMode(context: Context): Boolean {
+            return (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+        }
+        
+        // Check if dark mode should be enabled (system dark mode OR app dark mode setting)
+        private fun isDarkModeEnabled(context: Context): Boolean {
+            // Check system dark mode
+            val systemDarkMode = isSystemDarkMode(context)
+            
+            // Check app's dark mode setting from SharedPreferences
+            val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            val appDarkMode = prefs.getBoolean("flutter.isDarkMode", false)
+            
+            // Use dark mode if either system or app setting is enabled
+            return systemDarkMode || appDarkMode
+        }
+        
         // Roster patterns (5-week cycle, Sunday = index 0)
         private val rosterWeeks = listOf(
             "LLRLLLR", // Week 0: Late, Late, Rest, Late, Late, Late, Rest
@@ -42,8 +61,35 @@ class MonthlyCalendarWidgetProvider : AppWidgetProvider() {
             displayYear: Int? = null
         ) {
             var views: RemoteViews? = null
+            
+            // Get context with dark mode if dark mode is enabled (declare outside try block)
+            val isDarkMode = isDarkModeEnabled(context)
+            val colorContext = if (isDarkMode) {
+                // Always create a dark context when dark mode is enabled (system or app)
+                // This ensures we get dark colors consistently
+                val config = Configuration(context.resources.configuration)
+                config.uiMode = (config.uiMode and Configuration.UI_MODE_NIGHT_MASK.inv()) or Configuration.UI_MODE_NIGHT_YES
+                context.createConfigurationContext(config)
+            } else {
+                context
+            }
+            
             try {
                 views = RemoteViews(context.packageName, R.layout.monthly_calendar_widget)
+                
+                // Apply dark mode colors if dark mode is enabled
+                if (isDarkMode) {
+                    // Set header text colors using dark context
+                    views.setTextColor(R.id.widget_month_year, colorContext.getColor(R.color.widget_header_text))
+                    views.setTextColor(R.id.widget_prev_month, colorContext.getColor(R.color.widget_header_text))
+                    views.setTextColor(R.id.widget_next_month, colorContext.getColor(R.color.widget_header_text))
+                    views.setTextColor(R.id.widget_refresh_button, colorContext.getColor(R.color.widget_header_text))
+                    
+                    // Set background colors using setInt with setBackgroundColor
+                    views.setInt(R.id.widget_root, "setBackgroundColor", colorContext.getColor(R.color.widget_background))
+                    // Note: Header background is set via RelativeLayout background attribute in XML
+                    // We can't easily change it programmatically, but it should use dark colors automatically
+                }
                 
                 val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
                 val calendar = Calendar.getInstance()
@@ -95,7 +141,7 @@ class MonthlyCalendarWidgetProvider : AppWidgetProvider() {
                 val holidays = parseHolidays(holidaysJson)
                 
                 // Calculate and display calendar grid
-                displayCalendar(views, context, currentYear, currentMonth, startDateStr, startWeek, eventsMap, holidays)
+                displayCalendar(views, context, colorContext, currentYear, currentMonth, startDateStr, startWeek, eventsMap, holidays)
                 
                 // Set up click intent to open the app
                 val intent = android.content.Intent(context, MainActivity::class.java)
@@ -165,6 +211,7 @@ class MonthlyCalendarWidgetProvider : AppWidgetProvider() {
         private fun displayCalendar(
             views: RemoteViews,
             context: Context,
+            colorContext: Context,
             year: Int,
             month: Int,
             startDateStr: String?,
@@ -264,10 +311,10 @@ class MonthlyCalendarWidgetProvider : AppWidgetProvider() {
                             
                             // Set color - dim previous/next month days, highlight today
                             if (isToday) {
-                                views.setTextColor(dayId, context.getColor(R.color.widget_text_accent))
+                                views.setTextColor(dayId, colorContext.getColor(R.color.widget_text_accent))
                             } else if (isPrevMonth || isNextMonth) {
                                 // More transparent/dimmed color for adjacent months
-                                views.setTextColor(dayId, context.getColor(R.color.widget_text_dimmed))
+                                views.setTextColor(dayId, colorContext.getColor(R.color.widget_text_dimmed))
                             } else {
                                 // Set color based on pattern for current month, or holiday color
                                 val holidayType = getHolidayTypeForDate(displayDate.time, holidays)
@@ -285,7 +332,7 @@ class MonthlyCalendarWidgetProvider : AppWidgetProvider() {
                                         else -> R.color.widget_text_primary
                                     }
                                 }
-                                views.setTextColor(dayId, context.getColor(color))
+                                views.setTextColor(dayId, colorContext.getColor(color))
                             }
                         } else {
                             // Empty cell (shouldn't happen with 42 cells)

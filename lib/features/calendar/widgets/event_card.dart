@@ -258,10 +258,12 @@ class _EventCardState extends State<EventCard> {
       final filename = RosterService.getShiftFilename(zoneNumber, dayOfWeekForFilename, widget.event.startDate);
       
       // Load the CSV file
+      debugPrint('Loading location data for shift: $shiftCode from file: $filename');
       final file = await rootBundle.loadString('assets/$filename');
       final lines = file.split('\n');
       
       // Find the matching shift
+      bool shiftFound = false;
       for (final line in lines) {
         if (line.trim().isEmpty) continue;
         final parts = line.split(',');
@@ -269,6 +271,8 @@ class _EventCardState extends State<EventCard> {
         
         final shift = parts[0];
         if (shift == shiftCode) {
+          shiftFound = true;
+          debugPrint('Found shift $shiftCode in CSV');
           // Found the matching shift, get report/finish locations and times
           final reportLocation = parts.length > 4 ? parts[4].trim() : '';
           final finishLoc = parts.length > 11 ? parts[11].trim() : '';
@@ -286,9 +290,16 @@ class _EventCardState extends State<EventCard> {
           final startBreak = parts.length > 5 ? parts[5].trim().toLowerCase() : '';
           final isWorkout = startBreak == 'nan' || startBreak == 'workout' || startBreak.isEmpty;
           
-          // Format locations for display
-          final start = reportLocation.isNotEmpty ? mapLocationName(reportLocation) : '';
-          final end = finishLoc.isNotEmpty ? mapLocationName(finishLoc) : '';
+          // Map location names from raw CSV data
+          final mappedStartLocation = reportLocation.isNotEmpty && reportLocation.toLowerCase() != 'nan' 
+              ? mapLocationName(reportLocation) : null;
+          final mappedFinishLocation = finishLoc.isNotEmpty && finishLoc.toLowerCase() != 'nan'
+              ? mapLocationName(finishLoc) : null;
+          final mappedStartBreakLocation = breakStartLoc.isNotEmpty && breakStartLoc.toLowerCase() != 'nan'
+              ? mapLocationName(breakStartLoc) : null;
+          final mappedFinishBreakLocation = breakFinishLoc.isNotEmpty && breakFinishLoc.toLowerCase() != 'nan'
+              ? mapLocationName(breakFinishLoc) : null;
+          
           final departFormatted = _formatTimeWithoutSeconds(departTimeRaw);
           final finishFormatted = _formatTimeWithoutSeconds(finishTimeRaw);
           
@@ -296,14 +307,14 @@ class _EventCardState extends State<EventCard> {
           String? breakStart;
           String? breakEnd;
           if (!isWorkout) {
-            breakStart = breakStartLoc.isNotEmpty ? mapLocationName(breakStartLoc) : null;
-            breakEnd = breakFinishLoc.isNotEmpty ? mapLocationName(breakFinishLoc) : null;
+            breakStart = mappedStartBreakLocation;
+            breakEnd = mappedFinishBreakLocation;
           }
           
           if (mounted) {
             setState(() {
-              startLocation = start;
-              finishLocation = end;
+              startLocation = mappedStartLocation;
+              finishLocation = mappedFinishLocation;
               startBreakLocation = breakStart;
               finishBreakLocation = breakEnd;
               workTime = work.isNotEmpty ? work : null;
@@ -311,8 +322,43 @@ class _EventCardState extends State<EventCard> {
               _finishTimeStr = finishFormatted;
             });
           }
+          
+          // Save location data directly to Event (same as routes)
+          if (mappedStartLocation != null || mappedFinishLocation != null || 
+              mappedStartBreakLocation != null || mappedFinishBreakLocation != null) {
+            debugPrint('Saving location data for ${widget.event.title}:');
+            debugPrint('  startLocation: $mappedStartLocation');
+            debugPrint('  finishLocation: $mappedFinishLocation');
+            debugPrint('  startBreakLocation: $mappedStartBreakLocation');
+            debugPrint('  finishBreakLocation: $mappedFinishBreakLocation');
+            debugPrint('  dutyStartTime: $departFormatted');
+            
+            try {
+              final updatedEvent = widget.event.copyWith(
+                startLocation: mappedStartLocation,
+                finishLocation: mappedFinishLocation,
+                startBreakLocation: mappedStartBreakLocation,
+                finishBreakLocation: mappedFinishBreakLocation,
+                dutyStartTime: departFormatted.isNotEmpty ? departFormatted : null,
+              );
+              
+              await EventService.updateEvent(widget.event, updatedEvent);
+              debugPrint('Successfully saved location data');
+              // Don't call widget.onEdit here - it causes the event card to reopen
+              // The location data is saved and will be available on next load
+            } catch (e) {
+              debugPrint('Error saving location data: $e');
+            }
+          } else {
+            debugPrint('No location data found for $shiftCode');
+          }
+          
           return;
         }
+      }
+      
+      if (!shiftFound) {
+        debugPrint('Shift $shiftCode not found in CSV file $filename');
       }
       
       // If no match found
@@ -567,16 +613,22 @@ class _EventCardState extends State<EventCard> {
       }
       
       if (mounted) {
+        // Map location names from raw CSV data
+        final mappedStartLocation = reportLocation != null && reportLocation.isNotEmpty && reportLocation.toLowerCase() != 'nan' 
+            ? mapLocationName(reportLocation) : null;
+        final mappedFinishLocation = finishLoc != null && finishLoc.isNotEmpty && finishLoc.toLowerCase() != 'nan'
+            ? mapLocationName(finishLoc) : null;
+        final mappedStartBreakLocation = breakStartLoc != null && breakStartLoc.isNotEmpty && breakStartLoc.toLowerCase() != 'nan'
+            ? mapLocationName(breakStartLoc) : null;
+        final mappedFinishBreakLocation = breakFinishLoc != null && breakFinishLoc.isNotEmpty && breakFinishLoc.toLowerCase() != 'nan'
+            ? mapLocationName(breakFinishLoc) : null;
+        
         setState(() {
           // Set locations from CSV data (now available in 17-column format)
-          startLocation = reportLocation != null && reportLocation.isNotEmpty && reportLocation.toLowerCase() != 'nan' 
-              ? mapLocationName(reportLocation) : null;
-          finishLocation = finishLoc != null && finishLoc.isNotEmpty && finishLoc.toLowerCase() != 'nan'
-              ? mapLocationName(finishLoc) : null;
-          startBreakLocation = breakStartLoc != null && breakStartLoc.isNotEmpty && breakStartLoc.toLowerCase() != 'nan'
-              ? mapLocationName(breakStartLoc) : null;
-          finishBreakLocation = breakFinishLoc != null && breakFinishLoc.isNotEmpty && breakFinishLoc.toLowerCase() != 'nan'
-              ? mapLocationName(breakFinishLoc) : null;
+          startLocation = mappedStartLocation;
+          finishLocation = mappedFinishLocation;
+          startBreakLocation = mappedStartBreakLocation;
+          finishBreakLocation = mappedFinishBreakLocation;
           workTime = workTimeStr;
           routeInfo = null;
           
@@ -592,9 +644,69 @@ class _EventCardState extends State<EventCard> {
               DateFormat('HH:mm').parse(endTime));
           }
         });
+        
+        // Save location data directly to Event (same as routes)
+        // Save even if only some location fields are available
+        if (mappedStartLocation != null || mappedFinishLocation != null || 
+            mappedStartBreakLocation != null || mappedFinishBreakLocation != null) {
+          // Debug: Print what we're trying to save
+          debugPrint('Saving location data for ${widget.event.title}:');
+          debugPrint('  startLocation: $mappedStartLocation');
+          debugPrint('  finishLocation: $mappedFinishLocation');
+          debugPrint('  startBreakLocation: $mappedStartBreakLocation');
+          debugPrint('  finishBreakLocation: $mappedFinishBreakLocation');
+          
+          // Use a small delay to ensure setState completes
+          await Future.delayed(const Duration(milliseconds: 100));
+          
+          try {
+            // Create updated event with location data
+            final updatedEvent = widget.event.copyWith(
+              startLocation: mappedStartLocation,
+              finishLocation: mappedFinishLocation,
+              startBreakLocation: mappedStartBreakLocation,
+              finishBreakLocation: mappedFinishBreakLocation,
+            );
+            
+            // Debug: Print the event data before saving
+            debugPrint('Event before save: startLocation=${widget.event.startLocation}, finishLocation=${widget.event.finishLocation}');
+            debugPrint('Event after copyWith: startLocation=${updatedEvent.startLocation}, finishLocation=${updatedEvent.finishLocation}');
+            
+            // Save the event with location data
+            await EventService.updateEvent(widget.event, updatedEvent);
+            
+            debugPrint('Successfully saved location data');
+            // Don't call widget.onEdit here - it causes the event card to reopen
+            // The location data is saved and will be available on next load
+          } catch (e) {
+            debugPrint('Error updating event with location data: $e');
+            // If update fails, try addEvent as fallback
+            try {
+              final updatedEvent = widget.event.copyWith(
+                startLocation: mappedStartLocation,
+                finishLocation: mappedFinishLocation,
+                startBreakLocation: mappedStartBreakLocation,
+                finishBreakLocation: mappedFinishBreakLocation,
+              );
+              await EventService.addEvent(updatedEvent);
+              debugPrint('Successfully added event with location data');
+              // Don't call widget.onEdit here - it causes the event card to reopen
+            } catch (addError) {
+              debugPrint('Failed to save location data: $addError');
+            }
+          }
+        } else {
+          debugPrint('No location data to save for ${widget.event.title}');
+          debugPrint('  reportLocation: $reportLocation');
+          debugPrint('  finishLoc: $finishLoc');
+          debugPrint('  breakStartLoc: $breakStartLoc');
+          debugPrint('  breakFinishLoc: $breakFinishLoc');
+        }
       }
+      
     } catch (e) {
       // Failed to load Bus Check shift data, ignore
+      debugPrint('Error loading location data for $shiftCode: $e');
     }
   }
 
@@ -1188,6 +1300,66 @@ class _EventCardState extends State<EventCard> {
             'isHalfDuty': (isFirstHalf || isSecondHalf) ? 'true' : 'false',
           });
         }
+      }
+    }
+    
+    // Sync location data from _allDutyDetails to enhancedAssignedDuties
+    if (_allDutyDetails.isNotEmpty && widget.event.assignedDuties != null) {
+      var hasLocationUpdates = false;
+      final updatedEnhancedDuties = widget.event.assignedDuties!.map((dutyCode) {
+        // Normalize duty codes for matching (remove UNI: prefix, handle half duties)
+        final normalizedDutyCode = dutyCode.replaceAll('UNI:', '').replaceAll(RegExp(r'[AB]$'), '');
+        
+        // Find matching duty details
+        final dutyDetails = _allDutyDetails.firstWhere(
+          (d) {
+            final detailsCode = d['dutyCode'] ?? '';
+            final normalizedDetailsCode = detailsCode.replaceAll('UNI:', '').replaceAll(RegExp(r'[AB]$'), '');
+            return detailsCode == dutyCode || 
+                   normalizedDetailsCode == normalizedDutyCode ||
+                   detailsCode.endsWith(dutyCode) || 
+                   dutyCode.endsWith(detailsCode);
+          },
+          orElse: () => <String, String?>{},
+        );
+        
+        // Find existing enhanced duty or create new one
+        final existingEnhancedDuty = widget.event.enhancedAssignedDuties?.firstWhere(
+          (d) {
+            final normalizedExisting = d.dutyCode.replaceAll('UNI:', '').replaceAll(RegExp(r'[AB]$'), '');
+            return d.dutyCode == dutyCode || normalizedExisting == normalizedDutyCode;
+          },
+          orElse: () => AssignedDuty.fromLegacyString(dutyCode),
+        ) ?? AssignedDuty.fromLegacyString(dutyCode);
+        
+        // Check if we have location data to update
+        final hasStartLoc = dutyDetails['startLocation'] != null && dutyDetails['startLocation']!.isNotEmpty;
+        final hasFinishLoc = dutyDetails['endLocation'] != null && dutyDetails['endLocation']!.isNotEmpty;
+        final hasBreakStartLoc = dutyDetails['startBreakLocation'] != null && dutyDetails['startBreakLocation']!.isNotEmpty;
+        final hasBreakFinishLoc = dutyDetails['finishBreakLocation'] != null && dutyDetails['finishBreakLocation']!.isNotEmpty;
+        
+        if (hasStartLoc || hasFinishLoc || hasBreakStartLoc || hasBreakFinishLoc) {
+          hasLocationUpdates = true;
+        }
+        
+        // Update with location data from duty details, preserving bus assignment
+        return existingEnhancedDuty.copyWith(
+          startTime: dutyDetails['startTime'] ?? existingEnhancedDuty.startTime,
+          endTime: dutyDetails['endTime'] ?? existingEnhancedDuty.endTime,
+          location: dutyDetails['location'] ?? existingEnhancedDuty.location,
+          isHalfDuty: dutyDetails['isHalfDuty'] == 'true' ? true : (dutyDetails['isHalfDuty'] == 'false' ? false : existingEnhancedDuty.isHalfDuty),
+          isSecondHalf: dutyDetails['isSecondHalf'] == 'true' ? true : (dutyDetails['isSecondHalf'] == 'false' ? false : existingEnhancedDuty.isSecondHalf),
+          startLocation: hasStartLoc ? dutyDetails['startLocation'] : existingEnhancedDuty.startLocation,
+          finishLocation: hasFinishLoc ? dutyDetails['endLocation'] : existingEnhancedDuty.finishLocation,
+          startBreakLocation: hasBreakStartLoc ? dutyDetails['startBreakLocation'] : existingEnhancedDuty.startBreakLocation,
+          finishBreakLocation: hasBreakFinishLoc ? dutyDetails['finishBreakLocation'] : existingEnhancedDuty.finishBreakLocation,
+        );
+      }).toList();
+      
+      // Only update if we have location data
+      if (hasLocationUpdates) {
+        // Update the event's enhancedAssignedDuties
+        widget.event.enhancedAssignedDuties = updatedEnhancedDuties;
       }
     }
   }
@@ -2352,7 +2524,10 @@ class _EventCardState extends State<EventCard> {
                         widget.event.secondHalfBus = null;
                       }
                       
-                      // Save the updated event
+                      // Load duty details to get location data BEFORE saving
+                      await _loadAssignedDutyDetails();
+                      
+                      // Save the updated event (location data should now be in enhancedAssignedDuties)
                       await EventService.updateEvent(oldEvent, widget.event);
                       
                       // Close the dialog
@@ -2822,14 +2997,22 @@ class _EventCardState extends State<EventCard> {
                          Container(
                            padding: const EdgeInsets.all(10),
                            decoration: BoxDecoration(
-                             color: widget.event.getBusForDuty(duty['dutyCode'] ?? '') != null 
-                                 ? Colors.green.withValues(alpha: 0.1)
-                                 : Colors.orange.withValues(alpha: 0.1),
+                             color: Theme.of(context).brightness == Brightness.dark
+                                 ? (widget.event.getBusForDuty(duty['dutyCode'] ?? '') != null 
+                                     ? Colors.green.shade900.withOpacity(0.3)
+                                     : Colors.orange.shade900.withOpacity(0.3))
+                                 : (widget.event.getBusForDuty(duty['dutyCode'] ?? '') != null 
+                                     ? Colors.green.withValues(alpha: 0.1)
+                                     : Colors.orange.withValues(alpha: 0.1)),
                              borderRadius: BorderRadius.circular(8),
                              border: Border.all(
-                               color: widget.event.getBusForDuty(duty['dutyCode'] ?? '') != null 
-                                   ? Colors.green.withValues(alpha: 0.3)
-                                   : Colors.orange.withValues(alpha: 0.3),
+                               color: Theme.of(context).brightness == Brightness.dark
+                                   ? (widget.event.getBusForDuty(duty['dutyCode'] ?? '') != null 
+                                       ? Colors.green.shade700
+                                       : Colors.orange.shade700)
+                                   : (widget.event.getBusForDuty(duty['dutyCode'] ?? '') != null 
+                                       ? Colors.green.withValues(alpha: 0.3)
+                                       : Colors.orange.withValues(alpha: 0.3)),
                              ),
                            ),
                            child: Row(
@@ -4022,9 +4205,15 @@ class _EventCardState extends State<EventCard> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.blue.shade50,
+        color: Theme.of(context).brightness == Brightness.dark
+            ? Theme.of(context).cardColor
+            : Colors.blue.shade50,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.blue.shade200),
+        border: Border.all(
+          color: Theme.of(context).brightness == Brightness.dark
+              ? Theme.of(context).dividerColor
+              : Colors.blue.shade200,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -4045,11 +4234,18 @@ class _EventCardState extends State<EventCard> {
                       children: [
                         Text(
                           dutyCode,
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            color: Theme.of(context).textTheme.bodyLarge?.color,
+                          ),
                         ),
                         Text(
                           '${_formatTimeWithoutSeconds(dutyDetails['startTime'] ?? '')} - ${_formatTimeWithoutSeconds(dutyDetails['endTime'] ?? '')}',
-                          style: const TextStyle(fontSize: 14),
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Theme.of(context).textTheme.bodyMedium?.color,
+                          ),
                         ),
                       ],
                     ),
@@ -4138,13 +4334,17 @@ class _EventCardState extends State<EventCard> {
           const SizedBox(height: 8),
           
           // Bus assignment section for full duties
-          const Row(
+          Row(
             children: [
               Icon(Icons.directions_bus, size: 20, color: AppTheme.primaryColor),
-              SizedBox(width: 8),
+              const SizedBox(width: 8),
               Text(
                 'Bus Assignment',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                  color: Theme.of(context).textTheme.bodyLarge?.color,
+                ),
               ),
             ],
           ),
@@ -4159,9 +4359,15 @@ class _EventCardState extends State<EventCard> {
                 padding: const EdgeInsets.all(8),
                 margin: const EdgeInsets.only(bottom: 8),
                 decoration: BoxDecoration(
-                  color: Colors.green.shade50,
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.green.shade900.withOpacity(0.3)
+                      : Colors.green.shade50,
                   borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: Colors.green.shade200),
+                  border: Border.all(
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.green.shade700
+                        : Colors.green.shade200,
+                  ),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -4169,13 +4375,21 @@ class _EventCardState extends State<EventCard> {
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
+                        Text(
                           'First Half Bus',
-                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: Theme.of(context).textTheme.bodyMedium?.color,
+                          ),
                         ),
                         Text(
                           _firstHalfBus!,
-                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Theme.of(context).textTheme.bodyLarge?.color,
+                          ),
                         ),
                       ],
                     ),
@@ -4214,9 +4428,15 @@ class _EventCardState extends State<EventCard> {
                 padding: const EdgeInsets.all(8),
                 margin: const EdgeInsets.only(bottom: 8),
                 decoration: BoxDecoration(
-                  color: Colors.green.shade50,
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.green.shade900.withOpacity(0.3)
+                      : Colors.green.shade50,
                   borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: Colors.green.shade200),
+                  border: Border.all(
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.green.shade700
+                        : Colors.green.shade200,
+                  ),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -4224,13 +4444,21 @@ class _EventCardState extends State<EventCard> {
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
+                        Text(
                           'Second Half Bus',
-                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: Theme.of(context).textTheme.bodyMedium?.color,
+                          ),
                         ),
                         Text(
                           _secondHalfBus!,
-                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Theme.of(context).textTheme.bodyLarge?.color,
+                          ),
                         ),
                       ],
                     ),
