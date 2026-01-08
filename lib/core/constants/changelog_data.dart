@@ -1,4 +1,10 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.17.3': [
+    {
+      'title': 'Fixed Spare Duty Location Display for Half Duties',
+      'description': 'Fixed critical bug where spare duty half duties displayed incorrect locations. First half duties now correctly show break start location as the end location (e.g., "Aston Quay - Aston Quay" instead of "Aston Quay - Garage"). Second half duties now correctly show break end location as the start location. The app was previously displaying the full duty\'s finish location instead of the break locations for half duties.',
+    },
+  ],
   '2.17.2': [
     {
       'title': 'Enhanced Today\'s Shift Widget Header',

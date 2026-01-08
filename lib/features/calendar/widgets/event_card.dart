@@ -1172,18 +1172,22 @@ class _EventCardState extends State<EventCard> {
               if (isFirstHalf) {
                 // For first half, use original start time and break start time if available
                 const breakStartCol = 5; // Column index for break start time in CSV files
+                const breakStartLocCol = 6; // Column index for break start location in CSV files
                 final breakStartTimeStr = parts.length > breakStartCol ? parts[breakStartCol].trim() : "";
+                final breakStartLoc = parts.length > breakStartLocCol ? parts[breakStartLocCol].trim() : "";
                 
                 if (breakStartTimeStr.isNotEmpty && 
                     breakStartTimeStr.toLowerCase() != "nan" && 
                     breakStartTimeStr.toLowerCase() != "workout") {
                   // Use break start time for end time of first half
+                  // For first half, endLocation should be break start location (where break starts), not finish location
+                  final mappedBreakStartLoc = breakStartLoc.isNotEmpty && breakStartLoc.toLowerCase() != 'nan' ? mapLocationName(breakStartLoc) : '';
                   _allDutyDetails.add({
                     'dutyCode': dutyCode,
                     'startTime': dutyStartTime,
                     'endTime': breakStartTimeStr,
                     'startLocation': startLocation.isNotEmpty && startLocation.toLowerCase() != 'nan' ? mapLocationName(startLocation) : '',
-                    'endLocation': endLocation.isNotEmpty && endLocation.toLowerCase() != 'nan' ? mapLocationName(endLocation) : '',
+                    'endLocation': mappedBreakStartLoc.isNotEmpty ? mappedBreakStartLoc : (endLocation.isNotEmpty && endLocation.toLowerCase() != 'nan' ? mapLocationName(endLocation) : ''),
                     'location': startLocation.isNotEmpty && startLocation.toLowerCase() != 'nan' ? mapLocationName(startLocation) : '',
                     'isHalfDuty': 'true',
                     'isFirstHalf': 'true',
@@ -1195,12 +1199,16 @@ class _EventCardState extends State<EventCard> {
                   final duration = endTime.difference(startTime);
                   final halfwayPoint = startTime.add(Duration(minutes: duration.inMinutes ~/ 2));
                   
+                  // Even without break time, try to get break start location if available
+                  final breakStartLoc = parts.length > breakStartLocCol ? parts[breakStartLocCol].trim() : "";
+                  final mappedBreakStartLoc = breakStartLoc.isNotEmpty && breakStartLoc.toLowerCase() != 'nan' ? mapLocationName(breakStartLoc) : '';
+                  
                   _allDutyDetails.add({
                     'dutyCode': dutyCode,
                     'startTime': dutyStartTime,
                     'endTime': DateFormat('HH:mm:ss').format(halfwayPoint),
                     'startLocation': startLocation.isNotEmpty && startLocation.toLowerCase() != 'nan' ? mapLocationName(startLocation) : '',
-                    'endLocation': endLocation.isNotEmpty && endLocation.toLowerCase() != 'nan' ? mapLocationName(endLocation) : '',
+                    'endLocation': mappedBreakStartLoc.isNotEmpty ? mappedBreakStartLoc : (endLocation.isNotEmpty && endLocation.toLowerCase() != 'nan' ? mapLocationName(endLocation) : ''),
                     'location': startLocation.isNotEmpty && startLocation.toLowerCase() != 'nan' ? mapLocationName(startLocation) : '',
                     'isHalfDuty': 'true',
                     'isFirstHalf': 'true',
@@ -1209,17 +1217,21 @@ class _EventCardState extends State<EventCard> {
               } else if (isSecondHalf) {
                 // For second half, use break end time and finish time if available
                 const breakEndCol = 8; // Column index for break end time in CSV files
+                const breakEndLocCol = 9; // Column index for break end location in CSV files
                 final breakEndTimeStr = parts.length > breakEndCol ? parts[breakEndCol].trim() : "";
+                final breakEndLoc = parts.length > breakEndLocCol ? parts[breakEndLocCol].trim() : "";
                 
                 if (breakEndTimeStr.isNotEmpty && 
                     breakEndTimeStr.toLowerCase() != "nan" && 
                     breakEndTimeStr.toLowerCase() != "workout") {
                   // Use break end time for start time of second half
+                  // For second half, startLocation should be break end location (where break ends), not start location
+                  final mappedBreakEndLoc = breakEndLoc.isNotEmpty && breakEndLoc.toLowerCase() != 'nan' ? mapLocationName(breakEndLoc) : '';
                   _allDutyDetails.add({
                     'dutyCode': dutyCode,
                     'startTime': breakEndTimeStr,
                     'endTime': dutyEndTime,
-                    'startLocation': startLocation.isNotEmpty && startLocation.toLowerCase() != 'nan' ? mapLocationName(startLocation) : '',
+                    'startLocation': mappedBreakEndLoc.isNotEmpty ? mappedBreakEndLoc : (startLocation.isNotEmpty && startLocation.toLowerCase() != 'nan' ? mapLocationName(startLocation) : ''),
                     'endLocation': endLocation.isNotEmpty && endLocation.toLowerCase() != 'nan' ? mapLocationName(endLocation) : '',
                     'location': endLocation.isNotEmpty && endLocation.toLowerCase() != 'nan' ? mapLocationName(endLocation) : '',
                     'isHalfDuty': 'true',
@@ -1232,11 +1244,15 @@ class _EventCardState extends State<EventCard> {
                   final duration = endTime.difference(startTime);
                   final halfwayPoint = startTime.add(Duration(minutes: duration.inMinutes ~/ 2));
                   
+                  // Even without break time, try to get break end location if available
+                  final breakEndLoc = parts.length > breakEndLocCol ? parts[breakEndLocCol].trim() : "";
+                  final mappedBreakEndLoc = breakEndLoc.isNotEmpty && breakEndLoc.toLowerCase() != 'nan' ? mapLocationName(breakEndLoc) : '';
+                  
                   _allDutyDetails.add({
                     'dutyCode': dutyCode,
                     'startTime': DateFormat('HH:mm:ss').format(halfwayPoint),
                     'endTime': dutyEndTime,
-                    'startLocation': startLocation.isNotEmpty && startLocation.toLowerCase() != 'nan' ? mapLocationName(startLocation) : '',
+                    'startLocation': mappedBreakEndLoc.isNotEmpty ? mappedBreakEndLoc : (startLocation.isNotEmpty && startLocation.toLowerCase() != 'nan' ? mapLocationName(startLocation) : ''),
                     'endLocation': endLocation.isNotEmpty && endLocation.toLowerCase() != 'nan' ? mapLocationName(endLocation) : '',
                     'location': endLocation.isNotEmpty && endLocation.toLowerCase() != 'nan' ? mapLocationName(endLocation) : '',
                     'isHalfDuty': 'true',
