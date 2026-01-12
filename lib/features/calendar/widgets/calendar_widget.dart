@@ -119,9 +119,11 @@ class _CalendarWidgetState extends State<CalendarWidget> {
                   itemCount: _selectedEvents.length,
                   itemBuilder: (context, index) {
                     final event = _selectedEvents[index];
+                    // Use WFO shift type if this is a Work For Others event
+                    final String shiftType = event.isWorkForOthers ? 'WFO' : '';
                     return EventCard(
                       event: event,
-                      shiftType: '',
+                      shiftType: shiftType,
                       shiftInfoMap: widget.shiftInfoMap,
                       onEdit: (Event e) {
 

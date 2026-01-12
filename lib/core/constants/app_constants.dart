@@ -35,6 +35,14 @@ class AppConstants {
   // Pay Rate
   static const String spreadPayRateKey = 'spreadPayRate';
 
+  // Days In Lieu
+  static const String daysInLieuBalanceKey = 'daysInLieuBalance';
+  static const String hasSetDaysInLieuKey = 'hasSetDaysInLieu';
+
+  // Annual Leave
+  static const String annualLeaveBalanceKey = 'annualLeaveBalance';
+  static const String hasSetAnnualLeaveKey = 'hasSetAnnualLeave';
+
   // Admin Panel
   static const String adminRememberDeviceKey = 'adminRememberDevice';
 

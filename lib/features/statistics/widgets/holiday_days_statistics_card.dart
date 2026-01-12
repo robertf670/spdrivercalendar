@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:spdrivercalendar/theme/app_theme.dart';
+import 'package:spdrivercalendar/services/color_customization_service.dart';
 import 'time_range_selector.dart';
 
 class HolidayDaysStatisticsCard extends StatelessWidget {
@@ -102,11 +103,15 @@ class HolidayDaysStatisticsCard extends StatelessWidget {
     final total = periodData['total'] as int? ?? 0;
     final summer = periodData['summer'] as int? ?? 0;
     final winter = periodData['winter'] as int? ?? 0;
+    final unpaidLeave = periodData['unpaidLeave'] as int? ?? 0;
+    final dayInLieu = periodData['dayInLieu'] as int? ?? 0;
     final other = periodData['other'] as int? ?? 0;
     
     // Calculate percentages
     final summerPercent = total > 0 ? (summer / total * 100).round() : 0;
     final winterPercent = total > 0 ? (winter / total * 100).round() : 0;
+    final unpaidLeavePercent = total > 0 ? (unpaidLeave / total * 100).round() : 0;
+    final dayInLieuPercent = total > 0 ? (dayInLieu / total * 100).round() : 0;
     final otherPercent = total > 0 ? (other / total * 100).round() : 0;
     
     return Column(
@@ -132,11 +137,24 @@ class HolidayDaysStatisticsCard extends StatelessWidget {
           '$winter${total > 0 ? ' ($winterPercent%)' : ''}', 
           Colors.blue,
         ),
-        _buildHolidayStatRow(
-          'Other Holidays', 
-          '$other${total > 0 ? ' ($otherPercent%)' : ''}', 
-          Colors.green,
-        ),
+        if (unpaidLeave > 0)
+          _buildHolidayStatRow(
+            'Unpaid Leave', 
+            '$unpaidLeave${total > 0 ? ' ($unpaidLeavePercent%)' : ''}', 
+            Colors.purple,
+          ),
+        if (dayInLieu > 0)
+          _buildHolidayStatRow(
+            'Day In Lieu', 
+            '$dayInLieu${total > 0 ? ' ($dayInLieuPercent%)' : ''}', 
+            ColorCustomizationService.getColorForShift('DAY_IN_LIEU'),
+          ),
+        if (other > 0)
+          _buildHolidayStatRow(
+            'Other Holidays', 
+            '$other${total > 0 ? ' ($otherPercent%)' : ''}', 
+            Colors.green,
+          ),
         
         // Visual breakdown bar
         if (total > 0)
@@ -157,10 +175,10 @@ class HolidayDaysStatisticsCard extends StatelessWidget {
                               borderRadius: BorderRadius.only(
                                 topLeft: const Radius.circular(6),
                                 bottomLeft: const Radius.circular(6),
-                                topRight: winter == 0 && other == 0 
+                                topRight: (winter == 0 && unpaidLeave == 0 && dayInLieu == 0 && other == 0)
                                     ? const Radius.circular(6) 
                                     : Radius.zero,
-                                bottomRight: winter == 0 && other == 0 
+                                bottomRight: (winter == 0 && unpaidLeave == 0 && dayInLieu == 0 && other == 0)
                                     ? const Radius.circular(6) 
                                     : Radius.zero,
                               ),
@@ -174,6 +192,20 @@ class HolidayDaysStatisticsCard extends StatelessWidget {
                             color: Colors.blue,
                           ),
                         ),
+                      if (unpaidLeave > 0)
+                        Expanded(
+                          flex: unpaidLeave,
+                          child: Container(
+                            color: Colors.purple,
+                          ),
+                        ),
+                      if (dayInLieu > 0)
+                        Expanded(
+                          flex: dayInLieu,
+                          child: Container(
+                            color: ColorCustomizationService.getColorForShift('DAY_IN_LIEU'),
+                          ),
+                        ),
                       if (other > 0)
                         Expanded(
                           flex: other,
@@ -183,10 +215,10 @@ class HolidayDaysStatisticsCard extends StatelessWidget {
                               borderRadius: BorderRadius.only(
                                 topRight: const Radius.circular(6),
                                 bottomRight: const Radius.circular(6),
-                                topLeft: summer == 0 && winter == 0 
+                                topLeft: (summer == 0 && winter == 0 && unpaidLeave == 0 && dayInLieu == 0)
                                     ? const Radius.circular(6) 
                                     : Radius.zero,
-                                bottomLeft: summer == 0 && winter == 0 
+                                bottomLeft: (summer == 0 && winter == 0 && unpaidLeave == 0 && dayInLieu == 0)
                                     ? const Radius.circular(6) 
                                     : Radius.zero,
                               ),
@@ -197,13 +229,19 @@ class HolidayDaysStatisticsCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                Wrap(
+                  alignment: WrapAlignment.center,
+                  spacing: 8,
+                  runSpacing: 4,
                   children: [
                     if (summer > 0)
                       _buildLegendItem('Summer', Colors.orange),
                     if (winter > 0)
                       _buildLegendItem('Winter', Colors.blue),
+                    if (unpaidLeave > 0)
+                      _buildLegendItem('Unpaid Leave', Colors.purple),
+                    if (dayInLieu > 0)
+                      _buildLegendItem('Day In Lieu', ColorCustomizationService.getColorForShift('DAY_IN_LIEU')),
                     if (other > 0)
                       _buildLegendItem('Other', Colors.green),
                   ],

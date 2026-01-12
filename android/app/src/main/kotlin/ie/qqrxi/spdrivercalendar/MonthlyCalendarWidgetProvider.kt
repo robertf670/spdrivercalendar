@@ -321,6 +321,7 @@ class MonthlyCalendarWidgetProvider : AppWidgetProvider() {
                                 val color = if (holidayType != null) {
                                     when (holidayType) {
                                         "unpaid_leave" -> android.R.color.holo_purple // Unpaid Leave - purple
+                                        "day_in_lieu" -> android.R.color.holo_blue_dark // Day In Lieu - indigo/blue
                                         else -> android.R.color.holo_blue_light // Other holidays - light blue
                                     }
                                 } else {
@@ -439,6 +440,7 @@ class MonthlyCalendarWidgetProvider : AppWidgetProvider() {
             return if (holidayType != null) {
                 val marker = when (holidayType) {
                     "unpaid_leave" -> "UL"
+                    "day_in_lieu" -> "DIL"
                     else -> "H"
                 }
                 "$day\n$marker$eventMarker"

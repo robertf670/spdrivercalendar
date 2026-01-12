@@ -46,6 +46,10 @@ import '../../../services/live_updates_service.dart';
 import '../../../models/live_update.dart';
 import '../../../services/universal_board_service.dart';
 import '../../../models/universal_board.dart';
+import '../../../services/days_in_lieu_service.dart';
+import '../../../services/annual_leave_service.dart';
+import '../dialogs/days_in_lieu_setup_dialog.dart';
+import '../dialogs/annual_leave_setup_dialog.dart';
 
 // Add this new widget class before the CalendarScreen class
 class _StableLiveUpdatesBanner extends StatefulWidget {
@@ -113,6 +117,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
       'M': ShiftInfo('Middle', colors['M']!),
       'R': ShiftInfo('Rest', colors['R']!),
       'W': ShiftInfo('Work', colors['W']!), // Use Work color from customization service
+      'WFO': ShiftInfo('Work For Others', colors['WFO']!), // Work For Others color
     };
   }
 
@@ -206,6 +211,40 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
 
     // Schedule automatic update check after calendar loads
     _scheduleAutomaticUpdateCheck();
+    
+    // Check if user needs to set days in lieu balance
+    _checkDaysInLieuSetup();
+  }
+
+  Future<void> _checkDaysInLieuSetup() async {
+    // Wait a bit for the screen to fully load
+    await Future.delayed(const Duration(milliseconds: 500));
+    
+    if (!mounted) return;
+    
+    final hasSetDaysInLieu = await DaysInLieuService.hasSetInitialBalance();
+    final hasSetAnnualLeave = await AnnualLeaveService.hasSetInitialBalance();
+    
+    if (!hasSetDaysInLieu && mounted) {
+      // Show the days in lieu setup dialog
+      await showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const DaysInLieuSetupDialog(),
+      );
+    }
+    
+    // Wait a bit before showing annual leave dialog
+    await Future.delayed(const Duration(milliseconds: 300));
+    
+    if (!hasSetAnnualLeave && mounted) {
+      // Show the annual leave setup dialog
+      await showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const AnnualLeaveSetupDialog(),
+      );
+    }
   }
 
   Future<void> _loadMarkedInSettings() async {
@@ -531,6 +570,9 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
             case 'unpaid_leave':
               holidayTitle = 'Unpaid Leave';
               break;
+            case 'day_in_lieu':
+              holidayTitle = 'Day In Lieu';
+              break;
             case 'other':
             default:
               holidayTitle = 'Other Holiday';
@@ -630,6 +672,15 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                 _promptForOvertimeHalfType(); // Call the function to show overtime options
               },
             ),
+            // Only show Work For Others button on rest days
+            if (getShiftForDate(_selectedDay ?? DateTime.now()) == 'R')
+              TextButton(
+                child: const Text('Work For Others'),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  _showWorkForOthersDialog();
+                },
+              ),
           ],
         );
       },
@@ -1160,6 +1211,315 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
     );
   }
 
+  // Show dialog to select and add a Work For Others shift (only on rest days)
+  void _showWorkForOthersDialog() {
+    final now = DateTime.now();
+    final shiftDate = _selectedDay ?? now;
+    
+    // Validate that this is a rest day
+    final String shiftType = getShiftForDate(shiftDate);
+    if (shiftType != 'R') {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Work For Others can only be added on rest days.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+    
+    String selectedZone = 'Zone 1';
+    String selectedShiftNumber = '';
+    List<String> shiftNumbers = [];
+    bool isLoading = true;
+    
+    // Show dialog with loading state initially
+    showDialog(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setState) {
+          // Function to load shift numbers for selected zone
+          void loadShiftNumbers() async {
+            setState(() {
+              isLoading = true;
+            });
+            
+            try {
+              final dayOfWeek = RosterService.getDayOfWeek(shiftDate);
+              final zoneNumber = selectedZone.replaceAll('Zone ', '');
+              
+              // Convert full day name to abbreviated format for file loading
+              String dayOfWeekForFilename;
+              if (dayOfWeek == 'Saturday') {
+                dayOfWeekForFilename = 'SAT';
+              } else if (dayOfWeek == 'Sunday') {
+                dayOfWeekForFilename = 'SUN';
+              } else {
+                dayOfWeekForFilename = 'M-F';
+              }
+              
+              // Handle different zones
+              if (selectedZone == 'Uni/Euro') {
+                // Uni/Euro shifts - use both files on weekdays, only 7DAYs on weekends
+                List<String> combinedShifts = [];
+                
+                // Always load from UNI_7DAYs.csv first
+                try {
+                  final csv = await rootBundle.loadString('assets/UNI_7DAYs.csv');
+                  final lines = csv.split('\n');
+                  
+                  // Skip header line and load duty codes
+                  for (var i = 1; i < lines.length; i++) {
+                    if (lines[i].trim().isEmpty) continue;
+                    final parts = lines[i].split(',');
+                    if (parts.isNotEmpty) {
+                      combinedShifts.add(parts[0]);
+                    }
+                  }
+                } catch (e) {
+                  // Silently handle CSV parsing errors
+                }
+                
+                // On weekdays, also load from UNI_M-F.csv
+                if (dayOfWeek != 'Saturday' && dayOfWeek != 'Sunday') {
+                  try {
+                    final csv = await rootBundle.loadString('assets/UNI_M-F.csv');
+                    final lines = csv.split('\n');
+                    
+                    // Skip header line and load duty codes
+                    for (var i = 1; i < lines.length; i++) {
+                      if (lines[i].trim().isEmpty) continue;
+                      final parts = lines[i].split(',');
+                      if (parts.isNotEmpty) {
+                        combinedShifts.add(parts[0]);
+                      }
+                    }
+                  } catch (e) {
+                    // Silently handle CSV parsing errors
+                  }
+                }
+                
+                // Keep only unique shifts while preserving order
+                shiftNumbers = [];
+                final seenShifts = <String>{};
+                for (final shift in combinedShifts) {
+                  if (!seenShifts.contains(shift)) {
+                    seenShifts.add(shift);
+                    shiftNumbers.add(shift);
+                  }
+                }
+              } else {
+                // Regular zone shifts (Zone 1, 3, 4)
+                final filename = RosterService.getShiftFilename(zoneNumber, dayOfWeekForFilename, shiftDate);
+                
+                try {
+                  final csv = await rootBundle.loadString('assets/$filename');
+                  final lines = csv.split('\n');
+                  shiftNumbers = [];
+                  final seenShifts = <String>{};
+                  
+                  // Skip the header line
+                  for (int i = 1; i < lines.length; i++) {
+                    final line = lines[i].trim();
+                    if (line.isEmpty) continue;
+                    final parts = line.split(',');
+                    if (parts.isNotEmpty && parts[0].trim().isNotEmpty) {
+                      final shift = parts[0].trim();
+                      
+                      if (!seenShifts.contains(shift) && shift != "shift") {
+                        seenShifts.add(shift);
+                        shiftNumbers.add(shift);
+                      }
+                    }
+                  }
+                } catch (e) {
+                  shiftNumbers = [];
+                }
+              }
+              
+              // If no selected shift number yet but shifts are available, select the first one
+              if (selectedShiftNumber.isEmpty && shiftNumbers.isNotEmpty) {
+                selectedShiftNumber = shiftNumbers[0];
+              }
+            } catch (e) {
+              shiftNumbers = [];
+            } finally {
+              setState(() {
+                isLoading = false;
+              });
+            }
+          }
+          
+          // Load shift numbers initially
+          if (isLoading) {
+            loadShiftNumbers();
+          }
+                  
+          return AlertDialog(
+            title: Text('Add Work For Others for ${DateFormat('EEE, MMM d').format(shiftDate)}'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Zone:', style: TextStyle(fontWeight: FontWeight.bold)),
+                  DropdownButton<String>(
+                    value: selectedZone,
+                    isExpanded: true,
+                    items: [
+                      'Zone 1',
+                      'Zone 3',
+                      'Zone 4',
+                      'Uni/Euro',
+                    ].map((zone) {
+                      return DropdownMenuItem(
+                        value: zone,
+                        child: Text(zone),
+                      );
+                    }).toList(),
+                    onChanged: (value) {
+                      if (value != null) {
+                        setState(() {
+                          selectedZone = value;
+                          selectedShiftNumber = '';
+                        });
+                        loadShiftNumbers();
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  const Text('Shift Number:', style: TextStyle(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  isLoading
+                      ? const Center(child: CircularProgressIndicator())
+                      : shiftNumbers.isEmpty
+                          ? const Text('No shifts available for selected zone and date.')
+                          : DropdownButton<String>(
+                              value: selectedShiftNumber.isEmpty && shiftNumbers.isNotEmpty ? shiftNumbers[0] : selectedShiftNumber,
+                              isExpanded: true,
+                              items: shiftNumbers.map((shift) {
+                                return DropdownMenuItem(
+                                  value: shift,
+                                  child: Text(shift),
+                                );
+                              }).toList(),
+                              onChanged: (value) {
+                                if (value != null) {
+                                  setState(() {
+                                    selectedShiftNumber = value;
+                                  });
+                                }
+                              },
+                            ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                child: const Text('Cancel'),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+              ),
+              TextButton(
+                onPressed: shiftNumbers.isEmpty || isLoading
+                    ? null
+                    : () async {
+                        // Validate rest day again before saving
+                        final String currentShiftType = getShiftForDate(shiftDate);
+                        if (currentShiftType != 'R') {
+                          if (mounted) {
+                            ScaffoldMessenger.of(dialogContext).showSnackBar(
+                              const SnackBar(
+                                content: Text('Work For Others can only be added on rest days.'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
+                          return;
+                        }
+                        
+                        // Format title as "PZ1/12" or "807/20" etc. (no WFO suffix - badge provides identification)
+                        String title = selectedShiftNumber;
+                        // Ensure proper format - if it doesn't start with PZ, add it for zones
+                        if (selectedZone != 'Uni/Euro' && !title.startsWith('PZ')) {
+                          final zoneNum = selectedZone.replaceAll('Zone ', '');
+                          title = 'PZ$zoneNum/$title';
+                        }
+                        // Don't add WFO to title - the badge is enough for identification
+                        
+                        // Get shift times
+                        Map<String, dynamic>? shiftTimes;
+                        if (selectedZone == 'Uni/Euro') {
+                          shiftTimes = await _getShiftTimes(selectedZone, selectedShiftNumber, shiftDate);
+                        } else {
+                          shiftTimes = await _getShiftTimes(selectedZone.replaceAll('Zone ', ''), selectedShiftNumber, shiftDate);
+                        }
+                        
+                        // Handle potential null shiftTimes
+                        if (shiftTimes == null) {
+                          if (mounted) {
+                            ScaffoldMessenger.of(dialogContext).showSnackBar(
+                              const SnackBar(content: Text('Error retrieving shift times. Please try again.')),
+                            );
+                          }
+                          return;
+                        }
+                        
+                        // Create the event with isWorkForOthers = true
+                        final event = Event(
+                          id: DateTime.now().millisecondsSinceEpoch.toString(),
+                          title: title,
+                          startDate: shiftDate,
+                          startTime: shiftTimes['startTime']!,
+                          endDate: shiftTimes['isNextDay'] == true
+                              ? shiftDate.add(const Duration(days: 1))
+                              : shiftDate,
+                          endTime: shiftTimes['endTime']!,
+                          breakStartTime: shiftTimes['breakStartTime'] as TimeOfDay?,
+                          breakEndTime: shiftTimes['breakEndTime'] as TimeOfDay?,
+                          workTime: shiftTimes['workTime'] as Duration?,
+                          routes: shiftTimes['routes'] as List<String>?,
+                          isWorkForOthers: true,
+                        );
+                        
+                        // Add event and close dialog
+                        await EventService.addEvent(event);
+                        if (mounted) {
+                          Navigator.of(dialogContext).pop();
+                        }
+                        
+                        // Sync to Google if enabled
+                        if (mounted) {
+                          _checkAndSyncToGoogleCalendar(event, context);
+                        }
+                        
+                        // Force UI refresh
+                        if (mounted) {
+                          await EventService.preloadMonth(_focusedDay);
+                          setState(() {});
+                          
+                          // Force complete refresh
+                          _editEvent(Event(
+                            id: 'refresh_trigger',
+                            title: '',
+                            startDate: _selectedDay ?? DateTime.now(),
+                            startTime: const TimeOfDay(hour: 0, minute: 0),
+                            endDate: _selectedDay ?? DateTime.now(),
+                            endTime: const TimeOfDay(hour: 0, minute: 0),
+                            busAssignments: {},
+                          ));
+                        }
+                      },
+                child: const Text('Add Shift'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
   // Get shift times from CSV file
   Future<Map<String, dynamic>?> _getShiftTimes(String zone, String shiftNumber, DateTime shiftDate, {bool isOvertimeShift = false}) async { // Return type changed to nullable
           // Getting shift times
@@ -1659,11 +2019,16 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
       descriptionParts.add('Break Times: $breakTime');
     }
     
-    // Add rest day indicator if applicable
-    final String shiftType = getShiftForDate(event.startDate);
-    final bool isRest = shiftType == 'R';
-    if (isRest) {
-      descriptionParts.add('(Working on Rest Day)');
+    // Add Work For Others indicator if applicable
+    if (event.isWorkForOthers) {
+      descriptionParts.add('(Work For Others)');
+    } else {
+      // Add rest day indicator if applicable (only if not WFO)
+      final String shiftType = getShiftForDate(event.startDate);
+      final bool isRest = shiftType == 'R';
+      if (isRest) {
+        descriptionParts.add('(Working on Rest Day)');
+      }
     }
     
     // Add sick day status if applicable
@@ -4368,11 +4733,21 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
   Widget _buildCalendarDay(DateTime date, {required bool isToday, required bool isOutsideDay}) {
     final shift = _startDate != null ? getShiftForDate(date) : '';
     final shiftInfo = _shiftInfoMap[shift];
-    final hasEvents = getEventsForDay(date).isNotEmpty;
+    final events = getEventsForDay(date);
+    final hasEvents = events.isNotEmpty;
     final bankHoliday = getBankHoliday(date);
     final isBankHoliday = bankHoliday != null;
     final isHoliday = _holidays.any((h) => h.containsDate(date));
+    final dayInLieuHoliday = _holidays.firstWhere((h) => h.containsDate(date) && h.type == 'day_in_lieu', orElse: () => Holiday(id: '', startDate: DateTime.now(), endDate: DateTime.now(), type: ''));
+    final isDayInLieu = dayInLieuHoliday.id.isNotEmpty;
+    final unpaidLeaveHoliday = _holidays.firstWhere((h) => h.containsDate(date) && h.type == 'unpaid_leave', orElse: () => Holiday(id: '', startDate: DateTime.now(), endDate: DateTime.now(), type: ''));
+    final isUnpaidLeave = unpaidLeaveHoliday.id.isNotEmpty;
     final isSaturdayService = RosterService.isSaturdayService(date);
+    
+    // Check if there's a WFO event on this day
+    final hasWfoEvent = events.any((event) => event.isWorkForOthers);
+    final wfoColor = _shiftInfoMap['WFO']?.color;
+    final dayInLieuColor = ColorCustomizationService.getColorForShift('DAY_IN_LIEU');
     
     // Get the display text (duty code, spare title, or shift letter)
     final displayText = _getCalendarDayDisplayText(date);
@@ -4388,9 +4763,15 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
         margin: const EdgeInsets.all(4.0),
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: isHoliday 
-              ? holidayColor.withValues(alpha: 0.3)
-              : shiftInfo?.color.withValues(alpha: 0.3),
+          color: isDayInLieu
+              ? dayInLieuColor.withValues(alpha: 0.3)
+              : isUnpaidLeave
+                  ? Colors.purple.withValues(alpha: 0.3)
+                  : isHoliday 
+                      ? holidayColor.withValues(alpha: 0.3)
+                      : hasWfoEvent && wfoColor != null
+                          ? wfoColor.withValues(alpha: 0.3)
+                          : shiftInfo?.color.withValues(alpha: 0.3),
           borderRadius: BorderRadius.circular(8.0),
           border: isToday
               ? Border.all(
@@ -4430,7 +4811,19 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                       maxLines: 1,
                       overflow: TextOverflow.clip,
                     ),
-                  if (isHoliday)
+                  if (isDayInLieu)
+                    Text(
+                      'Lieu',
+                      style: TextStyle(
+                        fontSize: _getResponsiveDutyFontSize(screenWidth),
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        height: 1.0, // Reduce line height
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.clip,
+                    )
+                  else if (isHoliday)
                     Text(
                       'H',
                       style: TextStyle(
@@ -4479,9 +4872,15 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                   width: 6, // Smaller dot
                   height: 6, // Smaller dot
                   decoration: BoxDecoration(
-                    color: isHoliday 
-                        ? holidayColor 
-                        : (shiftInfo?.color ?? Theme.of(context).primaryColor),
+                    color: isDayInLieu
+                        ? dayInLieuColor
+                        : isUnpaidLeave
+                            ? Colors.purple
+                            : isHoliday 
+                                ? holidayColor 
+                                : hasWfoEvent && wfoColor != null
+                                    ? wfoColor
+                                    : (shiftInfo?.color ?? Theme.of(context).primaryColor),
                     shape: BoxShape.circle,
                   ),
                 ),
@@ -4608,9 +5007,11 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
               )
             : Column(
                 children: events.map((event) {
+                  // Use WFO shift type if this is a Work For Others event
+                  final String shiftType = event.isWorkForOthers ? 'WFO' : getShiftForDate(event.startDate);
                   return EventCard(
                     event: event,
-                    shiftType: getShiftForDate(event.startDate),
+                    shiftType: shiftType,
                     shiftInfoMap: _shiftInfoMap,
                     isBankHoliday: getBankHoliday(event.startDate) != null,
                     isRestDay: getShiftForDate(event.startDate) == 'R',
@@ -4931,6 +5332,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
     final winterCount = yearHolidays.where((h) => h.type == 'winter').length;
     final summerCount = yearHolidays.where((h) => h.type == 'summer').length;
     final unpaidLeaveCount = yearHolidays.where((h) => h.type == 'unpaid_leave').length;
+    final dayInLieuCount = yearHolidays.where((h) => h.type == 'day_in_lieu').length;
     final otherCount = yearHolidays.where((h) => h.type == 'other').length;
     
     return Container(
@@ -4999,6 +5401,8 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                           _buildTypeBadge('Summer', summerCount, Colors.orange, sizes),
                         if (unpaidLeaveCount > 0)
                           _buildTypeBadge('Unpaid Leave', unpaidLeaveCount, Colors.purple, sizes),
+                        if (dayInLieuCount > 0)
+                          _buildTypeBadge('Day In Lieu', dayInLieuCount, ColorCustomizationService.getColorForShift('DAY_IN_LIEU'), sizes),
                         if (otherCount > 0)
                           _buildTypeBadge('Other', otherCount, Colors.grey, sizes),
                       ],
@@ -5066,6 +5470,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
             type == 'Winter' ? Icons.ac_unit :
             type == 'Summer' ? Icons.wb_sunny :
             type == 'Unpaid Leave' ? Icons.money_off :
+            type == 'Day In Lieu' ? Icons.event_available :
             Icons.event,
             size: sizes['badgeIconSize']!,
             color: color,
@@ -5093,13 +5498,16 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
     final isWinter = holiday.type == 'winter';
     final isSummer = holiday.type == 'summer';
     final isUnpaidLeave = holiday.type == 'unpaid_leave';
+    final isDayInLieu = holiday.type == 'day_in_lieu';
     final iconColor = isWinter 
         ? Colors.blue 
         : isSummer 
             ? Colors.orange 
             : isUnpaidLeave
                 ? Colors.purple
-                : Colors.grey;
+                : isDayInLieu
+                    ? ColorCustomizationService.getColorForShift('DAY_IN_LIEU')
+                    : Colors.grey;
     
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
@@ -5124,6 +5532,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
               isWinter ? Icons.ac_unit :
               isSummer ? Icons.wb_sunny :
               isUnpaidLeave ? Icons.money_off :
+              isDayInLieu ? Icons.event_available :
               Icons.event,
               color: iconColor,
               size: sizes['iconSize']!,
@@ -5139,6 +5548,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                   isWinter ? 'Winter Holiday' :
                   isSummer ? 'Summer Holiday' :
                   isUnpaidLeave ? 'Unpaid Leave' :
+                  isDayInLieu ? 'Day In Lieu' :
                   'Other Holiday',
                   style: TextStyle(
                     fontWeight: FontWeight.w600,
@@ -5391,6 +5801,33 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                               const SizedBox(width: 12),
                               Text(
                                 'Unpaid Leave',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Theme.of(context).textTheme.bodyMedium?.color,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      InkWell(
+                        onTap: () {
+                          scrollController.dispose();
+                          Navigator.of(context).pop();
+                          _showDayInLieuDialog();
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.event_available,
+                                size: 22,
+                                color: ColorCustomizationService.getColorForShift('DAY_IN_LIEU'),
+                              ),
+                              const SizedBox(width: 12),
+                              Text(
+                                'Day In Lieu',
                                 style: TextStyle(
                                   fontSize: 14,
                                   color: Theme.of(context).textTheme.bodyMedium?.color,
@@ -6747,6 +7184,218 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                           foregroundColor: Colors.white,
                         ),
                         child: const Text('Add Unpaid Leave'),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showDayInLieuDialog() async {
+    DateTime selectedDate = DateTime.now();
+    final dayInLieuColor = ColorCustomizationService.getColorForShift('DAY_IN_LIEU');
+    
+    // Load balance information
+    final used = await DaysInLieuService.getUsedDays();
+    final remaining = await DaysInLieuService.getRemainingDays();
+    final hasZeroBalance = remaining == 0;
+    
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Container(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.8,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: dayInLieuColor.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(Icons.event_available, color: dayInLieuColor),
+                      ),
+                      const SizedBox(width: 12),
+                      const Expanded(
+                        child: Text(
+                          'Select Day In Lieu Date',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.of(context).pop(),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
+                    ],
+                  ),
+                ),
+                // Balance information section
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        Column(
+                          children: [
+                            Text(
+                              'Remaining',
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                            Text(
+                              '$remaining',
+                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: hasZeroBalance ? Colors.orange : null,
+                              ),
+                            ),
+                          ],
+                        ),
+                        Column(
+                          children: [
+                            Text(
+                              'Used',
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                            Text(
+                              '$used',
+                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                // Warning if balance is 0
+                if (hasZeroBalance)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.warning_amber_rounded,
+                            color: Colors.orange,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Warning: You have no days in lieu remaining. Make sure to add days when you earn them in Settings.',
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: Colors.orange.shade700,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                const Divider(height: 0),
+                Flexible(
+                  child: SingleChildScrollView(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: CalendarDatePicker(
+                        initialDate: selectedDate,
+                        firstDate: DateTime.now().subtract(const Duration(days: 365)),
+                        lastDate: DateTime.now().add(const Duration(days: 365)),
+                        onDateChanged: (date) {
+                          setState(() {
+                            selectedDate = date;
+                          });
+                        },
+                      ),
+                    ),
+                  ),
+                ),
+                const Divider(height: 0),
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: const Text('Cancel'),
+                      ),
+                      const SizedBox(width: 8),
+                      ElevatedButton(
+                        onPressed: () async {
+                          final holiday = Holiday(
+                            id: 'day_in_lieu_${selectedDate.millisecondsSinceEpoch}',
+                            startDate: selectedDate,
+                            endDate: selectedDate,
+                            type: 'day_in_lieu',
+                          );
+                          
+                          // Add the holiday
+                          await HolidayService.addHoliday(holiday);
+                          
+                          // Auto-decrement balance
+                          await DaysInLieuService.onDayInLieuAdded();
+                          
+                          // Reload holidays from storage to ensure consistency
+                          await _reloadHolidays();
+                          
+                          // Close the dialog
+                          Navigator.of(context).pop();
+                          
+                          // Force calendar rebuild to show the new day in lieu
+                          if (mounted) {
+                            setState(() {});
+                          }
+                          
+                          // Show success message
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: const Text('Day In Lieu added successfully'),
+                                backgroundColor: dayInLieuColor,
+                              ),
+                            );
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: dayInLieuColor,
+                          foregroundColor: Colors.white,
+                        ),
+                        child: const Text('Add Day In Lieu'),
                       ),
                     ],
                   ),

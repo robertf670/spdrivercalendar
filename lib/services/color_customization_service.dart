@@ -8,6 +8,8 @@ class ColorCustomizationService {
   static const String _middleColorKey = 'custom_middle_color';
   static const String _restColorKey = 'custom_rest_color';
   static const String _workColorKey = 'custom_work_color';
+  static const String _wfoColorKey = 'custom_wfo_color';
+  static const String _dayInLieuColorKey = 'custom_day_in_lieu_color';
 
   // Default colors from AppTheme
   static const Color _defaultEarlyColor = Color(0xFF66BB6A);  // Green
@@ -15,6 +17,8 @@ class ColorCustomizationService {
   static const Color _defaultMiddleColor = Color(0xFF9575CD); // Purple
   static const Color _defaultRestColor = Color(0xFF42A5F5);   // Blue
   static const Color _defaultWorkColor = Color(0xFF66BB6A);   // Green (same as Early)
+  static const Color _defaultWfoColor = Color(0xFFFF6B6B);   // Coral/Red-Pink for Work For Others (distinct from holidays)
+  static const Color _defaultDayInLieuColor = Color(0xFF3F51B5);   // Indigo for Day In Lieu (distinct from unpaid leave purple)
 
   static Map<String, Color> _customColors = {};
   static bool _isInitialized = false;
@@ -34,6 +38,8 @@ class ColorCustomizationService {
       'M': Color(prefs.getInt(_middleColorKey) ?? _defaultMiddleColor.toARGB32()),
       'R': Color(prefs.getInt(_restColorKey) ?? _defaultRestColor.toARGB32()),
       'W': Color(prefs.getInt(_workColorKey) ?? _defaultWorkColor.toARGB32()),
+      'WFO': Color(prefs.getInt(_wfoColorKey) ?? _defaultWfoColor.toARGB32()),
+      'DAY_IN_LIEU': Color(prefs.getInt(_dayInLieuColorKey) ?? _defaultDayInLieuColor.toARGB32()),
     };
     
     _isInitialized = true;
@@ -55,6 +61,8 @@ class ColorCustomizationService {
       // Return default colors if not initialized
       final defaultColors = Map<String, Color>.from(AppTheme.shiftColors);
       defaultColors['W'] = _defaultWorkColor;
+      defaultColors['WFO'] = _defaultWfoColor;
+      defaultColors['DAY_IN_LIEU'] = _defaultDayInLieuColor;
       return defaultColors;
     }
     return Map.from(_customColors);
@@ -64,9 +72,11 @@ class ColorCustomizationService {
   static Color getColorForShift(String shiftType) {
     if (!_isInitialized) {
       if (shiftType == 'W') return _defaultWorkColor;
+      if (shiftType == 'WFO') return _defaultWfoColor;
+      if (shiftType == 'DAY_IN_LIEU') return _defaultDayInLieuColor;
       return AppTheme.shiftColors[shiftType] ?? _defaultRestColor;
     }
-    return _customColors[shiftType] ?? AppTheme.shiftColors[shiftType] ?? (shiftType == 'W' ? _defaultWorkColor : _defaultRestColor);
+    return _customColors[shiftType] ?? AppTheme.shiftColors[shiftType] ?? (shiftType == 'W' ? _defaultWorkColor : (shiftType == 'WFO' ? _defaultWfoColor : (shiftType == 'DAY_IN_LIEU' ? _defaultDayInLieuColor : _defaultRestColor)));
   }
 
   /// Set custom color for a shift type
@@ -92,6 +102,12 @@ class ColorCustomizationService {
       case 'W':
         await prefs.setInt(_workColorKey, color.toARGB32());
         break;
+      case 'WFO':
+        await prefs.setInt(_wfoColorKey, color.toARGB32());
+        break;
+      case 'DAY_IN_LIEU':
+        await prefs.setInt(_dayInLieuColorKey, color.toARGB32());
+        break;
     }
     
     // Notify listeners of color changes
@@ -108,6 +124,8 @@ class ColorCustomizationService {
     await prefs.remove(_middleColorKey);
     await prefs.remove(_restColorKey);
     await prefs.remove(_workColorKey);
+    await prefs.remove(_wfoColorKey);
+    await prefs.remove(_dayInLieuColorKey);
     
     // Reset to default colors
     _customColors = {
@@ -116,6 +134,8 @@ class ColorCustomizationService {
       'M': _defaultMiddleColor,
       'R': _defaultRestColor,
       'W': _defaultWorkColor,
+      'WFO': _defaultWfoColor,
+      'DAY_IN_LIEU': _defaultDayInLieuColor,
     };
     
     // Notify listeners of color changes
@@ -130,7 +150,9 @@ class ColorCustomizationService {
            _customColors['L'] != _defaultLateColor ||
            _customColors['M'] != _defaultMiddleColor ||
            _customColors['R'] != _defaultRestColor ||
-           _customColors['W'] != _defaultWorkColor;
+           _customColors['W'] != _defaultWorkColor ||
+           _customColors['WFO'] != _defaultWfoColor ||
+           _customColors['DAY_IN_LIEU'] != _defaultDayInLieuColor;
   }
 
   /// Get default colors map
@@ -141,6 +163,8 @@ class ColorCustomizationService {
       'M': _defaultMiddleColor,
       'R': _defaultRestColor,
       'W': _defaultWorkColor,
+      'WFO': _defaultWfoColor,
+      'DAY_IN_LIEU': _defaultDayInLieuColor,
     };
   }
 
@@ -153,6 +177,8 @@ class ColorCustomizationService {
         'M': _customColors['M']?.toARGB32(),
         'R': _customColors['R']?.toARGB32(),
         'W': _customColors['W']?.toARGB32(),
+        'WFO': _customColors['WFO']?.toARGB32(),
+        'DAY_IN_LIEU': _customColors['DAY_IN_LIEU']?.toARGB32(),
       }
     };
   }
@@ -167,6 +193,8 @@ class ColorCustomizationService {
       if (colorData['M'] != null) await setShiftColor('M', Color(colorData['M']));
       if (colorData['R'] != null) await setShiftColor('R', Color(colorData['R']));
       if (colorData['W'] != null) await setShiftColor('W', Color(colorData['W']));
+      if (colorData['WFO'] != null) await setShiftColor('WFO', Color(colorData['WFO']));
+      if (colorData['DAY_IN_LIEU'] != null) await setShiftColor('DAY_IN_LIEU', Color(colorData['DAY_IN_LIEU']));
     }
   }
 } 

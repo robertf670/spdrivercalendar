@@ -210,6 +210,7 @@ class TodayShiftWidgetProvider : AppWidgetProvider() {
                 if (holidayType != null) {
                     val holidayText = when (holidayType) {
                         "unpaid_leave" -> "Unpaid Leave"
+                        "day_in_lieu" -> "Day In Lieu"
                         "winter" -> "Winter Holiday"
                         "summer" -> "Summer Holiday"
                         else -> "Holiday"
@@ -227,6 +228,7 @@ class TodayShiftWidgetProvider : AppWidgetProvider() {
                     views.setViewVisibility(R.id.widget_no_shift, android.view.View.GONE)
                     val holidayText = when (holidayType) {
                         "unpaid_leave" -> "Unpaid Leave"
+                        "day_in_lieu" -> "Day In Lieu"
                         "winter" -> "Winter Holiday"
                         "summer" -> "Summer Holiday"
                         else -> "Holiday"

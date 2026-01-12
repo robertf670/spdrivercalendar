@@ -5,6 +5,22 @@ final Map<String, List<Map<String, String>>> changelogData = {
       'description': 'Calendar now displays assigned duty codes instead of shift letters (E/L/M/R). Spare shifts show their title (e.g., "SP1000"). BusCheck duties shortened to "BUSC1", "BUSC2", etc. Toggle available in Appearance settings to show shift letters instead.',
     },
     {
+      'title': 'Work For Others Feature',
+      'description': 'Added "Work For Others" feature for tracking shifts worked on rest days. WFO option only appears when adding events on rest days. Tracked separately in statistics (excluded from "Rest Days Worked").',
+    },
+    {
+      'title': 'Day In Lieu Holiday Type',
+      'description': 'Added "Day In Lieu" as a new holiday type. Users can add single-day Day In Lieu entries with customizable color. Displayed as "Lieu" on calendar cells. Tracked separately in statistics alongside Unpaid Leave.',
+    },
+    {
+      'title': 'Days In Lieu Balance Tracking',
+      'description': 'Added balance tracking for days in lieu. Set your initial balance via popup on first launch, then manage it in Settings > Holidays & Leave. Balance shows remaining and used days. Warning displayed when balance reaches zero.',
+    },
+    {
+      'title': 'Annual Leave Balance Tracking',
+      'description': 'Added balance tracking for annual leave. Set your initial balance via popup on first launch, then manage it in Settings > Holidays & Leave. Only future holidays (winter, summer, other) count toward used days - past holidays are ignored. If you want existing holidays to count, remove them and add them again. Balance visible in Statistics screen.',
+    },
+    {
       'title': 'TRAIN23/24 Training Duty Removed',
       'description': 'Removed TRAIN23/24 training duty as training has been completed.',
     },

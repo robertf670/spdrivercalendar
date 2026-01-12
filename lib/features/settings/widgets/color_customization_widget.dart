@@ -47,6 +47,14 @@ class _ColorCustomizationWidgetState extends State<ColorCustomizationWidget> {
   void _loadCurrentColors() {
     setState(() {
       _currentColors = ColorCustomizationService.getShiftColors();
+      // Ensure DAY_IN_LIEU color is always present
+      if (!_currentColors.containsKey('DAY_IN_LIEU')) {
+        _currentColors['DAY_IN_LIEU'] = ColorCustomizationService.getColorForShift('DAY_IN_LIEU');
+      }
+      // Ensure WFO color is always present
+      if (!_currentColors.containsKey('WFO')) {
+        _currentColors['WFO'] = ColorCustomizationService.getColorForShift('WFO');
+      }
       _hasCustomColors = ColorCustomizationService.hasCustomColors();
     });
   }
@@ -230,6 +238,19 @@ class _ColorCustomizationWidgetState extends State<ColorCustomizationWidget> {
                     ],
                   ),
                 ],
+                const SizedBox(height: 8),
+                // Always show Work For Others and Day In Lieu color pickers side by side
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildColorTile('WFO', 'Work For Others', _currentColors['WFO'] ?? ColorCustomizationService.getColorForShift('WFO')),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _buildColorTile('DAY_IN_LIEU', 'Day In Lieu', _currentColors['DAY_IN_LIEU'] ?? ColorCustomizationService.getColorForShift('DAY_IN_LIEU'), displayText: 'Lieu'),
+                    ),
+                  ],
+                ),
                 const SizedBox(height: 16),
                 
                 // Reset button
@@ -262,22 +283,31 @@ class _ColorCustomizationWidgetState extends State<ColorCustomizationWidget> {
     );
   }
 
-  Widget _buildColorTile(String shiftType, String shiftName, Color color) {
+  Widget _buildColorTile(String shiftType, String shiftName, Color color, {String? displayText}) {
+    // Use displayText if provided, otherwise use shiftType
+    final circleText = displayText ?? shiftType;
+    // Determine circle size based on text length for better fit
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isSmallScreen = screenWidth < 400;
+    final circleSize = circleText.length > 3 ? (isSmallScreen ? 44.0 : 48.0) : (isSmallScreen ? 40.0 : 44.0);
+    final fontSize = circleText.length > 3 ? (isSmallScreen ? 12.0 : 14.0) : (isSmallScreen ? 14.0 : 16.0);
+    
     return InkWell(
       onTap: () => _showColorPicker(shiftType, shiftName),
       borderRadius: BorderRadius.circular(8),
       child: Container(
-        padding: const EdgeInsets.all(12),
+        padding: EdgeInsets.all(isSmallScreen ? 10 : 12),
         decoration: BoxDecoration(
           color: color.withValues(alpha: 0.1),
           border: Border.all(color: color.withValues(alpha: 0.3)),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              width: 40,
-              height: 40,
+              width: circleSize,
+              height: circleSize,
               decoration: BoxDecoration(
                 color: color,
                 shape: BoxShape.circle,
@@ -291,23 +321,28 @@ class _ColorCustomizationWidgetState extends State<ColorCustomizationWidget> {
               ),
               child: Center(
                 child: Text(
-                  shiftType,
-                  style: const TextStyle(
+                  circleText,
+                  style: TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
-                    fontSize: 16,
+                    fontSize: fontSize,
                   ),
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.clip,
                 ),
               ),
             ),
             const SizedBox(height: 8),
             Text(
               shiftName,
-              style: const TextStyle(
-                fontSize: 12,
+              style: TextStyle(
+                fontSize: isSmallScreen ? 11 : 12,
                 fontWeight: FontWeight.w500,
               ),
               textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),

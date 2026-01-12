@@ -57,6 +57,7 @@ class ShiftTypeSummaryCard extends StatelessWidget {
             _buildStatRow('Spare Shifts', '${stats['spareShifts']}'),
             _buildStatRow('Bogey Shifts', '${stats['bogeyShifts']}'),
             _buildStatRow('Overtime Shifts', '${stats['overtimeShifts'] ?? 0}'),
+            _buildStatRow('Work For Others', '${stats['workForOthersShifts'] ?? 0}'),
             _buildStatRow('Rest Days Worked', '${stats['restDaysWorked'] ?? 0}'),
             // Consider adding Bank Holiday shifts if needed: _buildStatRow('Bank Holiday Shifts', '${stats['bankHolidayShifts'] ?? 0}'),
             const Divider(height: 24),

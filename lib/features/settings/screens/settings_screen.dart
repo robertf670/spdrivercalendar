@@ -20,6 +20,9 @@ import 'package:spdrivercalendar/services/pay_scale_service.dart';
 import '../../../config/app_config.dart';
 import 'package:spdrivercalendar/services/universal_board_service.dart';
 import 'package:spdrivercalendar/models/universal_board.dart';
+import 'package:spdrivercalendar/services/days_in_lieu_service.dart';
+import 'package:spdrivercalendar/services/annual_leave_service.dart';
+import 'package:spdrivercalendar/services/color_customization_service.dart';
 
 // Define Preference Keys for Notifications (Consider moving to AppConstants if not already there)
 const String kNotificationsEnabledKey = 'notificationsEnabled';
@@ -63,10 +66,21 @@ class SettingsScreenState extends State<SettingsScreen> {
   // Pay rate setting
   String _spreadPayRate = 'year1+2'; // Default to Year 1/2
   
+  // Days in lieu balance
+  int _daysInLieuBalance = 0;
+  int _daysInLieuUsed = 0;
+  int _daysInLieuRemaining = 0;
+  
+  // Annual leave balance
+  int _annualLeaveBalance = 0;
+  int _annualLeaveUsed = 0;
+  int _annualLeaveRemaining = 0;
+  
   // Expandable sections state
   final Map<String, bool> _expandedSections = {
     'Appearance': true,
     'App': true,
+    'Holidays & Leave': false,
     'Google Calendar': false,
     'Backup & Restore': false,
     'Notifications': false,
@@ -81,6 +95,8 @@ class SettingsScreenState extends State<SettingsScreen> {
     _checkGoogleSignIn();
     _loadAppVersion();
     _loadExpandedSections();
+    _loadDaysInLieuBalance();
+    _loadAnnualLeaveBalance();
   }
   
   Future<void> _loadExpandedSections() async {
@@ -88,6 +104,7 @@ class SettingsScreenState extends State<SettingsScreen> {
     setState(() {
       _expandedSections['Appearance'] = prefs.getBool('settings_expanded_appearance') ?? true;
       _expandedSections['App'] = prefs.getBool('settings_expanded_app') ?? true;
+      _expandedSections['Holidays & Leave'] = prefs.getBool('settings_expanded_holidays') ?? false;
       _expandedSections['Google Calendar'] = prefs.getBool('settings_expanded_google') ?? false;
       _expandedSections['Backup & Restore'] = prefs.getBool('settings_expanded_backup') ?? false;
       _expandedSections['Notifications'] = prefs.getBool('settings_expanded_notifications') ?? false;
@@ -104,6 +121,9 @@ class SettingsScreenState extends State<SettingsScreen> {
         break;
       case 'App':
         key = 'settings_expanded_app';
+        break;
+      case 'Holidays & Leave':
+        key = 'settings_expanded_holidays';
         break;
       case 'Google Calendar':
         key = 'settings_expanded_google';
@@ -149,6 +169,30 @@ class SettingsScreenState extends State<SettingsScreen> {
 
     setState(() {
       _isLoading = false;
+    });
+  }
+
+  Future<void> _loadDaysInLieuBalance() async {
+    final balance = await DaysInLieuService.getBalance();
+    final used = await DaysInLieuService.getUsedDays();
+    final remaining = await DaysInLieuService.getRemainingDays();
+    
+    setState(() {
+      _daysInLieuBalance = balance;
+      _daysInLieuUsed = used;
+      _daysInLieuRemaining = remaining;
+    });
+  }
+
+  Future<void> _loadAnnualLeaveBalance() async {
+    final balance = await AnnualLeaveService.getBalance();
+    final used = await AnnualLeaveService.getUsedDays();
+    final remaining = await AnnualLeaveService.getRemainingDays();
+    
+    setState(() {
+      _annualLeaveBalance = balance;
+      _annualLeaveUsed = used;
+      _annualLeaveRemaining = remaining;
     });
   }
 
@@ -317,6 +361,17 @@ class SettingsScreenState extends State<SettingsScreen> {
                       _buildVersionHistoryButton(),
                       _buildResetRestDaysButton(),
                       _buildTestBoardButton(),
+                    ],
+                  ),
+                  
+                  const SizedBox(height: 8),
+                  
+                  _buildExpandableSection(
+                    title: 'Holidays & Leave',
+                    icon: Icons.event_available,
+                    children: [
+                      const SizedBox(height: 8),
+                      _buildLeaveBalancesCard(),
                     ],
                   ),
                   
@@ -692,6 +747,264 @@ class SettingsScreenState extends State<SettingsScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => const FeedbackScreen()),
+    );
+  }
+
+  Widget _buildLeaveBalancesCard() {
+    final dayInLieuColor = ColorCustomizationService.getColorForShift('DAY_IN_LIEU');
+    final primaryColor = Theme.of(context).colorScheme.primary;
+    
+    return Card(
+      margin: EdgeInsets.zero,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppTheme.borderRadius),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Annual Leave Section
+            _buildBalanceSection(
+              icon: Icons.beach_access,
+              iconColor: primaryColor,
+              title: 'Annual Leave',
+              remaining: _annualLeaveRemaining,
+              used: _annualLeaveUsed,
+              usedLabel: 'Used (Future)',
+              onDecrement: () async {
+                if (_annualLeaveBalance > 0) {
+                  await AnnualLeaveService.decrementBalance(1);
+                  await _loadAnnualLeaveBalance();
+                }
+              },
+              onIncrement: () async {
+                await AnnualLeaveService.incrementBalance(1);
+                await _loadAnnualLeaveBalance();
+              },
+              warningText: _annualLeaveRemaining == 0
+                ? 'No days remaining. Only future holidays count toward used days.'
+                : null,
+            ),
+            
+            // Divider
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 20.0),
+              child: Divider(
+                height: 1,
+                thickness: 1,
+                color: Theme.of(context).dividerColor.withValues(alpha: 0.3),
+              ),
+            ),
+            
+            // Days In Lieu Section
+            _buildBalanceSection(
+              icon: Icons.event_available,
+              iconColor: dayInLieuColor,
+              title: 'Days In Lieu',
+              remaining: _daysInLieuRemaining,
+              used: _daysInLieuUsed,
+              onDecrement: () async {
+                if (_daysInLieuBalance > 0) {
+                  await DaysInLieuService.decrementBalance(1);
+                  await _loadDaysInLieuBalance();
+                }
+              },
+              onIncrement: () async {
+                await DaysInLieuService.incrementBalance(1);
+                await _loadDaysInLieuBalance();
+              },
+              warningText: _daysInLieuRemaining == 0 
+                ? 'No days remaining. Remember to add days when you earn them.'
+                : null,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBalanceSection({
+    required IconData icon,
+    required Color iconColor,
+    required String title,
+    required int remaining,
+    required int used,
+    String usedLabel = 'Used',
+    required VoidCallback onDecrement,
+    required VoidCallback onIncrement,
+    String? warningText,
+  }) {
+    final hasWarning = warningText != null;
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Header
+        Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: iconColor.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(icon, color: iconColor, size: 20),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              title,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 20),
+        
+        // Stats Row
+        Row(
+          children: [
+            Expanded(
+              child: _buildStatBox(
+                label: 'Remaining',
+                value: remaining.toString(),
+                valueColor: remaining == 0 ? Colors.orange : null,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildStatBox(
+                label: usedLabel,
+                value: used.toString(),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        
+        // Controls
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            _buildControlButton(
+              icon: Icons.remove,
+              onPressed: onDecrement,
+              tooltip: 'Decrease',
+            ),
+            const SizedBox(width: 16),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                'Balance',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+            const SizedBox(width: 16),
+            _buildControlButton(
+              icon: Icons.add,
+              onPressed: onIncrement,
+              tooltip: 'Increase',
+            ),
+          ],
+        ),
+        
+        // Warning
+        if (hasWarning)
+          Padding(
+            padding: const EdgeInsets.only(top: 12.0),
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.orange.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: Colors.orange.withValues(alpha: 0.3),
+                  width: 1,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.info_outline,
+                    color: Colors.orange.shade700,
+                    size: 18,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      warningText,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Colors.orange.shade700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildStatBox({
+    required String label,
+    required String value,
+    Color? valueColor,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        children: [
+          Text(
+            label,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              fontSize: 12,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: valueColor,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildControlButton({
+    required IconData icon,
+    required VoidCallback onPressed,
+    required String tooltip,
+  }) {
+    return Material(
+      color: Theme.of(context).colorScheme.primaryContainer,
+      borderRadius: BorderRadius.circular(8),
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          child: Icon(
+            icon,
+            color: Theme.of(context).colorScheme.onPrimaryContainer,
+            size: 20,
+          ),
+        ),
+      ),
     );
   }
 

@@ -10,6 +10,7 @@ import 'package:spdrivercalendar/features/calendar/services/roster_service.dart'
 import 'package:spdrivercalendar/features/calendar/services/event_service.dart';
 import 'package:spdrivercalendar/features/calendar/services/route_service.dart';
 import 'package:spdrivercalendar/services/bus_tracking_service.dart';
+import 'package:spdrivercalendar/services/color_customization_service.dart';
 
 class EventCard extends StatefulWidget {
   final Event event;
@@ -1432,6 +1433,26 @@ class _EventCardState extends State<EventCard> {
           holidayColor = Colors.purple;
           holidayIcon = Icons.money_off;
           break;
+        case 'day_in_lieu':
+          // Use customizable color from ColorCustomizationService
+          final dayInLieuColor = ColorCustomizationService.getColorForShift('DAY_IN_LIEU');
+          holidayColor = MaterialColor(
+            dayInLieuColor.value,
+            <int, Color>{
+              50: dayInLieuColor.withValues(alpha: 0.1),
+              100: dayInLieuColor.withValues(alpha: 0.2),
+              200: dayInLieuColor.withValues(alpha: 0.3),
+              300: dayInLieuColor.withValues(alpha: 0.4),
+              400: dayInLieuColor.withValues(alpha: 0.5),
+              500: dayInLieuColor,
+              600: dayInLieuColor,
+              700: dayInLieuColor,
+              800: dayInLieuColor,
+              900: dayInLieuColor,
+            },
+          );
+          holidayIcon = Icons.event_available;
+          break;
         default:
           holidayColor = Colors.grey;
           holidayIcon = Icons.event;
@@ -1515,7 +1536,16 @@ class _EventCardState extends State<EventCard> {
     
     // Determine card color based on various factors
     Color cardColor = Colors.white;
-    if (isWorkShift) {
+    
+    // Check for WFO events first - they should use WFO color
+    final wfoColor = widget.shiftInfoMap['WFO']?.color;
+    if (widget.event.isWorkForOthers && wfoColor != null) {
+      if (Theme.of(context).brightness == Brightness.dark) {
+        cardColor = wfoColor.withValues(alpha: 0.2);
+      } else {
+        cardColor = wfoColor.withValues(alpha: 0.2);
+      }
+    } else if (isWorkShift) {
       if (widget.isRestDay) {
         cardColor = widget.shiftInfoMap['R']?.color.withValues(alpha: 0.3) ?? Colors.grey.shade100;
       } else {
@@ -1526,8 +1556,8 @@ class _EventCardState extends State<EventCard> {
       cardColor = shiftInfo?.color.withValues(alpha: 0.1) ?? Colors.grey.withValues(alpha: 0.1);
     }
     
-    // In dark mode, adjust card colors
-    if (Theme.of(context).brightness == Brightness.dark) {
+    // In dark mode, adjust card colors (only if not already set for WFO)
+    if (!widget.event.isWorkForOthers && Theme.of(context).brightness == Brightness.dark) {
       if (isWorkShift) {
         if (widget.isRestDay) {
           cardColor = widget.shiftInfoMap['R']?.color.withValues(alpha: 0.3) ?? Colors.blueGrey.shade700;
@@ -1643,7 +1673,7 @@ class _EventCardState extends State<EventCard> {
                         ),
                       ),
                       // Rest day badge - compact on small screens
-                      if (widget.isRestDay && widget.event.isWorkShift)
+                      if (widget.isRestDay && widget.event.isWorkShift && !widget.event.isWorkForOthers)
                         Container(
                           padding: EdgeInsets.symmetric(
                             horizontal: MediaQuery.of(context).size.width < 380 ? 6.0 : 8.0,
@@ -1656,6 +1686,27 @@ class _EventCardState extends State<EventCard> {
                           ),
                           child: Text(
                             MediaQuery.of(context).size.width < 380 ? 'Rest' : 'Rest Day',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 11.0,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      // Work For Others badge - compact on small screens
+                      if (widget.event.isWorkForOthers)
+                        Container(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: MediaQuery.of(context).size.width < 380 ? 6.0 : 8.0,
+                            vertical: 3.0,
+                          ),
+                          margin: const EdgeInsets.only(left: 4),
+                          decoration: BoxDecoration(
+                            color: widget.shiftInfoMap['WFO']?.color ?? Colors.teal,
+                            borderRadius: BorderRadius.circular(12.0),
+                          ),
+                          child: Text(
+                            MediaQuery.of(context).size.width < 380 ? 'WFO' : 'Work For Others',
                             style: const TextStyle(
                               color: Colors.white,
                               fontSize: 11.0,

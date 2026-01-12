@@ -129,6 +129,8 @@ class Event {
   int? overtimeDuration; // In minutes
   // Sick day status: null, 'normal', 'self-certified', or 'force-majeure'
   String? sickDayType;
+  // Work For Others flag - indicates this is a WFO shift (only on rest days)
+  bool isWorkForOthers;
 
   Event({
     required this.id,
@@ -158,6 +160,7 @@ class Event {
     this.tookFullBreak = false,
     this.overtimeDuration,
     this.sickDayType,
+    this.isWorkForOthers = false,
   });
 
   // Helper method to check if using enhanced duties
@@ -281,6 +284,7 @@ class Event {
     bool? tookFullBreak,
     int? overtimeDuration,
     String? sickDayType,
+    bool? isWorkForOthers,
     List<String>? routes,
     String? startLocation,
     String? finishLocation,
@@ -316,6 +320,7 @@ class Event {
       tookFullBreak: tookFullBreak ?? this.tookFullBreak,
       overtimeDuration: overtimeDuration ?? this.overtimeDuration,
       sickDayType: sickDayType ?? this.sickDayType,
+      isWorkForOthers: isWorkForOthers ?? this.isWorkForOthers,
     );
   }
 
@@ -356,6 +361,7 @@ class Event {
       'tookFullBreak': tookFullBreak,
       'overtimeDuration': overtimeDuration,
       'sickDayType': sickDayType,
+      'isWorkForOthers': isWorkForOthers,
     };
   }
 
@@ -417,6 +423,7 @@ class Event {
       tookFullBreak: map['tookFullBreak'] ?? false,
       overtimeDuration: map['overtimeDuration'],
       sickDayType: map['sickDayType'],  // Nullable for backwards compatibility
+      isWorkForOthers: map['isWorkForOthers'] ?? false,  // Default to false for backwards compatibility
     );
     
     // Auto-migrate legacy duties if needed
