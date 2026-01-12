@@ -58,6 +58,7 @@ class SettingsScreenState extends State<SettingsScreen> {
   
   // Display settings
   bool _showOvernightDutiesOnBothDays = true; // Default to true to preserve current behavior
+  bool _showDutyCodesOnCalendar = true; // Default to true (ON)
   
   // Pay rate setting
   String _spreadPayRate = 'year1+2'; // Default to Year 1/2
@@ -141,6 +142,7 @@ class SettingsScreenState extends State<SettingsScreen> {
     
     // Load display settings - default to true to preserve current behavior
     _showOvernightDutiesOnBothDays = prefs.getBool(AppConstants.showOvernightDutiesOnBothDaysKey) ?? true;
+    _showDutyCodesOnCalendar = prefs.getBool(AppConstants.showDutyCodesOnCalendarKey) ?? true;
     
     // Load pay rate setting - default to Year 1/2
     _spreadPayRate = prefs.getString(AppConstants.spreadPayRateKey) ?? 'year1+2';
@@ -218,6 +220,16 @@ class SettingsScreenState extends State<SettingsScreen> {
     EventService.updateOvernightDutiesPreference(value);
   }
 
+  Future<void> _toggleDutyCodesDisplay(bool value) async {
+    setState(() {
+      _showDutyCodesOnCalendar = value;
+    });
+    await StorageService.saveBool(AppConstants.showDutyCodesOnCalendarKey, value);
+    
+    // The calendar will refresh automatically when navigating back to it
+    // via didChangeDependencies or when the setting is checked in _getCalendarDayDisplayText
+  }
+
   void _onColorsChanged() {
     // Trigger a rebuild to refresh any UI that depends on colors
     setState(() {});
@@ -289,6 +301,7 @@ class SettingsScreenState extends State<SettingsScreen> {
                         onColorsChanged: _onColorsChanged,
                       ),
                       _buildOvernightDutiesToggle(),
+                      _buildDutyCodesToggle(),
                     ],
                   ),
                   
@@ -1459,6 +1472,22 @@ class SettingsScreenState extends State<SettingsScreen> {
         secondary: const Icon(Icons.schedule),
         value: _showOvernightDutiesOnBothDays,
         onChanged: _toggleOvernightDutiesDisplay,
+      ),
+    );
+  }
+
+  Widget _buildDutyCodesToggle() {
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 4.0),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppTheme.borderRadius),
+      ),
+      child: SwitchListTile(
+        title: const Text('Show Duty Codes on Calendar'),
+        subtitle: const Text('Display assigned duty codes instead of shift letters (E/L/M/R)'),
+        secondary: const Icon(Icons.calendar_view_day),
+        value: _showDutyCodesOnCalendar,
+        onChanged: _toggleDutyCodesDisplay,
       ),
     );
   }

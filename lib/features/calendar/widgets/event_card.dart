@@ -215,7 +215,7 @@ class _EventCardState extends State<EventCard> {
       }
       
       // Special handling for Training shifts
-      if (shiftCode == 'TRAIN23/24' || shiftCode == 'CPC') {
+      if (shiftCode == 'CPC') {
         await _loadTrainingShiftData(shiftCode);
         return;
       }
@@ -1920,7 +1920,7 @@ class _EventCardState extends State<EventCard> {
                 const SizedBox(height: 3.0), // Reduced gap - route/location and breaks are related
               ],
               // MODIFIED: Break times row (if available AND NOT BusCheck AND is work shift AND NOT training shift AND NOT spare shift)
-              if (breakTime != null && !isBusCheckShift && !widget.event.title.contains('(OT)') && widget.event.isWorkShift && widget.event.title != 'TRAIN23/24' && widget.event.title != 'CPC' && !widget.event.title.startsWith('SP') && widget.event.title != '22B/01') ...[
+              if (breakTime != null && !isBusCheckShift && !widget.event.title.contains('(OT)') && widget.event.isWorkShift && widget.event.title != 'CPC' && !widget.event.title.startsWith('SP') && widget.event.title != '22B/01') ...[
                 Padding(
                   padding: const EdgeInsets.only(bottom: 2.0), // Match report line padding
                   child: Row(
@@ -4615,7 +4615,7 @@ class _EventCardState extends State<EventCard> {
     
     // For PZ shifts, Jamestown Road shifts, Training shifts, and Universal/Euro shifts, use the specialized display format
     if (widget.event.title.startsWith('PZ') || widget.event.title.startsWith('811/') || 
-        widget.event.title == 'TRAIN23/24' || widget.event.title == 'CPC' ||
+        widget.event.title == 'CPC' ||
         RegExp(r'^\d+/').hasMatch(widget.event.title)) {
       return <TextSpan>[
         if (startLocation != null && startLocation!.isNotEmpty) ...[

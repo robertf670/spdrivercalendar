@@ -95,6 +95,9 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
   // Marked In settings
   bool _markedInEnabled = false;
   String _markedInStatus = 'Shift';
+  
+  // Display settings
+  bool _showDutyCodesOnCalendar = true; // Default to true (ON)
 
   // Holiday section expanded state (year -> expanded)
   final Map<int, bool> _holidayYearExpanded = {};
@@ -210,12 +213,16 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
     
     final newMarkedInEnabled = await StorageService.getBool(AppConstants.markedInEnabledKey);
     final newMarkedInStatus = await StorageService.getString(AppConstants.markedInStatusKey) ?? 'Shift';
+    final newShowDutyCodes = await StorageService.getBool(AppConstants.showDutyCodesOnCalendarKey, defaultValue: true);
     
     // Always update state to ensure calendar rebuilds with latest settings
     if (mounted) {
-      final needsUpdate = _markedInEnabled != newMarkedInEnabled || _markedInStatus != newMarkedInStatus;
+      final needsUpdate = _markedInEnabled != newMarkedInEnabled || 
+                         _markedInStatus != newMarkedInStatus ||
+                         _showDutyCodesOnCalendar != newShowDutyCodes;
       _markedInEnabled = newMarkedInEnabled;
       _markedInStatus = newMarkedInStatus;
+      _showDutyCodesOnCalendar = newShowDutyCodes;
       
       if (needsUpdate) {
         setState(() {});
@@ -1027,7 +1034,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                       } else if (selectedZone == 'Jamestown Road') {
                         title = selectedShiftNumber; // Use the shift code (e.g., 811/01)
                       } else if (selectedZone == 'Training') {
-                        title = selectedShiftNumber; // Use the training code (e.g., TRAIN23/24, CPC)
+                        title = selectedShiftNumber; // Use the training code (e.g., CPC)
                       } else {
                         // Regular PZ shifts
                         title = selectedShiftNumber; // Title is the shift code (e.g., PZ1/01)
@@ -4307,6 +4314,57 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
     );
   }
 
+  /// Helper method to format display text for calendar (shortens BusCheck to BUSC)
+  String _formatDisplayText(String text) {
+    // Shorten "BusCheck" to "BUSC" for calendar display
+    if (text.startsWith('BusCheck')) {
+      return text.replaceFirst('BusCheck', 'BUSC');
+    }
+    return text;
+  }
+
+  /// Helper method to determine what text to display on calendar day
+  /// Returns: duty code for regular work shifts, spare title for spare shifts, or shift letter (E/L/M/R)
+  String _getCalendarDayDisplayText(DateTime date) {
+    final events = getEventsForDay(date);
+    final rosterShift = _startDate != null ? getShiftForDate(date) : '';
+    
+    // If duty codes display is disabled, always return shift letter
+    if (!_showDutyCodesOnCalendar) {
+      return rosterShift;
+    }
+    
+    // First, check for spare shifts - always show their title (ignore assigned duties)
+    for (final event in events) {
+      if (event.isWorkShift && 
+          (event.title.startsWith('SP') || event.title == '22B/01')) {
+        return event.title; // Show spare shift title (e.g., "SP1000")
+      }
+    }
+    
+    // Second, check for regular work shifts (not spare, not OT)
+    // For regular work shifts, the title IS the duty code (e.g., "PZ1/74", "1/13X", "807/20")
+    // assignedDuties is only used for spare shifts
+    for (final event in events) {
+      if (event.isWorkShift && 
+          !event.title.startsWith('SP') && 
+          event.title != '22B/01' &&
+          !event.title.contains('(OT)')) {
+        // Check if this event has assigned duties (for spare shifts that were converted)
+        final dutyCodes = event.getCurrentDutyCodes();
+        if (dutyCodes.isNotEmpty) {
+          // Return the first assigned duty code (formatted for display)
+          return _formatDisplayText(dutyCodes.first);
+        }
+        // For regular work shifts, the title IS the duty code (formatted for display)
+        return _formatDisplayText(event.title);
+      }
+    }
+    
+    // Fallback to roster shift letter (E/L/M/R)
+    return rosterShift;
+  }
+
   Widget _buildCalendarDay(DateTime date, {required bool isToday, required bool isOutsideDay}) {
     final shift = _startDate != null ? getShiftForDate(date) : '';
     final shiftInfo = _shiftInfoMap[shift];
@@ -4315,6 +4373,9 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
     final isBankHoliday = bankHoliday != null;
     final isHoliday = _holidays.any((h) => h.containsDate(date));
     final isSaturdayService = RosterService.isSaturdayService(date);
+    
+    // Get the display text (duty code, spare title, or shift letter)
+    final displayText = _getCalendarDayDisplayText(date);
     
     // Calculate responsive badge sizes
     final screenWidth = MediaQuery.of(context).size.width;
@@ -4354,13 +4415,15 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                 children: [
                   Text(
                     '${date.day}',
-                    style: const TextStyle(fontSize: 14), // Slightly smaller
+                    style: TextStyle(
+                      fontSize: _getResponsiveDateFontSize(screenWidth),
+                    ),
                   ),
-                  if (shift.isNotEmpty && !isHoliday)
+                  if (displayText.isNotEmpty && !isHoliday)
                     Text(
-                      shift,
-                      style: const TextStyle(
-                        fontSize: 10, // Smaller font
+                      displayText,
+                      style: TextStyle(
+                        fontSize: _getResponsiveDutyFontSize(screenWidth),
                         fontWeight: FontWeight.bold,
                         height: 1.0, // Reduce line height
                       ),
@@ -4370,8 +4433,8 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                   if (isHoliday)
                     Text(
                       'H',
-                      style: const TextStyle(
-                        fontSize: 10, // Smaller font
+                      style: TextStyle(
+                        fontSize: _getResponsiveDutyFontSize(screenWidth),
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
                         height: 1.0, // Reduce line height
@@ -4429,6 +4492,32 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
     );
   }
   
+  // Helper method to get responsive date font size
+  double _getResponsiveDateFontSize(double screenWidth) {
+    if (screenWidth < 350) {
+      return 11.0; // Very small screens
+    } else if (screenWidth < 450) {
+      return 12.0; // Small screens
+    } else if (screenWidth < 600) {
+      return 12.0; // Medium screens
+    } else {
+      return 13.0; // Large screens (reduced from 14)
+    }
+  }
+
+  // Helper method to get responsive duty code font size
+  double _getResponsiveDutyFontSize(double screenWidth) {
+    if (screenWidth < 350) {
+      return 8.0; // Very small screens
+    } else if (screenWidth < 450) {
+      return 9.0; // Small screens
+    } else if (screenWidth < 600) {
+      return 9.5; // Medium screens
+    } else {
+      return 10.0; // Large screens
+    }
+  }
+
   // Helper method to calculate responsive badge sizes for calendar day
   Map<String, double> _getCalendarBadgeSizes(double screenWidth) {
     if (screenWidth < 350) {

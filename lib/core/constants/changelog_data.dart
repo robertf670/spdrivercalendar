@@ -1,4 +1,14 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.18.0': [
+    {
+      'title': 'Calendar Duty Code Display',
+      'description': 'Calendar now displays assigned duty codes instead of shift letters (E/L/M/R). Spare shifts show their title (e.g., "SP1000"). BusCheck duties shortened to "BUSC1", "BUSC2", etc. Toggle available in Appearance settings to show shift letters instead.',
+    },
+    {
+      'title': 'TRAIN23/24 Training Duty Removed',
+      'description': 'Removed TRAIN23/24 training duty as training has been completed.',
+    },
+  ],
   '2.17.3': [
     {
       'title': 'Fixed Spare Duty Location Display for Half Duties',

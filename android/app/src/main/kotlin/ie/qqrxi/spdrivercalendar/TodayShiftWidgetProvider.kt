@@ -609,7 +609,6 @@ class TodayShiftWidgetProvider : AppWidgetProvider() {
                    title.startsWith("SP") ||
                    title.startsWith("PZ") ||
                    title.startsWith("BusCheck") ||
-                   title == "TRAIN23/24" ||
                    title == "CPC" ||
                    title == "22B/01" ||
                    title.matches(Regex("^\\d+/.*"))
