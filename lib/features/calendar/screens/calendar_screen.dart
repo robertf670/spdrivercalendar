@@ -35,6 +35,7 @@ import 'package:spdrivercalendar/features/bills/screens/bills_screen.dart'; // I
 import 'package:spdrivercalendar/features/payscale/screens/payscale_screen.dart'; // Import the Payscale screen
 import 'package:spdrivercalendar/features/timing_points/screens/timing_points_screen.dart'; // Import the Timing Points screen
 import 'package:spdrivercalendar/features/calendar/screens/week_view_screen.dart'; // Import the Week View screen
+import 'package:spdrivercalendar/features/calendar/screens/year_view_screen.dart'; // Import the Year View screen
 import 'package:spdrivercalendar/features/search/screens/search_screen.dart'; // Import the Search screen
 import 'package:uuid/uuid.dart';
 import 'package:spdrivercalendar/services/update_service.dart';
@@ -4402,7 +4403,9 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                 },
               ),
               GestureDetector(
-                onTap: _showMonthYearPicker,
+                onTap: () {
+                  _showYearView(_focusedDay.year);
+                },
                 child: Container(
                   padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
                   decoration: BoxDecoration(
@@ -4441,7 +4444,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
         // The TableCalendar with headerVisible: false to hide the default header
         // Note: TableCalendar allows vertical scrolling when used in a ScrollView
         TableCalendar(
-          key: ValueKey('calendar_${_markedInEnabled}_$_markedInStatus'), // Force rebuild when marked in settings change
+          key: ValueKey('calendar_${_markedInEnabled}_$_markedInStatus}_${_focusedDay.year}_${_focusedDay.month}'), // Force rebuild when marked in settings change or month changes
           firstDay: DateTime.utc(2020, 1, 1),
           lastDay: DateTime.utc(2030, 12, 31),
           focusedDay: _focusedDay,
@@ -4510,7 +4513,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (BuildContext context) {
+      builder: (BuildContext modalContext) {
         return StatefulBuilder(
           builder: (BuildContext context, StateSetter setModalState) {
             return Container(
@@ -4572,20 +4575,32 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                             });
                           },
                         ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.5), // Use theme color
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: Theme.of(context).dividerColor,
+                        GestureDetector(
+                          onTap: () {
+                            final yearToShow = _selectedYear;
+                            Navigator.pop(modalContext); // Close the month/year picker
+                            // Navigate to year view after modal closes
+                            Future.delayed(const Duration(milliseconds: 100), () {
+                              if (mounted) {
+                                _showYearView(yearToShow);
+                              }
+                            });
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.5), // Use theme color
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: Theme.of(context).dividerColor,
+                              ),
                             ),
-                          ),
-                          child: Text(
-                            '$_selectedYear',
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
+                            child: Text(
+                              '$_selectedYear',
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
                           ),
                         ),
@@ -4749,6 +4764,25 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
     final wfoColor = _shiftInfoMap['WFO']?.color;
     final dayInLieuColor = ColorCustomizationService.getColorForShift('DAY_IN_LIEU');
     
+    // Check for sick day events - priority over other colors
+    final sickDayEvent = events.firstWhere(
+      (event) => event.sickDayType != null,
+      orElse: () => Event(
+        id: '',
+        title: '',
+        startDate: date,
+        startTime: const TimeOfDay(hour: 0, minute: 0),
+        endDate: date,
+        endTime: const TimeOfDay(hour: 0, minute: 0),
+        isHoliday: false,
+        hasLateBreak: false,
+        tookFullBreak: false,
+        isWorkForOthers: false,
+      ),
+    );
+    final hasSickDay = sickDayEvent.sickDayType != null;
+    final sickDayColor = hasSickDay ? ColorCustomizationService.getColorForSickType(sickDayEvent.sickDayType) : null;
+    
     // Get the display text (duty code, spare title, or shift letter)
     final displayText = _getCalendarDayDisplayText(date);
     
@@ -4763,15 +4797,17 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
         margin: const EdgeInsets.all(4.0),
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: isDayInLieu
-              ? dayInLieuColor.withValues(alpha: 0.3)
-              : isUnpaidLeave
-                  ? Colors.purple.withValues(alpha: 0.3)
-                  : isHoliday 
-                      ? holidayColor.withValues(alpha: 0.3)
-                      : hasWfoEvent && wfoColor != null
-                          ? wfoColor.withValues(alpha: 0.3)
-                          : shiftInfo?.color.withValues(alpha: 0.3),
+          color: hasSickDay && sickDayColor != null
+              ? sickDayColor.withValues(alpha: 0.3)
+              : isDayInLieu
+                  ? dayInLieuColor.withValues(alpha: 0.3)
+                  : isUnpaidLeave
+                      ? Colors.purple.withValues(alpha: 0.3)
+                      : isHoliday 
+                          ? holidayColor.withValues(alpha: 0.3)
+                          : hasWfoEvent && wfoColor != null
+                              ? wfoColor.withValues(alpha: 0.3)
+                              : shiftInfo?.color.withValues(alpha: 0.3),
           borderRadius: BorderRadius.circular(8.0),
           border: isToday
               ? Border.all(
@@ -4872,15 +4908,17 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                   width: 6, // Smaller dot
                   height: 6, // Smaller dot
                   decoration: BoxDecoration(
-                    color: isDayInLieu
-                        ? dayInLieuColor
-                        : isUnpaidLeave
-                            ? Colors.purple
-                            : isHoliday 
-                                ? holidayColor 
-                                : hasWfoEvent && wfoColor != null
-                                    ? wfoColor
-                                    : (shiftInfo?.color ?? Theme.of(context).primaryColor),
+                    color: hasSickDay && sickDayColor != null
+                        ? sickDayColor
+                        : isDayInLieu
+                            ? dayInLieuColor
+                            : isUnpaidLeave
+                                ? Colors.purple
+                                : isHoliday 
+                                    ? holidayColor 
+                                    : hasWfoEvent && wfoColor != null
+                                        ? wfoColor
+                                        : (shiftInfo?.color ?? Theme.of(context).primaryColor),
                     shape: BoxShape.circle,
                   ),
                 ),
@@ -7487,6 +7525,55 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
         ),
       ),
     );
+  }
+
+  void _showYearView(int year) async {
+    final selectedMonth = await Navigator.of(context).push<DateTime>(
+      MaterialPageRoute(
+        builder: (context) => YearViewScreen(
+          key: ValueKey('year_view_$year'),
+          year: year,
+          shiftInfoMap: _shiftInfoMap,
+          startDate: _startDate,
+          startWeek: _startWeek,
+          holidays: _holidays,
+          bankHolidays: _bankHolidays,
+        ),
+      ),
+    );
+    
+    // If a month was selected, navigate to that month
+    if (selectedMonth != null && mounted) {
+      // Extract year and month explicitly
+      final selectedYear = selectedMonth.year;
+      final selectedMonthNum = selectedMonth.month;
+      
+      // Create a fresh date with explicit values
+      final targetDate = DateTime(selectedYear, selectedMonthNum, 1);
+      
+      // Preload events for the selected month before updating UI
+      try {
+        await EventService.preloadMonth(targetDate);
+      } catch (e) {
+        // Handle preload errors gracefully
+      }
+      
+      // Update the focused day and selected day - this should trigger TableCalendar to navigate
+      if (mounted) {
+        setState(() {
+          _focusedDay = targetDate;
+          _selectedDay = targetDate;
+        });
+        
+        // Force a rebuild of the calendar by calling onPageChanged
+        // This ensures TableCalendar actually navigates to the new month
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            _onPageChanged(targetDate);
+          }
+        });
+      }
+    }
   }
 
 

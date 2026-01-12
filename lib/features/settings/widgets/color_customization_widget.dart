@@ -55,6 +55,16 @@ class _ColorCustomizationWidgetState extends State<ColorCustomizationWidget> {
       if (!_currentColors.containsKey('WFO')) {
         _currentColors['WFO'] = ColorCustomizationService.getColorForShift('WFO');
       }
+      // Ensure sick type colors are always present
+      if (!_currentColors.containsKey('SICK_NORMAL')) {
+        _currentColors['SICK_NORMAL'] = ColorCustomizationService.getColorForShift('SICK_NORMAL');
+      }
+      if (!_currentColors.containsKey('SICK_SELF_CERTIFIED')) {
+        _currentColors['SICK_SELF_CERTIFIED'] = ColorCustomizationService.getColorForShift('SICK_SELF_CERTIFIED');
+      }
+      if (!_currentColors.containsKey('SICK_FORCE_MAJEURE')) {
+        _currentColors['SICK_FORCE_MAJEURE'] = ColorCustomizationService.getColorForShift('SICK_FORCE_MAJEURE');
+      }
       _hasCustomColors = ColorCustomizationService.hasCustomColors();
     });
   }
@@ -249,6 +259,38 @@ class _ColorCustomizationWidgetState extends State<ColorCustomizationWidget> {
                     Expanded(
                       child: _buildColorTile('DAY_IN_LIEU', 'Day In Lieu', _currentColors['DAY_IN_LIEU'] ?? ColorCustomizationService.getColorForShift('DAY_IN_LIEU'), displayText: 'Lieu'),
                     ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                // Sick type color pickers
+                const Text(
+                  'Sick Day Colors',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildColorTile('SICK_NORMAL', 'Normal Sick', _currentColors['SICK_NORMAL'] ?? ColorCustomizationService.getColorForShift('SICK_NORMAL'), displayText: 'Normal'),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _buildColorTile('SICK_SELF_CERTIFIED', 'Self-Certified', _currentColors['SICK_SELF_CERTIFIED'] ?? ColorCustomizationService.getColorForShift('SICK_SELF_CERTIFIED'), displayText: 'Self'),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildColorTile('SICK_FORCE_MAJEURE', 'Force Majeure', _currentColors['SICK_FORCE_MAJEURE'] ?? ColorCustomizationService.getColorForShift('SICK_FORCE_MAJEURE'), displayText: 'Force'),
+                    ),
+                    const SizedBox(width: 8),
+                    // Empty space to maintain grid alignment
+                    Expanded(child: Container()),
                   ],
                 ),
                 const SizedBox(height: 16),

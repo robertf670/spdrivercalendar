@@ -7,14 +7,16 @@ import 'package:spdrivercalendar/theme/app_theme.dart';
 /// (time over 10 hours multiplied by year level rate)
 class EarningsCalculatorCard extends StatefulWidget {
   final Duration totalWorkTime;
-  final Duration spreadTime;
+  final Duration thisWeekSpreadTime;
+  final Duration lastWeekSpreadTime;
   final int overtimeShifts;
   final Duration overtimeDuration;
 
   const EarningsCalculatorCard({
     super.key,
     required this.totalWorkTime,
-    required this.spreadTime,
+    required this.thisWeekSpreadTime,
+    required this.lastWeekSpreadTime,
     this.overtimeShifts = 0,
     this.overtimeDuration = const Duration(),
   });
@@ -74,16 +76,16 @@ class _EarningsCalculatorCardState extends State<EarningsCalculatorCard> {
     await StorageService.saveString('selected_year_level', level);
   }
 
-  double? _calculateEarnings() {
+  double? _calculateEarnings(Duration spreadTime) {
     if (_selectedYearLevel == null || _payRates == null) return null;
 
     final spreadRate = _payRates![_selectedYearLevel!];
     if (spreadRate == null) return null;
 
-    // Calculate spread over payment: time over 10 hours multiplied by year level rate
-    final spreadHours = widget.spreadTime.inHours + 
-        (widget.spreadTime.inMinutes / 60.0);
-    final spreadPayHours = spreadHours > 10 ? spreadHours - 10 : 0;
+    // Calculate spread over payment: spreadTime is already the time over 10 hours
+    // (calculated by _calculateSpreadPay which subtracts 10 hours from total spread time)
+    final spreadPayHours = spreadTime.inHours + 
+        (spreadTime.inMinutes.remainder(60) / 60.0);
     final spreadPayAmount = spreadPayHours * spreadRate;
 
     return spreadPayAmount;
@@ -99,8 +101,6 @@ class _EarningsCalculatorCardState extends State<EarningsCalculatorCard> {
         ),
       );
     }
-
-    final earnings = _calculateEarnings();
 
     return Card(
       elevation: 2,
@@ -143,30 +143,19 @@ class _EarningsCalculatorCardState extends State<EarningsCalculatorCard> {
               ],
             ),
             const SizedBox(height: 16),
-            if (earnings != null) ...[
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: AppTheme.primaryColor.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'Spread Pay Estimate:',
-                      style: TextStyle(fontSize: 16),
-                    ),
-                    Text(
-                      '€${earnings.toStringAsFixed(2)}',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: AppTheme.primaryColor,
-                      ),
-                    ),
-                  ],
-                ),
+            if (_selectedYearLevel != null && _payRates != null) ...[
+              _buildEarningsRow(
+                'This Week',
+                widget.thisWeekSpreadTime,
+                _calculateEarnings(widget.thisWeekSpreadTime),
+                Colors.indigo,
+              ),
+              const SizedBox(height: 12),
+              _buildEarningsRow(
+                'Last Week',
+                widget.lastWeekSpreadTime,
+                _calculateEarnings(widget.lastWeekSpreadTime),
+                Colors.deepPurple,
               ),
               const SizedBox(height: 12),
               Text(
@@ -189,8 +178,8 @@ class _EarningsCalculatorCardState extends State<EarningsCalculatorCard> {
               ),
             ],
             const SizedBox(height: 8),
-            _buildStatRow('Work Time', _formatDuration(widget.totalWorkTime)),
-            _buildStatRow('Spread Time', _formatDuration(widget.spreadTime)),
+            _buildStatRow('This Week Spread', _formatDuration(widget.thisWeekSpreadTime)),
+            _buildStatRow('Last Week Spread', _formatDuration(widget.lastWeekSpreadTime)),
             if (widget.overtimeShifts > 0)
               _buildStatRow(
                 'Overtime Shifts',
@@ -198,6 +187,49 @@ class _EarningsCalculatorCardState extends State<EarningsCalculatorCard> {
               ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildEarningsRow(String label, Duration spreadTime, double? earnings, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: color,
+                ),
+              ),
+              Text(
+                _formatDuration(spreadTime),
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                ),
+              ),
+            ],
+          ),
+          Text(
+            earnings != null ? '~€${earnings.toStringAsFixed(2)}' : '~€0.00',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+        ],
       ),
     );
   }

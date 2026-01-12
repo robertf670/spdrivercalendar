@@ -116,13 +116,18 @@ class RosterService {
   }
   
   // Helper method to check if a date should run Saturday service
-  // These are special dates that run Saturday service regardless of actual day of week
+  // These are special dates that run Saturday service, but NOT if they fall on a Sunday
   static bool isSaturdayService(DateTime date) {
     final month = date.month;
     final day = date.day;
+    final weekday = date.weekday; // 1=Monday, 7=Sunday
     
-    // December 24, 27, 29, 30, 31 run Saturday service
+    // December 24, 27, 29, 30, 31 run Saturday service, but NOT if they're on a Sunday
     if (month == 12 && (day == 24 || day == 27 || day == 29 || day == 30 || day == 31)) {
+      // Don't show Saturday service if it's actually a Sunday
+      if (weekday == DateTime.sunday) {
+        return false;
+      }
       return true;
     }
     

@@ -1570,12 +1570,13 @@ class _EventCardState extends State<EventCard> {
       }
     }
     
-    // Override card color for sick days with subtle orange tint
+    // Override card color for sick days using customizable sick type colors
     if (widget.event.sickDayType != null) {
+      final sickDayColor = ColorCustomizationService.getColorForSickType(widget.event.sickDayType);
       if (Theme.of(context).brightness == Brightness.dark) {
-        cardColor = Colors.orange.withValues(alpha: 0.15);
+        cardColor = sickDayColor.withValues(alpha: 0.15);
       } else {
-        cardColor = Colors.orange.withValues(alpha: 0.08);
+        cardColor = sickDayColor.withValues(alpha: 0.08);
       }
     }
     

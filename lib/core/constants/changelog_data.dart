@@ -5,6 +5,10 @@ final Map<String, List<Map<String, String>>> changelogData = {
       'description': 'Calendar now displays assigned duty codes instead of shift letters (E/L/M/R). Spare shifts show their title (e.g., "SP1000"). BusCheck duties shortened to "BUSC1", "BUSC2", etc. Toggle available in Appearance settings to show shift letters instead.',
     },
     {
+      'title': 'Year View Feature',
+      'description': 'Added new Year View feature - click on the month/year header (e.g., "January 2026") to see all 12 months at once in a beautiful grid layout. Navigate between years using the arrow buttons, and tap any month to jump directly to it. All calendar colors and indicators (shifts, holidays, bank holidays, Saturday service) are displayed exactly as in the main calendar view.',
+    },
+    {
       'title': 'Work For Others Feature',
       'description': 'Added "Work For Others" feature for tracking shifts worked on rest days. WFO option only appears when adding events on rest days. Tracked separately in statistics (excluded from "Rest Days Worked").',
     },
@@ -19,6 +23,14 @@ final Map<String, List<Map<String, String>>> changelogData = {
     {
       'title': 'Annual Leave Balance Tracking',
       'description': 'Added balance tracking for annual leave. Set your initial balance via popup on first launch, then manage it in Settings > Holidays & Leave. Only future holidays (winter, summer, other) count toward used days - past holidays are ignored. If you want existing holidays to count, remove them and add them again. Balance visible in Statistics screen.',
+    },
+    {
+      'title': 'Customizable Sick Day Colors',
+      'description': 'Added customizable colors for different sick day types (Normal Sick, Self-Certified, Force Majeure). Each sick type now has its own distinct default color that can be customized in Settings > Appearance > Customize Shift Colors. Sick day colors are applied to calendar cells, event cards, and year view days.',
+    },
+    {
+      'title': 'Fixed Spread Payment Calculation',
+      'description': 'Fixed spread payment calculation bug in Earnings Calculator. The calculation was incorrectly using total minutes instead of minutes remainder, causing incorrect earnings amounts. Now correctly calculates spread pay for time over 10 hours. Also updated Earnings Calculator to show separate "This Week" and "Last Week" calculations with approximate (~) indicators.',
     },
     {
       'title': 'TRAIN23/24 Training Duty Removed',

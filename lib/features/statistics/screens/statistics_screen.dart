@@ -729,9 +729,8 @@ class StatisticsScreenState extends State<StatisticsScreen>
                       final summaryStats = _calculateSummaryStatistics();
                       return EarningsCalculatorCard(
                         totalWorkTime: workTimeStats['total'] ?? Duration.zero,
-                        spreadTime: (spreadStats['thisWeek'] ?? Duration.zero) +
-                                   (spreadStats['lastWeek'] ?? Duration.zero) +
-                                   (spreadStats['thisMonth'] ?? Duration.zero),
+                        thisWeekSpreadTime: spreadStats['thisWeek'] ?? Duration.zero,
+                        lastWeekSpreadTime: spreadStats['lastWeek'] ?? Duration.zero,
                         overtimeShifts: summaryStats['overtimeShifts'] ?? 0,
                         overtimeDuration: const Duration(),
                       );
