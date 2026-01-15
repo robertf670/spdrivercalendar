@@ -1,3 +1,5 @@
+import 'package:flutter/services.dart';
+import 'dart:convert';
 import 'package:spdrivercalendar/core/constants/app_constants.dart';
 import 'package:spdrivercalendar/core/services/storage_service.dart';
 import 'package:spdrivercalendar/features/calendar/services/holiday_service.dart';
@@ -32,15 +34,51 @@ class AnnualLeaveService {
     return newBalance;
   }
 
+  /// Check if a date is a bank holiday
+  static Future<bool> _isBankHoliday(DateTime date) async {
+    try {
+      final bankHolidaysData = await rootBundle.loadString('assets/bank_holidays.json');
+      final bankHolidays = json.decode(bankHolidaysData);
+      
+      final dateStr = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+      
+      // Find the year entry
+      final yearEntry = (bankHolidays['IrelandBankHolidays'] as List)
+          .firstWhere((entry) => entry['year'] == date.year, orElse: () => null);
+      
+      if (yearEntry == null) return false;
+      
+      // Check if the date is in the holidays list
+      return (yearEntry['holidays'] as List)
+          .any((holiday) => holiday['date'] == dateStr);
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// Check if user is on M-F schedule (through marked-in status)
+  static Future<bool> _isOnMFSchedule() async {
+    final markedInEnabled = await StorageService.getBool(AppConstants.markedInEnabledKey);
+    if (markedInEnabled) {
+      final markedInStatus = await StorageService.getString(AppConstants.markedInStatusKey) ?? 'Shift';
+      return markedInStatus == 'M-F';
+    }
+    // If not marked in, cannot determine schedule - return false
+    // Only apply bank holiday exclusion when explicitly on M-F schedule
+    return false;
+  }
+
   /// Get the number of annual leave days that are booked in the future
   /// Only counts holidays (winter, summer, other) that start on or after today
   /// Past holidays are ignored as they were already accounted for when balance was set
-  /// Counts all calendar days (including weekends) since work can occur any day of the week
+  /// For M-F schedules: excludes bank holidays since they are rest days
+  /// For other schedules: counts all calendar days (including weekends) since work can occur any day of the week
   /// Since work is 5 days per week, calculates: (calendar days / 7) * 5
   static Future<int> getUsedDays() async {
     final holidays = await HolidayService.getHolidays();
     final today = DateTime.now();
     final todayNormalized = DateTime(today.year, today.month, today.day);
+    final isMFSchedule = await _isOnMFSchedule();
     
     int usedDays = 0;
     for (final holiday in holidays) {
@@ -61,14 +99,33 @@ class AnnualLeaveService {
             holiday.endDate.day,
           );
           
-          // Count all calendar days (inclusive)
-          final calendarDays = endDateNormalized.difference(startDateNormalized).inDays + 1;
-          
-          // Since work is 5 days per week, calculate working days: (calendar days / 7) * 5
-          // Round to nearest integer to handle partial weeks
-          final workingDays = ((calendarDays / 7) * 5).round();
-          
-          usedDays += workingDays;
+          if (isMFSchedule) {
+            // For M-F schedules: count only working days, excluding bank holidays
+            int workingDays = 0;
+            DateTime currentDate = startDateNormalized;
+            while (!currentDate.isAfter(endDateNormalized)) {
+              final weekday = currentDate.weekday;
+              // Count only Monday-Friday (weekday 1-5)
+              if (weekday >= 1 && weekday <= 5) {
+                // Check if it's a bank holiday - exclude if it is
+                final isBankHolidayDate = await _isBankHoliday(currentDate);
+                if (!isBankHolidayDate) {
+                  workingDays++;
+                }
+              }
+              currentDate = currentDate.add(const Duration(days: 1));
+            }
+            usedDays += workingDays;
+          } else {
+            // For non-M-F schedules: count all calendar days (inclusive)
+            final calendarDays = endDateNormalized.difference(startDateNormalized).inDays + 1;
+            
+            // Since work is 5 days per week, calculate working days: (calendar days / 7) * 5
+            // Round to nearest integer to handle partial weeks
+            final workingDays = ((calendarDays / 7) * 5).round();
+            
+            usedDays += workingDays;
+          }
         }
       }
     }

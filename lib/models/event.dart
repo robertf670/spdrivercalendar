@@ -120,6 +120,11 @@ class Event {
   String? firstHalfBus;  // For storing the first half bus number
   String? secondHalfBus;  // For storing the second half bus number
   Map<String, String>? busAssignments;  // Map of duty code to assigned bus number
+  // Bus breakdown tracking - stores buses that were replaced due to breakdowns
+  List<String>? additionalBusesUsed;  // For single bus shifts (workout, overtime)
+  List<String>? firstHalfAdditionalBuses;  // For full duties - first half breakdown buses
+  List<String>? secondHalfAdditionalBuses;  // For full duties - second half breakdown buses
+  Map<String, List<String>>? additionalBusesByDuty;  // For spare duties - per-duty breakdown buses
   bool isHoliday;  // Whether this event represents a holiday
   String? holidayType;  // The type of holiday ('winter' or 'summer')
   String? notes; // Add notes field
@@ -153,6 +158,10 @@ class Event {
     this.firstHalfBus,
     this.secondHalfBus,
     this.busAssignments,
+    this.additionalBusesUsed,
+    this.firstHalfAdditionalBuses,
+    this.secondHalfAdditionalBuses,
+    this.additionalBusesByDuty,
     this.isHoliday = false,
     this.holidayType,
     this.notes,
@@ -261,6 +270,124 @@ class Event {
     }
   }
 
+  // Change bus for single bus shifts (workout, overtime) - moves old bus to history
+  void changeBusForSingleShift(String? newBus) {
+    final oldBus = firstHalfBus ?? secondHalfBus; // Get current primary bus
+    
+    // If there's an old bus and it's different from the new bus, add it to breakdown history
+    // Always add to history to count all bus changes in statistics
+    if (oldBus != null && oldBus.isNotEmpty && newBus != null && newBus.isNotEmpty && oldBus != newBus.trim()) {
+      additionalBusesUsed ??= [];
+      additionalBusesUsed!.add(oldBus); // Always add, even if duplicate - counts all changes
+    }
+    
+    // Set new bus as primary (use firstHalfBus for single bus shifts)
+    if (newBus != null && newBus.isNotEmpty) {
+      firstHalfBus = newBus.trim();
+      secondHalfBus = null; // Clear second half for single bus shifts
+    } else {
+      firstHalfBus = null;
+    }
+  }
+
+  // Change bus for first half of full duty - moves old bus to history
+  void changeBusForFirstHalf(String? newBus) {
+    final oldBus = firstHalfBus;
+    if (oldBus != null && oldBus.isNotEmpty && newBus != null && newBus.isNotEmpty && oldBus != newBus.trim()) {
+      firstHalfAdditionalBuses ??= [];
+      firstHalfAdditionalBuses!.add(oldBus); // Always add, even if duplicate - counts all changes
+    }
+    firstHalfBus = newBus?.trim();
+  }
+
+  // Change bus for second half of full duty - moves old bus to history
+  void changeBusForSecondHalf(String? newBus) {
+    final oldBus = secondHalfBus;
+    if (oldBus != null && oldBus.isNotEmpty && newBus != null && newBus.isNotEmpty && oldBus != newBus.trim()) {
+      secondHalfAdditionalBuses ??= [];
+      secondHalfAdditionalBuses!.add(oldBus); // Always add, even if duplicate - counts all changes
+    }
+    secondHalfBus = newBus?.trim();
+  }
+
+  // Change bus for a specific duty in spare shift - moves old bus to history
+  void changeBusForDuty(String dutyCode, String? newBus) {
+    final oldBus = busAssignments?[dutyCode];
+    if (oldBus != null && oldBus.isNotEmpty && newBus != null && newBus.isNotEmpty && oldBus != newBus.trim()) {
+      additionalBusesByDuty ??= {};
+      additionalBusesByDuty![dutyCode] ??= [];
+      additionalBusesByDuty![dutyCode]!.add(oldBus); // Always add, even if duplicate - counts all changes
+    }
+    setBusForDuty(dutyCode, newBus);
+  }
+
+  // Remove bus for single shift - only clears primary bus, keeps breakdown history
+  // Breakdown history represents buses that were actually driven, so they remain in statistics
+  void removeBusForSingleShift() {
+    firstHalfBus = null;
+    secondHalfBus = null;
+    // Keep additionalBusesUsed - these buses were actually driven
+  }
+
+  // Remove bus for first half - only clears primary bus, keeps breakdown history
+  // Breakdown history represents buses that were actually driven, so they remain in statistics
+  void removeBusForFirstHalf() {
+    firstHalfBus = null;
+    // Keep firstHalfAdditionalBuses - these buses were actually driven
+  }
+
+  // Remove bus for second half - only clears primary bus, keeps breakdown history
+  // Breakdown history represents buses that were actually driven, so they remain in statistics
+  void removeBusForSecondHalf() {
+    secondHalfBus = null;
+    // Keep secondHalfAdditionalBuses - these buses were actually driven
+  }
+
+  // Remove bus for a specific duty - only clears primary bus, keeps breakdown history
+  // Breakdown history represents buses that were actually driven, so they remain in statistics
+  void removeBusForDuty(String dutyCode) {
+    setBusForDuty(dutyCode, null);
+    // Keep additionalBusesByDuty[dutyCode] - these buses were actually driven
+  }
+
+  // Get all buses used for statistics (primary + breakdown buses)
+  List<String> getAllBusesUsed() {
+    final buses = <String>[];
+    
+    // Primary buses (firstHalfBus, secondHalfBus, busAssignments)
+    if (firstHalfBus != null && firstHalfBus!.isNotEmpty) {
+      buses.add(firstHalfBus!);
+    }
+    if (secondHalfBus != null && secondHalfBus!.isNotEmpty) {
+      buses.add(secondHalfBus!);
+    }
+    if (busAssignments != null) {
+      for (final bus in busAssignments!.values) {
+        if (bus.isNotEmpty && !buses.contains(bus)) {
+          buses.add(bus);
+        }
+      }
+    }
+    
+    // Breakdown buses
+    if (additionalBusesUsed != null) {
+      buses.addAll(additionalBusesUsed!);
+    }
+    if (firstHalfAdditionalBuses != null) {
+      buses.addAll(firstHalfAdditionalBuses!);
+    }
+    if (secondHalfAdditionalBuses != null) {
+      buses.addAll(secondHalfAdditionalBuses!);
+    }
+    if (additionalBusesByDuty != null) {
+      for (final busList in additionalBusesByDuty!.values) {
+        buses.addAll(busList);
+      }
+    }
+    
+    return buses;
+  }
+
   // Add copyWith method
   Event copyWith({
     String? id,
@@ -277,6 +404,10 @@ class Event {
     String? firstHalfBus,
     String? secondHalfBus,
     Map<String, String>? busAssignments,
+    List<String>? additionalBusesUsed,
+    List<String>? firstHalfAdditionalBuses,
+    List<String>? secondHalfAdditionalBuses,
+    Map<String, List<String>>? additionalBusesByDuty,
     bool? isHoliday,
     String? holidayType,
     String? notes,
@@ -313,6 +444,10 @@ class Event {
       firstHalfBus: firstHalfBus ?? this.firstHalfBus,
       secondHalfBus: secondHalfBus ?? this.secondHalfBus,
       busAssignments: busAssignments ?? this.busAssignments,
+      additionalBusesUsed: additionalBusesUsed ?? this.additionalBusesUsed,
+      firstHalfAdditionalBuses: firstHalfAdditionalBuses ?? this.firstHalfAdditionalBuses,
+      secondHalfAdditionalBuses: secondHalfAdditionalBuses ?? this.secondHalfAdditionalBuses,
+      additionalBusesByDuty: additionalBusesByDuty ?? this.additionalBusesByDuty,
       isHoliday: isHoliday ?? this.isHoliday,
       holidayType: holidayType ?? this.holidayType,
       notes: notes ?? this.notes,
@@ -354,6 +489,10 @@ class Event {
       'firstHalfBus': firstHalfBus,
       'secondHalfBus': secondHalfBus,
       'busAssignments': busAssignments,
+      'additionalBusesUsed': additionalBusesUsed,
+      'firstHalfAdditionalBuses': firstHalfAdditionalBuses,
+      'secondHalfAdditionalBuses': secondHalfAdditionalBuses,
+      'additionalBusesByDuty': additionalBusesByDuty,
       'isHoliday': isHoliday,
       'holidayType': holidayType,
       'notes': notes,
@@ -415,6 +554,22 @@ class Event {
       secondHalfBus: map['secondHalfBus'],
       busAssignments: map['busAssignments'] != null 
         ? Map<String, String>.from(map['busAssignments'])
+        : null,
+      additionalBusesUsed: map['additionalBusesUsed'] != null
+        ? List<String>.from(map['additionalBusesUsed'])
+        : null,
+      firstHalfAdditionalBuses: map['firstHalfAdditionalBuses'] != null
+        ? List<String>.from(map['firstHalfAdditionalBuses'])
+        : null,
+      secondHalfAdditionalBuses: map['secondHalfAdditionalBuses'] != null
+        ? List<String>.from(map['secondHalfAdditionalBuses'])
+        : null,
+      additionalBusesByDuty: map['additionalBusesByDuty'] != null
+        ? Map<String, List<String>>.from(
+            map['additionalBusesByDuty'].map((key, value) => 
+              MapEntry(key, List<String>.from(value))
+            )
+          )
         : null,
       isHoliday: map['isHoliday'] ?? false,
       holidayType: map['holidayType'],

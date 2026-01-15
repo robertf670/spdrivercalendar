@@ -2025,61 +2025,14 @@ class StatisticsScreenState extends State<StatisticsScreen>
         if (processedIds.contains(event.id)) continue;
         processedIds.add(event.id);
 
-        // Check if this is a workout or overtime shift
-        final isOvertimeShift = event.title.contains('(OT)');
-        // For workout shifts, we need to check the break time
-        final isWorkoutShift = _isWorkoutShift(event);
-        final isWorkoutOrOvertime = isWorkoutShift || isOvertimeShift;
-        
-        // Check if this is a spare shift or 22B/01 with bus assignments
-        if (event.title.startsWith('SP') || event.title == '22B/01') {
-          if (event.hasEnhancedDuties) {
-            // For spare shifts with enhanced duties, count buses from individual duty assignments
-            for (final assignedDuty in event.enhancedAssignedDuties!) {
-              if (assignedDuty.assignedBus != null) {
-                if (busCounts.containsKey(assignedDuty.assignedBus!)) {
-                  busCounts[assignedDuty.assignedBus!] = busCounts[assignedDuty.assignedBus!]! + 1;
-                } else {
-                  busCounts[assignedDuty.assignedBus!] = 1;
-                }
-              }
-            }
-          } else if (event.busAssignments != null) {
-            // For spare shifts with current bus assignment system, count buses from busAssignments
-            for (final busNumber in event.busAssignments!.values) {
-              if (busCounts.containsKey(busNumber)) {
-                busCounts[busNumber] = busCounts[busNumber]! + 1;
-              } else {
-                busCounts[busNumber] = 1;
-              }
-            }
-          }
-        } else if (isWorkoutOrOvertime) {
-          // For workout and overtime shifts, only count the firstHalfBus (which is the assigned bus)
-          if (event.firstHalfBus != null) {
-            if (busCounts.containsKey(event.firstHalfBus!)) {
-              busCounts[event.firstHalfBus!] = busCounts[event.firstHalfBus!]! + 1;
+        // Use getAllBusesUsed() to get all buses (primary + breakdown buses) for statistics
+        final allBuses = event.getAllBusesUsed();
+        for (final busNumber in allBuses) {
+          if (busNumber.isNotEmpty) {
+            if (busCounts.containsKey(busNumber)) {
+              busCounts[busNumber] = busCounts[busNumber]! + 1;
             } else {
-              busCounts[event.firstHalfBus!] = 1;
-            }
-          }
-        } else {
-          // For regular shifts, count both first and second half buses
-          // Count first half bus
-          if (event.firstHalfBus != null) {
-            if (busCounts.containsKey(event.firstHalfBus!)) {
-              busCounts[event.firstHalfBus!] = busCounts[event.firstHalfBus!]! + 1;
-            } else {
-              busCounts[event.firstHalfBus!] = 1;
-            }
-          }
-          
-          // Count second half bus
-          if (event.secondHalfBus != null) {
-            if (busCounts.containsKey(event.secondHalfBus!)) {
-              busCounts[event.secondHalfBus!] = busCounts[event.secondHalfBus!]! + 1;
-            } else {
-              busCounts[event.secondHalfBus!] = 1;
+              busCounts[busNumber] = 1;
             }
           }
         }
@@ -2564,14 +2517,14 @@ class StatisticsScreenState extends State<StatisticsScreen>
       final year = currentYear + yearOffset;
       final yearStart = DateTime(year, 1, 1);
       final yearEnd = DateTime(year, 12, 31);
-      stats[year.toString()] = _calculateHolidayDaysStatsForPeriod(holidays, yearStart, yearEnd);
+      stats[year.toString()] = await _calculateHolidayDaysStatsForPeriod(holidays, yearStart, yearEnd);
     }
     
     return stats;
   }
   
-  Map<String, dynamic> _calculateHolidayDaysStatsForPeriod(
-    List<Holiday> holidays, DateTime startDate, DateTime endDate) {
+  Future<Map<String, dynamic>> _calculateHolidayDaysStatsForPeriod(
+    List<Holiday> holidays, DateTime startDate, DateTime endDate) async {
     
     int totalDays = 0;
     int summerDays = 0;
@@ -2579,6 +2532,9 @@ class StatisticsScreenState extends State<StatisticsScreen>
     int unpaidLeaveDays = 0;
     int dayInLieuDays = 0;
     int otherDays = 0;
+    
+    // Check if user is on M-F schedule
+    final isMFSchedule = _markedInEnabled && _markedInStatus == 'M-F';
     
     // Normalize dates to midnight for comparison
     final normalizedStart = DateTime(startDate.year, startDate.month, startDate.day);
@@ -2604,30 +2560,55 @@ class StatisticsScreenState extends State<StatisticsScreen>
       if (daysInOverlap > 0) {
         int countedDays;
         
-        // For summer and winter weeks: count 5 days per week (since 2 rest days are already accounted for)
-        // For other holidays: count all days normally
-        if (holiday.type == 'summer' || holiday.type == 'winter') {
-          // Calculate as 5 days per week
-          // For a full week (7 days), count as 5 days
-          // For partial weeks, calculate proportionally: (days / 7) * 5
-          countedDays = ((daysInOverlap / 7) * 5).round();
-          
-          if (holiday.type == 'summer') {
-            summerDays += countedDays;
-          } else {
-            winterDays += countedDays;
+        // For M-F schedules: exclude bank holidays from the count
+        if (isMFSchedule && (holiday.type == 'summer' || holiday.type == 'winter' || holiday.type == 'other')) {
+          // Count only working days (Mon-Fri), excluding bank holidays
+          int workingDays = 0;
+          DateTime currentDate = overlapStart;
+          while (!currentDate.isAfter(overlapEnd)) {
+            final weekday = currentDate.weekday;
+            // Count only Monday-Friday (weekday 1-5)
+            if (weekday >= 1 && weekday <= 5) {
+              // Check if it's a bank holiday - exclude if it is
+              final isBankHolidayDate = await isBankHoliday(currentDate);
+              if (!isBankHolidayDate) {
+                workingDays++;
+              }
+            }
+            currentDate = currentDate.add(const Duration(days: 1));
           }
+          countedDays = workingDays;
+        } else {
+          // For non-M-F schedules or other holiday types: use original calculation
+          // For summer and winter weeks: count 5 days per week (since 2 rest days are already accounted for)
+          // For other holidays: count all days normally
+          if (holiday.type == 'summer' || holiday.type == 'winter') {
+            // Calculate as 5 days per week
+            // For a full week (7 days), count as 5 days
+            // For partial weeks, calculate proportionally: (days / 7) * 5
+            countedDays = ((daysInOverlap / 7) * 5).round();
+          } else if (holiday.type == 'unpaid_leave') {
+            // Unpaid leave counts all days normally
+            countedDays = daysInOverlap;
+          } else if (holiday.type == 'day_in_lieu') {
+            // Day In Lieu counts all days normally
+            countedDays = daysInOverlap;
+          } else {
+            // Other holidays count all days normally
+            countedDays = daysInOverlap;
+          }
+        }
+        
+        // Add to appropriate category
+        if (holiday.type == 'summer') {
+          summerDays += countedDays;
+        } else if (holiday.type == 'winter') {
+          winterDays += countedDays;
         } else if (holiday.type == 'unpaid_leave') {
-          // Unpaid leave counts all days normally
-          countedDays = daysInOverlap;
           unpaidLeaveDays += countedDays;
         } else if (holiday.type == 'day_in_lieu') {
-          // Day In Lieu counts all days normally
-          countedDays = daysInOverlap;
           dayInLieuDays += countedDays;
         } else {
-          // Other holidays count all days normally
-          countedDays = daysInOverlap;
           otherDays += countedDays;
         }
         

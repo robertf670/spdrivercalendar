@@ -2617,9 +2617,9 @@ class _EventCardState extends State<EventCard> {
                       
                       // Clear bus assignments when duties change (to prevent persistence issue)
                       if (!selectedDuty.endsWith('A') && !selectedDuty.endsWith('B')) {
-                        // This is a full duty - clear any existing bus assignments
-                        widget.event.firstHalfBus = null;
-                        widget.event.secondHalfBus = null;
+                        // This is a full duty - clear any existing bus assignments and breakdown history
+                        widget.event.removeBusForFirstHalf();
+                        widget.event.removeBusForSecondHalf();
                       }
                       
                       // Load duty details to get location data BEFORE saving
@@ -3578,54 +3578,72 @@ class _EventCardState extends State<EventCard> {
   // Show bus assignment dialog for a specific duty
   Future<void> _showDutyBusAssignmentDialog(BuildContext context, String dutyCode, [StateSetter? refreshDialog]) async {
     String? busNumber = widget.event.getBusForDuty(dutyCode);
+    final hasCurrentBus = busNumber != null && busNumber.isNotEmpty;
     
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: Text('Assign Bus to $dutyCode'),
-        content: TextField(
-          onChanged: (value) {
-            busNumber = value.isEmpty ? null : value;
-          },
-          onSubmitted: (value) {
-            try {
-              String? normalizedBusNumber = value.trim().toUpperCase().replaceAll(' ', '');
-              busNumber = normalizedBusNumber.isEmpty ? null : normalizedBusNumber;
-              
-              Navigator.of(dialogContext).pop();
-              
-              _updateDutyBus(dutyCode, busNumber, refreshDialog).then((_) {
-                // Success - no action needed
-              }).catchError((error) {
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Failed to assign bus: ${error.toString()}'),
-                      backgroundColor: Colors.red,
-                      duration: const Duration(seconds: 3),
-                    ),
-                  );
+        title: Text(hasCurrentBus ? 'Change Bus for $dutyCode' : 'Assign Bus to $dutyCode'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (hasCurrentBus)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8.0),
+                child: Text(
+                  'Current: $busNumber',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w500,
+                    color: Colors.grey[700],
+                  ),
+                ),
+              ),
+            TextField(
+              onChanged: (value) {
+                busNumber = value.isEmpty ? null : value;
+              },
+              onSubmitted: (value) {
+                try {
+                  String? normalizedBusNumber = value.trim().toUpperCase().replaceAll(' ', '');
+                  busNumber = normalizedBusNumber.isEmpty ? null : normalizedBusNumber;
+                  
+                  Navigator.of(dialogContext).pop();
+                  
+                  _updateDutyBus(dutyCode, busNumber, refreshDialog).then((_) {
+                    // Success - no action needed
+                  }).catchError((error) {
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Failed to assign bus: ${error.toString()}'),
+                          backgroundColor: Colors.red,
+                          duration: const Duration(seconds: 3),
+                        ),
+                      );
+                    }
+                  });
+                  
+                } catch (error) {
+                  // Still close the dialog even if there's an error
+                  Navigator.of(dialogContext).pop();
                 }
-              });
-              
-            } catch (error) {
-              // Still close the dialog even if there's an error
-              Navigator.of(dialogContext).pop();
-            }
-          },
-          controller: TextEditingController(text: widget.event.getBusForDuty(dutyCode) ?? ''),
-          decoration: const InputDecoration(
-            labelText: 'Bus Number',
-            hintText: 'e.g., EW64, PA168, SG559',
-          ),
-          textCapitalization: TextCapitalization.characters,
+              },
+              controller: TextEditingController(text: widget.event.getBusForDuty(dutyCode) ?? ''),
+              decoration: const InputDecoration(
+                labelText: 'Bus Number',
+                hintText: 'e.g., EW64, PA168, SG559',
+              ),
+              textCapitalization: TextCapitalization.characters,
+              autofocus: true,
+            ),
+          ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(),
             child: const Text('Cancel'),
           ),
-          if (widget.event.getBusForDuty(dutyCode) != null)
+          if (hasCurrentBus)
             TextButton(
               onPressed: () async {
                 try {
@@ -3672,7 +3690,7 @@ class _EventCardState extends State<EventCard> {
                 }
               }
             },
-            child: const Text('Assign'),
+            child: Text(hasCurrentBus ? 'Change' : 'Assign'),
           ),
         ],
       ),
@@ -3697,6 +3715,10 @@ class _EventCardState extends State<EventCard> {
       firstHalfBus: widget.event.firstHalfBus,
       secondHalfBus: widget.event.secondHalfBus,
       busAssignments: widget.event.busAssignments?.map((k, v) => MapEntry(k, v)),
+      additionalBusesUsed: widget.event.additionalBusesUsed?.map((b) => b).toList(),
+      firstHalfAdditionalBuses: widget.event.firstHalfAdditionalBuses?.map((b) => b).toList(),
+      secondHalfAdditionalBuses: widget.event.secondHalfAdditionalBuses?.map((b) => b).toList(),
+      additionalBusesByDuty: widget.event.additionalBusesByDuty?.map((k, v) => MapEntry(k, List<String>.from(v))),
       isHoliday: widget.event.isHoliday,
       holidayType: widget.event.holidayType,
       notes: widget.event.notes,
@@ -3717,15 +3739,11 @@ class _EventCardState extends State<EventCard> {
     
     // Update the bus assignment in a controlled way
     if (newBus == null || newBus.trim().isEmpty) {
-      // Remove bus assignment
-      widget.event.busAssignments?.remove(dutyCode);
-      if (widget.event.busAssignments?.isEmpty == true) {
-        widget.event.busAssignments = null;
-      }
+      // Use remove method to clear primary bus and breakdown history
+      widget.event.removeBusForDuty(dutyCode);
     } else {
-      // Add/update bus assignment
-      widget.event.busAssignments ??= {};
-      widget.event.busAssignments![dutyCode] = newBus.trim();
+      // Change bus assignment - moves old bus to history if it exists
+      widget.event.changeBusForDuty(dutyCode, newBus.trim());
     }
     
     // Save the updated event with enhanced error handling
@@ -3791,20 +3809,38 @@ class _EventCardState extends State<EventCard> {
   }
 
   // Show bus assignment dialog for full duties
-  Future<String?> _showBusAssignmentDialog(BuildContext context, String halfType) async {
-    final controller = TextEditingController();
+  Future<String?> _showBusAssignmentDialog(BuildContext context, String halfType, String? currentBus) async {
+    final controller = TextEditingController(text: currentBus ?? '');
+    final hasCurrentBus = currentBus != null && currentBus.isNotEmpty;
     
     return showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Add $halfType Bus'),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(
-            hintText: 'Enter bus number (e.g. PA155)',
-            labelText: 'Bus Number',
-          ),
-          textCapitalization: TextCapitalization.characters,
+        title: Text(hasCurrentBus ? 'Change $halfType Bus' : 'Add $halfType Bus'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (hasCurrentBus)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8.0),
+                child: Text(
+                  'Current: $currentBus',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w500,
+                    color: Colors.grey[700],
+                  ),
+                ),
+              ),
+            TextField(
+              controller: controller,
+              decoration: InputDecoration(
+                hintText: 'Enter bus number (e.g. PA155)',
+                labelText: 'Bus Number',
+              ),
+              textCapitalization: TextCapitalization.characters,
+              autofocus: true,
+            ),
+          ],
         ),
         actions: [
           TextButton(
@@ -3819,7 +3855,7 @@ class _EventCardState extends State<EventCard> {
                 Navigator.of(context).pop(busNumber);
               }
             },
-            child: const Text('Add'),
+            child: Text(hasCurrentBus ? 'Change' : 'Add'),
           ),
         ],
       ),
@@ -4379,8 +4415,10 @@ class _EventCardState extends State<EventCard> {
                         endDate: widget.event.endDate,
                         endTime: widget.event.endTime,
                         assignedDuties: widget.event.assignedDuties?.where((d) => d != dutyCode).toList(),
-                        firstHalfBus: null, // Clear bus assignments when removing full duty
+                        // Clear bus assignments when removing full duty (but keep breakdown history)
+                        firstHalfBus: null,
                         secondHalfBus: null,
+                        // Keep breakdown history - these buses were actually driven
                       );
 
                       await EventService.updateEvent(oldEvent, updatedEvent);
@@ -4491,6 +4529,57 @@ class _EventCardState extends State<EventCard> {
                         ),
                       ],
                     ),
+                    // Track button for first half bus
+                    IconButton(
+                      icon: _busTrackingLoading['tracking_${_firstHalfBus}'] == true
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.location_on, size: 18, color: Colors.blue),
+                      onPressed: _busTrackingLoading['tracking_${_firstHalfBus}'] == true
+                          ? null
+                          : () => _trackBus(_firstHalfBus!),
+                      tooltip: 'Track $_firstHalfBus',
+                    ),
+                    // Change bus button (swap/recycle icon)
+                    IconButton(
+                      icon: const Icon(Icons.swap_horiz, size: 18, color: Colors.orange),
+                      onPressed: () async {
+                        final result = await _showBusAssignmentDialog(context, 'First Half', _firstHalfBus);
+                        if (result != null) {
+                          final oldEvent = Event(
+                            id: widget.event.id,
+                            title: widget.event.title,
+                            startDate: widget.event.startDate,
+                            startTime: widget.event.startTime,
+                            endDate: widget.event.endDate,
+                            endTime: widget.event.endTime,
+                            assignedDuties: widget.event.assignedDuties,
+                            busAssignments: widget.event.busAssignments,
+                            firstHalfBus: widget.event.firstHalfBus,
+                            secondHalfBus: widget.event.secondHalfBus,
+                            additionalBusesUsed: widget.event.additionalBusesUsed?.map((b) => b).toList(),
+                            firstHalfAdditionalBuses: widget.event.firstHalfAdditionalBuses?.map((b) => b).toList(),
+                            secondHalfAdditionalBuses: widget.event.secondHalfAdditionalBuses?.map((b) => b).toList(),
+                            additionalBusesByDuty: widget.event.additionalBusesByDuty?.map((k, v) => MapEntry(k, List<String>.from(v))),
+                          );
+                          
+                          // Use change bus method to track breakdown buses
+                          widget.event.changeBusForFirstHalf(result);
+                          await EventService.updateEvent(oldEvent, widget.event);
+                          
+                          if (mounted) {
+                            setState(() {
+                              _firstHalfBus = result;
+                            });
+                            dialogSetState(() {});
+                          }
+                        }
+                      },
+                      tooltip: 'Change bus',
+                    ),
                     IconButton(
                       icon: const Icon(Icons.remove_circle_outline, size: 18, color: Colors.red),
                       onPressed: () async {
@@ -4502,11 +4591,17 @@ class _EventCardState extends State<EventCard> {
                           endDate: widget.event.endDate,
                           endTime: widget.event.endTime,
                           assignedDuties: widget.event.assignedDuties,
+                          busAssignments: widget.event.busAssignments,
                           firstHalfBus: widget.event.firstHalfBus,
                           secondHalfBus: widget.event.secondHalfBus,
+                          additionalBusesUsed: widget.event.additionalBusesUsed?.map((b) => b).toList(),
+                          firstHalfAdditionalBuses: widget.event.firstHalfAdditionalBuses?.map((b) => b).toList(),
+                          secondHalfAdditionalBuses: widget.event.secondHalfAdditionalBuses?.map((b) => b).toList(),
+                          additionalBusesByDuty: widget.event.additionalBusesByDuty?.map((k, v) => MapEntry(k, List<String>.from(v))),
                         );
                         
-                        widget.event.firstHalfBus = null;
+                        // Use remove method to clear primary bus and breakdown history
+                        widget.event.removeBusForFirstHalf();
                         await EventService.updateEvent(oldEvent, widget.event);
                         
                         if (mounted) {
@@ -4560,6 +4655,57 @@ class _EventCardState extends State<EventCard> {
                         ),
                       ],
                     ),
+                    // Track button for second half bus
+                    IconButton(
+                      icon: _busTrackingLoading['tracking_${_secondHalfBus}'] == true
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.location_on, size: 18, color: Colors.blue),
+                      onPressed: _busTrackingLoading['tracking_${_secondHalfBus}'] == true
+                          ? null
+                          : () => _trackBus(_secondHalfBus!),
+                      tooltip: 'Track $_secondHalfBus',
+                    ),
+                    // Change bus button (swap/recycle icon)
+                    IconButton(
+                      icon: const Icon(Icons.swap_horiz, size: 18, color: Colors.orange),
+                      onPressed: () async {
+                        final result = await _showBusAssignmentDialog(context, 'Second Half', _secondHalfBus);
+                        if (result != null) {
+                          final oldEvent = Event(
+                            id: widget.event.id,
+                            title: widget.event.title,
+                            startDate: widget.event.startDate,
+                            startTime: widget.event.startTime,
+                            endDate: widget.event.endDate,
+                            endTime: widget.event.endTime,
+                            assignedDuties: widget.event.assignedDuties,
+                            busAssignments: widget.event.busAssignments,
+                            firstHalfBus: widget.event.firstHalfBus,
+                            secondHalfBus: widget.event.secondHalfBus,
+                            additionalBusesUsed: widget.event.additionalBusesUsed?.map((b) => b).toList(),
+                            firstHalfAdditionalBuses: widget.event.firstHalfAdditionalBuses?.map((b) => b).toList(),
+                            secondHalfAdditionalBuses: widget.event.secondHalfAdditionalBuses?.map((b) => b).toList(),
+                            additionalBusesByDuty: widget.event.additionalBusesByDuty?.map((k, v) => MapEntry(k, List<String>.from(v))),
+                          );
+                          
+                          // Use change bus method to track breakdown buses
+                          widget.event.changeBusForSecondHalf(result);
+                          await EventService.updateEvent(oldEvent, widget.event);
+                          
+                          if (mounted) {
+                            setState(() {
+                              _secondHalfBus = result;
+                            });
+                            dialogSetState(() {});
+                          }
+                        }
+                      },
+                      tooltip: 'Change bus',
+                    ),
                     IconButton(
                       icon: const Icon(Icons.remove_circle_outline, size: 18, color: Colors.red),
                       onPressed: () async {
@@ -4571,11 +4717,17 @@ class _EventCardState extends State<EventCard> {
                           endDate: widget.event.endDate,
                           endTime: widget.event.endTime,
                           assignedDuties: widget.event.assignedDuties,
+                          busAssignments: widget.event.busAssignments,
                           firstHalfBus: widget.event.firstHalfBus,
                           secondHalfBus: widget.event.secondHalfBus,
+                          additionalBusesUsed: widget.event.additionalBusesUsed?.map((b) => b).toList(),
+                          firstHalfAdditionalBuses: widget.event.firstHalfAdditionalBuses?.map((b) => b).toList(),
+                          secondHalfAdditionalBuses: widget.event.secondHalfAdditionalBuses?.map((b) => b).toList(),
+                          additionalBusesByDuty: widget.event.additionalBusesByDuty?.map((k, v) => MapEntry(k, List<String>.from(v))),
                         );
                         
-                        widget.event.secondHalfBus = null;
+                        // Use remove method to clear primary bus and breakdown history
+                        widget.event.removeBusForSecondHalf();
                         await EventService.updateEvent(oldEvent, widget.event);
                         
                         if (mounted) {
@@ -4593,16 +4745,15 @@ class _EventCardState extends State<EventCard> {
             const SizedBox(height: 8),
           ],
           
-          // Bus assignment buttons
-          Row(
-            children: [
-              // First half bus button
-              if (_firstHalfBus == null)
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: () async {
-                      final result = await _showBusAssignmentDialog(context, 'First Half');
-                      if (result != null) {
+          // Add bus buttons - only show when buses are not assigned
+          if (_firstHalfBus == null || _secondHalfBus == null) ...[
+            if (_firstHalfBus == null)
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () async {
+                    final result = await _showBusAssignmentDialog(context, 'First Half', _firstHalfBus);
+                    if (result != null) {
                         final oldEvent = Event(
                           id: widget.event.id,
                           title: widget.event.title,
@@ -4611,42 +4762,44 @@ class _EventCardState extends State<EventCard> {
                           endDate: widget.event.endDate,
                           endTime: widget.event.endTime,
                           assignedDuties: widget.event.assignedDuties,
-                          busAssignments: widget.event.busAssignments, // CRITICAL: Preserve bus assignments
+                          busAssignments: widget.event.busAssignments,
                           firstHalfBus: widget.event.firstHalfBus,
                           secondHalfBus: widget.event.secondHalfBus,
+                          additionalBusesUsed: widget.event.additionalBusesUsed?.map((b) => b).toList(),
+                          firstHalfAdditionalBuses: widget.event.firstHalfAdditionalBuses?.map((b) => b).toList(),
+                          secondHalfAdditionalBuses: widget.event.secondHalfAdditionalBuses?.map((b) => b).toList(),
+                          additionalBusesByDuty: widget.event.additionalBusesByDuty?.map((k, v) => MapEntry(k, List<String>.from(v))),
                         );
                         
+                        // Use change bus method to track breakdown buses (or assign if null)
                         widget.event.firstHalfBus = result;
                         await EventService.updateEvent(oldEvent, widget.event);
                         
                         if (mounted) {
                           setState(() {
-                            // Update state variable to force rebuild
                             _firstHalfBus = result;
                           });
-                          // Also refresh the dialog
                           dialogSetState(() {});
                         }
                       }
                     },
                     icon: const Icon(Icons.directions_bus, size: 18),
-                    label: const Text('1st Half'),
+                    label: const Text('Add 1st Half Bus'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppTheme.primaryColor,
                       foregroundColor: Colors.white,
                     ),
                   ),
                 ),
-              if (_firstHalfBus == null && _secondHalfBus == null)
-                const SizedBox(width: 8),
-              
-              // Second half bus button
-              if (_secondHalfBus == null)
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: () async {
-                      final result = await _showBusAssignmentDialog(context, 'Second Half');
-                      if (result != null) {
+            if (_firstHalfBus == null && _secondHalfBus == null)
+              const SizedBox(height: 8),
+            if (_secondHalfBus == null)
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () async {
+                    final result = await _showBusAssignmentDialog(context, 'Second Half', _secondHalfBus);
+                    if (result != null) {
                         final oldEvent = Event(
                           id: widget.event.id,
                           title: widget.event.title,
@@ -4655,34 +4808,36 @@ class _EventCardState extends State<EventCard> {
                           endDate: widget.event.endDate,
                           endTime: widget.event.endTime,
                           assignedDuties: widget.event.assignedDuties,
-                          busAssignments: widget.event.busAssignments, // CRITICAL: Preserve bus assignments
+                          busAssignments: widget.event.busAssignments,
                           firstHalfBus: widget.event.firstHalfBus,
                           secondHalfBus: widget.event.secondHalfBus,
+                          additionalBusesUsed: widget.event.additionalBusesUsed?.map((b) => b).toList(),
+                          firstHalfAdditionalBuses: widget.event.firstHalfAdditionalBuses?.map((b) => b).toList(),
+                          secondHalfAdditionalBuses: widget.event.secondHalfAdditionalBuses?.map((b) => b).toList(),
+                          additionalBusesByDuty: widget.event.additionalBusesByDuty?.map((k, v) => MapEntry(k, List<String>.from(v))),
                         );
                         
+                        // Use change bus method to track breakdown buses (or assign if null)
                         widget.event.secondHalfBus = result;
                         await EventService.updateEvent(oldEvent, widget.event);
                         
                         if (mounted) {
                           setState(() {
-                            // Update state variable to force rebuild
                             _secondHalfBus = result;
                           });
-                          // Also refresh the dialog
                           dialogSetState(() {});
                         }
                       }
                     },
                     icon: const Icon(Icons.directions_bus, size: 18),
-                    label: const Text('2nd Half'),
+                    label: const Text('Add 2nd Half Bus'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppTheme.primaryColor,
                       foregroundColor: Colors.white,
                     ),
                   ),
                 ),
-            ],
-          ),
+          ],
         ],
       ),
     );

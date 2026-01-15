@@ -2428,6 +2428,127 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                                           : () => _trackBus(event.firstHalfBus!),
                                       tooltip: 'Track ${event.firstHalfBus}',
                                     ),
+                                    // Change bus button (swap/recycle icon)
+                                    IconButton(
+                                      icon: const Icon(Icons.swap_horiz, size: 18, color: Colors.orange),
+                                      onPressed: () async {
+                                        // Show the bus assignment dialog
+                                        final hasCurrentBus = event.firstHalfBus != null && event.firstHalfBus!.isNotEmpty;
+                                        final TextEditingController controller = TextEditingController(text: event.firstHalfBus ?? '');
+                                        final result = await showDialog<String>(
+                                          context: context,
+                                          builder: (context) => AlertDialog(
+                                            title: Text(hasCurrentBus ? 'Change First Half Bus' : 'Add First Half Bus'),
+                                            content: Column(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                if (hasCurrentBus)
+                                                  Padding(
+                                                    padding: const EdgeInsets.only(bottom: 8.0),
+                                                    child: Text(
+                                                      'Current: ${event.firstHalfBus}',
+                                                      style: TextStyle(
+                                                        fontWeight: FontWeight.w500,
+                                                        color: Colors.grey[700],
+                                                      ),
+                                                    ),
+                                                  ),
+                                                TextField(
+                                                  controller: controller,
+                                                  decoration: const InputDecoration(
+                                                    hintText: 'Enter bus number (e.g. PA155)',
+                                                    labelText: 'Bus Number',
+                                                  ),
+                                                  textCapitalization: TextCapitalization.characters,
+                                                  autofocus: true,
+                                                ),
+                                              ],
+                                            ),
+                                            actions: [
+                                              TextButton(
+                                                onPressed: () => Navigator.of(context).pop(),
+                                                child: const Text('Cancel'),
+                                              ),
+                                              TextButton(
+                                                onPressed: () {
+                                                  String busNumber = controller.text.trim().toUpperCase();
+                                                  busNumber = busNumber.replaceAll(' ', '');
+                                                  if (busNumber.isNotEmpty) {
+                                                    Navigator.of(context).pop(busNumber);
+                                                  }
+                                                },
+                                                child: Text(hasCurrentBus ? 'Change' : 'Add'),
+                                              ),
+                                            ],
+                                          ),
+                                        );
+                                        
+                                        if (result != null) {
+                                          // Create a copy of the old event
+                                          final oldEvent = Event(
+                                            id: event.id,
+                                            title: event.title,
+                                            startDate: event.startDate,
+                                            startTime: event.startTime,
+                                            endDate: event.endDate,
+                                            endTime: event.endTime,
+                                            workTime: event.workTime,
+                                            breakStartTime: event.breakStartTime,
+                                            breakEndTime: event.breakEndTime,
+                                            assignedDuties: event.assignedDuties,
+                                            firstHalfBus: event.firstHalfBus,
+                                            secondHalfBus: event.secondHalfBus,
+                                            busAssignments: event.busAssignments,
+                                            additionalBusesUsed: event.additionalBusesUsed?.map((b) => b).toList(),
+                                            firstHalfAdditionalBuses: event.firstHalfAdditionalBuses?.map((b) => b).toList(),
+                                            secondHalfAdditionalBuses: event.secondHalfAdditionalBuses?.map((b) => b).toList(),
+                                            additionalBusesByDuty: event.additionalBusesByDuty?.map((k, v) => MapEntry(k, List<String>.from(v))),
+                                            notes: event.notes,
+                                          );
+                                          
+                                          // Create updated event with all bus breakdown fields
+                                          final updatedEvent = Event(
+                                            id: event.id,
+                                            title: event.title,
+                                            startDate: event.startDate,
+                                            startTime: event.startTime,
+                                            endDate: event.endDate,
+                                            endTime: event.endTime,
+                                            workTime: event.workTime,
+                                            breakStartTime: event.breakStartTime,
+                                            breakEndTime: event.breakEndTime,
+                                            assignedDuties: event.assignedDuties,
+                                            busAssignments: event.busAssignments,
+                                            firstHalfBus: event.firstHalfBus,
+                                            secondHalfBus: event.secondHalfBus,
+                                            additionalBusesUsed: event.additionalBusesUsed?.map((b) => b).toList(),
+                                            firstHalfAdditionalBuses: event.firstHalfAdditionalBuses?.map((b) => b).toList(),
+                                            secondHalfAdditionalBuses: event.secondHalfAdditionalBuses?.map((b) => b).toList(),
+                                            additionalBusesByDuty: event.additionalBusesByDuty?.map((k, v) => MapEntry(k, List<String>.from(v))),
+                                            notes: event.notes,
+                                          );
+                                          
+                                          // Use change bus method to track breakdown buses
+                                          updatedEvent.changeBusForFirstHalf(result);
+                                          
+                                          // Save the updated event
+                                          await EventService.updateEvent(oldEvent, updatedEvent);
+                                          
+                                          // Sync bus assignments to Google Calendar
+                                          await _syncBusAssignmentsToGoogleCalendar(updatedEvent);
+                                          
+                                          // Refresh the UI
+                                          if (mounted) {
+                                            setState(() {});
+                                            // Close the current dialog
+                                            Navigator.of(context).pop();
+                                            // Reopen the dialog with the updated event
+                                            _editEvent(updatedEvent);
+                                          }
+                                        }
+                                      },
+                                      tooltip: 'Change bus',
+                                    ),
                                     IconButton(
                                       icon: const Icon(Icons.remove_circle_outline, size: 18, color: Colors.red),
                                       onPressed: () async {
@@ -2446,10 +2567,14 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                                           firstHalfBus: event.firstHalfBus,
                                           secondHalfBus: event.secondHalfBus,
                                           busAssignments: event.busAssignments,
+                                          additionalBusesUsed: event.additionalBusesUsed?.map((b) => b).toList(),
+                                          firstHalfAdditionalBuses: event.firstHalfAdditionalBuses?.map((b) => b).toList(),
+                                          secondHalfAdditionalBuses: event.secondHalfAdditionalBuses?.map((b) => b).toList(),
+                                          additionalBusesByDuty: event.additionalBusesByDuty?.map((k, v) => MapEntry(k, List<String>.from(v))),
                                           notes: event.notes,
                                         );
                                         
-                                        // Create a new event with the updated bus
+                                        // Create a new event and use remove method to clear primary bus and breakdown history
                                         final updatedEvent = Event(
                                           id: event.id,
                                           title: event.title,
@@ -2461,11 +2586,18 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                                           breakStartTime: event.breakStartTime,
                                           breakEndTime: event.breakEndTime,
                                           assignedDuties: event.assignedDuties,
-                                          busAssignments: event.busAssignments, // CRITICAL: Preserve bus assignments
-                                          firstHalfBus: null, // Remove first half bus
+                                          busAssignments: event.busAssignments,
+                                          firstHalfBus: event.firstHalfBus,
                                           secondHalfBus: event.secondHalfBus,
+                                          additionalBusesUsed: event.additionalBusesUsed?.map((b) => b).toList(),
+                                          firstHalfAdditionalBuses: event.firstHalfAdditionalBuses?.map((b) => b).toList(),
+                                          secondHalfAdditionalBuses: event.secondHalfAdditionalBuses?.map((b) => b).toList(),
+                                          additionalBusesByDuty: event.additionalBusesByDuty?.map((k, v) => MapEntry(k, List<String>.from(v))),
                                           notes: event.notes,
                                         );
+                                        
+                                        // Use remove method to clear primary bus and breakdown history
+                                        updatedEvent.removeBusForFirstHalf();
                                         
                                         // Save the updated event
                                         await EventService.updateEvent(oldEvent, updatedEvent);
@@ -2535,6 +2667,127 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                                           : () => _trackBus(event.secondHalfBus!),
                                       tooltip: 'Track ${event.secondHalfBus}',
                                     ),
+                                    // Change bus button (swap/recycle icon)
+                                    IconButton(
+                                      icon: const Icon(Icons.swap_horiz, size: 18, color: Colors.orange),
+                                      onPressed: () async {
+                                        // Show the bus assignment dialog
+                                        final hasCurrentBus = event.secondHalfBus != null && event.secondHalfBus!.isNotEmpty;
+                                        final TextEditingController controller = TextEditingController(text: event.secondHalfBus ?? '');
+                                        final result = await showDialog<String>(
+                                          context: context,
+                                          builder: (context) => AlertDialog(
+                                            title: Text(hasCurrentBus ? 'Change Second Half Bus' : 'Add Second Half Bus'),
+                                            content: Column(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                if (hasCurrentBus)
+                                                  Padding(
+                                                    padding: const EdgeInsets.only(bottom: 8.0),
+                                                    child: Text(
+                                                      'Current: ${event.secondHalfBus}',
+                                                      style: TextStyle(
+                                                        fontWeight: FontWeight.w500,
+                                                        color: Colors.grey[700],
+                                                      ),
+                                                    ),
+                                                  ),
+                                                TextField(
+                                                  controller: controller,
+                                                  decoration: const InputDecoration(
+                                                    hintText: 'Enter bus number (e.g. PA155)',
+                                                    labelText: 'Bus Number',
+                                                  ),
+                                                  textCapitalization: TextCapitalization.characters,
+                                                  autofocus: true,
+                                                ),
+                                              ],
+                                            ),
+                                            actions: [
+                                              TextButton(
+                                                onPressed: () => Navigator.of(context).pop(),
+                                                child: const Text('Cancel'),
+                                              ),
+                                              TextButton(
+                                                onPressed: () {
+                                                  String busNumber = controller.text.trim().toUpperCase();
+                                                  busNumber = busNumber.replaceAll(' ', '');
+                                                  if (busNumber.isNotEmpty) {
+                                                    Navigator.of(context).pop(busNumber);
+                                                  }
+                                                },
+                                                child: Text(hasCurrentBus ? 'Change' : 'Add'),
+                                              ),
+                                            ],
+                                          ),
+                                        );
+                                        
+                                        if (result != null) {
+                                          // Create a copy of the old event
+                                          final oldEvent = Event(
+                                            id: event.id,
+                                            title: event.title,
+                                            startDate: event.startDate,
+                                            startTime: event.startTime,
+                                            endDate: event.endDate,
+                                            endTime: event.endTime,
+                                            workTime: event.workTime,
+                                            breakStartTime: event.breakStartTime,
+                                            breakEndTime: event.breakEndTime,
+                                            assignedDuties: event.assignedDuties,
+                                            firstHalfBus: event.firstHalfBus,
+                                            secondHalfBus: event.secondHalfBus,
+                                            busAssignments: event.busAssignments,
+                                            additionalBusesUsed: event.additionalBusesUsed?.map((b) => b).toList(),
+                                            firstHalfAdditionalBuses: event.firstHalfAdditionalBuses?.map((b) => b).toList(),
+                                            secondHalfAdditionalBuses: event.secondHalfAdditionalBuses?.map((b) => b).toList(),
+                                            additionalBusesByDuty: event.additionalBusesByDuty?.map((k, v) => MapEntry(k, List<String>.from(v))),
+                                            notes: event.notes,
+                                          );
+                                          
+                                          // Create updated event with all bus breakdown fields
+                                          final updatedEvent = Event(
+                                            id: event.id,
+                                            title: event.title,
+                                            startDate: event.startDate,
+                                            startTime: event.startTime,
+                                            endDate: event.endDate,
+                                            endTime: event.endTime,
+                                            workTime: event.workTime,
+                                            breakStartTime: event.breakStartTime,
+                                            breakEndTime: event.breakEndTime,
+                                            assignedDuties: event.assignedDuties,
+                                            busAssignments: event.busAssignments,
+                                            firstHalfBus: event.firstHalfBus,
+                                            secondHalfBus: event.secondHalfBus,
+                                            additionalBusesUsed: event.additionalBusesUsed?.map((b) => b).toList(),
+                                            firstHalfAdditionalBuses: event.firstHalfAdditionalBuses?.map((b) => b).toList(),
+                                            secondHalfAdditionalBuses: event.secondHalfAdditionalBuses?.map((b) => b).toList(),
+                                            additionalBusesByDuty: event.additionalBusesByDuty?.map((k, v) => MapEntry(k, List<String>.from(v))),
+                                            notes: event.notes,
+                                          );
+                                          
+                                          // Use change bus method to track breakdown buses
+                                          updatedEvent.changeBusForSecondHalf(result);
+                                          
+                                          // Save the updated event
+                                          await EventService.updateEvent(oldEvent, updatedEvent);
+                                          
+                                          // Sync bus assignments to Google Calendar
+                                          await _syncBusAssignmentsToGoogleCalendar(updatedEvent);
+                                          
+                                          // Refresh the UI
+                                          if (mounted) {
+                                            setState(() {});
+                                            // Close the current dialog
+                                            Navigator.of(context).pop();
+                                            // Reopen the dialog with the updated event
+                                            _editEvent(updatedEvent);
+                                          }
+                                        }
+                                      },
+                                      tooltip: 'Change bus',
+                                    ),
                                     IconButton(
                                       icon: const Icon(Icons.remove_circle_outline, size: 18, color: Colors.red),
                                       onPressed: () async {
@@ -2553,10 +2806,14 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                                           firstHalfBus: event.firstHalfBus,
                                           secondHalfBus: event.secondHalfBus,
                                           busAssignments: event.busAssignments,
+                                          additionalBusesUsed: event.additionalBusesUsed?.map((b) => b).toList(),
+                                          firstHalfAdditionalBuses: event.firstHalfAdditionalBuses?.map((b) => b).toList(),
+                                          secondHalfAdditionalBuses: event.secondHalfAdditionalBuses?.map((b) => b).toList(),
+                                          additionalBusesByDuty: event.additionalBusesByDuty?.map((k, v) => MapEntry(k, List<String>.from(v))),
                                           notes: event.notes,
                                         );
                                         
-                                        // Create a new event with the updated bus
+                                        // Create a new event and use remove method to clear primary bus and breakdown history
                                         final updatedEvent = Event(
                                           id: event.id,
                                           title: event.title,
@@ -2568,11 +2825,18 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                                           breakStartTime: event.breakStartTime,
                                           breakEndTime: event.breakEndTime,
                                           assignedDuties: event.assignedDuties,
-                                          busAssignments: event.busAssignments, // CRITICAL: Preserve bus assignments
+                                          busAssignments: event.busAssignments,
                                           firstHalfBus: event.firstHalfBus,
-                                          secondHalfBus: null, // Remove second half bus
-                                          notes: event.notes, // Add this line
+                                          secondHalfBus: event.secondHalfBus,
+                                          additionalBusesUsed: event.additionalBusesUsed?.map((b) => b).toList(),
+                                          firstHalfAdditionalBuses: event.firstHalfAdditionalBuses?.map((b) => b).toList(),
+                                          secondHalfAdditionalBuses: event.secondHalfAdditionalBuses?.map((b) => b).toList(),
+                                          additionalBusesByDuty: event.additionalBusesByDuty?.map((k, v) => MapEntry(k, List<String>.from(v))),
+                                          notes: event.notes,
                                         );
+                                        
+                                        // Use remove method to clear primary bus and breakdown history
+                                        updatedEvent.removeBusForSecondHalf();
                                         
                                         // Save the updated event
                                         await EventService.updateEvent(oldEvent, updatedEvent);
@@ -2606,107 +2870,152 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                           // Removed unused variable isSpareWithFullDuties
                           
                           if (isWorkoutOrOvertime) {
-                            // Single button for workout and overtime shifts - only show if no bus is assigned
-                            if (event.firstHalfBus == null) {
-                              return ElevatedButton(
-                                onPressed: () async {
-                                  // Show the bus assignment dialog
-                                  final TextEditingController controller = TextEditingController();
-                                  final result = await showDialog<String>(
-                                    context: context,
-                                    builder: (context) => AlertDialog(
-                                      title: const Text('Add Bus'),
-                                      content: TextField(
-                                        controller: controller,
-                                        decoration: const InputDecoration(
-                                          hintText: 'Enter bus number (e.g. PA155)',
-                                          labelText: 'Bus Number',
-                                        ),
-                                        textCapitalization: TextCapitalization.characters,
-                                      ),
-                                      actions: [
-                                        TextButton(
-                                          onPressed: () => Navigator.of(context).pop(),
-                                          child: const Text('Cancel'),
-                                        ),
-                                        TextButton(
-                                          onPressed: () {
-                                            String busNumber = controller.text.trim().toUpperCase();
-                                            busNumber = busNumber.replaceAll(' ', '');
-                                            if (busNumber.isNotEmpty) {
-                                              Navigator.of(context).pop(busNumber);
-                                            }
-                                          },
-                                          child: const Text('Add'),
+                            // Single button for workout and overtime shifts - show "Change Bus" if bus exists, "Add Bus" if not
+                            return ElevatedButton(
+                              onPressed: () async {
+                                // Show the bus assignment dialog
+                                final TextEditingController controller = TextEditingController(text: event.firstHalfBus ?? '');
+                                final hasCurrentBus = event.firstHalfBus != null && event.firstHalfBus!.isNotEmpty;
+                                final result = await showDialog<String>(
+                                  context: context,
+                                  builder: (context) => AlertDialog(
+                                    title: Text(hasCurrentBus ? 'Change Bus' : 'Add Bus'),
+                                    content: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        if (hasCurrentBus)
+                                          Padding(
+                                            padding: const EdgeInsets.only(bottom: 8.0),
+                                            child: Text(
+                                              'Current: ${event.firstHalfBus}',
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.w500,
+                                                color: Colors.grey[700],
+                                              ),
+                                            ),
+                                          ),
+                                        TextField(
+                                          controller: controller,
+                                          decoration: const InputDecoration(
+                                            hintText: 'Enter bus number (e.g. PA155)',
+                                            labelText: 'Bus Number',
+                                          ),
+                                          textCapitalization: TextCapitalization.characters,
+                                          autofocus: true,
                                         ),
                                       ],
                                     ),
-                                  );
-                                  
-                                        if (result != null) {
-                                          // Create a new event with the updated bus number
-                                          final updatedEvent = Event(
-                                            id: event.id,
-                                            title: event.title,
-                                            startDate: event.startDate,
-                                            startTime: event.startTime,
-                                            endDate: event.endDate,
-                                            endTime: event.endTime,
-                                            workTime: event.workTime,
-                                            breakStartTime: event.breakStartTime,
-                                            breakEndTime: event.breakEndTime,
-                                            assignedDuties: event.assignedDuties,
-                                            busAssignments: event.busAssignments, // CRITICAL: Preserve bus assignments
-                                            firstHalfBus: result,
-                                            secondHalfBus: event.secondHalfBus,
-                                          );
-                                    
-                                    // Save the updated event
-                                    await EventService.updateEvent(event, updatedEvent);
-                                    
-                                    // Sync bus assignments to Google Calendar
-                                    await _syncBusAssignmentsToGoogleCalendar(updatedEvent);
-                                    
-                                    // Refresh the UI
-                                    if (mounted) {
-                                      setState(() {});
-                                      // Close the current dialog
-                                      Navigator.of(context).pop();
-                                      // Reopen the dialog with the updated event
-                                      _editEvent(updatedEvent);
-                                    }
-                                  }
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(vertical: 12),
-                                  backgroundColor: AppTheme.primaryColor,
-                                  foregroundColor: Colors.white,
-                                  elevation: 2,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  minimumSize: const Size(0, 48),
-                                ),
-                                child: const SizedBox(
-                                  width: double.infinity,
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(Icons.directions_bus, size: 18),
-                                      SizedBox(width: 8),
-                                      Text('Add Bus'),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () => Navigator.of(context).pop(),
+                                        child: const Text('Cancel'),
+                                      ),
+                                      TextButton(
+                                        onPressed: () {
+                                          String busNumber = controller.text.trim().toUpperCase();
+                                          busNumber = busNumber.replaceAll(' ', '');
+                                          if (busNumber.isNotEmpty) {
+                                            Navigator.of(context).pop(busNumber);
+                                          }
+                                        },
+                                        child: Text(hasCurrentBus ? 'Change' : 'Add'),
+                                      ),
                                     ],
                                   ),
+                                );
+                                
+                                if (result != null) {
+                                  // Create a copy of the old event
+                                  final oldEvent = Event(
+                                    id: event.id,
+                                    title: event.title,
+                                    startDate: event.startDate,
+                                    startTime: event.startTime,
+                                    endDate: event.endDate,
+                                    endTime: event.endTime,
+                                    workTime: event.workTime,
+                                    breakStartTime: event.breakStartTime,
+                                    breakEndTime: event.breakEndTime,
+                                    assignedDuties: event.assignedDuties,
+                                    busAssignments: event.busAssignments,
+                                    firstHalfBus: event.firstHalfBus,
+                                    secondHalfBus: event.secondHalfBus,
+                                    additionalBusesUsed: event.additionalBusesUsed?.map((b) => b).toList(),
+                                    firstHalfAdditionalBuses: event.firstHalfAdditionalBuses?.map((b) => b).toList(),
+                                    secondHalfAdditionalBuses: event.secondHalfAdditionalBuses?.map((b) => b).toList(),
+                                    additionalBusesByDuty: event.additionalBusesByDuty?.map((k, v) => MapEntry(k, List<String>.from(v))),
+                                  );
+                                  
+                                  // Create updated event and use change bus method
+                                  final updatedEvent = Event(
+                                    id: event.id,
+                                    title: event.title,
+                                    startDate: event.startDate,
+                                    startTime: event.startTime,
+                                    endDate: event.endDate,
+                                    endTime: event.endTime,
+                                    workTime: event.workTime,
+                                    breakStartTime: event.breakStartTime,
+                                    breakEndTime: event.breakEndTime,
+                                    assignedDuties: event.assignedDuties,
+                                    busAssignments: event.busAssignments,
+                                    firstHalfBus: event.firstHalfBus,
+                                    secondHalfBus: event.secondHalfBus,
+                                    additionalBusesUsed: event.additionalBusesUsed?.map((b) => b).toList(),
+                                    firstHalfAdditionalBuses: event.firstHalfAdditionalBuses?.map((b) => b).toList(),
+                                    secondHalfAdditionalBuses: event.secondHalfAdditionalBuses?.map((b) => b).toList(),
+                                    additionalBusesByDuty: event.additionalBusesByDuty?.map((k, v) => MapEntry(k, List<String>.from(v))),
+                                  );
+                                  
+                                  // Use change bus method to track breakdown buses
+                                  updatedEvent.changeBusForSingleShift(result);
+                                  
+                                  // Save the updated event
+                                  await EventService.updateEvent(oldEvent, updatedEvent);
+                                  
+                                  // Sync bus assignments to Google Calendar
+                                  await _syncBusAssignmentsToGoogleCalendar(updatedEvent);
+                                  
+                                  // Refresh the UI
+                                  if (mounted) {
+                                    setState(() {});
+                                    // Close the current dialog
+                                    Navigator.of(context).pop();
+                                    // Reopen the dialog with the updated event
+                                    _editEvent(updatedEvent);
+                                  }
+                                }
+                              },
+                              style: ElevatedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                backgroundColor: event.firstHalfBus == null ? AppTheme.primaryColor : Colors.orange,
+                                foregroundColor: Colors.white,
+                                elevation: 2,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
                                 ),
-                              );
-                            }
-                            return const SizedBox.shrink(); // Return empty widget if bus is already assigned
+                                minimumSize: const Size(0, 48),
+                              ),
+                              child: SizedBox(
+                                width: double.infinity,
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Icon(Icons.directions_bus, size: 18),
+                                    const SizedBox(width: 8),
+                                    Text(event.firstHalfBus == null ? 'Add Bus' : 'Change Bus'),
+                                  ],
+                                ),
+                              ),
+                            );
                           } else {
-                            // Two buttons for regular shifts OR spare shifts with full duties
-                            return Row(
+                            // Add bus buttons - only show when buses are not assigned
+                            // Bus changes are handled via swap icons in the bus cards when buses exist
+                            return Column(
                               children: [
                                 if (event.firstHalfBus == null)
-                                  Expanded(
+                                  SizedBox(
+                                    width: double.infinity,
                                     child: ElevatedButton(
                                       onPressed: () async {
                                         // Create a copy of the old event
@@ -2724,6 +3033,11 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                                           firstHalfBus: event.firstHalfBus,
                                           secondHalfBus: event.secondHalfBus,
                                           busAssignments: event.busAssignments,
+                                          additionalBusesUsed: event.additionalBusesUsed?.map((b) => b).toList(),
+                                          firstHalfAdditionalBuses: event.firstHalfAdditionalBuses?.map((b) => b).toList(),
+                                          secondHalfAdditionalBuses: event.secondHalfAdditionalBuses?.map((b) => b).toList(),
+                                          additionalBusesByDuty: event.additionalBusesByDuty?.map((k, v) => MapEntry(k, List<String>.from(v))),
+                                          notes: event.notes,
                                         );
                                         
                                         // Show the bus assignment dialog
@@ -2732,13 +3046,19 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                                           context: context,
                                           builder: (context) => AlertDialog(
                                             title: const Text('Add First Half Bus'),
-                                            content: TextField(
-                                              controller: controller,
-                                              decoration: const InputDecoration(
-                                                hintText: 'Enter bus number (e.g. PA155)',
-                                                labelText: 'Bus Number',
-                                              ),
-                                              textCapitalization: TextCapitalization.characters,
+                                            content: Column(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                TextField(
+                                                  controller: controller,
+                                                  decoration: const InputDecoration(
+                                                    hintText: 'Enter bus number (e.g. PA155)',
+                                                    labelText: 'Bus Number',
+                                                  ),
+                                                  textCapitalization: TextCapitalization.characters,
+                                                  autofocus: true,
+                                                ),
+                                              ],
                                             ),
                                             actions: [
                                               TextButton(
@@ -2757,10 +3077,10 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                                               ),
                                             ],
                                           ),
-                                  );
-                                  
+                                        );
+                                        
                                         if (result != null) {
-                                          // Create a new event with the updated bus number
+                                          // Create updated event
                                           final updatedEvent = Event(
                                             id: event.id,
                                             title: event.title,
@@ -2772,10 +3092,14 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                                             breakStartTime: event.breakStartTime,
                                             breakEndTime: event.breakEndTime,
                                             assignedDuties: event.assignedDuties,
-                                            busAssignments: event.busAssignments, // CRITICAL: Preserve bus assignments
+                                            busAssignments: event.busAssignments,
                                             firstHalfBus: result,
                                             secondHalfBus: event.secondHalfBus,
-                                            notes: event.notes, // Add this line
+                                            additionalBusesUsed: event.additionalBusesUsed?.map((b) => b).toList(),
+                                            firstHalfAdditionalBuses: event.firstHalfAdditionalBuses?.map((b) => b).toList(),
+                                            secondHalfAdditionalBuses: event.secondHalfAdditionalBuses?.map((b) => b).toList(),
+                                            additionalBusesByDuty: event.additionalBusesByDuty?.map((k, v) => MapEntry(k, List<String>.from(v))),
+                                            notes: event.notes,
                                           );
                                           
                                           // Save the updated event
@@ -2804,23 +3128,24 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                                         ),
                                         minimumSize: const Size(0, 48),
                                       ),
-                                      child: const SizedBox(
+                                      child: SizedBox(
                                         width: double.infinity,
                                         child: Row(
                                           mainAxisAlignment: MainAxisAlignment.center,
                                           children: [
-                                            Icon(Icons.directions_bus, size: 18),
-                                            SizedBox(width: 8),
-                                            Text('1st Half'),
+                                            const Icon(Icons.directions_bus, size: 18),
+                                            const SizedBox(width: 8),
+                                            const Text('Add 1st Half Bus'),
                                           ],
                                         ),
                                       ),
                                     ),
                                   ),
                                 if (event.firstHalfBus == null && event.secondHalfBus == null)
-                                  const SizedBox(width: 8),
+                                  const SizedBox(height: 8),
                                 if (event.secondHalfBus == null)
-                                  Expanded(
+                                  SizedBox(
+                                    width: double.infinity,
                                     child: ElevatedButton(
                                       onPressed: () async {
                                         // Create a copy of the old event
@@ -2838,6 +3163,11 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                                           firstHalfBus: event.firstHalfBus,
                                           secondHalfBus: event.secondHalfBus,
                                           busAssignments: event.busAssignments,
+                                          additionalBusesUsed: event.additionalBusesUsed?.map((b) => b).toList(),
+                                          firstHalfAdditionalBuses: event.firstHalfAdditionalBuses?.map((b) => b).toList(),
+                                          secondHalfAdditionalBuses: event.secondHalfAdditionalBuses?.map((b) => b).toList(),
+                                          additionalBusesByDuty: event.additionalBusesByDuty?.map((k, v) => MapEntry(k, List<String>.from(v))),
+                                          notes: event.notes,
                                         );
                                         
                                         // Show the bus assignment dialog
@@ -2846,13 +3176,19 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                                           context: context,
                                           builder: (context) => AlertDialog(
                                             title: const Text('Add Second Half Bus'),
-                                            content: TextField(
-                                              controller: controller,
-                                              decoration: const InputDecoration(
-                                                hintText: 'Enter bus number (e.g. PA155)',
-                                                labelText: 'Bus Number',
-                                              ),
-                                              textCapitalization: TextCapitalization.characters,
+                                            content: Column(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                TextField(
+                                                  controller: controller,
+                                                  decoration: const InputDecoration(
+                                                    hintText: 'Enter bus number (e.g. PA155)',
+                                                    labelText: 'Bus Number',
+                                                  ),
+                                                  textCapitalization: TextCapitalization.characters,
+                                                  autofocus: true,
+                                                ),
+                                              ],
                                             ),
                                             actions: [
                                               TextButton(
@@ -2874,7 +3210,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                                         );
                                         
                                         if (result != null) {
-                                          // Create a new event with the updated bus number
+                                          // Create updated event
                                           final updatedEvent = Event(
                                             id: event.id,
                                             title: event.title,
@@ -2886,10 +3222,14 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                                             breakStartTime: event.breakStartTime,
                                             breakEndTime: event.breakEndTime,
                                             assignedDuties: event.assignedDuties,
-                                            busAssignments: event.busAssignments, // CRITICAL: Preserve bus assignments
+                                            busAssignments: event.busAssignments,
                                             firstHalfBus: event.firstHalfBus,
                                             secondHalfBus: result,
-                                            notes: event.notes, // Add this line
+                                            additionalBusesUsed: event.additionalBusesUsed?.map((b) => b).toList(),
+                                            firstHalfAdditionalBuses: event.firstHalfAdditionalBuses?.map((b) => b).toList(),
+                                            secondHalfAdditionalBuses: event.secondHalfAdditionalBuses?.map((b) => b).toList(),
+                                            additionalBusesByDuty: event.additionalBusesByDuty?.map((k, v) => MapEntry(k, List<String>.from(v))),
+                                            notes: event.notes,
                                           );
                                           
                                           // Save the updated event
@@ -2918,14 +3258,14 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                                         ),
                                         minimumSize: const Size(0, 48),
                                       ),
-                                      child: const SizedBox(
+                                      child: SizedBox(
                                         width: double.infinity,
                                         child: Row(
                                           mainAxisAlignment: MainAxisAlignment.center,
                                           children: [
-                                            Icon(Icons.directions_bus, size: 18),
-                                            SizedBox(width: 8),
-                                            Text('2nd Half'),
+                                            const Icon(Icons.directions_bus, size: 18),
+                                            const SizedBox(width: 8),
+                                            const Text('Add 2nd Half Bus'),
                                           ],
                                         ),
                                       ),

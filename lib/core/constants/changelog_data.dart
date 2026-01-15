@@ -20,6 +20,14 @@ final Map<String, List<Map<String, String>>> changelogData = {
       'title': 'Fixed Year View M-F Pattern Support',
       'description': 'Fixed Year View to correctly display M-F (Monday-Friday) marked-in pattern. Year View now respects marked-in settings and shows Work days for Mon-Fri and Rest days for Sat-Sun when M-F marked-in is enabled, matching the behavior of the main calendar view.',
     },
+    {
+      'title': 'Bus Change Tracking',
+      'description': 'Bus changes are now tracked for all shift types. When you change buses during a shift, all buses used are counted in statistics. Only the current bus is displayed in event cards.',
+    },
+    {
+      'title': 'Bank Holidays Excluded from M-F Holiday Day Count',
+      'description': 'M-F marked-in users no longer have holiday days deducted for bank holidays that fall within their holiday periods, since they already rest on bank holidays.',
+    },
   ],
   '2.18.0': [
     {
