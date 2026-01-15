@@ -5769,7 +5769,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                               const Icon(Icons.wb_sunny, size: 22),
                               const SizedBox(width: 12),
                               Text(
-                                'Summer (2 Weeks)',
+                                'Summer Holiday',
                                 style: TextStyle(
                                   fontSize: 14,
                                   color: Theme.of(context).textTheme.bodyMedium?.color,
@@ -6474,10 +6474,175 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
   }
 
   void _showSummerHolidayDateDialog() {
+    // Show duration choice first
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.orange.shade900.withOpacity(0.3)
+                      : Colors.orange.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Icons.wb_sunny, color: Colors.orange, size: 20),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Text(
+                  'Select Duration',
+                  style: TextStyle(
+                    fontSize: 16,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    _showSummerHolidayYearDialog(durationWeeks: 1);
+                  },
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Theme.of(context).cardColor
+                          : Colors.orange.shade50,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: Colors.orange.shade300,
+                        width: 2,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.orange.shade100,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(Icons.calendar_view_week, color: Colors.orange),
+                        ),
+                        const SizedBox(width: 12),
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '1 Week',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              SizedBox(height: 4),
+                              Text(
+                                'Sunday to Saturday (7 days)',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    _showSummerHolidayYearDialog(durationWeeks: 2);
+                  },
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Theme.of(context).cardColor
+                          : Colors.orange.shade50,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: Colors.orange.shade300,
+                        width: 2,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.orange.shade100,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(Icons.calendar_view_month, color: Colors.orange),
+                        ),
+                        const SizedBox(width: 12),
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '2 Weeks',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              SizedBox(height: 4),
+                              Text(
+                                'Sunday to Saturday (14 days)',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showSummerHolidayYearDialog({required int durationWeeks}) {
     final now = DateTime.now();
     final currentYear = now.year;
     
-    // Show year selection first
+    // Show year selection
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -6543,7 +6708,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                               child: InkWell(
                                 onTap: () {
                                   Navigator.of(context).pop();
-                                  _showSummerHolidayDateDialogForYear(year);
+                                  _showSummerHolidayDateDialogForYear(year, durationWeeks: durationWeeks);
                                 },
                                 borderRadius: BorderRadius.circular(12),
                                 child: Container(
@@ -6677,7 +6842,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
   }
 
   // Show summer holiday date selection for a specific year
-  void _showSummerHolidayDateDialogForYear(int year) {
+  void _showSummerHolidayDateDialogForYear(int year, {required int durationWeeks}) {
     final sundays = _getSundaysForYear(year);
     
     showDialog(
@@ -6710,30 +6875,30 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                     child: const Icon(Icons.wb_sunny, color: Colors.orange, size: 20),
                   ),
                   const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          'Select Summer Holiday Start Date',
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: Theme.of(context).textTheme.titleLarge?.color,
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                'Select Summer Holiday Start Date',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: Theme.of(context).textTheme.titleLarge?.color,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Year: $year • ${durationWeeks == 1 ? '1 Week' : '2 Weeks'}',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Theme.of(context).textTheme.bodySmall?.color,
+                                  fontWeight: FontWeight.normal,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-                          'Year: $year',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Theme.of(context).textTheme.bodySmall?.color,
-                            fontWeight: FontWeight.normal,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
                   IconButton(
                     icon: const Icon(Icons.arrow_back, size: 20),
                     onPressed: () {
@@ -6804,10 +6969,12 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                               child: InkWell(
                                 onTap: alreadyHasHoliday ? null : () async {
                                   // Create a new holiday starting on the selected Sunday
+                                  // Duration: 1 week = 6 days (Sun-Sat), 2 weeks = 13 days (Sun-Sat)
+                                  final daysToAdd = durationWeeks == 1 ? 6 : 13;
                                   final holiday = Holiday(
                                     id: DateTime.now().millisecondsSinceEpoch.toString(),
                                     startDate: date,
-                                    endDate: date.add(const Duration(days: 13)), // End on Saturday (2 weeks)
+                                    endDate: date.add(Duration(days: daysToAdd)),
                                     type: 'summer',
                                   );
                                   
@@ -6822,9 +6989,10 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                                   
                                   // Show success message
                                   if (mounted) {
+                                    final durationText = durationWeeks == 1 ? '1 week' : '2 weeks';
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       SnackBar(
-                                        content: Text('Summer holiday for $year added successfully'),
+                                        content: Text('Summer holiday ($durationText) for $year added successfully'),
                                         backgroundColor: Colors.green,
                                       ),
                                     );
@@ -6986,7 +7154,8 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
 
 
   void _showOtherHolidayDialog() {
-    DateTime selectedDate = DateTime.now();
+    final Set<DateTime> selectedDates = {};
+    DateTime currentMonth = DateTime.now();
     
     showDialog(
       context: context,
@@ -7017,7 +7186,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                       const SizedBox(width: 12),
                       const Expanded(
                         child: Text(
-                          'Select Holiday Date',
+                          'Select Holiday Dates',
                           style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
@@ -7033,24 +7202,88 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                     ],
                   ),
                 ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.chevron_left),
+                        onPressed: () {
+                          setState(() {
+                            currentMonth = DateTime(currentMonth.year, currentMonth.month - 1);
+                          });
+                        },
+                      ),
+                      Text(
+                        DateFormat('MMMM yyyy').format(currentMonth),
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.chevron_right),
+                        onPressed: () {
+                          setState(() {
+                            currentMonth = DateTime(currentMonth.year, currentMonth.month + 1);
+                          });
+                        },
+                      ),
+                    ],
+                  ),
+                ),
                 const Divider(height: 0),
                 Flexible(
                   child: SingleChildScrollView(
                     child: Padding(
                       padding: const EdgeInsets.all(16),
-                      child: CalendarDatePicker(
-                        initialDate: selectedDate,
-                        firstDate: DateTime.now().subtract(const Duration(days: 365)),
-                        lastDate: DateTime.now().add(const Duration(days: 365)),
-                        onDateChanged: (date) {
+                      child: _buildMultiSelectCalendar(
+                        currentMonth: currentMonth,
+                        selectedDates: selectedDates,
+                        onDateTapped: (date) {
                           setState(() {
-                            selectedDate = date;
+                            // Normalize date to midnight for comparison
+                            final normalizedDate = DateTime(date.year, date.month, date.day);
+                            if (selectedDates.contains(normalizedDate)) {
+                              selectedDates.remove(normalizedDate);
+                            } else {
+                              selectedDates.add(normalizedDate);
+                            }
                           });
                         },
                       ),
                     ),
                   ),
                 ),
+                if (selectedDates.isNotEmpty) ...[
+                  const Divider(height: 0),
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.green.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.info_outline, color: Colors.green.shade700, size: 20),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              '${selectedDates.length} day${selectedDates.length == 1 ? '' : 's'} selected',
+                              style: TextStyle(
+                                color: Colors.green.shade700,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
                 const Divider(height: 0),
                 Padding(
                   padding: const EdgeInsets.all(16),
@@ -7063,16 +7296,26 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                       ),
                       const SizedBox(width: 8),
                       ElevatedButton(
-                        onPressed: () async {
-                          final holiday = Holiday(
-                            id: 'other_${selectedDate.millisecondsSinceEpoch}',
-                            startDate: selectedDate,
-                            endDate: selectedDate,
-                            type: 'other',
-                          );
+                        onPressed: selectedDates.isEmpty ? null : () async {
+                          // Create a separate holiday for each selected date
+                          final sortedDates = selectedDates.toList()..sort();
+                          int successCount = 0;
                           
-                          // Add the holiday
-                          await HolidayService.addHoliday(holiday);
+                          for (final date in sortedDates) {
+                            try {
+                              final holiday = Holiday(
+                                id: 'other_${date.millisecondsSinceEpoch}',
+                                startDate: date,
+                                endDate: date,
+                                type: 'other',
+                              );
+                              
+                              await HolidayService.addHoliday(holiday);
+                              successCount++;
+                            } catch (e) {
+                              // Continue with other dates even if one fails
+                            }
+                          }
                           
                           // Reload holidays from storage to ensure consistency
                           await _reloadHolidays();
@@ -7082,9 +7325,13 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                           
                           // Show success message
                           if (mounted) {
+                            final message = successCount == 1
+                                ? 'Holiday added successfully'
+                                : '$successCount holidays added successfully';
+                            
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Holiday added successfully'),
+                              SnackBar(
+                                content: Text(message),
                                 backgroundColor: Colors.green,
                               ),
                             );
@@ -7093,8 +7340,9 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.green,
                           foregroundColor: Colors.white,
+                          disabledBackgroundColor: Colors.grey.shade300,
                         ),
-                        child: const Text('Add Holiday'),
+                        child: Text(selectedDates.length == 1 ? 'Add Holiday' : 'Add Holidays'),
                       ),
                     ],
                   ),
@@ -7104,6 +7352,128 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
           ),
         ),
       ),
+    );
+  }
+  
+  Widget _buildMultiSelectCalendar({
+    required DateTime currentMonth,
+    required Set<DateTime> selectedDates,
+    required Function(DateTime) onDateTapped,
+  }) {
+    final firstDayOfMonth = DateTime(currentMonth.year, currentMonth.month, 1);
+    final lastDayOfMonth = DateTime(currentMonth.year, currentMonth.month + 1, 0);
+    final firstDayOfWeek = firstDayOfMonth.weekday % 7; // 0 = Sunday, 6 = Saturday
+    final daysInMonth = lastDayOfMonth.day;
+    
+    // Get all dates in the month
+    final List<DateTime> dates = [];
+    for (int day = 1; day <= daysInMonth; day++) {
+      dates.add(DateTime(currentMonth.year, currentMonth.month, day));
+    }
+    
+    // Get previous month's dates for padding
+    final List<DateTime> previousMonthDates = [];
+    if (firstDayOfWeek > 0) {
+      final previousMonth = DateTime(currentMonth.year, currentMonth.month - 1);
+      final lastDayOfPreviousMonth = DateTime(previousMonth.year, previousMonth.month + 1, 0);
+      for (int i = firstDayOfWeek - 1; i >= 0; i--) {
+        previousMonthDates.add(DateTime(previousMonth.year, previousMonth.month, lastDayOfPreviousMonth.day - i));
+      }
+    }
+    
+    // Get next month's dates for padding
+    final List<DateTime> nextMonthDates = [];
+    final totalCells = previousMonthDates.length + dates.length;
+    final remainingCells = 42 - totalCells; // 6 weeks * 7 days
+    if (remainingCells > 0) {
+      for (int day = 1; day <= remainingCells; day++) {
+        nextMonthDates.add(DateTime(currentMonth.year, currentMonth.month + 1, day));
+      }
+    }
+    
+    final allDates = [...previousMonthDates, ...dates, ...nextMonthDates];
+    
+    return Column(
+      children: [
+        // Weekday headers
+        Row(
+          children: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+              .map((day) => Expanded(
+                    child: Center(
+                      child: Text(
+                        day,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  ))
+              .toList(),
+        ),
+        const SizedBox(height: 8),
+        // Calendar grid
+        GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 7,
+            mainAxisSpacing: 4,
+            crossAxisSpacing: 4,
+          ),
+          itemCount: allDates.length,
+          itemBuilder: (context, index) {
+            final date = allDates[index];
+            final isCurrentMonth = date.month == currentMonth.month;
+            final normalizedDate = DateTime(date.year, date.month, date.day);
+            final isSelected = selectedDates.contains(normalizedDate);
+            final isToday = normalizedDate.year == DateTime.now().year &&
+                normalizedDate.month == DateTime.now().month &&
+                normalizedDate.day == DateTime.now().day;
+            
+            final minDate = DateTime.now().subtract(const Duration(days: 365));
+            final maxDate = DateTime.now().add(const Duration(days: 365));
+            final isWithinRange = !date.isBefore(minDate) && !date.isAfter(maxDate);
+            
+            return GestureDetector(
+              onTap: isWithinRange && isCurrentMonth
+                  ? () => onDateTapped(date)
+                  : null,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? Colors.green
+                      : isToday
+                          ? Colors.green.shade100
+                          : Colors.transparent,
+                  shape: BoxShape.circle,
+                  border: isToday && !isSelected
+                      ? Border.all(color: Colors.green, width: 2)
+                      : null,
+                ),
+                child: Center(
+                  child: Text(
+                    '${date.day}',
+                    style: TextStyle(
+                      color: isSelected
+                          ? Colors.white
+                          : !isCurrentMonth
+                              ? Colors.grey.shade300
+                              : !isWithinRange
+                                  ? Colors.grey.shade400
+                                  : Colors.black87,
+                      fontWeight: isSelected || isToday
+                          ? FontWeight.bold
+                          : FontWeight.normal,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      ],
     );
   }
 

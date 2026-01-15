@@ -7,6 +7,8 @@ import 'package:spdrivercalendar/models/event.dart';
 import 'package:spdrivercalendar/models/holiday.dart';
 import 'package:spdrivercalendar/models/bank_holiday.dart';
 import 'package:spdrivercalendar/services/color_customization_service.dart';
+import 'package:spdrivercalendar/core/services/storage_service.dart';
+import 'package:spdrivercalendar/core/constants/app_constants.dart';
 
 class YearViewScreen extends StatefulWidget {
   final int year;
@@ -33,16 +35,30 @@ class YearViewScreen extends StatefulWidget {
 class YearViewScreenState extends State<YearViewScreen> {
   static const Color holidayColor = Color(0xFF00BCD4); // Teal color for holidays
   late int _currentYear; // Store year in state to avoid closure issues
+  bool _markedInEnabled = false;
+  String _markedInStatus = 'Shift';
 
   @override
   void initState() {
     super.initState();
     _currentYear = widget.year; // Initialize with widget.year
+    _loadMarkedInSettings();
     // Preload events for visible months only (first 3-4 months) in background
     // This allows UI to show immediately while events load
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _preloadVisibleMonths();
     });
+  }
+
+  Future<void> _loadMarkedInSettings() async {
+    final markedInEnabled = await StorageService.getBool(AppConstants.markedInEnabledKey);
+    final markedInStatus = await StorageService.getString(AppConstants.markedInStatusKey) ?? 'Shift';
+    if (mounted) {
+      setState(() {
+        _markedInEnabled = markedInEnabled;
+        _markedInStatus = markedInStatus;
+      });
+    }
   }
 
   @override
@@ -52,6 +68,8 @@ class YearViewScreenState extends State<YearViewScreen> {
     if (oldWidget.year != widget.year) {
       _currentYear = widget.year;
     }
+    // Reload marked-in settings in case they changed
+    _loadMarkedInSettings();
   }
 
   Future<void> _preloadVisibleMonths() async {
@@ -72,6 +90,50 @@ class YearViewScreenState extends State<YearViewScreen> {
 
   String getShiftForDate(DateTime date) {
     if (widget.startDate == null) return '';
+    
+    // Check if marked in is enabled
+    if (_markedInEnabled) {
+      // 4 Day marked in logic: W on Fri-Sat-Sun-Mon, R on Tue-Wed-Thu
+      // Bank holidays are WORK days for 4 Day
+      if (_markedInStatus == '4 Day') {
+        // Check if this is a bank holiday - bank holidays are work days for 4 Day
+        final bankHoliday = getBankHoliday(date);
+        if (bankHoliday != null) {
+          return 'W'; // Bank holidays are work days for 4 Day
+        }
+        
+        // weekday: 1=Monday, 2=Tuesday, 3=Wednesday, 4=Thursday, 5=Friday, 6=Saturday, 7=Sunday
+        final weekday = date.weekday;
+        if (weekday == 1 || weekday == 5 || weekday == 6 || weekday == 7) {
+          // Monday (1), Friday (5), Saturday (6), Sunday (7) are work days
+          return 'W';
+        } else {
+          // Tuesday (2), Wednesday (3), Thursday (4) are rest days
+          return 'R';
+        }
+      }
+      
+      // M-F marked in logic: W on Mon-Fri, R on Sat-Sun
+      // Bank holidays are REST days for M-F
+      if (_markedInStatus == 'M-F') {
+        // Check if this is a bank holiday
+        final bankHoliday = getBankHoliday(date);
+        if (bankHoliday != null) {
+          // If M-F marked in is enabled, bank holidays are always R (Rest)
+          return 'R';
+        }
+        
+        // weekday: 1=Monday, 2=Tuesday, ..., 6=Saturday, 7=Sunday
+        final weekday = date.weekday;
+        if (weekday >= 1 && weekday <= 5) {
+          return 'W'; // Work days Mon-Fri
+        } else {
+          return 'R'; // Rest days Sat-Sun
+        }
+      }
+    }
+    
+    // Normal roster calculation
     return RosterService.getShiftForDate(date, widget.startDate!, widget.startWeek);
   }
 

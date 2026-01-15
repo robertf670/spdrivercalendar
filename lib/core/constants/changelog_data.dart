@@ -1,4 +1,26 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.18.1': [
+    {
+      'title': 'Summer Holiday Duration Choice',
+      'description': 'Added the ability to choose between 1 week or 2 weeks when adding summer holidays. Users can now select their preferred duration before choosing the start date, making it easy to add swapped holidays (e.g., 1 week in July and 1 week in August) as separate entries.',
+    },
+    {
+      'title': 'Multi-Select for Other Holidays',
+      'description': 'Enhanced "Other Holiday" selection to support selecting multiple non-consecutive days at once. Users can now tap multiple dates in the calendar to select them (e.g., 15th, 19th, 23rd), and add them all in one action. Each selected day is created as a separate holiday entry, ensuring accurate annual leave tracking.',
+    },
+    {
+      'title': 'Fixed Spread Payment Calculation for M-F Marked-In Users',
+      'description': 'Fixed spread payment calculation bug that was causing M-F marked-in users to be down exactly one day per week. The calculation was incorrectly using the rotating roster pattern to determine rest days, which excluded one weekday per week for M-F users. Now correctly treats all Monday-Friday days as work days for M-F marked-in users, ensuring all 5 weekdays are included in spread calculations.',
+    },
+    {
+      'title': 'Fixed Duplicate Duty Display on Spare Shifts',
+      'description': 'Fixed bug where adding two half duties (e.g., 4/27A and 4/27B) to a spare shift would show one duty duplicated instead of both duties correctly.',
+    },
+    {
+      'title': 'Fixed Year View M-F Pattern Support',
+      'description': 'Fixed Year View to correctly display M-F (Monday-Friday) marked-in pattern. Year View now respects marked-in settings and shows Work days for Mon-Fri and Rest days for Sat-Sun when M-F marked-in is enabled, matching the behavior of the main calendar view.',
+    },
+  ],
   '2.18.0': [
     {
       'title': 'Calendar Duty Code Display',

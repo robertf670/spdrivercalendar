@@ -108,6 +108,10 @@ class StatisticsScreenState extends State<StatisticsScreen>
   // Roster settings
   DateTime? _startDate;
   int _startWeek = 0;
+  
+  // Marked-in settings
+  bool _markedInEnabled = false;
+  String _markedInStatus = 'Shift';
 
   // State variable to hold the future for work time stats
   Future<Map<String, Duration>>? _workTimeStatsFuture;
@@ -271,6 +275,7 @@ class StatisticsScreenState extends State<StatisticsScreen>
     _csvSpreadTimeCache.clear(); 
     
     await _loadRosterSettings();
+    await _loadMarkedInSettings();
     await _loadDaysInLieuBalance();
     await _loadAnnualLeaveBalance();
     if (mounted) {
@@ -1839,11 +1844,8 @@ class StatisticsScreenState extends State<StatisticsScreen>
 
       final normalizedDate = DateTime.utc(date.year, date.month, date.day);
 
-      // Skip if this is a rest day based on roster
-      final String shiftType = (_startDate != null)
-          ? RosterService.getShiftForDate(normalizedDate, _startDate!, _startWeek)
-          : '';
-      final bool isRest = shiftType == 'R';
+      // Skip if this is a rest day (respects marked-in status)
+      final bool isRest = await _isRestDay(normalizedDate);
 
       if (isRest) {
         continue;
@@ -2292,6 +2294,67 @@ class StatisticsScreenState extends State<StatisticsScreen>
         _startWeek = startWeek;
       });
     }
+  }
+
+  Future<void> _loadMarkedInSettings() async {
+    final markedInEnabled = await StorageService.getBool(AppConstants.markedInEnabledKey);
+    final markedInStatus = await StorageService.getString(AppConstants.markedInStatusKey) ?? 'Shift';
+    if (mounted) {
+      setState(() {
+        _markedInEnabled = markedInEnabled;
+        _markedInStatus = markedInStatus;
+      });
+    }
+  }
+
+  // Check if a date is a rest day, respecting marked-in status
+  Future<bool> _isRestDay(DateTime date) async {
+    // Check if marked in is enabled
+    if (_markedInEnabled) {
+      // M-F marked in logic: W on Mon-Fri, R on Sat-Sun
+      // Bank holidays are REST days for M-F
+      if (_markedInStatus == 'M-F') {
+        // Check if this is a bank holiday
+        final isBankHolidayDate = await isBankHoliday(date);
+        if (isBankHolidayDate) {
+          // If M-F marked in is enabled, bank holidays are always R (Rest)
+          return true;
+        }
+        
+        // weekday: 1=Monday, 2=Tuesday, ..., 6=Saturday, 7=Sunday
+        final weekday = date.weekday;
+        if (weekday >= 1 && weekday <= 5) {
+          return false; // Work days Mon-Fri
+        } else {
+          return true; // Rest days Sat-Sun
+        }
+      }
+      
+      // 4 Day marked in logic: W on Fri-Sat-Sun-Mon, R on Tue-Wed-Thu
+      // Bank holidays are WORK days for 4 Day
+      if (_markedInStatus == '4 Day') {
+        // Check if this is a bank holiday - bank holidays are work days for 4 Day
+        final isBankHolidayDate = await isBankHoliday(date);
+        if (isBankHolidayDate) {
+          return false; // Bank holidays are work days for 4 Day
+        }
+        
+        // weekday: 1=Monday, 2=Tuesday, 3=Wednesday, 4=Thursday, 5=Friday, 6=Saturday, 7=Sunday
+        final weekday = date.weekday;
+        if (weekday == 1 || weekday == 5 || weekday == 6 || weekday == 7) {
+          // Monday (1), Friday (5), Saturday (6), Sunday (7) are work days
+          return false;
+        } else {
+          // Tuesday (2), Wednesday (3), Thursday (4) are rest days
+          return true;
+        }
+      }
+    }
+    
+    // Normal roster calculation
+    if (_startDate == null) return false;
+    final String shiftType = RosterService.getShiftForDate(date, _startDate!, _startWeek);
+    return shiftType == 'R';
   }
 
   // Add new method to calculate break statistics

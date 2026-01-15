@@ -1184,7 +1184,7 @@ class _EventCardState extends State<EventCard> {
                   // For first half, endLocation should be break start location (where break starts), not finish location
                   final mappedBreakStartLoc = breakStartLoc.isNotEmpty && breakStartLoc.toLowerCase() != 'nan' ? mapLocationName(breakStartLoc) : '';
                   _allDutyDetails.add({
-                    'dutyCode': dutyCode,
+                    'dutyCode': originalDutyCode,
                     'startTime': dutyStartTime,
                     'endTime': breakStartTimeStr,
                     'startLocation': startLocation.isNotEmpty && startLocation.toLowerCase() != 'nan' ? mapLocationName(startLocation) : '',
@@ -1205,7 +1205,7 @@ class _EventCardState extends State<EventCard> {
                   final mappedBreakStartLoc = breakStartLoc.isNotEmpty && breakStartLoc.toLowerCase() != 'nan' ? mapLocationName(breakStartLoc) : '';
                   
                   _allDutyDetails.add({
-                    'dutyCode': dutyCode,
+                    'dutyCode': originalDutyCode,
                     'startTime': dutyStartTime,
                     'endTime': DateFormat('HH:mm:ss').format(halfwayPoint),
                     'startLocation': startLocation.isNotEmpty && startLocation.toLowerCase() != 'nan' ? mapLocationName(startLocation) : '',
@@ -1229,7 +1229,7 @@ class _EventCardState extends State<EventCard> {
                   // For second half, startLocation should be break end location (where break ends), not start location
                   final mappedBreakEndLoc = breakEndLoc.isNotEmpty && breakEndLoc.toLowerCase() != 'nan' ? mapLocationName(breakEndLoc) : '';
                   _allDutyDetails.add({
-                    'dutyCode': dutyCode,
+                    'dutyCode': originalDutyCode,
                     'startTime': breakEndTimeStr,
                     'endTime': dutyEndTime,
                     'startLocation': mappedBreakEndLoc.isNotEmpty ? mappedBreakEndLoc : (startLocation.isNotEmpty && startLocation.toLowerCase() != 'nan' ? mapLocationName(startLocation) : ''),
@@ -1250,7 +1250,7 @@ class _EventCardState extends State<EventCard> {
                   final mappedBreakEndLoc = breakEndLoc.isNotEmpty && breakEndLoc.toLowerCase() != 'nan' ? mapLocationName(breakEndLoc) : '';
                   
                   _allDutyDetails.add({
-                    'dutyCode': dutyCode,
+                    'dutyCode': originalDutyCode,
                     'startTime': DateFormat('HH:mm:ss').format(halfwayPoint),
                     'endTime': dutyEndTime,
                     'startLocation': mappedBreakEndLoc.isNotEmpty ? mappedBreakEndLoc : (startLocation.isNotEmpty && startLocation.toLowerCase() != 'nan' ? mapLocationName(startLocation) : ''),
@@ -1272,7 +1272,7 @@ class _EventCardState extends State<EventCard> {
                 final mappedBreakEndLoc = breakEndLoc.isNotEmpty && breakEndLoc.toLowerCase() != 'nan' ? mapLocationName(breakEndLoc) : '';
                 
                 _allDutyDetails.add({
-                  'dutyCode': dutyCode,
+                  'dutyCode': originalDutyCode,
                   'startTime': dutyStartTime,
                   'endTime': dutyEndTime,
                   'startLocation': mappedStartLocation,
@@ -1298,7 +1298,7 @@ class _EventCardState extends State<EventCard> {
           // If duty wasn't found
           if (!dutyFound) {
             _allDutyDetails.add({
-              'dutyCode': dutyCode,
+              'dutyCode': originalDutyCode,
               'startTime': '00:00:00',
               'endTime': '00:00:00',
               'location': 'Zone $zone - Not found',
@@ -1310,7 +1310,7 @@ class _EventCardState extends State<EventCard> {
         } catch (e) {
 
           _allDutyDetails.add({
-            'dutyCode': dutyCode,
+            'dutyCode': originalDutyCode,
             'startTime': '00:00:00',
             'endTime': '00:00:00',
             'location': 'Error loading duty',
@@ -1327,27 +1327,55 @@ class _EventCardState extends State<EventCard> {
         // Normalize duty codes for matching (remove UNI: prefix, handle half duties)
         final normalizedDutyCode = dutyCode.replaceAll('UNI:', '').replaceAll(RegExp(r'[AB]$'), '');
         
-        // Find matching duty details
-        final dutyDetails = _allDutyDetails.firstWhere(
-          (d) {
-            final detailsCode = d['dutyCode'] ?? '';
-            final normalizedDetailsCode = detailsCode.replaceAll('UNI:', '').replaceAll(RegExp(r'[AB]$'), '');
-            return detailsCode == dutyCode || 
-                   normalizedDetailsCode == normalizedDutyCode ||
-                   detailsCode.endsWith(dutyCode) || 
-                   dutyCode.endsWith(detailsCode);
-          },
-          orElse: () => <String, String?>{},
-        );
+        // Find matching duty details - prioritize exact match first to avoid matching wrong duty
+        Map<String, String?> dutyDetails;
+        // First try exact match
+        try {
+          dutyDetails = _allDutyDetails.firstWhere(
+            (d) => (d['dutyCode'] ?? '') == dutyCode,
+          );
+        } catch (e) {
+          // If no exact match, try normalized match as fallback
+          try {
+            dutyDetails = _allDutyDetails.firstWhere(
+              (d) {
+                final detailsCode = d['dutyCode'] ?? '';
+                final normalizedDetailsCode = detailsCode.replaceAll('UNI:', '').replaceAll(RegExp(r'[AB]$'), '');
+                return normalizedDetailsCode == normalizedDutyCode ||
+                       detailsCode.endsWith(dutyCode) || 
+                       dutyCode.endsWith(detailsCode);
+              },
+            );
+          } catch (e) {
+            dutyDetails = <String, String?>{};
+          }
+        }
         
-        // Find existing enhanced duty or create new one
-        final existingEnhancedDuty = widget.event.enhancedAssignedDuties?.firstWhere(
-          (d) {
-            final normalizedExisting = d.dutyCode.replaceAll('UNI:', '').replaceAll(RegExp(r'[AB]$'), '');
-            return d.dutyCode == dutyCode || normalizedExisting == normalizedDutyCode;
-          },
-          orElse: () => AssignedDuty.fromLegacyString(dutyCode),
-        ) ?? AssignedDuty.fromLegacyString(dutyCode);
+        // Find existing enhanced duty or create new one - prioritize exact match
+        AssignedDuty existingEnhancedDuty;
+        if (widget.event.enhancedAssignedDuties != null) {
+          try {
+            // First try exact match
+            existingEnhancedDuty = widget.event.enhancedAssignedDuties!.firstWhere(
+              (d) => d.dutyCode == dutyCode,
+            );
+          } catch (e) {
+            // If no exact match, try normalized match as fallback
+            try {
+              existingEnhancedDuty = widget.event.enhancedAssignedDuties!.firstWhere(
+                (d) {
+                  final normalizedExisting = d.dutyCode.replaceAll('UNI:', '').replaceAll(RegExp(r'[AB]$'), '');
+                  return normalizedExisting == normalizedDutyCode;
+                },
+              );
+            } catch (e) {
+              // No match found, create new one
+              existingEnhancedDuty = AssignedDuty.fromLegacyString(dutyCode);
+            }
+          }
+        } else {
+          existingEnhancedDuty = AssignedDuty.fromLegacyString(dutyCode);
+        }
         
         // Check if we have location data to update
         final hasStartLoc = dutyDetails['startLocation'] != null && dutyDetails['startLocation']!.isNotEmpty;
@@ -1360,7 +1388,9 @@ class _EventCardState extends State<EventCard> {
         }
         
         // Update with location data from duty details, preserving bus assignment
+        // CRITICAL FIX: Always use the dutyCode from assignedDuties (the iteration variable) to ensure correct code
         return existingEnhancedDuty.copyWith(
+          dutyCode: dutyCode, // Ensure we use the correct duty code from assignedDuties
           startTime: dutyDetails['startTime'] ?? existingEnhancedDuty.startTime,
           endTime: dutyDetails['endTime'] ?? existingEnhancedDuty.endTime,
           location: dutyDetails['location'] ?? existingEnhancedDuty.location,
