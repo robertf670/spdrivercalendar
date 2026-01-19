@@ -13,7 +13,6 @@ import 'package:spdrivercalendar/features/calendar/widgets/shift_details_card.da
 import 'package:spdrivercalendar/features/calendar/dialogs/add_event_dialog.dart';
 import 'package:spdrivercalendar/features/statistics/screens/statistics_screen.dart';
 import 'package:spdrivercalendar/features/settings/screens/settings_screen.dart';
-import 'package:spdrivercalendar/features/about/screens/about_screen.dart';
 import 'package:spdrivercalendar/models/event.dart';
 import 'package:spdrivercalendar/models/bank_holiday.dart';
 import 'package:spdrivercalendar/models/shift_info.dart';
@@ -673,6 +672,13 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                 _promptForOvertimeHalfType(); // Call the function to show overtime options
               },
             ),
+            TextButton( // EA Training button
+              child: const Text('EA Training'),
+              onPressed: () {
+                Navigator.of(context).pop();
+                _showEATrainingDialog();
+              },
+            ),
             // Only show Work For Others button on rest days
             if (getShiftForDate(_selectedDay ?? DateTime.now()) == 'R')
               TextButton(
@@ -884,6 +890,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                 }
               } else if (selectedZone == 'Training') {
                 // Load Training shifts from training_duties.csv
+                // Exclude EA Type Training shifts (they are overtime-only)
                 try {
                   final csv = await rootBundle.loadString('assets/training_duties.csv');
                   final lines = csv.split('\n');
@@ -897,6 +904,10 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                     final parts = line.split(',');
                     if (parts.isNotEmpty) {
                       final shift = parts[0].trim();
+                      // Exclude EA Type Training shifts (overtime-only)
+                      if (shift.contains('EA Type Training')) {
+                        continue;
+                      }
                       if (shift.isNotEmpty && !seenShifts.contains(shift)) {
                         shiftNumbers.add(shift);
                         seenShifts.add(shift);
@@ -2387,9 +2398,16 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                           FutureBuilder<String?>(
                             future: ShiftService.getBreakTime(event),
                             builder: (context, snapshot) {
-                              final isWorkout = snapshot.data?.toLowerCase().contains('workout') ?? false;
+                              final screenWidth = MediaQuery.of(context).size.width;
+                              final isSmallScreen = screenWidth < 350;
+                              final iconSize = isSmallScreen ? 16.0 : 18.0;
+                              final iconPadding = isSmallScreen ? 2.0 : 4.0;
+                              final textFontSize = isSmallScreen ? 12.0 : 14.0;
+                              final containerPadding = isSmallScreen ? 6.0 : 8.0;
+                              final checkIconSize = isSmallScreen ? 14.0 : 16.0;
+                              
                               return Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                                padding: EdgeInsets.symmetric(horizontal: containerPadding, vertical: containerPadding * 0.75),
                                 decoration: BoxDecoration(
                                   color: Theme.of(context).brightness == Brightness.dark
                                       ? Theme.of(context).cardColor.withOpacity(0.5)
@@ -2403,37 +2421,44 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                                 ),
                                 child: Row(
                                   children: [
-                                    const Icon(Icons.check_circle, size: 16, color: Colors.green),
-                                    const SizedBox(width: 8),
+                                    Icon(Icons.check_circle, size: checkIconSize, color: Colors.green),
+                                    SizedBox(width: isSmallScreen ? 4 : 8),
                                     Expanded(
                                       child: Text(
-                                        (isWorkout || event.title.contains('(OT)')) ? 'Assigned Bus: ${event.firstHalfBus}' : 'First Half: ${event.firstHalfBus}',
+                                        event.title.contains('(OT)') ? 'Assigned Bus: ${event.firstHalfBus}' : '1: ${event.firstHalfBus}',
                                         style: TextStyle(
-                                          fontSize: 14,
+                                          fontSize: textFontSize,
                                           color: Theme.of(context).textTheme.bodyMedium?.color,
                                         ),
+                                        overflow: TextOverflow.ellipsis,
                                       ),
                                     ),
-                                    // Track button for first half bus
-                                    IconButton(
-                                      icon: _busTrackingLoading['tracking_${event.firstHalfBus}'] == true
-                                          ? const SizedBox(
-                                              width: 16,
-                                              height: 16,
-                                              child: CircularProgressIndicator(strokeWidth: 2),
-                                            )
-                                          : const Icon(Icons.location_on, size: 18, color: Colors.blue),
-                                      onPressed: _busTrackingLoading['tracking_${event.firstHalfBus}'] == true
-                                          ? null
-                                          : () => _trackBus(event.firstHalfBus!),
-                                      tooltip: 'Track ${event.firstHalfBus}',
-                                    ),
-                                    // Change bus button (swap/recycle icon)
-                                    IconButton(
-                                      icon: const Icon(Icons.swap_horiz, size: 18, color: Colors.orange),
-                                      onPressed: () async {
-                                        // Show the bus assignment dialog
-                                        final hasCurrentBus = event.firstHalfBus != null && event.firstHalfBus!.isNotEmpty;
+                                    SizedBox(width: isSmallScreen ? 2 : 4),
+                                    // Group icons together tightly
+                                    Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        // Track button for first half bus
+                                        GestureDetector(
+                                          onTap: _busTrackingLoading['tracking_${event.firstHalfBus}'] == true
+                                              ? null
+                                              : () => _trackBus(event.firstHalfBus!),
+                                          child: Container(
+                                            padding: EdgeInsets.all(iconPadding),
+                                            child: _busTrackingLoading['tracking_${event.firstHalfBus}'] == true
+                                                ? SizedBox(
+                                                    width: iconSize - 2,
+                                                    height: iconSize - 2,
+                                                    child: const CircularProgressIndicator(strokeWidth: 2),
+                                                  )
+                                                : Icon(Icons.location_on, size: iconSize, color: Colors.blue),
+                                          ),
+                                        ),
+                                        // Change bus button (swap/recycle icon)
+                                        GestureDetector(
+                                          onTap: () async {
+                                            // Show the bus assignment dialog
+                                            final hasCurrentBus = event.firstHalfBus != null && event.firstHalfBus!.isNotEmpty;
                                         final TextEditingController controller = TextEditingController(text: event.firstHalfBus ?? '');
                                         final result = await showDialog<String>(
                                           context: context,
@@ -2546,74 +2571,83 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                                             _editEvent(updatedEvent);
                                           }
                                         }
-                                      },
-                                      tooltip: 'Change bus',
-                                    ),
-                                    IconButton(
-                                      icon: const Icon(Icons.remove_circle_outline, size: 18, color: Colors.red),
-                                      onPressed: () async {
-                                        // Create a copy of the old event
-                                        final oldEvent = Event(
-                                          id: event.id,
-                                          title: event.title,
-                                          startDate: event.startDate,
-                                          startTime: event.startTime,
-                                          endDate: event.endDate,
-                                          endTime: event.endTime,
-                                          workTime: event.workTime,
-                                          breakStartTime: event.breakStartTime,
-                                          breakEndTime: event.breakEndTime,
-                                          assignedDuties: event.assignedDuties,
-                                          firstHalfBus: event.firstHalfBus,
-                                          secondHalfBus: event.secondHalfBus,
-                                          busAssignments: event.busAssignments,
-                                          additionalBusesUsed: event.additionalBusesUsed?.map((b) => b).toList(),
-                                          firstHalfAdditionalBuses: event.firstHalfAdditionalBuses?.map((b) => b).toList(),
-                                          secondHalfAdditionalBuses: event.secondHalfAdditionalBuses?.map((b) => b).toList(),
-                                          additionalBusesByDuty: event.additionalBusesByDuty?.map((k, v) => MapEntry(k, List<String>.from(v))),
-                                          notes: event.notes,
-                                        );
-                                        
-                                        // Create a new event and use remove method to clear primary bus and breakdown history
-                                        final updatedEvent = Event(
-                                          id: event.id,
-                                          title: event.title,
-                                          startDate: event.startDate,
-                                          startTime: event.startTime,
-                                          endDate: event.endDate,
-                                          endTime: event.endTime,
-                                          workTime: event.workTime,
-                                          breakStartTime: event.breakStartTime,
-                                          breakEndTime: event.breakEndTime,
-                                          assignedDuties: event.assignedDuties,
-                                          busAssignments: event.busAssignments,
-                                          firstHalfBus: event.firstHalfBus,
-                                          secondHalfBus: event.secondHalfBus,
-                                          additionalBusesUsed: event.additionalBusesUsed?.map((b) => b).toList(),
-                                          firstHalfAdditionalBuses: event.firstHalfAdditionalBuses?.map((b) => b).toList(),
-                                          secondHalfAdditionalBuses: event.secondHalfAdditionalBuses?.map((b) => b).toList(),
-                                          additionalBusesByDuty: event.additionalBusesByDuty?.map((k, v) => MapEntry(k, List<String>.from(v))),
-                                          notes: event.notes,
-                                        );
-                                        
-                                        // Use remove method to clear primary bus and breakdown history
-                                        updatedEvent.removeBusForFirstHalf();
-                                        
-                                        // Save the updated event
-                                        await EventService.updateEvent(oldEvent, updatedEvent);
-                                        
-                                        // Sync bus assignments to Google Calendar
-                                        await _syncBusAssignmentsToGoogleCalendar(updatedEvent);
-                                        
-                                        // Refresh the UI
-                                        if (mounted) {
-                                          setState(() {});
-                                          // Close the current dialog
-                                          Navigator.of(context).pop();
-                                          // Reopen the dialog with the updated event
-                                          _editEvent(updatedEvent);
-                                        }
-                                      },
+                                        },
+                                        child: Container(
+                                          padding: EdgeInsets.all(iconPadding),
+                                          child: Icon(Icons.swap_horiz, size: iconSize, color: Colors.orange),
+                                        ),
+                                      ),
+                                      // Remove bus button
+                                      GestureDetector(
+                                        onTap: () async {
+                                            // Create a copy of the old event
+                                            final oldEvent = Event(
+                                              id: event.id,
+                                              title: event.title,
+                                              startDate: event.startDate,
+                                              startTime: event.startTime,
+                                              endDate: event.endDate,
+                                              endTime: event.endTime,
+                                              workTime: event.workTime,
+                                              breakStartTime: event.breakStartTime,
+                                              breakEndTime: event.breakEndTime,
+                                              assignedDuties: event.assignedDuties,
+                                              firstHalfBus: event.firstHalfBus,
+                                              secondHalfBus: event.secondHalfBus,
+                                              busAssignments: event.busAssignments,
+                                              additionalBusesUsed: event.additionalBusesUsed?.map((b) => b).toList(),
+                                              firstHalfAdditionalBuses: event.firstHalfAdditionalBuses?.map((b) => b).toList(),
+                                              secondHalfAdditionalBuses: event.secondHalfAdditionalBuses?.map((b) => b).toList(),
+                                              additionalBusesByDuty: event.additionalBusesByDuty?.map((k, v) => MapEntry(k, List<String>.from(v))),
+                                              notes: event.notes,
+                                            );
+                                            
+                                            // Create a new event and use remove method to clear primary bus and breakdown history
+                                            final updatedEvent = Event(
+                                              id: event.id,
+                                              title: event.title,
+                                              startDate: event.startDate,
+                                              startTime: event.startTime,
+                                              endDate: event.endDate,
+                                              endTime: event.endTime,
+                                              workTime: event.workTime,
+                                              breakStartTime: event.breakStartTime,
+                                              breakEndTime: event.breakEndTime,
+                                              assignedDuties: event.assignedDuties,
+                                              busAssignments: event.busAssignments,
+                                              firstHalfBus: event.firstHalfBus,
+                                              secondHalfBus: event.secondHalfBus,
+                                              additionalBusesUsed: event.additionalBusesUsed?.map((b) => b).toList(),
+                                              firstHalfAdditionalBuses: event.firstHalfAdditionalBuses?.map((b) => b).toList(),
+                                              secondHalfAdditionalBuses: event.secondHalfAdditionalBuses?.map((b) => b).toList(),
+                                              additionalBusesByDuty: event.additionalBusesByDuty?.map((k, v) => MapEntry(k, List<String>.from(v))),
+                                              notes: event.notes,
+                                            );
+                                            
+                                            // Use remove method to clear primary bus and breakdown history
+                                            updatedEvent.removeBusForFirstHalf();
+                                            
+                                            // Save the updated event
+                                            await EventService.updateEvent(oldEvent, updatedEvent);
+                                            
+                                            // Sync bus assignments to Google Calendar
+                                            await _syncBusAssignmentsToGoogleCalendar(updatedEvent);
+                                            
+                                            // Refresh the UI
+                                            if (mounted) {
+                                              setState(() {});
+                                              // Close the current dialog
+                                              Navigator.of(context).pop();
+                                              // Reopen the dialog with the updated event
+                                              _editEvent(updatedEvent);
+                                            }
+                                          },
+                                          child: Container(
+                                            padding: EdgeInsets.all(iconPadding),
+                                            child: Icon(Icons.remove_circle_outline, size: iconSize, color: Colors.red),
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ],
                                 ),
@@ -2626,9 +2660,16 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                           FutureBuilder<String?>(
                             future: ShiftService.getBreakTime(event),
                             builder: (context, snapshot) {
-                              final isWorkout = snapshot.data?.toLowerCase().contains('workout') ?? false;
+                              final screenWidth = MediaQuery.of(context).size.width;
+                              final isSmallScreen = screenWidth < 350;
+                              final iconSize = isSmallScreen ? 16.0 : 18.0;
+                              final iconPadding = isSmallScreen ? 2.0 : 4.0;
+                              final textFontSize = isSmallScreen ? 12.0 : 14.0;
+                              final containerPadding = isSmallScreen ? 6.0 : 8.0;
+                              final checkIconSize = isSmallScreen ? 14.0 : 16.0;
+                              
                               return Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                                padding: EdgeInsets.symmetric(horizontal: containerPadding, vertical: containerPadding * 0.75),
                                 decoration: BoxDecoration(
                                   color: Theme.of(context).brightness == Brightness.dark
                                       ? Theme.of(context).cardColor.withOpacity(0.5)
@@ -2642,37 +2683,44 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                                 ),
                                 child: Row(
                                   children: [
-                                    const Icon(Icons.check_circle, size: 16, color: Colors.green),
-                                    const SizedBox(width: 8),
+                                    Icon(Icons.check_circle, size: checkIconSize, color: Colors.green),
+                                    SizedBox(width: isSmallScreen ? 4 : 8),
                                     Expanded(
                                       child: Text(
-                                        (isWorkout || event.title.contains('(OT)')) ? 'Assigned Bus: ${event.secondHalfBus}' : 'Second Half: ${event.secondHalfBus}',
+                                        event.title.contains('(OT)') ? 'Assigned Bus: ${event.secondHalfBus}' : '2: ${event.secondHalfBus}',
                                         style: TextStyle(
-                                          fontSize: 14,
+                                          fontSize: textFontSize,
                                           color: Theme.of(context).textTheme.bodyMedium?.color,
                                         ),
+                                        overflow: TextOverflow.ellipsis,
                                       ),
                                     ),
-                                    // Track button for second half bus
-                                    IconButton(
-                                      icon: _busTrackingLoading['tracking_${event.secondHalfBus}'] == true
-                                          ? const SizedBox(
-                                              width: 16,
-                                              height: 16,
-                                              child: CircularProgressIndicator(strokeWidth: 2),
-                                            )
-                                          : const Icon(Icons.location_on, size: 18, color: Colors.blue),
-                                      onPressed: _busTrackingLoading['tracking_${event.secondHalfBus}'] == true
-                                          ? null
-                                          : () => _trackBus(event.secondHalfBus!),
-                                      tooltip: 'Track ${event.secondHalfBus}',
-                                    ),
-                                    // Change bus button (swap/recycle icon)
-                                    IconButton(
-                                      icon: const Icon(Icons.swap_horiz, size: 18, color: Colors.orange),
-                                      onPressed: () async {
-                                        // Show the bus assignment dialog
-                                        final hasCurrentBus = event.secondHalfBus != null && event.secondHalfBus!.isNotEmpty;
+                                    SizedBox(width: isSmallScreen ? 2 : 4),
+                                    // Group icons together tightly
+                                    Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        // Track button for second half bus
+                                        GestureDetector(
+                                          onTap: _busTrackingLoading['tracking_${event.secondHalfBus}'] == true
+                                              ? null
+                                              : () => _trackBus(event.secondHalfBus!),
+                                          child: Container(
+                                            padding: EdgeInsets.all(iconPadding),
+                                            child: _busTrackingLoading['tracking_${event.secondHalfBus}'] == true
+                                                ? SizedBox(
+                                                    width: iconSize - 2,
+                                                    height: iconSize - 2,
+                                                    child: const CircularProgressIndicator(strokeWidth: 2),
+                                                  )
+                                                : Icon(Icons.location_on, size: iconSize, color: Colors.blue),
+                                          ),
+                                        ),
+                                        // Change bus button (swap/recycle icon)
+                                        GestureDetector(
+                                          onTap: () async {
+                                            // Show the bus assignment dialog
+                                            final hasCurrentBus = event.secondHalfBus != null && event.secondHalfBus!.isNotEmpty;
                                         final TextEditingController controller = TextEditingController(text: event.secondHalfBus ?? '');
                                         final result = await showDialog<String>(
                                           context: context,
@@ -2786,11 +2834,14 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                                           }
                                         }
                                       },
-                                      tooltip: 'Change bus',
+                                      child: Container(
+                                        padding: EdgeInsets.all(iconPadding),
+                                        child: Icon(Icons.swap_horiz, size: iconSize, color: Colors.orange),
+                                      ),
                                     ),
-                                    IconButton(
-                                      icon: const Icon(Icons.remove_circle_outline, size: 18, color: Colors.red),
-                                      onPressed: () async {
+                                    // Remove bus button
+                                    GestureDetector(
+                                      onTap: () async {
                                         // Create a copy of the old event
                                         final oldEvent = Event(
                                           id: event.id,
@@ -2853,10 +2904,16 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                                           _editEvent(updatedEvent);
                                         }
                                       },
+                                      child: Container(
+                                        padding: EdgeInsets.all(iconPadding),
+                                        child: Icon(Icons.remove_circle_outline, size: iconSize, color: Colors.red),
+                                      ),
                                     ),
                                   ],
                                 ),
-                              );
+                              ],
+                            ),
+                          );
                             },
                           ),
                         const SizedBox(height: 4),
@@ -4596,10 +4653,6 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
             icon: const Icon(Icons.settings),
             itemBuilder: (context) => const [
               PopupMenuItem(
-                value: 'about',
-                child: Text('About'),
-              ),
-              PopupMenuItem(
                 value: 'bills',
                 child: Text('Bills'),
               ),
@@ -4635,8 +4688,6 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
             onSelected: (value) {
               if (value == 'statistics') {
                 _showStatisticsPage();
-              } else if (value == 'about') {
-                _showAboutPage();
               } else if (value == 'bills') {
                 _showBillsPage();
               } else if (value == 'timing_points') {
@@ -5423,14 +5474,6 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
     );
   }
   
-  void _showAboutPage() {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => const AboutScreen(),
-      ),
-    );
-  }
-
   void _showSettingsPage() {
     Navigator.of(context).push(
       MaterialPageRoute(
@@ -7818,7 +7861,8 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
   }
 
   void _showUnpaidLeaveDialog() {
-    DateTime selectedDate = DateTime.now();
+    Set<DateTime> selectedDates = {};
+    DateTime currentMonth = DateTime.now();
     
     showDialog(
       context: context,
@@ -7849,7 +7893,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                       const SizedBox(width: 12),
                       const Expanded(
                         child: Text(
-                          'Select Unpaid Leave Date',
+                          'Select Unpaid Leave Dates',
                           style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
@@ -7865,24 +7909,88 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                     ],
                   ),
                 ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.chevron_left),
+                        onPressed: () {
+                          setState(() {
+                            currentMonth = DateTime(currentMonth.year, currentMonth.month - 1);
+                          });
+                        },
+                      ),
+                      Text(
+                        DateFormat('MMMM yyyy').format(currentMonth),
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.chevron_right),
+                        onPressed: () {
+                          setState(() {
+                            currentMonth = DateTime(currentMonth.year, currentMonth.month + 1);
+                          });
+                        },
+                      ),
+                    ],
+                  ),
+                ),
                 const Divider(height: 0),
                 Flexible(
                   child: SingleChildScrollView(
                     child: Padding(
                       padding: const EdgeInsets.all(16),
-                      child: CalendarDatePicker(
-                        initialDate: selectedDate,
-                        firstDate: DateTime.now().subtract(const Duration(days: 365)),
-                        lastDate: DateTime.now().add(const Duration(days: 365)),
-                        onDateChanged: (date) {
+                      child: _buildMultiSelectCalendar(
+                        currentMonth: currentMonth,
+                        selectedDates: selectedDates,
+                        onDateTapped: (date) {
                           setState(() {
-                            selectedDate = date;
+                            // Normalize date to midnight for comparison
+                            final normalizedDate = DateTime(date.year, date.month, date.day);
+                            if (selectedDates.contains(normalizedDate)) {
+                              selectedDates.remove(normalizedDate);
+                            } else {
+                              selectedDates.add(normalizedDate);
+                            }
                           });
                         },
                       ),
                     ),
                   ),
                 ),
+                if (selectedDates.isNotEmpty) ...[
+                  const Divider(height: 0),
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.purple.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.info_outline, color: Colors.purple.shade700, size: 20),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              '${selectedDates.length} day${selectedDates.length == 1 ? '' : 's'} selected',
+                              style: TextStyle(
+                                color: Colors.purple.shade700,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
                 const Divider(height: 0),
                 Padding(
                   padding: const EdgeInsets.all(16),
@@ -7895,16 +8003,26 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                       ),
                       const SizedBox(width: 8),
                       ElevatedButton(
-                        onPressed: () async {
-                          final holiday = Holiday(
-                            id: 'unpaid_leave_${selectedDate.millisecondsSinceEpoch}',
-                            startDate: selectedDate,
-                            endDate: selectedDate,
-                            type: 'unpaid_leave',
-                          );
+                        onPressed: selectedDates.isEmpty ? null : () async {
+                          // Create a separate holiday for each selected date
+                          final sortedDates = selectedDates.toList()..sort();
+                          int successCount = 0;
                           
-                          // Add the holiday
-                          await HolidayService.addHoliday(holiday);
+                          for (final date in sortedDates) {
+                            try {
+                              final holiday = Holiday(
+                                id: 'unpaid_leave_${date.millisecondsSinceEpoch}',
+                                startDate: date,
+                                endDate: date,
+                                type: 'unpaid_leave',
+                              );
+                              
+                              await HolidayService.addHoliday(holiday);
+                              successCount++;
+                            } catch (e) {
+                              // Continue with other dates even if one fails
+                            }
+                          }
                           
                           // Reload holidays from storage to ensure consistency
                           await _reloadHolidays();
@@ -7919,9 +8037,13 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                           
                           // Show success message
                           if (mounted) {
+                            final message = successCount == 1
+                                ? 'Unpaid leave added successfully'
+                                : '$successCount unpaid leave days added successfully';
+                            
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Unpaid leave added successfully'),
+                              SnackBar(
+                                content: Text(message),
                                 backgroundColor: Colors.purple,
                               ),
                             );
@@ -7930,8 +8052,9 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.purple,
                           foregroundColor: Colors.white,
+                          disabledBackgroundColor: Colors.grey.shade300,
                         ),
-                        child: const Text('Add Unpaid Leave'),
+                        child: Text(selectedDates.length == 1 ? 'Add Unpaid Leave' : 'Add Unpaid Leave Days'),
                       ),
                     ],
                   ),
@@ -7945,7 +8068,8 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
   }
 
   void _showDayInLieuDialog() async {
-    DateTime selectedDate = DateTime.now();
+    Set<DateTime> selectedDates = {};
+    DateTime currentMonth = DateTime.now();
     final dayInLieuColor = ColorCustomizationService.getColorForShift('DAY_IN_LIEU');
     
     // Load balance information
@@ -7982,7 +8106,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                       const SizedBox(width: 12),
                       const Expanded(
                         child: Text(
-                          'Select Day In Lieu Date',
+                          'Select Day In Lieu Dates',
                           style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
@@ -8074,24 +8198,88 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                       ),
                     ),
                   ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.chevron_left),
+                        onPressed: () {
+                          setState(() {
+                            currentMonth = DateTime(currentMonth.year, currentMonth.month - 1);
+                          });
+                        },
+                      ),
+                      Text(
+                        DateFormat('MMMM yyyy').format(currentMonth),
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.chevron_right),
+                        onPressed: () {
+                          setState(() {
+                            currentMonth = DateTime(currentMonth.year, currentMonth.month + 1);
+                          });
+                        },
+                      ),
+                    ],
+                  ),
+                ),
                 const Divider(height: 0),
                 Flexible(
                   child: SingleChildScrollView(
                     child: Padding(
                       padding: const EdgeInsets.all(16),
-                      child: CalendarDatePicker(
-                        initialDate: selectedDate,
-                        firstDate: DateTime.now().subtract(const Duration(days: 365)),
-                        lastDate: DateTime.now().add(const Duration(days: 365)),
-                        onDateChanged: (date) {
+                      child: _buildMultiSelectCalendar(
+                        currentMonth: currentMonth,
+                        selectedDates: selectedDates,
+                        onDateTapped: (date) {
                           setState(() {
-                            selectedDate = date;
+                            // Normalize date to midnight for comparison
+                            final normalizedDate = DateTime(date.year, date.month, date.day);
+                            if (selectedDates.contains(normalizedDate)) {
+                              selectedDates.remove(normalizedDate);
+                            } else {
+                              selectedDates.add(normalizedDate);
+                            }
                           });
                         },
                       ),
                     ),
                   ),
                 ),
+                if (selectedDates.isNotEmpty) ...[
+                  const Divider(height: 0),
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: dayInLieuColor.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.info_outline, color: dayInLieuColor, size: 20),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              '${selectedDates.length} day${selectedDates.length == 1 ? '' : 's'} selected',
+                              style: TextStyle(
+                                color: dayInLieuColor,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
                 const Divider(height: 0),
                 Padding(
                   padding: const EdgeInsets.all(16),
@@ -8104,19 +8292,31 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                       ),
                       const SizedBox(width: 8),
                       ElevatedButton(
-                        onPressed: () async {
-                          final holiday = Holiday(
-                            id: 'day_in_lieu_${selectedDate.millisecondsSinceEpoch}',
-                            startDate: selectedDate,
-                            endDate: selectedDate,
-                            type: 'day_in_lieu',
-                          );
+                        onPressed: selectedDates.isEmpty ? null : () async {
+                          // Create a separate holiday for each selected date
+                          final sortedDates = selectedDates.toList()..sort();
+                          int successCount = 0;
                           
-                          // Add the holiday
-                          await HolidayService.addHoliday(holiday);
-                          
-                          // Auto-decrement balance
-                          await DaysInLieuService.onDayInLieuAdded();
+                          for (final date in sortedDates) {
+                            try {
+                              final holiday = Holiday(
+                                id: 'day_in_lieu_${date.millisecondsSinceEpoch}',
+                                startDate: date,
+                                endDate: date,
+                                type: 'day_in_lieu',
+                              );
+                              
+                              // Add the holiday
+                              await HolidayService.addHoliday(holiday);
+                              
+                              // Auto-decrement balance for each day
+                              await DaysInLieuService.onDayInLieuAdded();
+                              
+                              successCount++;
+                            } catch (e) {
+                              // Continue with other dates even if one fails
+                            }
+                          }
                           
                           // Reload holidays from storage to ensure consistency
                           await _reloadHolidays();
@@ -8124,16 +8324,20 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                           // Close the dialog
                           Navigator.of(context).pop();
                           
-                          // Force calendar rebuild to show the new day in lieu
+                          // Force calendar rebuild to show the new day in lieu entries
                           if (mounted) {
                             setState(() {});
                           }
                           
                           // Show success message
                           if (mounted) {
+                            final message = successCount == 1
+                                ? 'Day In Lieu added successfully'
+                                : '$successCount days in lieu added successfully';
+                            
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                content: const Text('Day In Lieu added successfully'),
+                                content: Text(message),
                                 backgroundColor: dayInLieuColor,
                               ),
                             );
@@ -8142,8 +8346,9 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                         style: ElevatedButton.styleFrom(
                           backgroundColor: dayInLieuColor,
                           foregroundColor: Colors.white,
+                          disabledBackgroundColor: Colors.grey.shade300,
                         ),
-                        child: const Text('Add Day In Lieu'),
+                        child: Text(selectedDates.length == 1 ? 'Add Day In Lieu' : 'Add Days In Lieu'),
                       ),
                     ],
                   ),
@@ -8336,6 +8541,109 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
         );
       },
     );
+  }
+
+  // Show dialog to select and add EA Training (1HR or 2HR)
+  void _showEATrainingDialog() {
+    final now = DateTime.now();
+    final shiftDate = _selectedDay ?? now;
+    
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Add EA Training for ${DateFormat('dd/MM/yyyy').format(shiftDate)}'),
+          content: const Text('Select the type of EA Training:'),
+          actions: [
+            TextButton(
+              child: const Text('Cancel'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            TextButton(
+              child: const Text('EA Type Training 1HR'),
+              onPressed: () async {
+                Navigator.of(context).pop();
+                await _addEATrainingEvent('EA Type Training 1HR', shiftDate);
+              },
+            ),
+            TextButton(
+              child: const Text('EA Type Training 2HR'),
+              onPressed: () async {
+                Navigator.of(context).pop();
+                await _addEATrainingEvent('EA Type Training 2HR', shiftDate);
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // Helper method to add EA Training event
+  Future<void> _addEATrainingEvent(String trainingType, DateTime shiftDate) async {
+    try {
+      // Create event with default times (hidden from user, just for internal tracking)
+      final event = Event(
+        id: const Uuid().v4(),
+        title: trainingType,
+        startDate: shiftDate,
+        startTime: const TimeOfDay(hour: 0, minute: 0), // Default time, not displayed
+        endDate: shiftDate,
+        endTime: const TimeOfDay(hour: 0, minute: 0), // Default time, not displayed
+        startLocation: null, // No location
+        finishLocation: null, // No location
+      );
+      
+      // Add the event
+      await EventService.addEvent(event);
+      
+      if (mounted) {
+        // Show confirmation
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('$trainingType added'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+        
+        // Force reload events for current month
+        await EventService.preloadMonth(_focusedDay);
+        
+        // Force rebuild
+        setState(() {
+          _selectedDay = null;
+        });
+        
+        await Future.delayed(const Duration(milliseconds: 100));
+        
+        setState(() {
+          _selectedDay = shiftDate;
+        });
+        
+        // Force complete refresh
+        _editEvent(Event(
+          id: 'refresh_trigger',
+          title: '',
+          startDate: DateTime.now(),
+          startTime: const TimeOfDay(hour: 0, minute: 0),
+          endDate: DateTime.now(),
+          endTime: const TimeOfDay(hour: 0, minute: 0),
+          busAssignments: {},
+        ));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error adding EA Training: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   // Method to show overtime duty selection dialog with filtered duties by half type
@@ -8578,10 +8886,12 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                               value: selectedShiftNumber.isEmpty && shiftNumbers.isNotEmpty ? shiftNumbers[0] : selectedShiftNumber,
                               isExpanded: true,
                               items: shiftNumbers.map((shift) {
+                                // EA Type Training doesn't have A/B halves
+                                final isEATypeTraining = shift.contains('EA Type Training');
                                 return DropdownMenuItem(
                                   value: shift,
-                                  child: Text(overtimeHalfType.isNotEmpty 
-                                      ? '$shift$overtimeHalfType' // Add A/B suffix for display
+                                  child: Text((overtimeHalfType.isNotEmpty && !isEATypeTraining)
+                                      ? '$shift$overtimeHalfType' // Add A/B suffix for display (not for EA Type Training)
                                       : shift),
                                 );
                               }).toList(),
@@ -8607,7 +8917,11 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                 onPressed: shiftNumbers.isEmpty || isLoading
                     ? null
                     : () async {
-                        final title = '$selectedShiftNumber$overtimeHalfType (OT)';
+                        // EA Type Training shifts don't have A/B halves
+                        final isEATypeTraining = selectedShiftNumber.contains('EA Type Training');
+                        final title = isEATypeTraining 
+                            ? '$selectedShiftNumber (OT)'
+                            : '$selectedShiftNumber$overtimeHalfType (OT)';
                         
                         // Get the shift times
                         Map<String, dynamic>? shiftTimes;
@@ -8626,7 +8940,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                             'startTime': startTime,
                             'endTime': endTime,
                           };
-                            } else {
+                        } else {
                           // For regular shifts, look up times from CSV
                           shiftTimes = await _getShiftTimes(
                             selectedZone.replaceAll('Zone ', ''),
@@ -8640,128 +8954,135 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                           final startTime = shiftTimes['startTime'] as TimeOfDay;
                           TimeOfDay endTime = shiftTimes['endTime'] as TimeOfDay;
                           
-                          // Calculate actual start and end times based on overtime half type
-                          final shiftDuration = (endTime.hour * 60 + endTime.minute) - 
-                                              (startTime.hour * 60 + startTime.minute);
-                          
+                          // EA Type Training uses times directly, no A/B half adjustments
                           TimeOfDay adjustedStartTime;
                           TimeOfDay adjustedEndTime;
                           
-                          // Get the day of the week
-                          final dayOfWeek = RosterService.getDayOfWeek(shiftDate);
+                          if (isEATypeTraining) {
+                            // Use CSV times directly for EA Type Training
+                            adjustedStartTime = startTime;
+                            adjustedEndTime = endTime;
+                          } else {
+                            // Calculate actual start and end times based on overtime half type
+                            final shiftDuration = (endTime.hour * 60 + endTime.minute) - 
+                                                (startTime.hour * 60 + startTime.minute);
+                          
+                            // Get the day of the week
+                            final dayOfWeek = RosterService.getDayOfWeek(shiftDate);
 
-                          // Try to get break times from CSV
-                          final csvFilename = selectedZone == 'Uni/Euro' 
-                              ? 'UNI_7DAYs.csv'  // UNI shifts - first try 7DAYs
-                              : RosterService.getShiftFilename(selectedZone.replaceAll('Zone ', ''), 
-                                  dayOfWeek == 'Saturday' ? 'SAT' : 
-                                  dayOfWeek == 'Sunday' ? 'SUN' : 'M-F', 
-                                  shiftDate);
-                          
-                          // Variables to hold break times if found
-                          TimeOfDay? breakStartTime;
-                          TimeOfDay? breakEndTime;
-                          
-                          try {
-                            final csv = await rootBundle.loadString('assets/$csvFilename');
-                            final lines = csv.split('\n');
+                            // Try to get break times from CSV
+                            final csvFilename = selectedZone == 'Uni/Euro' 
+                                ? 'UNI_7DAYs.csv'  // UNI shifts - first try 7DAYs
+                                : RosterService.getShiftFilename(selectedZone.replaceAll('Zone ', ''), 
+                                    dayOfWeek == 'Saturday' ? 'SAT' : 
+                                    dayOfWeek == 'Sunday' ? 'SUN' : 'M-F', 
+                                    shiftDate);
                             
-                            // Find the shift in the CSV file
-                            for (final line in lines) {
-                              if (line.trim().isEmpty) continue;
-                              final parts = line.split(',');
-                              
-                              // Standard PZ files have shift code at index 0
-                              // UNI files also have shift code at index 0
-                              if (parts.isNotEmpty && parts[0].trim() == selectedShiftNumber) {
-                                
-                                // Different CSV structures for PZ vs UNI files
-                                if (selectedZone == 'Uni/Euro') {
-                                  // UNI files: ShiftCode,StartTime,BreakStart,BreakEnd,FinishTime
-                                  if (parts.length >= 5) {
-                                    final breakStartStr = parts[2].trim();
-                                    final breakEndStr = parts[3].trim();
-                                    
-                                    if (breakStartStr.toLowerCase() != 'nan' && breakEndStr.toLowerCase() != 'nan') {
-                                      breakStartTime = _parseTimeOfDay(breakStartStr);
-                                      breakEndTime = _parseTimeOfDay(breakEndStr);
-                                    }
-                                  }
-                                } else {
-                                  // PZ files: Column 5 is breakStart, column 8 is breakEnd
-                                  if (parts.length >= 9) {
-                                    final breakStartStr = parts[5].trim();
-                                    final breakEndStr = parts[8].trim();
-                                    
-                                    if (breakStartStr.toLowerCase() != 'nan' && 
-                                        breakStartStr.toLowerCase() != 'workout' &&
-                                        breakEndStr.toLowerCase() != 'nan' && 
-                                        breakEndStr.toLowerCase() != 'workout') {
-                                      breakStartTime = _parseTimeOfDay(breakStartStr);
-                                      breakEndTime = _parseTimeOfDay(breakEndStr);
-                                    }
-                                  }
-                                }
-                                break;
-                              }
-                            }
+                            // Variables to hold break times if found
+                            TimeOfDay? breakStartTime;
+                            TimeOfDay? breakEndTime;
                             
-                            // For UNI/EURO, if not found in 7DAYs.csv and it's a weekday, check M-F.csv
-                            if (selectedZone == 'Uni/Euro' && breakStartTime == null && 
-                                dayOfWeek != 'Saturday' && dayOfWeek != 'Sunday') {
-                              final csvMF = await rootBundle.loadString('assets/UNI_M-F.csv');
-                              final linesMF = csvMF.split('\n');
+                            try {
+                              final csv = await rootBundle.loadString('assets/$csvFilename');
+                              final lines = csv.split('\n');
                               
-                              for (final line in linesMF) {
+                              // Find the shift in the CSV file
+                              for (final line in lines) {
                                 if (line.trim().isEmpty) continue;
                                 final parts = line.split(',');
                                 
+                                // Standard PZ files have shift code at index 0
+                                // UNI files also have shift code at index 0
                                 if (parts.isNotEmpty && parts[0].trim() == selectedShiftNumber) {
-                                  if (parts.length >= 5) {
-                                    final breakStartStr = parts[2].trim();
-                                    final breakEndStr = parts[3].trim();
-                                    
-                                    if (breakStartStr.toLowerCase() != 'nan' && breakEndStr.toLowerCase() != 'nan') {
-                                      breakStartTime = _parseTimeOfDay(breakStartStr);
-                                      breakEndTime = _parseTimeOfDay(breakEndStr);
+                                  
+                                  // Different CSV structures for PZ vs UNI files
+                                  if (selectedZone == 'Uni/Euro') {
+                                    // UNI files: ShiftCode,StartTime,BreakStart,BreakEnd,FinishTime
+                                    if (parts.length >= 5) {
+                                      final breakStartStr = parts[2].trim();
+                                      final breakEndStr = parts[3].trim();
+                                      
+                                      if (breakStartStr.toLowerCase() != 'nan' && breakEndStr.toLowerCase() != 'nan') {
+                                        breakStartTime = _parseTimeOfDay(breakStartStr);
+                                        breakEndTime = _parseTimeOfDay(breakEndStr);
+                                      }
+                                    }
+                                  } else {
+                                    // PZ files: Column 5 is breakStart, column 8 is breakEnd
+                                    if (parts.length >= 9) {
+                                      final breakStartStr = parts[5].trim();
+                                      final breakEndStr = parts[8].trim();
+                                      
+                                      if (breakStartStr.toLowerCase() != 'nan' && 
+                                          breakStartStr.toLowerCase() != 'workout' &&
+                                          breakEndStr.toLowerCase() != 'nan' && 
+                                          breakEndStr.toLowerCase() != 'workout') {
+                                        breakStartTime = _parseTimeOfDay(breakStartStr);
+                                        breakEndTime = _parseTimeOfDay(breakEndStr);
+                                      }
                                     }
                                   }
                                   break;
                                 }
                               }
+                              
+                              // For UNI/EURO, if not found in 7DAYs.csv and it's a weekday, check M-F.csv
+                              if (selectedZone == 'Uni/Euro' && breakStartTime == null && 
+                                  dayOfWeek != 'Saturday' && dayOfWeek != 'Sunday') {
+                                final csvMF = await rootBundle.loadString('assets/UNI_M-F.csv');
+                                final linesMF = csvMF.split('\n');
+                                
+                                for (final line in linesMF) {
+                                  if (line.trim().isEmpty) continue;
+                                  final parts = line.split(',');
+                                  
+                                  if (parts.isNotEmpty && parts[0].trim() == selectedShiftNumber) {
+                                    if (parts.length >= 5) {
+                                      final breakStartStr = parts[2].trim();
+                                      final breakEndStr = parts[3].trim();
+                                      
+                                      if (breakStartStr.toLowerCase() != 'nan' && breakEndStr.toLowerCase() != 'nan') {
+                                        breakStartTime = _parseTimeOfDay(breakStartStr);
+                                        breakEndTime = _parseTimeOfDay(breakEndStr);
+                                      }
+                                    }
+                                    break;
+                                  }
+                                }
+                              }
+                            } catch (e) {
+                              // Silently handle CSV parsing errors - file may not exist or be malformed
                             }
-                          } catch (e) {
-                            // Silently handle CSV parsing errors - file may not exist or be malformed
-                          }
-                          
-                          // Adjust times based on first half (A) or second half (B)
-                          if (overtimeHalfType == 'A') { 
-                            // First half - use start time and end at break start time if available
-                            adjustedStartTime = startTime;
                             
-                            if (breakStartTime != null) {
-                              // Use actual break start time
-                              adjustedEndTime = breakStartTime;
+                            // Adjust times based on first half (A) or second half (B)
+                            if (overtimeHalfType == 'A') { 
+                              // First half - use start time and end at break start time if available
+                              adjustedStartTime = startTime;
+                              
+                              if (breakStartTime != null) {
+                                // Use actual break start time
+                                adjustedEndTime = breakStartTime;
+                              } else {
+                                // Fall back to midpoint calculation
+                                final halfDurationMinutes = shiftDuration ~/ 2;
+                                final endHour = (startTime.hour + (halfDurationMinutes ~/ 60)) % 24;
+                                final endMinute = (startTime.minute + (halfDurationMinutes % 60)) % 60;
+                                adjustedEndTime = TimeOfDay(hour: endHour, minute: endMinute);
+                              }
                             } else {
-                              // Fall back to midpoint calculation
-                              final halfDurationMinutes = shiftDuration ~/ 2;
-                              final endHour = (startTime.hour + (halfDurationMinutes ~/ 60)) % 24;
-                              final endMinute = (startTime.minute + (halfDurationMinutes % 60)) % 60;
-                              adjustedEndTime = TimeOfDay(hour: endHour, minute: endMinute);
+                              // Second half - start at break end time if available and use end time
+                              if (breakEndTime != null) {
+                                // Use actual break end time
+                                adjustedStartTime = breakEndTime;
+                              } else {
+                                // Fall back to midpoint calculation
+                                final halfDurationMinutes = shiftDuration ~/ 2;
+                                final startHour = (startTime.hour + (halfDurationMinutes ~/ 60)) % 24;
+                                final startMinute = (startTime.minute + (halfDurationMinutes % 60)) % 60;
+                                adjustedStartTime = TimeOfDay(hour: startHour, minute: startMinute);
+                              }
+                              adjustedEndTime = endTime;
                             }
-                          } else {
-                            // Second half - start at break end time if available and use end time
-                            if (breakEndTime != null) {
-                              // Use actual break end time
-                              adjustedStartTime = breakEndTime;
-                            } else {
-                              // Fall back to midpoint calculation
-                              final halfDurationMinutes = shiftDuration ~/ 2;
-                              final startHour = (startTime.hour + (halfDurationMinutes ~/ 60)) % 24;
-                              final startMinute = (startTime.minute + (halfDurationMinutes % 60)) % 60;
-                              adjustedStartTime = TimeOfDay(hour: startHour, minute: startMinute);
-                            }
-                            adjustedEndTime = endTime;
                           }
                           
                           // Create the overtime event

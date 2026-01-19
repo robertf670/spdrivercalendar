@@ -1,4 +1,26 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.18.2': [
+    {
+      'title': 'EA Training Feature',
+      'description': 'Added EA Training feature for tracking EA Type Training sessions. New "EA Training" button in the event dialog allows quick addition of EA Type Training 1HR or EA Type Training 2HR.',
+    },
+    {
+      'title': 'Multiple Day Selection for Day In Lieu and Unpaid Leave',
+      'description': 'Enhanced Day In Lieu and Unpaid Leave holiday types to support selecting multiple non-consecutive days at once, matching the functionality of Other Holidays.',
+    },
+    {
+      'title': 'Fixed Edit Event Dialog Layout Issues',
+      'description': 'Fixed RenderFlex overflow errors in Edit Event dialog and Days in Lieu dialog. Improved bus assignment icon spacing - location, change bus, and remove bus icons are now grouped tightly together with minimal whitespace. Added responsive sizing for very small screens (<350px) - icons, text, and padding automatically scale down to prevent overflow.',
+    },
+    {
+      'title': 'Fixed Event Card Bus Assignment Overflow',
+      'description': 'Fixed bus assignment text overflow on event cards for small screens. Bus assignments now wrap to the next line instead of being truncated, ensuring all bus information remains visible and readable on all screen sizes.',
+    },
+    {
+      'title': 'Removed About Page',
+      'description': 'Removed the About page from the app as it was redundant. The page is no longer accessible from the menu.',
+    },
+  ],
   '2.18.1': [
     {
       'title': 'Summer Holiday Duration Choice',

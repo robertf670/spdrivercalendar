@@ -72,6 +72,9 @@ class _EventCardState extends State<EventCard> {
     }
   }
 
+  // Check if this is an EA Training event (no times/locations displayed)
+  bool get _isEATraining => widget.event.title.contains('EA Type Training');
+
   // Calculate work time for overtime shifts
   String? _calculateOvertimeWorkTime() {
     if (widget.event.title.contains('(OT)')) {
@@ -1787,7 +1790,8 @@ class _EventCardState extends State<EventCard> {
               const SizedBox(height: 8.0), // Slightly larger gap after title
               
               // For normal events (non-work shifts), show simple time display
-              if (!widget.event.isWorkShift) ...[
+              // Skip time display for EA Training (turn up and go, no times)
+              if (!widget.event.isWorkShift && !_isEATraining) ...[
                 Row(
                   children: [
                     Icon(
@@ -1816,7 +1820,8 @@ class _EventCardState extends State<EventCard> {
               ],
               
               // NEW: Report - Sign Off line (for PZ shifts and UNI overtime shifts)
-              if (widget.event.title.startsWith('PZ') || widget.event.title.startsWith('811/') || (widget.event.title.contains('(OT)') && RegExp(r'^\d{2,3}/').hasMatch(widget.event.title.replaceAll(RegExp(r'[AB]? \(OT\)$'), ''))))
+              // Skip for EA Training (no times/locations)
+              if (!_isEATraining && (widget.event.title.startsWith('PZ') || widget.event.title.startsWith('811/') || (widget.event.title.contains('(OT)') && RegExp(r'^\d{2,3}/').hasMatch(widget.event.title.replaceAll(RegExp(r'[AB]? \(OT\)$'), '')))))
                 Padding(
                   padding: const EdgeInsets.only(bottom: 2.0), // Reduced space - time info goes together
                   // Add Row for Icon
@@ -2206,7 +2211,10 @@ class _EventCardState extends State<EventCard> {
                                 Row(
                                   children: [
                                     Expanded(
-                                      child: Row(
+                                      child: Wrap(
+                                        spacing: 4.0,
+                                        runSpacing: 4.0,
+                                        crossAxisAlignment: WrapCrossAlignment.center,
                                         children: [
                                           // First Half Bus
                                           if (widget.event.firstHalfBus != null) ...[
@@ -4491,62 +4499,91 @@ class _EventCardState extends State<EventCard> {
             
             // Current bus assignments display
             if (_firstHalfBus != null)
-              Container(
-                padding: const EdgeInsets.all(8),
-                margin: const EdgeInsets.only(bottom: 8),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).brightness == Brightness.dark
-                      ? Colors.green.shade900.withOpacity(0.3)
-                      : Colors.green.shade50,
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(
-                    color: Theme.of(context).brightness == Brightness.dark
-                        ? Colors.green.shade700
-                        : Colors.green.shade200,
-                  ),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+              Builder(
+                builder: (context) {
+                  final screenWidth = MediaQuery.of(context).size.width;
+                  final isSmallScreen = screenWidth < 350;
+                  final iconSize = isSmallScreen ? 16.0 : 18.0;
+                  final iconPadding = isSmallScreen ? 2.0 : 4.0;
+                  final labelFontSize = isSmallScreen ? 11.0 : 12.0;
+                  final busFontSize = isSmallScreen ? 14.0 : 16.0;
+                  final containerPadding = isSmallScreen ? 6.0 : 8.0;
+                  final checkIconSize = isSmallScreen ? 14.0 : 16.0;
+                  
+                  return Container(
+                    padding: EdgeInsets.all(containerPadding),
+                    margin: const EdgeInsets.only(bottom: 8),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.green.shade900.withOpacity(0.3)
+                          : Colors.green.shade50,
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.green.shade700
+                            : Colors.green.shade200,
+                      ),
+                    ),
+                    child: Row(
                       children: [
-                        Text(
-                          'First Half Bus',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                            color: Theme.of(context).textTheme.bodyMedium?.color,
+                        Icon(Icons.check_circle, size: checkIconSize, color: Colors.green),
+                        SizedBox(width: isSmallScreen ? 4 : 8),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Row(
+                                children: [
+                                  Text(
+                                    '1: ',
+                                    style: TextStyle(
+                                      fontSize: labelFontSize,
+                                      fontWeight: FontWeight.w500,
+                                      color: Theme.of(context).textTheme.bodyMedium?.color,
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: Text(
+                                      _firstHalfBus!,
+                                      style: TextStyle(
+                                        fontSize: busFontSize,
+                                        fontWeight: FontWeight.bold,
+                                        color: Theme.of(context).textTheme.bodyLarge?.color,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                      maxLines: 1,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
                           ),
                         ),
-                        Text(
-                          _firstHalfBus!,
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Theme.of(context).textTheme.bodyLarge?.color,
-                          ),
-                        ),
-                      ],
-                    ),
-                    // Track button for first half bus
-                    IconButton(
-                      icon: _busTrackingLoading['tracking_${_firstHalfBus}'] == true
-                          ? const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Icon(Icons.location_on, size: 18, color: Colors.blue),
-                      onPressed: _busTrackingLoading['tracking_${_firstHalfBus}'] == true
-                          ? null
-                          : () => _trackBus(_firstHalfBus!),
-                      tooltip: 'Track $_firstHalfBus',
-                    ),
-                    // Change bus button (swap/recycle icon)
-                    IconButton(
-                      icon: const Icon(Icons.swap_horiz, size: 18, color: Colors.orange),
-                      onPressed: () async {
+                        SizedBox(width: isSmallScreen ? 2 : 4),
+                        // Group icons together tightly - use GestureDetector for tighter control
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // Track button for first half bus
+                            GestureDetector(
+                              onTap: _busTrackingLoading['tracking_${_firstHalfBus}'] == true
+                                  ? null
+                                  : () => _trackBus(_firstHalfBus!),
+                              child: Container(
+                                padding: EdgeInsets.all(iconPadding),
+                                child: _busTrackingLoading['tracking_${_firstHalfBus}'] == true
+                                    ? SizedBox(
+                                        width: iconSize - 2,
+                                        height: iconSize - 2,
+                                        child: const CircularProgressIndicator(strokeWidth: 2),
+                                      )
+                                    : Icon(Icons.location_on, size: iconSize, color: Colors.blue),
+                              ),
+                            ),
+                        // Change bus button (swap/recycle icon)
+                        GestureDetector(
+                          onTap: () async {
                         final result = await _showBusAssignmentDialog(context, 'First Half', _firstHalfBus);
                         if (result != null) {
                           final oldEvent = Event(
@@ -4577,170 +4614,221 @@ class _EventCardState extends State<EventCard> {
                             dialogSetState(() {});
                           }
                         }
-                      },
-                      tooltip: 'Change bus',
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.remove_circle_outline, size: 18, color: Colors.red),
-                      onPressed: () async {
-                        final oldEvent = Event(
-                          id: widget.event.id,
-                          title: widget.event.title,
-                          startDate: widget.event.startDate,
-                          startTime: widget.event.startTime,
-                          endDate: widget.event.endDate,
-                          endTime: widget.event.endTime,
-                          assignedDuties: widget.event.assignedDuties,
-                          busAssignments: widget.event.busAssignments,
-                          firstHalfBus: widget.event.firstHalfBus,
-                          secondHalfBus: widget.event.secondHalfBus,
-                          additionalBusesUsed: widget.event.additionalBusesUsed?.map((b) => b).toList(),
-                          firstHalfAdditionalBuses: widget.event.firstHalfAdditionalBuses?.map((b) => b).toList(),
-                          secondHalfAdditionalBuses: widget.event.secondHalfAdditionalBuses?.map((b) => b).toList(),
-                          additionalBusesByDuty: widget.event.additionalBusesByDuty?.map((k, v) => MapEntry(k, List<String>.from(v))),
-                        );
-                        
-                        // Use remove method to clear primary bus and breakdown history
-                        widget.event.removeBusForFirstHalf();
-                        await EventService.updateEvent(oldEvent, widget.event);
-                        
-                        if (mounted) {
-                          setState(() {
-                            _firstHalfBus = null;
-                          });
-                          // Also refresh the dialog
-                          dialogSetState(() {});
-                        }
-                      },
-                    ),
-                  ],
-                ),
-              ),
-            if (_secondHalfBus != null)
-              Container(
-                padding: const EdgeInsets.all(8),
-                margin: const EdgeInsets.only(bottom: 8),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).brightness == Brightness.dark
-                      ? Colors.green.shade900.withOpacity(0.3)
-                      : Colors.green.shade50,
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(
-                    color: Theme.of(context).brightness == Brightness.dark
-                        ? Colors.green.shade700
-                        : Colors.green.shade200,
-                  ),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Second Half Bus',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                            color: Theme.of(context).textTheme.bodyMedium?.color,
-                          ),
-                        ),
-                        Text(
-                          _secondHalfBus!,
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Theme.of(context).textTheme.bodyLarge?.color,
-                          ),
+                          },
+                              child: Container(
+                                padding: EdgeInsets.all(iconPadding),
+                                child: Icon(Icons.swap_horiz, size: iconSize, color: Colors.orange),
+                              ),
+                            ),
+                            // Remove bus button
+                            GestureDetector(
+                              onTap: () async {
+                                final oldEvent = Event(
+                                  id: widget.event.id,
+                                  title: widget.event.title,
+                                  startDate: widget.event.startDate,
+                                  startTime: widget.event.startTime,
+                                  endDate: widget.event.endDate,
+                                  endTime: widget.event.endTime,
+                                  assignedDuties: widget.event.assignedDuties,
+                                  busAssignments: widget.event.busAssignments,
+                                  firstHalfBus: widget.event.firstHalfBus,
+                                  secondHalfBus: widget.event.secondHalfBus,
+                                  additionalBusesUsed: widget.event.additionalBusesUsed?.map((b) => b).toList(),
+                                  firstHalfAdditionalBuses: widget.event.firstHalfAdditionalBuses?.map((b) => b).toList(),
+                                  secondHalfAdditionalBuses: widget.event.secondHalfAdditionalBuses?.map((b) => b).toList(),
+                                  additionalBusesByDuty: widget.event.additionalBusesByDuty?.map((k, v) => MapEntry(k, List<String>.from(v))),
+                                );
+                                
+                                // Use remove method to clear primary bus and breakdown history
+                                widget.event.removeBusForFirstHalf();
+                                await EventService.updateEvent(oldEvent, widget.event);
+                                
+                                if (mounted) {
+                                  setState(() {
+                                    _firstHalfBus = null;
+                                  });
+                                  // Also refresh the dialog
+                                  dialogSetState(() {});
+                                }
+                              },
+                              child: Container(
+                                padding: EdgeInsets.all(iconPadding),
+                                child: Icon(Icons.remove_circle_outline, size: iconSize, color: Colors.red),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
-                    // Track button for second half bus
-                    IconButton(
-                      icon: _busTrackingLoading['tracking_${_secondHalfBus}'] == true
-                          ? const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Icon(Icons.location_on, size: 18, color: Colors.blue),
-                      onPressed: _busTrackingLoading['tracking_${_secondHalfBus}'] == true
-                          ? null
-                          : () => _trackBus(_secondHalfBus!),
-                      tooltip: 'Track $_secondHalfBus',
+                  );
+                },
+              ),
+            if (_secondHalfBus != null)
+              Builder(
+                builder: (context) {
+                  final screenWidth = MediaQuery.of(context).size.width;
+                  final isSmallScreen = screenWidth < 350;
+                  final iconSize = isSmallScreen ? 16.0 : 18.0;
+                  final iconPadding = isSmallScreen ? 2.0 : 4.0;
+                  final labelFontSize = isSmallScreen ? 11.0 : 12.0;
+                  final busFontSize = isSmallScreen ? 14.0 : 16.0;
+                  final containerPadding = isSmallScreen ? 6.0 : 8.0;
+                  final checkIconSize = isSmallScreen ? 14.0 : 16.0;
+                  
+                  return Container(
+                    padding: EdgeInsets.all(containerPadding),
+                    margin: const EdgeInsets.only(bottom: 8),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.green.shade900.withOpacity(0.3)
+                          : Colors.green.shade50,
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.green.shade700
+                            : Colors.green.shade200,
+                      ),
                     ),
-                    // Change bus button (swap/recycle icon)
-                    IconButton(
-                      icon: const Icon(Icons.swap_horiz, size: 18, color: Colors.orange),
-                      onPressed: () async {
-                        final result = await _showBusAssignmentDialog(context, 'Second Half', _secondHalfBus);
-                        if (result != null) {
-                          final oldEvent = Event(
-                            id: widget.event.id,
-                            title: widget.event.title,
-                            startDate: widget.event.startDate,
-                            startTime: widget.event.startTime,
-                            endDate: widget.event.endDate,
-                            endTime: widget.event.endTime,
-                            assignedDuties: widget.event.assignedDuties,
-                            busAssignments: widget.event.busAssignments,
-                            firstHalfBus: widget.event.firstHalfBus,
-                            secondHalfBus: widget.event.secondHalfBus,
-                            additionalBusesUsed: widget.event.additionalBusesUsed?.map((b) => b).toList(),
-                            firstHalfAdditionalBuses: widget.event.firstHalfAdditionalBuses?.map((b) => b).toList(),
-                            secondHalfAdditionalBuses: widget.event.secondHalfAdditionalBuses?.map((b) => b).toList(),
-                            additionalBusesByDuty: widget.event.additionalBusesByDuty?.map((k, v) => MapEntry(k, List<String>.from(v))),
-                          );
-                          
-                          // Use change bus method to track breakdown buses
-                          widget.event.changeBusForSecondHalf(result);
-                          await EventService.updateEvent(oldEvent, widget.event);
-                          
-                          if (mounted) {
-                            setState(() {
-                              _secondHalfBus = result;
-                            });
-                            dialogSetState(() {});
-                          }
-                        }
-                      },
-                      tooltip: 'Change bus',
+                    child: Row(
+                      children: [
+                        Icon(Icons.check_circle, size: checkIconSize, color: Colors.green),
+                        SizedBox(width: isSmallScreen ? 4 : 8),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Row(
+                                children: [
+                                  Text(
+                                    '2: ',
+                                    style: TextStyle(
+                                      fontSize: labelFontSize,
+                                      fontWeight: FontWeight.w500,
+                                      color: Theme.of(context).textTheme.bodyMedium?.color,
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: Text(
+                                      _secondHalfBus!,
+                                      style: TextStyle(
+                                        fontSize: busFontSize,
+                                        fontWeight: FontWeight.bold,
+                                        color: Theme.of(context).textTheme.bodyLarge?.color,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                      maxLines: 1,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        SizedBox(width: isSmallScreen ? 2 : 4),
+                        // Group icons together tightly - use GestureDetector for tighter control
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // Track button for second half bus
+                            GestureDetector(
+                              onTap: _busTrackingLoading['tracking_${_secondHalfBus}'] == true
+                                  ? null
+                                  : () => _trackBus(_secondHalfBus!),
+                              child: Container(
+                                padding: EdgeInsets.all(iconPadding),
+                                child: _busTrackingLoading['tracking_${_secondHalfBus}'] == true
+                                    ? SizedBox(
+                                        width: iconSize - 2,
+                                        height: iconSize - 2,
+                                        child: const CircularProgressIndicator(strokeWidth: 2),
+                                      )
+                                    : Icon(Icons.location_on, size: iconSize, color: Colors.blue),
+                              ),
+                            ),
+                            // Change bus button (swap/recycle icon)
+                            GestureDetector(
+                              onTap: () async {
+                                final result = await _showBusAssignmentDialog(context, 'Second Half', _secondHalfBus);
+                                if (result != null) {
+                                  final oldEvent = Event(
+                                    id: widget.event.id,
+                                    title: widget.event.title,
+                                    startDate: widget.event.startDate,
+                                    startTime: widget.event.startTime,
+                                    endDate: widget.event.endDate,
+                                    endTime: widget.event.endTime,
+                                    assignedDuties: widget.event.assignedDuties,
+                                    busAssignments: widget.event.busAssignments,
+                                    firstHalfBus: widget.event.firstHalfBus,
+                                    secondHalfBus: widget.event.secondHalfBus,
+                                    additionalBusesUsed: widget.event.additionalBusesUsed?.map((b) => b).toList(),
+                                    firstHalfAdditionalBuses: widget.event.firstHalfAdditionalBuses?.map((b) => b).toList(),
+                                    secondHalfAdditionalBuses: widget.event.secondHalfAdditionalBuses?.map((b) => b).toList(),
+                                    additionalBusesByDuty: widget.event.additionalBusesByDuty?.map((k, v) => MapEntry(k, List<String>.from(v))),
+                                  );
+                                  
+                                  // Use change bus method to track breakdown buses
+                                  widget.event.changeBusForSecondHalf(result);
+                                  await EventService.updateEvent(oldEvent, widget.event);
+                                  
+                                  if (mounted) {
+                                    setState(() {
+                                      _secondHalfBus = result;
+                                    });
+                                    dialogSetState(() {});
+                                  }
+                                }
+                              },
+                              child: Container(
+                                padding: EdgeInsets.all(iconPadding),
+                                child: Icon(Icons.swap_horiz, size: iconSize, color: Colors.orange),
+                              ),
+                            ),
+                            // Remove bus button
+                            GestureDetector(
+                              onTap: () async {
+                                final oldEvent = Event(
+                                  id: widget.event.id,
+                                  title: widget.event.title,
+                                  startDate: widget.event.startDate,
+                                  startTime: widget.event.startTime,
+                                  endDate: widget.event.endDate,
+                                  endTime: widget.event.endTime,
+                                  assignedDuties: widget.event.assignedDuties,
+                                  busAssignments: widget.event.busAssignments,
+                                  firstHalfBus: widget.event.firstHalfBus,
+                                  secondHalfBus: widget.event.secondHalfBus,
+                                  additionalBusesUsed: widget.event.additionalBusesUsed?.map((b) => b).toList(),
+                                  firstHalfAdditionalBuses: widget.event.firstHalfAdditionalBuses?.map((b) => b).toList(),
+                                  secondHalfAdditionalBuses: widget.event.secondHalfAdditionalBuses?.map((b) => b).toList(),
+                                  additionalBusesByDuty: widget.event.additionalBusesByDuty?.map((k, v) => MapEntry(k, List<String>.from(v))),
+                                );
+                                
+                                // Use remove method to clear primary bus and breakdown history
+                                widget.event.removeBusForSecondHalf();
+                                await EventService.updateEvent(oldEvent, widget.event);
+                                
+                                if (mounted) {
+                                  setState(() {
+                                    _secondHalfBus = null;
+                                  });
+                                  // Also refresh the dialog
+                                  dialogSetState(() {});
+                                }
+                              },
+                              child: Container(
+                                padding: EdgeInsets.all(iconPadding),
+                                child: Icon(Icons.remove_circle_outline, size: iconSize, color: Colors.red),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
-                    IconButton(
-                      icon: const Icon(Icons.remove_circle_outline, size: 18, color: Colors.red),
-                      onPressed: () async {
-                        final oldEvent = Event(
-                          id: widget.event.id,
-                          title: widget.event.title,
-                          startDate: widget.event.startDate,
-                          startTime: widget.event.startTime,
-                          endDate: widget.event.endDate,
-                          endTime: widget.event.endTime,
-                          assignedDuties: widget.event.assignedDuties,
-                          busAssignments: widget.event.busAssignments,
-                          firstHalfBus: widget.event.firstHalfBus,
-                          secondHalfBus: widget.event.secondHalfBus,
-                          additionalBusesUsed: widget.event.additionalBusesUsed?.map((b) => b).toList(),
-                          firstHalfAdditionalBuses: widget.event.firstHalfAdditionalBuses?.map((b) => b).toList(),
-                          secondHalfAdditionalBuses: widget.event.secondHalfAdditionalBuses?.map((b) => b).toList(),
-                          additionalBusesByDuty: widget.event.additionalBusesByDuty?.map((k, v) => MapEntry(k, List<String>.from(v))),
-                        );
-                        
-                        // Use remove method to clear primary bus and breakdown history
-                        widget.event.removeBusForSecondHalf();
-                        await EventService.updateEvent(oldEvent, widget.event);
-                        
-                        if (mounted) {
-                          setState(() {
-                            _secondHalfBus = null;
-                          });
-                          // Also refresh the dialog
-                          dialogSetState(() {});
-                        }
-                      },
-                    ),
-                  ],
-                ),
+                  );
+                },
               ),
             const SizedBox(height: 8),
           ],
@@ -4849,6 +4937,11 @@ class _EventCardState extends State<EventCard> {
     final bool isOvertimeShift = widget.event.title.contains('(OT)');
     final bool isFirstHalf = isOvertimeShift && widget.event.title.contains('A (OT)');
     final bool isSecondHalf = isOvertimeShift && widget.event.title.contains('B (OT)');
+    
+    // For EA Training, don't show times or locations (turn up and go)
+    if (_isEATraining) {
+      return <TextSpan>[];
+    }
     
     // For PZ shifts, Jamestown Road shifts, Training shifts, and Universal/Euro shifts, use the specialized display format
     if (widget.event.title.startsWith('PZ') || widget.event.title.startsWith('811/') || 

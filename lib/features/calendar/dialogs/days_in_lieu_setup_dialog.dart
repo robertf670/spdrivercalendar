@@ -153,14 +153,16 @@ class _DaysInLieuSetupDialogState extends State<DaysInLieuSetupDialog> {
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                TextButton(
-                  onPressed: _isLoading ? null : () {
-                    // Set to 0 if user cancels without entering
-                    DaysInLieuService.setBalance(0);
-                    DaysInLieuService.markAsSet();
-                    Navigator.of(context).pop();
-                  },
-                  child: const Text('Skip (Set to 0)'),
+                Flexible(
+                  child: TextButton(
+                    onPressed: _isLoading ? null : () {
+                      // Set to 0 if user cancels without entering
+                      DaysInLieuService.setBalance(0);
+                      DaysInLieuService.markAsSet();
+                      Navigator.of(context).pop();
+                    },
+                    child: const Text('Skip (Set to 0)'),
+                  ),
                 ),
                 const SizedBox(width: 8),
                 ElevatedButton(
