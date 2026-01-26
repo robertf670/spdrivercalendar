@@ -2334,6 +2334,34 @@ class _EventCardState extends State<EventCard> {
                   ],
                 ),
               ],
+              // Late Finish Status Section
+              if (widget.event.hasLateFinish) ...[
+                const SizedBox(height: 3.0),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.schedule,
+                      size: 16,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white
+                          : Colors.black,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Late Finish: ${widget.event.lateFinishDuration} mins',
+                        style: TextStyle(
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.white
+                              : Colors.black,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w400,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ],
           ),
         ),
@@ -3459,7 +3487,7 @@ class _EventCardState extends State<EventCard> {
                 // Show break status dialog
                 _showBreakStatusDialog(context);
               },
-              child: const Text('Break Status'),
+              child: const Text('Break & Finish'),
             ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(), // Simple close action
@@ -4304,6 +4332,8 @@ class _EventCardState extends State<EventCard> {
                   hasLateBreak: widget.event.hasLateBreak,
                   tookFullBreak: widget.event.tookFullBreak,
                   overtimeDuration: widget.event.overtimeDuration,
+                  hasLateFinish: widget.event.hasLateFinish,
+                  lateFinishDuration: widget.event.lateFinishDuration,
                 );
                 
                 // Reset break status

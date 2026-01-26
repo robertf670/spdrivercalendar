@@ -37,16 +37,16 @@ class YearViewScreenState extends State<YearViewScreen> {
   late int _currentYear; // Store year in state to avoid closure issues
   bool _markedInEnabled = false;
   String _markedInStatus = 'Shift';
+  bool _isLoadingMonths = true; // Track loading state
 
   @override
   void initState() {
     super.initState();
     _currentYear = widget.year; // Initialize with widget.year
     _loadMarkedInSettings();
-    // Preload events for visible months only (first 3-4 months) in background
-    // This allows UI to show immediately while events load
+    // Preload all 12 months before showing the grid to improve performance
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _preloadVisibleMonths();
+      _preloadAllMonths();
     });
   }
 
@@ -68,25 +68,29 @@ class YearViewScreenState extends State<YearViewScreen> {
     // Update state if year changed
     if (oldWidget.year != widget.year) {
       _currentYear = widget.year;
+      // Reload all months when year changes
+      _isLoadingMonths = true;
+      _preloadAllMonths();
     }
     // Reload marked-in settings in case they changed
     _loadMarkedInSettings();
   }
 
-  Future<void> _preloadVisibleMonths() async {
-    // Only preload first few months that are likely visible
-    // Events will load on-demand for other months as user scrolls
+  Future<void> _preloadAllMonths() async {
+    // Preload all 12 months in parallel for better performance
+    // This prevents expensive synchronous calls during build
     final futures = <Future>[];
-    for (int month = 1; month <= 4; month++) {
+    for (int month = 1; month <= 12; month++) {
       final date = DateTime(_currentYear, month, 1);
       futures.add(EventService.preloadMonth(date).catchError((_) {}));
     }
-    // Load in background without blocking
-    Future.wait(futures).then((_) {
-      if (mounted) {
-        setState(() {});
-      }
-    });
+    // Wait for all months to load before showing the grid
+    await Future.wait(futures);
+    if (mounted) {
+      setState(() {
+        _isLoadingMonths = false;
+      });
+    }
   }
 
   String getShiftForDate(DateTime date) {
@@ -164,7 +168,9 @@ class YearViewScreenState extends State<YearViewScreen> {
               if (currentYear != _currentYear) {
                 setState(() {
                   _currentYear = currentYear;
+                  _isLoadingMonths = true;
                 });
+                _preloadAllMonths();
               }
             },
           ),
@@ -197,7 +203,9 @@ class YearViewScreenState extends State<YearViewScreen> {
                       onTap: () {
                         setState(() {
                           _currentYear = _currentYear - 1;
+                          _isLoadingMonths = true;
                         });
+                        _preloadAllMonths();
                       },
                       child: Container(
                         padding: const EdgeInsets.all(8),
@@ -251,7 +259,9 @@ class YearViewScreenState extends State<YearViewScreen> {
                       onTap: () {
                         setState(() {
                           _currentYear = _currentYear + 1;
+                          _isLoadingMonths = true;
                         });
+                        _preloadAllMonths();
                       },
                       child: Container(
                         padding: const EdgeInsets.all(8),
@@ -268,51 +278,67 @@ class YearViewScreenState extends State<YearViewScreen> {
             
             // Scrollable year view with all months in a grid
             Expanded(
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  // Determine number of columns based on screen width
-                  final screenWidth = constraints.maxWidth;
-                  int crossAxisCount = 3; // Default to 3 columns
-                  if (screenWidth > 900) {
-                    crossAxisCount = 4; // 4 columns on very large screens
-                  } else if (screenWidth < 600) {
-                    crossAxisCount = 2; // 2 columns on small screens
-                  }
-                  
-                  // Calculate responsive values based on screen width
-                  final isSmallScreen = screenWidth < 600;
-                  final isLargeScreen = screenWidth > 900;
-                  
-                  // Responsive spacing
-                  final gridPadding = isSmallScreen ? 6.0 : (isLargeScreen ? 12.0 : 8.0);
-                  final gridSpacing = isSmallScreen ? 6.0 : (isLargeScreen ? 12.0 : 8.0);
-                  
-                  // Responsive aspect ratio (smaller screens need taller cells)
-                  final aspectRatio = isSmallScreen ? 0.92 : (isLargeScreen ? 0.98 : 0.95);
-                  
-                  return SingleChildScrollView(
-                    padding: EdgeInsets.all(gridPadding),
-                    child: GridView.builder(
-                      key: ValueKey('year_grid_$_currentYear'), // Force rebuild when year changes
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: crossAxisCount,
-                        crossAxisSpacing: gridSpacing,
-                        mainAxisSpacing: gridSpacing,
-                        childAspectRatio: aspectRatio,
+              child: _isLoadingMonths
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          CircularProgressIndicator(),
+                          const SizedBox(height: 16),
+                          Text(
+                            'Loading calendar...',
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                            ),
+                          ),
+                        ],
                       ),
-                      itemCount: 12,
-                      itemBuilder: (context, index) {
-                        final month = index + 1;
-                        // Use _currentYear from state, not widget.year, to avoid closure issues
-                        final currentYear = _currentYear;
-                        return _buildMonthCalendar(month, currentYear, screenWidth);
+                    )
+                  : LayoutBuilder(
+                      builder: (context, constraints) {
+                        // Determine number of columns based on screen width
+                        final screenWidth = constraints.maxWidth;
+                        int crossAxisCount = 3; // Default to 3 columns
+                        if (screenWidth > 900) {
+                          crossAxisCount = 4; // 4 columns on very large screens
+                        } else if (screenWidth < 600) {
+                          crossAxisCount = 2; // 2 columns on small screens
+                        }
+                        
+                        // Calculate responsive values based on screen width
+                        final isSmallScreen = screenWidth < 600;
+                        final isLargeScreen = screenWidth > 900;
+                        
+                        // Responsive spacing
+                        final gridPadding = isSmallScreen ? 6.0 : (isLargeScreen ? 12.0 : 8.0);
+                        final gridSpacing = isSmallScreen ? 6.0 : (isLargeScreen ? 12.0 : 8.0);
+                        
+                        // Responsive aspect ratio (smaller screens need taller cells)
+                        final aspectRatio = isSmallScreen ? 0.92 : (isLargeScreen ? 0.98 : 0.95);
+                        
+                        return SingleChildScrollView(
+                          padding: EdgeInsets.all(gridPadding),
+                          child: GridView.builder(
+                            key: ValueKey('year_grid_$_currentYear'), // Force rebuild when year changes
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: crossAxisCount,
+                              crossAxisSpacing: gridSpacing,
+                              mainAxisSpacing: gridSpacing,
+                              childAspectRatio: aspectRatio,
+                            ),
+                            itemCount: 12,
+                            itemBuilder: (context, index) {
+                              final month = index + 1;
+                              // Use _currentYear from state, not widget.year, to avoid closure issues
+                              final currentYear = _currentYear;
+                              return _buildMonthCalendar(month, currentYear, screenWidth);
+                            },
+                          ),
+                        );
                       },
                     ),
-                  );
-                },
-              ),
             ),
           ],
         ),
@@ -656,7 +682,7 @@ class YearViewScreenState extends State<YearViewScreen> {
                     style: TextStyle(
                       fontSize: satBadgeFontSize,
                       fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                      color: Colors.black,
                       height: 1.0,
                       letterSpacing: 0.3,
                     ),

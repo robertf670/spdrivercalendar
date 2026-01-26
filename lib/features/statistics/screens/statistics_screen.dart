@@ -572,10 +572,21 @@ class StatisticsScreenState extends State<StatisticsScreen>
           SizedBox(height: sizes['cardSpacing']!), // Spacing between cards
           _buildExpandableSection(
             title: 'Rostered Sunday Pair Hours',
-            subtitle: 'Sum of hours worked on specific rostered Late & Early Sundays (Max 14h 30m). Entitled to overtime if time is more than 14h 30m. If the second Sunday has not happened yet, and the time is more than 14h 30m, you have the right to finish in the garage',
+            subtitle: 'Sunday pair hours (Max 14h 30m)',
             icon: Icons.calendar_today,
             children: [
               const SizedBox(height: 8),
+              // Detailed description
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12.0),
+                child: Text(
+                  'Sum of hours worked on specific rostered Late & Early Sundays (Max 14h 30m). Entitled to overtime if time is more than 14h 30m. If the second Sunday has not happened yet, and the time is more than 14h 30m, you have the right to finish in the garage',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                  ),
+                ),
+              ),
               if (_sundayStatsLoading)
                 const Center(child: Padding(
                   padding: EdgeInsets.symmetric(vertical: 16.0),
@@ -737,9 +748,9 @@ class StatisticsScreenState extends State<StatisticsScreen>
           
           SizedBox(height: sizes['cardSpacing']!),
           
-          // Break Statistics Card
+          // Break & Finish Statistics Card
           _buildExpandableSection(
-            title: 'Break Statistics',
+            title: 'Break & Finish Statistics',
             icon: Icons.free_breakfast,
             children: [
               const SizedBox(height: 8),
@@ -1001,9 +1012,13 @@ class StatisticsScreenState extends State<StatisticsScreen>
         // Only count shifts occurring Mon-Fri
         final dayOfWeek = event.startDate.weekday;
         if (dayOfWeek >= DateTime.monday && dayOfWeek <= DateTime.friday) {
-          // Update to check for work shifts without "Shift:" prefix
-          if (event.isWorkShift) {
-            final shiftType = event.title;
+          // Exclude overtime shifts and ensure it's a work shift
+          if (event.isWorkShift && !event.title.contains('(OT)')) {
+            // Strip "Shift:" prefix if present for cleaner display
+            String shiftType = event.title;
+            if (shiftType.startsWith('Shift: ')) {
+              shiftType = shiftType.substring(7); // Remove "Shift: " prefix
+            }
             
             if (!countedIds.contains(event.id)) {
               countedIds.add(event.id);
@@ -1997,6 +2012,7 @@ class StatisticsScreenState extends State<StatisticsScreen>
         processedIds.add(event.id);
 
         // Use getAllBusesUsed() to get all buses (primary + breakdown buses) for statistics
+        // Include all work shifts including overtime shifts
         final allBuses = event.getAllBusesUsed();
         for (final busNumber in allBuses) {
           if (busNumber.isNotEmpty) {
@@ -2269,9 +2285,9 @@ class StatisticsScreenState extends State<StatisticsScreen>
     return shiftType == 'R';
   }
 
-  // Add new method to calculate break statistics
+  // Add new method to calculate break and finish statistics
   Map<String, dynamic> _calculateBreakStatistics() {
-    // Calculating break statistics
+    // Calculating break and finish statistics
     
     final DateTime now = DateTime.now();
     
@@ -2293,41 +2309,47 @@ class StatisticsScreenState extends State<StatisticsScreen>
     final lastMonthEnd = thisMonthStart.subtract(const Duration(days: 1));
     final lastMonthStart = DateTime(lastMonthEnd.year, lastMonthEnd.month, 1);
     
-    // FIXED: Get all events with late break status from the map of events with duplicate prevention
+    // Get all events with late break OR late finish status from the map of events with duplicate prevention
     final List<Event> eventsWithBreakStatus = [];
-    final Set<String> processedIds = {}; // Add duplicate prevention
+    final List<Event> eventsWithFinishStatus = [];
+    final Set<String> processedBreakIds = {}; // Prevent duplicate break events
+    final Set<String> processedFinishIds = {}; // Prevent duplicate finish events
     
     widget.events.forEach((date, dayEvents) {
       for (final event in dayEvents) {
-        // Only add events that haven't been processed yet (prevents midnight-spanning duplicates)
-        if (event.hasLateBreak == true && !processedIds.contains(event.id)) {
-          processedIds.add(event.id);
+        // Add events with late break status (prevents midnight-spanning duplicates)
+        if (event.hasLateBreak == true && !processedBreakIds.contains(event.id)) {
+          processedBreakIds.add(event.id);
           eventsWithBreakStatus.add(event);
+        }
+        // Add events with late finish status (prevents midnight-spanning duplicates)
+        if (event.hasLateFinish == true && !processedFinishIds.contains(event.id)) {
+          processedFinishIds.add(event.id);
+          eventsWithFinishStatus.add(event);
         }
       }
     });
     
     // Final result map
     Map<String, dynamic> result = {
-      'thisweek': _calculateBreakStatsForPeriod(eventsWithBreakStatus, thisWeekStart, thisWeekEnd),
-      'lastweek': _calculateBreakStatsForPeriod(eventsWithBreakStatus, lastWeekStart, lastWeekEnd),
-      'thismonth': _calculateBreakStatsForPeriod(eventsWithBreakStatus, thisMonthStart, thisMonthEnd),
-      'lastmonth': _calculateBreakStatsForPeriod(eventsWithBreakStatus, lastMonthStart, lastMonthEnd),
-      'alltime': _calculateBreakStatsForPeriod(eventsWithBreakStatus, null, null),
+      'thisweek': _calculateBreakStatsForPeriod(eventsWithBreakStatus, eventsWithFinishStatus, thisWeekStart, thisWeekEnd),
+      'lastweek': _calculateBreakStatsForPeriod(eventsWithBreakStatus, eventsWithFinishStatus, lastWeekStart, lastWeekEnd),
+      'thismonth': _calculateBreakStatsForPeriod(eventsWithBreakStatus, eventsWithFinishStatus, thisMonthStart, thisMonthEnd),
+      'lastmonth': _calculateBreakStatsForPeriod(eventsWithBreakStatus, eventsWithFinishStatus, lastMonthStart, lastMonthEnd),
+      'alltime': _calculateBreakStatsForPeriod(eventsWithBreakStatus, eventsWithFinishStatus, null, null),
     };
     
-    // Break statistics calculated
-    // Found events with late break status
+    // Break and finish statistics calculated
     return result;
   }
   
   Map<String, dynamic> _calculateBreakStatsForPeriod(
-    List<Event> events, DateTime? startDate, DateTime? endDate) {
+    List<Event> breakEvents, List<Event> finishEvents, DateTime? startDate, DateTime? endDate) {
     
-    // Filter by date range if specified
-    List<Event> filteredEvents = events;
+    // Filter break events by date range if specified
+    List<Event> filteredBreakEvents = breakEvents;
     if (startDate != null && endDate != null) {
-      filteredEvents = events.where((event) {
+      filteredBreakEvents = breakEvents.where((event) {
         final eventDate = DateTime(event.startDate.year, event.startDate.month, event.startDate.day);
         return eventDate.isAtSameMomentAs(startDate) || 
                eventDate.isAtSameMomentAs(endDate) || 
@@ -2335,24 +2357,48 @@ class StatisticsScreenState extends State<StatisticsScreen>
       }).toList();
     }
     
-    // Count statistics
-    int total = filteredEvents.length;
-    int fullBreak = filteredEvents.where((e) => e.tookFullBreak == true).length;
-    int overtime = filteredEvents.where((e) => e.tookFullBreak == false).length;
+    // Filter finish events by date range if specified
+    List<Event> filteredFinishEvents = finishEvents;
+    if (startDate != null && endDate != null) {
+      filteredFinishEvents = finishEvents.where((event) {
+        final eventDate = DateTime(event.startDate.year, event.startDate.month, event.startDate.day);
+        return eventDate.isAtSameMomentAs(startDate) || 
+               eventDate.isAtSameMomentAs(endDate) || 
+               (eventDate.isAfter(startDate) && eventDate.isBefore(endDate));
+      }).toList();
+    }
+    
+    // Count break statistics
+    int totalBreaks = filteredBreakEvents.length;
+    int fullBreak = filteredBreakEvents.where((e) => e.tookFullBreak == true).length;
+    int overtime = filteredBreakEvents.where((e) => e.tookFullBreak == false).length;
     
     // Calculate total overtime minutes
     int totalOvertimeMinutes = 0;
-    for (final event in filteredEvents) {
+    for (final event in filteredBreakEvents) {
       if (event.tookFullBreak == false && event.overtimeDuration != null) {
         totalOvertimeMinutes += event.overtimeDuration!;
       }
     }
     
+    // Count finish statistics
+    int totalFinishes = filteredFinishEvents.length;
+    
+    // Calculate total late finish minutes
+    int totalLateFinishMinutes = 0;
+    for (final event in filteredFinishEvents) {
+      if (event.hasLateFinish == true && event.lateFinishDuration != null) {
+        totalLateFinishMinutes += event.lateFinishDuration!;
+      }
+    }
+    
     return {
-      'total': total,
+      'total': totalBreaks,
       'fullBreak': fullBreak,
       'overtime': overtime,
       'totalOvertimeMinutes': totalOvertimeMinutes,
+      'totalFinishes': totalFinishes,
+      'totalLateFinishMinutes': totalLateFinishMinutes,
     };
   }
   

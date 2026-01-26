@@ -62,6 +62,7 @@ class SettingsScreenState extends State<SettingsScreen> {
   // Display settings
   bool _showOvernightDutiesOnBothDays = true; // Default to true to preserve current behavior
   bool _showDutyCodesOnCalendar = true; // Default to true (ON)
+  bool _animatedSelectedDay = true; // Default to true (ON) - animated border
   
   // Pay rate setting
   String _spreadPayRate = 'year1+2'; // Default to Year 1/2
@@ -168,6 +169,7 @@ class SettingsScreenState extends State<SettingsScreen> {
     // Load display settings - default to true to preserve current behavior
     _showOvernightDutiesOnBothDays = prefs.getBool(AppConstants.showOvernightDutiesOnBothDaysKey) ?? true;
     _showDutyCodesOnCalendar = prefs.getBool(AppConstants.showDutyCodesOnCalendarKey) ?? true;
+    _animatedSelectedDay = prefs.getBool(AppConstants.animatedSelectedDayKey) ?? true;
     
     // Load pay rate setting - default to Year 1/2
     _spreadPayRate = prefs.getString(AppConstants.spreadPayRateKey) ?? 'year1+2';
@@ -321,6 +323,15 @@ class SettingsScreenState extends State<SettingsScreen> {
     // via didChangeDependencies or when the setting is checked in _getCalendarDayDisplayText
   }
 
+  Future<void> _toggleAnimatedSelectedDay(bool value) async {
+    setState(() {
+      _animatedSelectedDay = value;
+    });
+    await StorageService.saveBool(AppConstants.animatedSelectedDayKey, value);
+    
+    // The calendar will refresh automatically when navigating back to it
+  }
+
   void _onColorsChanged() {
     // Trigger a rebuild to refresh any UI that depends on colors
     setState(() {});
@@ -393,6 +404,7 @@ class SettingsScreenState extends State<SettingsScreen> {
                       ),
                       _buildOvernightDutiesToggle(),
                       _buildDutyCodesToggle(),
+                      _buildAnimatedSelectedDayToggle(),
                     ],
                   ),
                   
@@ -1960,6 +1972,22 @@ class SettingsScreenState extends State<SettingsScreen> {
         secondary: const Icon(Icons.calendar_view_day),
         value: _showDutyCodesOnCalendar,
         onChanged: _toggleDutyCodesDisplay,
+      ),
+    );
+  }
+
+  Widget _buildAnimatedSelectedDayToggle() {
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 4.0),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppTheme.borderRadius),
+      ),
+      child: SwitchListTile(
+        title: const Text('Animated Selected Day Border'),
+        subtitle: const Text('Show animated pulsing border for selected day (disabled shows static border)'),
+        secondary: const Icon(Icons.animation),
+        value: _animatedSelectedDay,
+        onChanged: _toggleAnimatedSelectedDay,
       ),
     );
   }

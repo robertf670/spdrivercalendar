@@ -102,6 +102,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
   
   // Display settings
   bool _showDutyCodesOnCalendar = true; // Default to true (ON)
+  bool _animatedSelectedDay = true; // Default to true (ON) - animated border
 
   // Holiday section expanded state (year -> expanded)
   final Map<int, bool> _holidayYearExpanded = {};
@@ -257,15 +258,18 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
     final newMarkedInEnabled = markedInEnabled && markedInStatus.isNotEmpty;
     final newMarkedInStatus = markedInStatus.isEmpty ? 'Spare' : markedInStatus;
     final newShowDutyCodes = await StorageService.getBool(AppConstants.showDutyCodesOnCalendarKey, defaultValue: true);
+    final newAnimatedSelectedDay = await StorageService.getBool(AppConstants.animatedSelectedDayKey, defaultValue: true);
     
     // Always update state to ensure calendar rebuilds with latest settings
     if (mounted) {
       final needsUpdate = _markedInEnabled != newMarkedInEnabled || 
                          _markedInStatus != newMarkedInStatus ||
-                         _showDutyCodesOnCalendar != newShowDutyCodes;
+                         _showDutyCodesOnCalendar != newShowDutyCodes ||
+                         _animatedSelectedDay != newAnimatedSelectedDay;
       _markedInEnabled = newMarkedInEnabled;
       _markedInStatus = newMarkedInStatus;
       _showDutyCodesOnCalendar = newShowDutyCodes;
+      _animatedSelectedDay = newAnimatedSelectedDay;
       
       if (needsUpdate) {
         setState(() {});
@@ -706,11 +710,20 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
     // Check if user is M-F marked in and if it's a weekday
     bool isMFMarkedIn = false;
     bool isWeekday = false;
+    // Check if user is marked-in on Shift status and get their zone
+    bool isShiftMarkedIn = false;
+    String markedInZone = '';
     
     try {
       final markedInEnabled = await StorageService.getBool(AppConstants.markedInEnabledKey);
-      final markedInStatus = await StorageService.getString(AppConstants.markedInStatusKey) ?? 'Shift';
+      final markedInStatus = await StorageService.getString(AppConstants.markedInStatusKey) ?? '';
       isMFMarkedIn = markedInEnabled && markedInStatus == 'M-F';
+      
+      // Check if marked-in on Shift status
+      if (markedInEnabled && markedInStatus == 'Shift') {
+        isShiftMarkedIn = true;
+        markedInZone = await StorageService.getString(AppConstants.markedInZoneKey) ?? 'Zone 1';
+      }
       
       final dayOfWeek = RosterService.getDayOfWeek(shiftDate);
       isWeekday = dayOfWeek != 'Saturday' && dayOfWeek != 'Sunday';
@@ -718,6 +731,8 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
       // If we can't check, default to false
       isMFMarkedIn = false;
       isWeekday = false;
+      isShiftMarkedIn = false;
+      markedInZone = '';
     }
     
     // Show dialog with loading state initially
@@ -728,7 +743,46 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
         String selectedShiftNumber = '';
         List<String> shiftNumbers = [];
         bool isLoading = true;
-        bool fillWholeWeek = false;
+        // For M-F Uni/Euro repeat feature
+        bool repeatUniEuroThisWeek = false;
+        Map<int, bool> uniEuroSelectedDays = {
+          0: false, // Sunday
+          1: false, // Monday
+          2: false, // Tuesday
+          3: false, // Wednesday
+          4: false, // Thursday
+          5: false, // Friday
+          6: false, // Saturday
+        };
+        Map<int, bool> uniEuroDisabledDays = {
+          0: false, // Sunday
+          1: false, // Monday
+          2: false, // Tuesday
+          3: false, // Wednesday
+          4: false, // Thursday
+          5: false, // Friday
+          6: false, // Saturday
+        };
+        // For marked-in zone repeat feature
+        bool repeatDutyThisWeek = false;
+        Map<int, bool> selectedDays = {
+          0: false, // Sunday
+          1: false, // Monday
+          2: false, // Tuesday
+          3: false, // Wednesday
+          4: false, // Thursday
+          5: false, // Friday
+          6: false, // Saturday
+        };
+        Map<int, bool> disabledDays = {
+          0: false, // Sunday
+          1: false, // Monday
+          2: false, // Tuesday
+          3: false, // Wednesday
+          4: false, // Thursday
+          5: false, // Friday
+          6: false, // Saturday
+        };
         
         return StatefulBuilder(
           builder: (context, setState) {
@@ -977,10 +1031,11 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                   
           return AlertDialog(
             title: Text('Add Work Shift for ${DateFormat('EEE, MMM d').format(shiftDate)}'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                 const Text('Zone:', style: TextStyle(fontWeight: FontWeight.bold)),
                 DropdownButton<String>(
                   value: selectedZone,
@@ -1079,39 +1134,189 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                             }
                           },
                         ),
-                // Show checkbox for M-F marked in users selecting Uni/Euro on weekdays
+                // Show checkbox for M-F marked in users selecting Uni/Euro (not on weekends)
                 Builder(
                   builder: (context) {
-                    final shouldShowFillWeekCheckbox = isMFMarkedIn && isWeekday && selectedZone == 'Uni/Euro';
-                    if (shouldShowFillWeekCheckbox) {
+                    final dayOfWeek = RosterService.getDayOfWeek(shiftDate);
+                    final isWeekend = dayOfWeek == 'Saturday' || dayOfWeek == 'Sunday';
+                    final shouldShowRepeatCheckbox = isMFMarkedIn && selectedZone == 'Uni/Euro' && !isWeekend;
+                    if (shouldShowRepeatCheckbox) {
                       return Column(
                         children: [
                           const SizedBox(height: 16),
                           Row(
                             children: [
                               Checkbox(
-                                value: fillWholeWeek,
-                                onChanged: (value) {
+                                value: repeatUniEuroThisWeek,
+                                onChanged: (value) async {
                                   setState(() {
-                                    fillWholeWeek = value ?? false;
+                                    repeatUniEuroThisWeek = value ?? false;
                                   });
+                                  
+                                  if (repeatUniEuroThisWeek) {
+                                    // When checking, check which weekdays already have work shifts
+                                    // Get the start of the week (Sunday)
+                                    final weekday = shiftDate.weekday; // 1=Monday, 7=Sunday
+                                    final daysToSunday = weekday == 7 ? 0 : weekday;
+                                    final weekStart = shiftDate.subtract(Duration(days: daysToSunday));
+                                    
+                                    // Check each weekday (Monday-Friday, indices 1-5) for existing work shifts
+                                    final newDisabledDays = <int, bool>{};
+                                    for (int dayIndex = 1; dayIndex <= 5; dayIndex++) {
+                                      final targetDate = weekStart.add(Duration(days: dayIndex));
+                                      final existingEvents = EventService.getEventsForDay(targetDate);
+                                      
+                                      // Check if there's a work shift (non-holiday event) on this day
+                                      final hasWorkShift = existingEvents.any((e) => !e.isHoliday);
+                                      newDisabledDays[dayIndex] = hasWorkShift;
+                                    }
+                                    
+                                    setState(() {
+                                      uniEuroDisabledDays = newDisabledDays;
+                                      
+                                      // Automatically select the current day if it's not disabled (only for weekdays)
+                                      if (weekday >= 1 && weekday <= 5) {
+                                        if (!(uniEuroDisabledDays[weekday] ?? false)) {
+                                          uniEuroSelectedDays[weekday] = true;
+                                        }
+                                      }
+                                    });
+                                  } else {
+                                    // If unchecking, clear all selected days and disabled days
+                                    setState(() {
+                                      uniEuroSelectedDays = {
+                                        0: false, 1: false, 2: false, 3: false,
+                                        4: false, 5: false, 6: false,
+                                      };
+                                      uniEuroDisabledDays = {
+                                        0: false, 1: false, 2: false, 3: false,
+                                        4: false, 5: false, 6: false,
+                                      };
+                                    });
+                                  }
                                 },
                               ),
                               const Expanded(
                                 child: Text(
-                                  'Fill whole week (Mon-Fri) with this shift',
+                                  'Would you like to repeat this shift this week?',
                                   style: TextStyle(fontSize: 14),
                                 ),
                               ),
                             ],
                           ),
+                          if (repeatUniEuroThisWeek) ...[
+                            const SizedBox(height: 12),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                              children: [
+                                _buildDayToggle(context, setState, 1, 'M', uniEuroSelectedDays[1] ?? false, uniEuroSelectedDays, uniEuroDisabledDays[1] ?? false),
+                                _buildDayToggle(context, setState, 2, 'T', uniEuroSelectedDays[2] ?? false, uniEuroSelectedDays, uniEuroDisabledDays[2] ?? false),
+                                _buildDayToggle(context, setState, 3, 'W', uniEuroSelectedDays[3] ?? false, uniEuroSelectedDays, uniEuroDisabledDays[3] ?? false),
+                                _buildDayToggle(context, setState, 4, 'T', uniEuroSelectedDays[4] ?? false, uniEuroSelectedDays, uniEuroDisabledDays[4] ?? false),
+                                _buildDayToggle(context, setState, 5, 'F', uniEuroSelectedDays[5] ?? false, uniEuroSelectedDays, uniEuroDisabledDays[5] ?? false),
+                              ],
+                            ),
+                          ],
                         ],
                       );
                     }
                     return const SizedBox.shrink();
                   },
                 ),
-              ],
+                // Show checkbox for marked-in Shift users when zone matches (not on weekends)
+                Builder(
+                  builder: (context) {
+                    final dayOfWeek = RosterService.getDayOfWeek(shiftDate);
+                    final isWeekend = dayOfWeek == 'Saturday' || dayOfWeek == 'Sunday';
+                    final shouldShowRepeatCheckbox = isShiftMarkedIn && 
+                        (selectedZone == 'Zone 1' || selectedZone == 'Zone 3' || selectedZone == 'Zone 4') &&
+                        selectedZone == markedInZone &&
+                        !isWeekend;
+                    if (shouldShowRepeatCheckbox) {
+                      return Column(
+                        children: [
+                          const SizedBox(height: 16),
+                          Row(
+                            children: [
+                              Checkbox(
+                                value: repeatDutyThisWeek,
+                                onChanged: (value) async {
+                                  setState(() {
+                                    repeatDutyThisWeek = value ?? false;
+                                  });
+                                  
+                                  if (repeatDutyThisWeek) {
+                                    // When checking, check which weekdays already have work shifts
+                                    // Get the start of the week (Sunday)
+                                    final weekday = shiftDate.weekday; // 1=Monday, 7=Sunday
+                                    final daysToSunday = weekday == 7 ? 0 : weekday;
+                                    final weekStart = shiftDate.subtract(Duration(days: daysToSunday));
+                                    
+                                    // Check each weekday (Monday-Friday, indices 1-5) for existing work shifts
+                                    final newDisabledDays = <int, bool>{};
+                                    for (int dayIndex = 1; dayIndex <= 5; dayIndex++) {
+                                      final targetDate = weekStart.add(Duration(days: dayIndex));
+                                      final existingEvents = EventService.getEventsForDay(targetDate);
+                                      
+                                      // Check if there's a work shift (non-holiday event) on this day
+                                      final hasWorkShift = existingEvents.any((e) => !e.isHoliday);
+                                      newDisabledDays[dayIndex] = hasWorkShift;
+                                    }
+                                    
+                                    setState(() {
+                                      disabledDays = newDisabledDays;
+                                      
+                                      // Automatically select the current day if it's not disabled (only for weekdays)
+                                      if (weekday >= 1 && weekday <= 5) {
+                                        if (!(disabledDays[weekday] ?? false)) {
+                                          selectedDays[weekday] = true;
+                                        }
+                                      }
+                                    });
+                                  } else {
+                                    // If unchecking, clear all selected days and disabled days
+                                    setState(() {
+                                      selectedDays = {
+                                        0: false, 1: false, 2: false, 3: false,
+                                        4: false, 5: false, 6: false,
+                                      };
+                                      disabledDays = {
+                                        0: false, 1: false, 2: false, 3: false,
+                                        4: false, 5: false, 6: false,
+                                      };
+                                    });
+                                  }
+                                },
+                              ),
+                              const Expanded(
+                                child: Text(
+                                  'Would you like to repeat this duty this week?',
+                                  style: TextStyle(fontSize: 14),
+                                ),
+                              ),
+                            ],
+                          ),
+                          if (repeatDutyThisWeek) ...[
+                            const SizedBox(height: 12),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                              children: [
+                                _buildDayToggle(context, setState, 1, 'M', selectedDays[1] ?? false, selectedDays, disabledDays[1] ?? false),
+                                _buildDayToggle(context, setState, 2, 'T', selectedDays[2] ?? false, selectedDays, disabledDays[2] ?? false),
+                                _buildDayToggle(context, setState, 3, 'W', selectedDays[3] ?? false, selectedDays, disabledDays[3] ?? false),
+                                _buildDayToggle(context, setState, 4, 'T', selectedDays[4] ?? false, selectedDays, disabledDays[4] ?? false),
+                                _buildDayToggle(context, setState, 5, 'F', selectedDays[5] ?? false, selectedDays, disabledDays[5] ?? false),
+                              ],
+                            ),
+                          ],
+                        ],
+                      );
+                    }
+                    return const SizedBox.shrink();
+                  },
+                ),
+                ],
+              ),
             ),
             actions: [
               TextButton(
@@ -1228,22 +1433,36 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                       // Add event and close dialog
                       await EventService.addEvent(event);
                       
-                      // If fill whole week is checked, fill all weekdays (Mon-Fri) with the same shift
-                      if (fillWholeWeek && isMFMarkedIn && isWeekday && selectedZone == 'Uni/Euro') {
+                      // If repeat Uni/Euro this week is checked for M-F marked-in users, create events for selected days
+                      if (repeatUniEuroThisWeek && isMFMarkedIn && selectedZone == 'Uni/Euro') {
                         // Get the start of the week (Sunday)
                         final weekday = shiftDate.weekday; // 1=Monday, 7=Sunday
                         // Calculate days to subtract to get to Sunday (weekday 7)
                         final daysToSunday = weekday == 7 ? 0 : weekday;
                         final weekStart = shiftDate.subtract(Duration(days: daysToSunday));
                         
-                        // Loop through Monday to Friday (weekday 1-5)
-                        for (int dayOffset = 1; dayOffset <= 5; dayOffset++) {
-                          final targetDate = weekStart.add(Duration(days: dayOffset));
+                        // Loop through weekdays only (Monday-Friday, indices 1-5)
+                        for (int dayIndex = 1; dayIndex <= 5; dayIndex++) {
+                          // Skip if this day is not selected
+                          if (!(uniEuroSelectedDays[dayIndex] ?? false)) {
+                            continue;
+                          }
+                          
+                          final targetDate = weekStart.add(Duration(days: dayIndex));
                           
                           // Skip if it's the same day (already handled above)
                           if (targetDate.year == shiftDate.year &&
                               targetDate.month == shiftDate.month &&
                               targetDate.day == shiftDate.day) {
+                            continue;
+                          }
+                          
+                          // Check if an event with the same title already exists on this day
+                          final existingEvents = EventService.getEventsForDay(targetDate);
+                          final duplicateExists = existingEvents.any((e) => e.title == title);
+                          
+                          if (duplicateExists) {
+                            // Skip this day - event already exists
                             continue;
                           }
                           
@@ -1284,6 +1503,77 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                             // Sync to Google if enabled
                             if (mounted) {
                               _checkAndSyncToGoogleCalendar(weekEvent, context);
+                            }
+                          }
+                        }
+                      }
+                      
+                      // If repeat duty this week is checked for marked-in zone users, create events for selected days
+                      if (repeatDutyThisWeek && isShiftMarkedIn && 
+                          (selectedZone == 'Zone 1' || selectedZone == 'Zone 3' || selectedZone == 'Zone 4') &&
+                          selectedZone == markedInZone) {
+                        // Get the start of the week (Sunday)
+                        final weekday = shiftDate.weekday; // 1=Monday, 7=Sunday
+                        // Calculate days to subtract to get to Sunday (weekday 7)
+                        final daysToSunday = weekday == 7 ? 0 : weekday;
+                        final weekStart = shiftDate.subtract(Duration(days: daysToSunday));
+                        
+                        // Loop through weekdays only (Monday-Friday, indices 1-5)
+                        for (int dayIndex = 1; dayIndex <= 5; dayIndex++) {
+                          // Skip if this day is not selected
+                          if (!(selectedDays[dayIndex] ?? false)) {
+                            continue;
+                          }
+                          
+                          final targetDate = weekStart.add(Duration(days: dayIndex));
+                          
+                          // Skip if it's the same day (already handled above)
+                          if (targetDate.year == shiftDate.year &&
+                              targetDate.month == shiftDate.month &&
+                              targetDate.day == shiftDate.day) {
+                            continue;
+                          }
+                          
+                          // Check if an event with the same title already exists on this day
+                          final existingEvents = EventService.getEventsForDay(targetDate);
+                          final duplicateExists = existingEvents.any((e) => e.title == title);
+                          
+                          if (duplicateExists) {
+                            // Skip this day - event already exists
+                            continue;
+                          }
+                          
+                          // Get shift times for this day (may differ for different days)
+                          Map<String, dynamic>? targetShiftTimes;
+                          if (selectedZone == 'Zone 1' || selectedZone == 'Zone 3' || selectedZone == 'Zone 4') {
+                            targetShiftTimes = await _getShiftTimes(selectedZone, selectedShiftNumber, targetDate);
+                          }
+                          
+                          // Use the same shift times if available, otherwise use original
+                          final finalShiftTimes = targetShiftTimes ?? shiftTimes;
+                          
+                          if (finalShiftTimes != null) {
+                            // Create event for this day
+                            final repeatEvent = Event(
+                              id: '${title}_${targetDate.millisecondsSinceEpoch}',
+                              title: title,
+                              startDate: targetDate,
+                              startTime: finalShiftTimes['startTime']!,
+                              endDate: finalShiftTimes['isNextDay'] == true
+                                  ? targetDate.add(const Duration(days: 1))
+                                  : targetDate,
+                              endTime: finalShiftTimes['endTime']!,
+                              breakStartTime: finalShiftTimes['breakStartTime'] as TimeOfDay?,
+                              breakEndTime: finalShiftTimes['breakEndTime'] as TimeOfDay?,
+                              workTime: finalShiftTimes['workTime'] as Duration?,
+                              routes: finalShiftTimes['routes'] as List<String>?,
+                            );
+                            
+                            await EventService.addEvent(repeatEvent);
+                            
+                            // Sync to Google if enabled
+                            if (mounted) {
+                              _checkAndSyncToGoogleCalendar(repeatEvent, context);
                             }
                           }
                         }
@@ -2441,7 +2731,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                             // Show break status dialog
                             _showBreakStatusDialog(event);
                           },
-                          child: const Text('Break Status'),
+                          child: const Text('Break & Finish'),
                         ),
                       ],
                     ],
@@ -4077,7 +4367,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
           children: [
             Icon(Icons.access_time, color: AppTheme.primaryColor),
             SizedBox(width: 8),
-            Text('Break Status'),
+            Text('Break & Finish Status'),
           ],
         ),
         content: Column(
@@ -4125,8 +4415,86 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
               const Divider(height: 1),
               const SizedBox(height: 16),
             ],
+            if (event.hasLateBreak) ...[
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Current Status:', 
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Icon(
+                          event.tookFullBreak 
+                              ? Icons.free_breakfast
+                              : Icons.monetization_on,
+                          size: 16,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          event.tookFullBreak 
+                              ? 'Full Break Taken'
+                              : 'Overtime (${event.overtimeDuration} mins)', 
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Divider(height: 1),
+              const SizedBox(height: 16),
+            ],
+            if (event.hasLateFinish) ...[
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Current Late Finish Status:', 
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.schedule,
+                          size: 16,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Late Finish: ${event.lateFinishDuration} mins',
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Divider(height: 1),
+              const SizedBox(height: 16),
+            ],
             const Text(
-              'Select an option for late break:',
+              'Select an option:',
               style: TextStyle(
                 fontSize: 14,
               ),
@@ -4163,6 +4531,8 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                   hasLateBreak: event.hasLateBreak,
                   tookFullBreak: event.tookFullBreak,
                   overtimeDuration: event.overtimeDuration,
+                  hasLateFinish: event.hasLateFinish,
+                  lateFinishDuration: event.lateFinishDuration,
                 );
                 
                 // Reset break status
@@ -4205,25 +4575,27 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
             ),
           TextButton(
             onPressed: () async {
-              // Save the old event for update
-              final oldEvent = Event(
-                id: event.id,
-                title: event.title,
-                startDate: event.startDate,
-                startTime: event.startTime,
-                endDate: event.endDate,
-                endTime: event.endTime,
-                workTime: event.workTime,
-                breakStartTime: event.breakStartTime,
-                breakEndTime: event.breakEndTime,
-                assignedDuties: event.assignedDuties,
-                firstHalfBus: event.firstHalfBus,
-                secondHalfBus: event.secondHalfBus,
-                notes: event.notes,
-                hasLateBreak: event.hasLateBreak,
-                tookFullBreak: event.tookFullBreak,
-                overtimeDuration: event.overtimeDuration,
-              );
+                // Save the old event for update
+                final oldEvent = Event(
+                  id: event.id,
+                  title: event.title,
+                  startDate: event.startDate,
+                  startTime: event.startTime,
+                  endDate: event.endDate,
+                  endTime: event.endTime,
+                  workTime: event.workTime,
+                  breakStartTime: event.breakStartTime,
+                  breakEndTime: event.breakEndTime,
+                  assignedDuties: event.assignedDuties,
+                  firstHalfBus: event.firstHalfBus,
+                  secondHalfBus: event.secondHalfBus,
+                  notes: event.notes,
+                  hasLateBreak: event.hasLateBreak,
+                  tookFullBreak: event.tookFullBreak,
+                  overtimeDuration: event.overtimeDuration,
+                  hasLateFinish: event.hasLateFinish,
+                  lateFinishDuration: event.lateFinishDuration,
+                );
               
               // Update event with Full Break option
               event.hasLateBreak = true;
@@ -4267,6 +4639,81 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
               _showOvertimeSelectionDialog(event);
             },
             child: const Text('Overtime'),
+          ),
+          const SizedBox(height: 8),
+          const Divider(height: 1),
+          const SizedBox(height: 8),
+          // Late Finish buttons
+          if (event.hasLateFinish)
+            TextButton(
+              onPressed: () async {
+                // Save the old event for update
+                final oldEvent = Event(
+                  id: event.id,
+                  title: event.title,
+                  startDate: event.startDate,
+                  startTime: event.startTime,
+                  endDate: event.endDate,
+                  endTime: event.endTime,
+                  workTime: event.workTime,
+                  breakStartTime: event.breakStartTime,
+                  breakEndTime: event.breakEndTime,
+                  assignedDuties: event.assignedDuties,
+                  firstHalfBus: event.firstHalfBus,
+                  secondHalfBus: event.secondHalfBus,
+                  busAssignments: event.busAssignments,
+                  notes: event.notes,
+                  hasLateBreak: event.hasLateBreak,
+                  tookFullBreak: event.tookFullBreak,
+                  overtimeDuration: event.overtimeDuration,
+                  hasLateFinish: event.hasLateFinish,
+                  lateFinishDuration: event.lateFinishDuration,
+                );
+                
+                // Reset late finish status
+                event.hasLateFinish = false;
+                event.lateFinishDuration = null;
+                
+                // Save the updated event
+                await EventService.updateEvent(oldEvent, event);
+                
+                // Close the dialog
+                Navigator.of(context).pop();
+                
+                // Update the UI
+                setState(() {});
+                
+                // Show confirmation
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Late finish status removed'),
+                    duration: Duration(seconds: 2),
+                  ),
+                );
+                
+                // Force refresh of the event cards
+                _editEvent(Event(
+                  id: 'refresh_trigger',
+                  title: '',
+                  startDate: DateTime.now(),
+                  startTime: const TimeOfDay(hour: 0, minute: 0),
+                  endDate: DateTime.now(),
+                  endTime: const TimeOfDay(hour: 0, minute: 0),
+                  busAssignments: {},
+                ));
+              },
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.red,
+              ),
+              child: const Text('Remove Late Finish'),
+            ),
+          TextButton(
+            onPressed: () {
+              // Close current dialog and show late finish selection dialog
+              Navigator.of(context).pop();
+              _showLateFinishSelectionDialog(event);
+            },
+            child: const Text('Late Finish'),
           ),
         ],
       ),
@@ -4412,6 +4859,8 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                   hasLateBreak: event.hasLateBreak,
                   tookFullBreak: event.tookFullBreak,
                   overtimeDuration: event.overtimeDuration,
+                  hasLateFinish: event.hasLateFinish,
+                  lateFinishDuration: event.lateFinishDuration,
                 );
                 
                 // Update event with Overtime option
@@ -4432,6 +4881,200 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text('Overtime ($selectedDuration mins) saved'),
+                    duration: const Duration(seconds: 2),
+                  ),
+                );
+                
+                // Force refresh of the event cards
+                _editEvent(Event(
+                  id: 'refresh_trigger',
+                  title: '',
+                  startDate: DateTime.now(),
+                  startTime: const TimeOfDay(hour: 0, minute: 0),
+                  endDate: DateTime.now(),
+                  endTime: const TimeOfDay(hour: 0, minute: 0),
+                  busAssignments: {},
+                ));
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Show dialog for late finish duration selection
+  void _showLateFinishSelectionDialog(Event event) {
+    int selectedDuration = event.lateFinishDuration ?? 15; // Default to 15 mins
+    final TextEditingController customMinutesController = TextEditingController(
+      text: event.lateFinishDuration?.toString() ?? '',
+    );
+    bool useCustom = false;
+    
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.schedule, color: Colors.orange),
+              SizedBox(width: 8),
+              Text('Select Late Finish'),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Select or enter how many minutes late you finished:',
+                  style: TextStyle(
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                // Dropdown for late finish duration
+                DropdownButtonFormField<int?>(
+                  value: useCustom ? null : selectedDuration,
+                  decoration: const InputDecoration(
+                    labelText: 'Duration (Select)',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: [5, 10, 15, 20, 30, 45, 60, 90, 120].map((int value) {
+                    return DropdownMenuItem<int?>(
+                      value: value,
+                      child: Text('$value mins'),
+                    );
+                  }).toList(),
+                  onChanged: (int? newValue) {
+                    if (newValue != null) {
+                      setState(() {
+                        selectedDuration = newValue;
+                        useCustom = false;
+                        customMinutesController.text = '';
+                      });
+                    }
+                  },
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Or enter custom minutes:',
+                  style: TextStyle(
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                // Text input for custom minutes
+                TextField(
+                  controller: customMinutesController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Minutes',
+                    hintText: 'Enter minutes',
+                    border: OutlineInputBorder(),
+                    suffixText: 'mins',
+                  ),
+                  onChanged: (String value) {
+                    if (value.isNotEmpty) {
+                      final parsed = int.tryParse(value);
+                      if (parsed != null && parsed > 0) {
+                        setState(() {
+                          selectedDuration = parsed;
+                          useCustom = true;
+                        });
+                      } else {
+                        // Invalid input, but keep useCustom true so dropdown clears
+                        setState(() {
+                          useCustom = true;
+                        });
+                      }
+                    } else {
+                      setState(() {
+                        useCustom = false;
+                      });
+                    }
+                  },
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                customMinutesController.dispose();
+                Navigator.of(context).pop();
+              },
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () async {
+                // Validate that we have a valid duration
+                int? finalDuration;
+                if (useCustom && customMinutesController.text.isNotEmpty) {
+                  final parsed = int.tryParse(customMinutesController.text);
+                  if (parsed != null && parsed > 0) {
+                    finalDuration = parsed;
+                  }
+                } else if (!useCustom) {
+                  finalDuration = selectedDuration;
+                }
+                
+                if (finalDuration == null || finalDuration <= 0) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Please enter a valid number of minutes'),
+                      backgroundColor: Colors.red,
+                      duration: Duration(seconds: 2),
+                    ),
+                  );
+                  return;
+                }
+                
+                // Save the old event for update
+                final oldEvent = Event(
+                  id: event.id,
+                  title: event.title,
+                  startDate: event.startDate,
+                  startTime: event.startTime,
+                  endDate: event.endDate,
+                  endTime: event.endTime,
+                  workTime: event.workTime,
+                  breakStartTime: event.breakStartTime,
+                  breakEndTime: event.breakEndTime,
+                  assignedDuties: event.assignedDuties,
+                  busAssignments: event.busAssignments,
+                  firstHalfBus: event.firstHalfBus,
+                  secondHalfBus: event.secondHalfBus,
+                  notes: event.notes,
+                  hasLateBreak: event.hasLateBreak,
+                  tookFullBreak: event.tookFullBreak,
+                  overtimeDuration: event.overtimeDuration,
+                  hasLateFinish: event.hasLateFinish,
+                  lateFinishDuration: event.lateFinishDuration,
+                );
+                
+                // Update event with Late Finish option
+                event.hasLateFinish = true;
+                event.lateFinishDuration = finalDuration;
+                
+                // Dispose controller
+                customMinutesController.dispose();
+                
+                // Save the updated event
+                await EventService.updateEvent(oldEvent, event);
+                
+                // Close the dialog
+                Navigator.of(context).pop();
+                
+                // Update the UI
+                setState(() {});
+                
+                // Show confirmation
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Late finish ($finalDuration mins) saved'),
                     duration: const Duration(seconds: 2),
                   ),
                 );
@@ -5010,6 +5653,10 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
             outsideBuilder: (context, date, _) {
               return _buildCalendarDay(date, isToday: false, isOutsideDay: true);
             },
+            // Custom builder for selected day - make it see-through with a border
+            selectedBuilder: (context, date, _) {
+              return _buildCalendarDay(date, isToday: false, isOutsideDay: false, isSelected: true);
+            },
             markerBuilder: (context, date, events) {
               return null;
             },
@@ -5226,7 +5873,17 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
       return rosterShift;
     }
     
-    // First, check for spare shifts - always show their title (ignore assigned duties)
+    // First, check for all sick day codes (S, SC, FM) - these take priority over EVERYTHING
+    for (final event in events) {
+      if (event.sickDayType != null) {
+        final sickDayCode = _getSickDayDisplayCode(event.sickDayType);
+        if (sickDayCode.isNotEmpty) {
+          return sickDayCode; // Show S, SC, or FM - takes priority over everything
+        }
+      }
+    }
+    
+    // Second, check for spare shifts - always show their title (ignore assigned duties)
     for (final event in events) {
       if (event.isWorkShift && 
           (event.title.startsWith('SP') || event.title == '22B/01')) {
@@ -5234,7 +5891,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
       }
     }
     
-    // Second, check for regular work shifts (not spare, not OT)
+    // Third, check for regular work shifts (not spare, not OT)
     // For regular work shifts, the title IS the duty code (e.g., "PZ1/74", "1/13X", "807/20")
     // assignedDuties is only used for spare shifts
     for (final event in events) {
@@ -5253,21 +5910,11 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
       }
     }
     
-    // Third, check for sick day codes (S, SC, FM)
-    for (final event in events) {
-      if (event.sickDayType != null) {
-        final sickDayCode = _getSickDayDisplayCode(event.sickDayType);
-        if (sickDayCode.isNotEmpty) {
-          return sickDayCode;
-        }
-      }
-    }
-    
     // Fallback to roster shift letter (E/L/M/R)
     return rosterShift;
   }
 
-  Widget _buildCalendarDay(DateTime date, {required bool isToday, required bool isOutsideDay}) {
+  Widget _buildCalendarDay(DateTime date, {required bool isToday, required bool isOutsideDay, bool isSelected = false}) {
     final shift = _startDate != null ? getShiftForDate(date) : '';
     final shiftInfo = _shiftInfoMap[shift];
     final events = getEventsForDay(date);
@@ -5312,149 +5959,323 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
     final screenWidth = MediaQuery.of(context).size.width;
     final badgeSizes = _getCalendarBadgeSizes(screenWidth);
 
+    final backgroundColor = hasSickDay && sickDayColor != null
+        ? sickDayColor.withValues(alpha: 0.3)
+        : isDayInLieu
+            ? dayInLieuColor.withValues(alpha: 0.3)
+            : isUnpaidLeave
+                ? Colors.purple.withValues(alpha: 0.3)
+                : isHoliday 
+                    ? holidayColor.withValues(alpha: 0.3)
+                    : hasWfoEvent && wfoColor != null
+                        ? wfoColor.withValues(alpha: 0.3)
+                        : shiftInfo?.color.withValues(alpha: 0.3);
+    
+    final cellContent = _buildDayCellContent(date, displayText, isDayInLieu, isHoliday, shift, hasEvents, hasSickDay, sickDayColor, dayInLieuColor, isUnpaidLeave, hasWfoEvent, wfoColor, shiftInfo, isSaturdayService, badgeSizes, screenWidth);
+    
+    // Determine border color for selected days
+    final selectedBorderColor = isBankHoliday ? Colors.red : Theme.of(context).colorScheme.primary;
+
     // Wrap the content in Opacity if it's an outside day
     return Opacity(
       opacity: isOutsideDay ? 0.4 : 1.0, // Changed from 0.6 to 0.4 for more transparency
-      child: Container(
-        margin: const EdgeInsets.all(4.0),
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: hasSickDay && sickDayColor != null
-              ? sickDayColor.withValues(alpha: 0.3)
-              : isDayInLieu
-                  ? dayInLieuColor.withValues(alpha: 0.3)
-                  : isUnpaidLeave
-                      ? Colors.purple.withValues(alpha: 0.3)
-                      : isHoliday 
-                          ? holidayColor.withValues(alpha: 0.3)
-                          : hasWfoEvent && wfoColor != null
-                              ? wfoColor.withValues(alpha: 0.3)
-                              : shiftInfo?.color.withValues(alpha: 0.3),
-          borderRadius: BorderRadius.circular(8.0),
-          border: isToday
-              ? Border.all(
-                  color: isBankHoliday ? Colors.red : Colors.blue,
-                  width: 2,
+      child: isSelected
+          ? _animatedSelectedDay
+              ? _AnimatedSelectedDayCell(
+                  backgroundColor: backgroundColor,
+                  isToday: isToday,
+                  isBankHoliday: isBankHoliday,
+                  borderColor: selectedBorderColor,
+                  child: cellContent,
                 )
-              : isBankHoliday
-                  ? Border.all(
-                      color: Colors.red,
-                      width: 1.5,
-                    )
-                  : null,
-        ),
-        // Use Stack for more compact layout
-        child: Stack(
-          children: [
-            // Main content centered
-            Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                mainAxisSize: MainAxisSize.min, // Important: minimize space
-                children: [
-                  Text(
-                    '${date.day}',
-                    style: TextStyle(
-                      fontSize: _getResponsiveDateFontSize(screenWidth),
+              : Container(
+                  margin: const EdgeInsets.all(2.0), // Reduced margin to make circle bigger
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: isBankHoliday 
+                        ? Colors.red.withValues(alpha: 0.7) // Less bright red
+                        : const Color(0xFF1565C0), // Navy blue color
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: isBankHoliday ? Colors.red : const Color(0xFF0D47A1), // Darker navy border
+                      width: 2.0,
                     ),
+                    // Add subtle shadow for depth
+                    boxShadow: [
+                      BoxShadow(
+                        color: (isBankHoliday ? Colors.red : const Color(0xFF1565C0)).withValues(alpha: 0.4),
+                        blurRadius: 6.0,
+                        spreadRadius: 1.0,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
-                  // Show display text if not empty AND (not holiday OR it's a rest day)
-                  // This allows rest day "R" to show even when holidays are present
-                  if (displayText.isNotEmpty && (!isHoliday || shift == 'R'))
-                    Text(
+                  child: _buildDayCellContentWithWhiteText(date, displayText, isDayInLieu, isHoliday, shift, hasEvents, hasSickDay, sickDayColor, dayInLieuColor, isUnpaidLeave, hasWfoEvent, wfoColor, shiftInfo, isSaturdayService, badgeSizes, screenWidth),
+                )
+          : Container(
+              margin: const EdgeInsets.all(4.0),
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: backgroundColor,
+                borderRadius: BorderRadius.circular(8.0),
+                border: isToday
+                    ? Border.all(
+                        color: isBankHoliday ? Colors.red : Colors.blue,
+                        width: 2,
+                      )
+                    : isBankHoliday
+                        ? Border.all(
+                            color: Colors.red,
+                            width: 1.5,
+                          )
+                        : null,
+              ),
+              child: cellContent,
+            ),
+    );
+  }
+
+  Widget _buildDayCellContentWithWhiteText(
+    DateTime date,
+    String displayText,
+    bool isDayInLieu,
+    bool isHoliday,
+    String shift,
+    bool hasEvents,
+    bool hasSickDay,
+    Color? sickDayColor,
+    Color? dayInLieuColor,
+    bool isUnpaidLeave,
+    bool hasWfoEvent,
+    Color? wfoColor,
+    ShiftInfo? shiftInfo,
+    bool isSaturdayService,
+    Map<String, double> badgeSizes,
+    double screenWidth,
+  ) {
+    return Stack(
+      children: [
+        // Main content centered
+        Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min, // Important: minimize space
+            children: [
+              Text(
+                '${date.day}',
+                style: TextStyle(
+                  fontSize: _getResponsiveDateFontSize(screenWidth),
+                  color: Colors.white, // White text for filled circle
+                ),
+              ),
+              // Show display text if not empty AND (not holiday OR it's a rest day)
+              // This allows rest day "R" to show even when holidays are present
+              if (displayText.isNotEmpty && (!isHoliday || shift == 'R')) ...[
+                Builder(
+                  builder: (context) {
+                    return Text(
                       displayText,
                       style: TextStyle(
                         fontSize: _getResponsiveDutyFontSize(screenWidth),
                         fontWeight: FontWeight.bold,
                         height: 1.0, // Reduce line height
-                        // Use white color for rest days and sick days when they override holidays
-                        color: (shift == 'R' && isHoliday) || hasSickDay 
-                            ? Colors.white 
-                            : null,
+                        color: Colors.white, // White text for filled circle
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.clip,
-                    ),
-                  if (isDayInLieu)
-                    Text(
-                      'Lieu',
-                      style: TextStyle(
-                        fontSize: _getResponsiveDutyFontSize(screenWidth),
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                        height: 1.0, // Reduce line height
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.clip,
-                    )
-                  // Only show "H" for holidays when it's NOT a rest day
-                  else if (isHoliday && shift != 'R')
-                    Text(
-                      'H',
-                      style: TextStyle(
-                        fontSize: _getResponsiveDutyFontSize(screenWidth),
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                        height: 1.0, // Reduce line height
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.clip,
-                    ),
-                ],
+                    );
+                  },
+                ),
+              ],
+              if (isDayInLieu)
+                Text(
+                  'Lieu',
+                  style: TextStyle(
+                    fontSize: _getResponsiveDutyFontSize(screenWidth),
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white, // White text for filled circle
+                    height: 1.0, // Reduce line height
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.clip,
+                )
+              // Only show "H" for holidays when it's NOT a rest day
+              else if (isHoliday && shift != 'R')
+                Text(
+                  'H',
+                  style: TextStyle(
+                    fontSize: _getResponsiveDutyFontSize(screenWidth),
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white, // White text for filled circle
+                    height: 1.0, // Reduce line height
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.clip,
+                ),
+            ],
+          ),
+        ),
+        // Saturday service indicator positioned in top-left corner
+        if (isSaturdayService)
+          Positioned(
+            top: badgeSizes['top']!,
+            left: badgeSizes['left']!,
+            child: Container(
+              padding: EdgeInsets.symmetric(
+                horizontal: badgeSizes['paddingH']!,
+                vertical: badgeSizes['paddingV']!,
+              ),
+              decoration: BoxDecoration(
+                color: Colors.orange.shade600,
+                borderRadius: BorderRadius.circular(badgeSizes['radius']!),
+              ),
+              child: Text(
+                'SAT',
+                style: TextStyle(
+                  fontSize: badgeSizes['fontSize']!,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                  height: 1.0,
+                ),
               ),
             ),
-            // Saturday service indicator positioned in top-left corner
-            if (isSaturdayService)
-              Positioned(
-                top: badgeSizes['top']!,
-                left: badgeSizes['left']!,
-                child: Container(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: badgeSizes['paddingH']!,
-                    vertical: badgeSizes['paddingV']!,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.orange.shade600,
-                    borderRadius: BorderRadius.circular(badgeSizes['radius']!),
-                  ),
-                  child: Text(
-                    'SAT',
-                    style: TextStyle(
-                      fontSize: badgeSizes['fontSize']!,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                      height: 1.0,
-                    ),
-                  ),
+          ),
+        // Event indicator positioned in bottom-right corner
+        // Hidden when day is selected (filled circle mode)
+      ],
+    );
+  }
+
+  Widget _buildDayCellContent(
+    DateTime date,
+    String displayText,
+    bool isDayInLieu,
+    bool isHoliday,
+    String shift,
+    bool hasEvents,
+    bool hasSickDay,
+    Color? sickDayColor,
+    Color? dayInLieuColor,
+    bool isUnpaidLeave,
+    bool hasWfoEvent,
+    Color? wfoColor,
+    ShiftInfo? shiftInfo,
+    bool isSaturdayService,
+    Map<String, double> badgeSizes,
+    double screenWidth,
+  ) {
+    return Stack(
+      children: [
+        // Main content centered
+        Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min, // Important: minimize space
+            children: [
+              Text(
+                '${date.day}',
+                style: TextStyle(
+                  fontSize: _getResponsiveDateFontSize(screenWidth),
                 ),
               ),
-            // Event indicator positioned in bottom-right corner
-            if (hasEvents)
-              Positioned(
-                bottom: 2,
-                right: 2,
-                child: Container(
-                  width: 6, // Smaller dot
-                  height: 6, // Smaller dot
-                  decoration: BoxDecoration(
-                    color: hasSickDay && sickDayColor != null
-                        ? sickDayColor
-                        : isDayInLieu
-                            ? dayInLieuColor
-                            : isUnpaidLeave
-                                ? Colors.purple
-                                : isHoliday 
-                                    ? holidayColor 
-                                    : hasWfoEvent && wfoColor != null
-                                        ? wfoColor
-                                        : (shiftInfo?.color ?? Theme.of(context).primaryColor),
-                    shape: BoxShape.circle,
-                  ),
+              // Show display text if not empty AND (not holiday OR it's a rest day)
+              // This allows rest day "R" to show even when holidays are present
+              if (displayText.isNotEmpty && (!isHoliday || shift == 'R')) ...[
+                Builder(
+                  builder: (context) {
+                    // Use black text for all cells for consistency and readability
+                    return Text(
+                      displayText,
+                      style: TextStyle(
+                        fontSize: _getResponsiveDutyFontSize(screenWidth),
+                        fontWeight: FontWeight.bold,
+                        height: 1.0, // Reduce line height
+                        color: Colors.black,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.clip,
+                    );
+                  },
                 ),
-              ),
-          ],
+              ],
+              if (isDayInLieu)
+                Text(
+                  'Lieu',
+                  style: TextStyle(
+                    fontSize: _getResponsiveDutyFontSize(screenWidth),
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                    height: 1.0, // Reduce line height
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.clip,
+                )
+              // Only show "H" for holidays when it's NOT a rest day
+              else if (isHoliday && shift != 'R')
+                Text(
+                  'H',
+                  style: TextStyle(
+                    fontSize: _getResponsiveDutyFontSize(screenWidth),
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                    height: 1.0, // Reduce line height
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.clip,
+                ),
+            ],
+          ),
         ),
-      ),
+        // Saturday service indicator positioned in top-left corner
+        if (isSaturdayService)
+          Positioned(
+            top: badgeSizes['top']!,
+            left: badgeSizes['left']!,
+            child: Container(
+              padding: EdgeInsets.symmetric(
+                horizontal: badgeSizes['paddingH']!,
+                vertical: badgeSizes['paddingV']!,
+              ),
+              decoration: BoxDecoration(
+                color: Colors.orange.shade600,
+                borderRadius: BorderRadius.circular(badgeSizes['radius']!),
+              ),
+              child: Text(
+                'SAT',
+                style: TextStyle(
+                  fontSize: badgeSizes['fontSize']!,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                  height: 1.0,
+                ),
+              ),
+            ),
+          ),
+        // Event indicator positioned in bottom-right corner
+        if (hasEvents)
+          Positioned(
+            bottom: 2,
+            right: 2,
+            child: Container(
+              width: 6, // Smaller dot
+              height: 6, // Smaller dot
+              decoration: BoxDecoration(
+                color: hasSickDay && sickDayColor != null
+                    ? sickDayColor
+                    : isDayInLieu
+                        ? dayInLieuColor
+                        : isUnpaidLeave
+                            ? Colors.purple
+                            : isHoliday 
+                                ? holidayColor 
+                                : hasWfoEvent && wfoColor != null
+                                    ? wfoColor
+                                    : (shiftInfo?.color ?? Theme.of(context).primaryColor),
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+      ],
     );
   }
   
@@ -9314,6 +10135,58 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
     );
   }
 
+  // Helper method to build day toggle button
+  Widget _buildDayToggle(BuildContext context, StateSetter setState, int dayIndex, String label, bool isSelected, Map<int, bool> selectedDays, bool isDisabled) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    // Responsive sizing: smaller on very small screens
+    final toggleSize = screenWidth < 350 ? 32.0 : 36.0;
+    final fontSize = screenWidth < 350 ? 12.0 : 14.0;
+    
+    return GestureDetector(
+      onTap: isDisabled ? null : () {
+        setState(() {
+          selectedDays[dayIndex] = !isSelected;
+        });
+      },
+      child: Opacity(
+        opacity: isDisabled ? 0.4 : 1.0,
+        child: Container(
+          width: toggleSize,
+          height: toggleSize,
+          decoration: BoxDecoration(
+            color: isDisabled
+                ? Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5)
+                : (isSelected 
+                    ? Theme.of(context).colorScheme.primary 
+                    : Theme.of(context).colorScheme.surfaceContainerHighest),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: isDisabled
+                  ? Theme.of(context).dividerColor.withValues(alpha: 0.5)
+                  : (isSelected 
+                      ? Theme.of(context).colorScheme.primary 
+                      : Theme.of(context).dividerColor),
+            ),
+          ),
+          child: Center(
+            child: Text(
+              label,
+              style: TextStyle(
+                color: isDisabled
+                    ? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5)
+                    : (isSelected 
+                        ? Theme.of(context).colorScheme.onPrimary 
+                        : Theme.of(context).colorScheme.onSurface),
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                fontSize: fontSize,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   // Helper method to check if spare shift has full duties (should use firstHalfBus/secondHalfBus)
   bool _spareShiftHasFullDuties(Event event) {
     if (!event.title.startsWith('SP') || 
@@ -9346,6 +10219,86 @@ class _StaticLiveUpdatesBanner extends StatelessWidget {
           MaterialPageRoute(
             builder: (context) => const LiveUpdatesDetailsScreen(),
           ),
+        );
+      },
+    );
+  }
+}
+
+// Animated cell widget for selected day with animated border
+class _AnimatedSelectedDayCell extends StatefulWidget {
+  final Color? backgroundColor;
+  final bool isToday;
+  final bool isBankHoliday;
+  final Color borderColor;
+  final Widget child;
+
+  const _AnimatedSelectedDayCell({
+    required this.backgroundColor,
+    required this.isToday,
+    required this.isBankHoliday,
+    required this.borderColor,
+    required this.child,
+  });
+
+  @override
+  State<_AnimatedSelectedDayCell> createState() => _AnimatedSelectedDayCellState();
+}
+
+class _AnimatedSelectedDayCellState extends State<_AnimatedSelectedDayCell> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 1200), // Slower, more relaxed animation
+      vsync: this,
+    )..repeat(reverse: true);
+    
+    _animation = Tween<double>(
+      begin: 2.0, // Thicker minimum
+      end: 3.5,   // Thicker maximum
+    ).animate(CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeInOut,
+    ));
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _animation,
+      builder: (context, child) {
+        // Determine border color: red for bank holidays, primary color otherwise
+        final borderColor = widget.isBankHoliday ? Colors.red : widget.borderColor;
+        final borderWidth = _animation.value;
+        
+        return Container(
+          margin: const EdgeInsets.all(4.0),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: widget.backgroundColor,
+            borderRadius: BorderRadius.circular(8.0),
+            border: widget.isToday
+                ? Border.all(
+                    color: widget.isBankHoliday ? Colors.red : Colors.blue,
+                    width: 2,
+                  )
+                : Border.all(
+                    // Show animated border - red for bank holidays, primary color otherwise
+                    color: borderColor,
+                    width: borderWidth,
+                  ),
+          ),
+          child: widget.child,
         );
       },
     );

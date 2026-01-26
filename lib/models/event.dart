@@ -132,6 +132,9 @@ class Event {
   bool hasLateBreak;
   bool tookFullBreak; 
   int? overtimeDuration; // In minutes
+  // Late finishing tracking
+  bool hasLateFinish;
+  int? lateFinishDuration; // In minutes
   // Sick day status: null, 'normal', 'self-certified', or 'force-majeure'
   String? sickDayType;
   // Work For Others flag - indicates this is a WFO shift (only on rest days)
@@ -168,6 +171,8 @@ class Event {
     this.hasLateBreak = false,
     this.tookFullBreak = false,
     this.overtimeDuration,
+    this.hasLateFinish = false,
+    this.lateFinishDuration,
     this.sickDayType,
     this.isWorkForOthers = false,
   });
@@ -414,6 +419,8 @@ class Event {
     bool? hasLateBreak,
     bool? tookFullBreak,
     int? overtimeDuration,
+    bool? hasLateFinish,
+    int? lateFinishDuration,
     String? sickDayType,
     bool? isWorkForOthers,
     List<String>? routes,
@@ -454,6 +461,8 @@ class Event {
       hasLateBreak: hasLateBreak ?? this.hasLateBreak,
       tookFullBreak: tookFullBreak ?? this.tookFullBreak,
       overtimeDuration: overtimeDuration ?? this.overtimeDuration,
+      hasLateFinish: hasLateFinish ?? this.hasLateFinish,
+      lateFinishDuration: lateFinishDuration ?? this.lateFinishDuration,
       sickDayType: sickDayType ?? this.sickDayType,
       isWorkForOthers: isWorkForOthers ?? this.isWorkForOthers,
     );
@@ -499,6 +508,8 @@ class Event {
       'hasLateBreak': hasLateBreak,
       'tookFullBreak': tookFullBreak,
       'overtimeDuration': overtimeDuration,
+      'hasLateFinish': hasLateFinish,
+      'lateFinishDuration': lateFinishDuration,
       'sickDayType': sickDayType,
       'isWorkForOthers': isWorkForOthers,
     };
@@ -577,6 +588,8 @@ class Event {
       hasLateBreak: map['hasLateBreak'] ?? false,
       tookFullBreak: map['tookFullBreak'] ?? false,
       overtimeDuration: map['overtimeDuration'],
+      hasLateFinish: map['hasLateFinish'] ?? false,
+      lateFinishDuration: map['lateFinishDuration'],
       sickDayType: map['sickDayType'],  // Nullable for backwards compatibility
       isWorkForOthers: map['isWorkForOthers'] ?? false,  // Default to false for backwards compatibility
     );
@@ -640,10 +653,13 @@ class Event {
                       title.startsWith('3/') || 
                       title.startsWith('4/');
     
+    // Check if it's a Uni/Euro shift (pattern: 2-3 digits followed by slash, e.g., "807/20", "808/25")
+    final isUniEuro = RegExp(r'^\d{2,3}/').hasMatch(title);
+    
     // Exclude workout shifts - look for 'workout' in the title
     final isWorkout = title.toLowerCase().contains('workout');
     
-    return (isZoneDuty && !isWorkout) || isSpareOrSpecial;
+    return (isZoneDuty && !isWorkout) || isSpareOrSpecial || (isUniEuro && !isWorkout);
   }
   
   // Get shift code - properly handle shift codes

@@ -30,12 +30,12 @@ class BreakStatisticsCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Break Statistics',
+              'Break & Finish Statistics',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 4),
             Text(
-              'Statistics for shifts with late break status',
+              'Statistics for shifts with late break or late finish status',
               style: TextStyle(
                 fontSize: 12,
                 color: Colors.grey[600],
@@ -63,7 +63,7 @@ class BreakStatisticsCard extends StatelessWidget {
                 padding: EdgeInsets.symmetric(vertical: 16.0),
                 child: Center(
                   child: Text(
-                    'No break data recorded for this period',
+                    'No break or finish data recorded for this period',
                     style: TextStyle(
                       fontStyle: FontStyle.italic,
                       color: Colors.grey,
@@ -83,7 +83,8 @@ class BreakStatisticsCard extends StatelessWidget {
     if (periodData == null) return false;
     
     final total = periodData['total'] as int? ?? 0;
-    return total > 0;
+    final totalFinishes = periodData['totalFinishes'] as int? ?? 0;
+    return total > 0 || totalFinishes > 0;
   }
 
   Widget _buildTimeRangeSection(BuildContext context, Map<String, dynamic> periodData) {
@@ -91,6 +92,8 @@ class BreakStatisticsCard extends StatelessWidget {
     final fullBreak = periodData['fullBreak'] as int? ?? 0;
     final overtime = periodData['overtime'] as int? ?? 0;
     final totalOvertimeMinutes = periodData['totalOvertimeMinutes'] as int? ?? 0;
+    final totalFinishes = periodData['totalFinishes'] as int? ?? 0;
+    final totalLateFinishMinutes = periodData['totalLateFinishMinutes'] as int? ?? 0;
     
     // Calculate percentages
     final fullBreakPercent = total > 0 ? (fullBreak / total * 100).round() : 0;
@@ -99,27 +102,35 @@ class BreakStatisticsCard extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Data rows
-        _buildBreakStatRow(
-          'Total Late Breaks', 
-          '$total', 
-        ),
-        _buildBreakStatRow(
-          'Full Break Taken', 
-          '$fullBreak ($fullBreakPercent%)', 
-        ),
-        _buildBreakStatRow(
-          'Overtime Taken', 
-          '$overtime ($overtimePercent%)', 
-        ),
-        if (totalOvertimeMinutes > 0)
-          _buildBreakStatRow(
-            'Total Overtime Minutes', 
-            '$totalOvertimeMinutes mins', 
+        // Late Break Section
+        if (total > 0) ...[
+          const Text(
+            'Late Breaks',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
           ),
-        
-        // Progress indicator
-        if (total > 0)
+          const SizedBox(height: 8),
+          _buildBreakStatRow(
+            'Total Late Breaks', 
+            '$total', 
+          ),
+          _buildBreakStatRow(
+            'Full Break Taken', 
+            '$fullBreak ($fullBreakPercent%)', 
+          ),
+          _buildBreakStatRow(
+            'Overtime Taken', 
+            '$overtime ($overtimePercent%)', 
+          ),
+          if (totalOvertimeMinutes > 0)
+            _buildBreakStatRow(
+              'Total Overtime Minutes', 
+              '$totalOvertimeMinutes mins', 
+            ),
+          
+          // Progress indicator
           Padding(
             padding: const EdgeInsets.only(top: 8.0),
             child: SizedBox(
@@ -136,8 +147,7 @@ class BreakStatisticsCard extends StatelessWidget {
               ),
             ),
           ),
-        const SizedBox(height: 4),
-        if (total > 0)
+          const SizedBox(height: 4),
           Row(
             children: [
               Expanded(
@@ -164,6 +174,33 @@ class BreakStatisticsCard extends StatelessWidget {
               ),
             ],
           ),
+        ],
+        
+        // Late Finish Section
+        if (totalFinishes > 0) ...[
+          if (total > 0) ...[
+            const SizedBox(height: 24),
+            const Divider(),
+            const SizedBox(height: 16),
+          ],
+          const Text(
+            'Late Finishes',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 8),
+          _buildBreakStatRow(
+            'Total Late Finishes', 
+            '$totalFinishes', 
+          ),
+          if (totalLateFinishMinutes > 0)
+            _buildBreakStatRow(
+              'Total Late Finish Minutes', 
+              '$totalLateFinishMinutes mins', 
+            ),
+        ],
       ],
     );
   }

@@ -27,6 +27,7 @@ class AppConstants {
   // Display Settings
   static const String showOvernightDutiesOnBothDaysKey = 'showOvernightDutiesOnBothDays';
   static const String showDutyCodesOnCalendarKey = 'showDutyCodesOnCalendar';
+  static const String animatedSelectedDayKey = 'animatedSelectedDay';
 
   // Marked In Status
   static const String markedInEnabledKey = 'markedInEnabled';

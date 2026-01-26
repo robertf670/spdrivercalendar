@@ -5,8 +5,32 @@ final Map<String, List<Map<String, String>>> changelogData = {
       'description': 'Marked-In Status settings are now accessible to all users in Settings > App section.',
     },
     {
-      'title': 'TEST FEATURE: Fill Whole Week Feature for M-F Marked-In Users',
-      'description': 'TEST FEATURE: Added checkbox option to fill all weekdays (Mon-Fri) with the same Uni/Euro shift when adding work shifts.',
+      'title': 'Zone Duty Repeater for Marked-In Users',
+      'description': 'When marked-in on Zone 1, 3, or 4, users can now repeat duties across the week.',
+    },
+    {
+      'title': 'Day Selection for M-F Uni/Euro Shifts',
+      'description': 'M-F marked-in users can now select specific days to repeat Uni/Euro shifts.',
+    },
+    {
+      'title': 'Weekend Repeat Restrictions',
+      'description': 'Repeat duty/shift checkboxes are hidden when adding shifts on Saturday or Sunday, as weekend shifts use different times.',
+    },
+    {
+      'title': 'Animated Selected Day Indicator',
+      'description': 'Selected day now shows an animated pulsing border on the calendar cell. Bank holidays display a red animated border when selected, while regular days use the primary color.',
+    },
+    {
+      'title': 'Toggleable Selected Day Indicator',
+      'description': 'The animated selected day indicator can be toggled off in Settings > Appearance to revert to the classic filled circle style.',
+    },
+    {
+      'title': 'Late Finish Tracking',
+      'description': 'Added ability to track late finishes for all shift types. Users can enter custom minutes or select from preset values. Late finish statistics are included in Break & Finish Statistics.',
+    },
+    {
+      'title': 'Late Break Support for Uni/Euro Shifts',
+      'description': 'Uni/Euro shifts can now track late breaks the same way as other shifts.',
     },
     {
       'title': 'Rest Days and Sick Day Codes Always Visible',
@@ -15,6 +39,10 @@ final Map<String, List<Map<String, String>>> changelogData = {
     {
       'title': 'Merged Statistics Sections',
       'description': 'Combined Holiday Days Statistics with Holiday Balance into one section. Merged Shift Type Distribution pie chart with Shift Type Summary statistics for easier viewing.',
+    },
+    {
+      'title': 'Year View Performance Optimization',
+      'description': 'Improved Year View loading performance by preloading all 12 months before rendering. Added loading indicator while months are being loaded. Year View now loads much faster and displays smoothly.',
     },
   ],
   '2.18.2': [
