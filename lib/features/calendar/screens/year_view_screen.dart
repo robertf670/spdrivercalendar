@@ -52,11 +52,12 @@ class YearViewScreenState extends State<YearViewScreen> {
 
   Future<void> _loadMarkedInSettings() async {
     final markedInEnabled = await StorageService.getBool(AppConstants.markedInEnabledKey);
-    final markedInStatus = await StorageService.getString(AppConstants.markedInStatusKey) ?? 'Shift';
+    final markedInStatus = await StorageService.getString(AppConstants.markedInStatusKey) ?? '';
     if (mounted) {
       setState(() {
-        _markedInEnabled = markedInEnabled;
-        _markedInStatus = markedInStatus;
+        // Determine if marked-in is actually enabled (enabled flag must be true AND status must not be empty)
+        _markedInEnabled = markedInEnabled && markedInStatus.isNotEmpty;
+        _markedInStatus = markedInStatus.isEmpty ? 'Spare' : markedInStatus;
       });
     }
   }
@@ -93,26 +94,6 @@ class YearViewScreenState extends State<YearViewScreen> {
     
     // Check if marked in is enabled
     if (_markedInEnabled) {
-      // 4 Day marked in logic: W on Fri-Sat-Sun-Mon, R on Tue-Wed-Thu
-      // Bank holidays are WORK days for 4 Day
-      if (_markedInStatus == '4 Day') {
-        // Check if this is a bank holiday - bank holidays are work days for 4 Day
-        final bankHoliday = getBankHoliday(date);
-        if (bankHoliday != null) {
-          return 'W'; // Bank holidays are work days for 4 Day
-        }
-        
-        // weekday: 1=Monday, 2=Tuesday, 3=Wednesday, 4=Thursday, 5=Friday, 6=Saturday, 7=Sunday
-        final weekday = date.weekday;
-        if (weekday == 1 || weekday == 5 || weekday == 6 || weekday == 7) {
-          // Monday (1), Friday (5), Saturday (6), Sunday (7) are work days
-          return 'W';
-        } else {
-          // Tuesday (2), Wednesday (3), Thursday (4) are rest days
-          return 'R';
-        }
-      }
-      
       // M-F marked in logic: W on Mon-Fri, R on Sat-Sun
       // Bank holidays are REST days for M-F
       if (_markedInStatus == 'M-F') {
@@ -131,9 +112,15 @@ class YearViewScreenState extends State<YearViewScreen> {
           return 'R'; // Rest days Sat-Sun
         }
       }
+      
+      // Shift marked in: use normal roster calculation
+      // (Zone selection is stored but doesn't affect shift calculation here)
+      if (_markedInStatus == 'Shift') {
+        return RosterService.getShiftForDate(date, widget.startDate!, widget.startWeek);
+      }
     }
     
-    // Normal roster calculation
+    // Default or normal roster calculation
     return RosterService.getShiftForDate(date, widget.startDate!, widget.startWeek);
   }
 

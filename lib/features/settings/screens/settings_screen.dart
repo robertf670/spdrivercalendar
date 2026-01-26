@@ -66,6 +66,10 @@ class SettingsScreenState extends State<SettingsScreen> {
   // Pay rate setting
   String _spreadPayRate = 'year1+2'; // Default to Year 1/2
   
+  // Marked In settings
+  String _markedInStatus = 'Spare'; // Spare, Shift, or M-F
+  String _markedInZone = 'Zone 1'; // Zone selection when Shift is selected
+  
   // Days in lieu balance
   int _daysInLieuBalance = 0;
   int _daysInLieuUsed = 0;
@@ -97,6 +101,7 @@ class SettingsScreenState extends State<SettingsScreen> {
     _loadExpandedSections();
     _loadDaysInLieuBalance();
     _loadAnnualLeaveBalance();
+    _loadMarkedInSettings();
   }
   
   Future<void> _loadExpandedSections() async {
@@ -170,6 +175,48 @@ class SettingsScreenState extends State<SettingsScreen> {
     setState(() {
       _isLoading = false;
     });
+  }
+
+  Future<void> _loadMarkedInSettings() async {
+    // Check if marked-in was previously enabled (for migration)
+    final markedInEnabled = await StorageService.getBool(AppConstants.markedInEnabledKey);
+    final oldStatus = await StorageService.getString(AppConstants.markedInStatusKey) ?? 'Shift';
+    final zone = await StorageService.getString(AppConstants.markedInZoneKey) ?? 'Zone 1';
+    
+    setState(() {
+      if (markedInEnabled) {
+        // Migrate old settings: if M-F or 4 Day, keep as M-F; otherwise set to Shift
+        if (oldStatus == 'M-F' || oldStatus == '4 Day') {
+          _markedInStatus = 'M-F';
+        } else {
+          _markedInStatus = 'Shift';
+        }
+      } else {
+        _markedInStatus = 'Spare';
+      }
+      _markedInZone = zone;
+    });
+  }
+
+  Future<void> _saveMarkedInSettings() async {
+    // Save marked-in enabled state (true if not Spare)
+    final enabled = _markedInStatus != 'Spare';
+    await StorageService.saveBool(AppConstants.markedInEnabledKey, enabled);
+    
+    // Save status (use 'M-F' for M-F, 'Shift' for Shift)
+    if (_markedInStatus == 'M-F') {
+      await StorageService.saveString(AppConstants.markedInStatusKey, 'M-F');
+    } else if (_markedInStatus == 'Shift') {
+      await StorageService.saveString(AppConstants.markedInStatusKey, 'Shift');
+    } else {
+      // Spare - clear the status
+      await StorageService.saveString(AppConstants.markedInStatusKey, '');
+    }
+    
+    // Save zone if Shift is selected
+    if (_markedInStatus == 'Shift') {
+      await StorageService.saveString(AppConstants.markedInZoneKey, _markedInZone);
+    }
   }
 
   Future<void> _loadDaysInLieuBalance() async {
@@ -355,6 +402,7 @@ class SettingsScreenState extends State<SettingsScreen> {
                     title: 'App',
                     icon: Icons.apps,
                     children: [
+                      _buildMarkedInSettings(),
                       _buildPayRateDropdown(),
                       _buildFeedbackButton(),
                       _buildLiveUpdatesPreferencesButton(),
@@ -677,6 +725,117 @@ class SettingsScreenState extends State<SettingsScreen> {
       context,
       MaterialPageRoute(
         builder: (context) => const GoogleCalendarHelpScreen(),
+      ),
+    );
+  }
+
+  Widget _buildMarkedInSettings() {
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 4.0),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppTheme.borderRadius),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.work_outline),
+              title: const Text('Marked In Status'),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 8),
+                  const Text('Status Type:', style: TextStyle(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  DropdownButtonFormField<String>(
+                    value: _markedInStatus,
+                    decoration: InputDecoration(
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    ),
+                    items: const [
+                      DropdownMenuItem(value: 'Spare', child: Text('Spare')),
+                      DropdownMenuItem(value: 'Shift', child: Text('Shift')),
+                      DropdownMenuItem(value: 'M-F', child: Text('M-F')),
+                    ],
+                    onChanged: (String? newValue) async {
+                      if (newValue != null && newValue != _markedInStatus) {
+                        setState(() {
+                          _markedInStatus = newValue;
+                        });
+                        await _saveMarkedInSettings();
+                      }
+                    },
+                  ),
+                  if (_markedInStatus == 'Shift') ...[
+                    const SizedBox(height: 16),
+                    const Text('Zone:', style: TextStyle(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    DropdownButtonFormField<String>(
+                      value: _markedInZone,
+                      decoration: InputDecoration(
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      ),
+                      items: const [
+                        DropdownMenuItem(value: 'Zone 1', child: Text('Zone 1')),
+                        DropdownMenuItem(value: 'Zone 3', child: Text('Zone 3')),
+                        DropdownMenuItem(value: 'Zone 4', child: Text('Zone 4')),
+                      ],
+                      onChanged: (String? newValue) async {
+                        if (newValue != null && newValue != _markedInZone) {
+                          setState(() {
+                            _markedInZone = newValue;
+                          });
+                          await _saveMarkedInSettings();
+                        }
+                      },
+                    ),
+                  ],
+                  const SizedBox(height: 12),
+                  // Coming soon notice
+                  Container(
+                    padding: const EdgeInsets.all(12.0),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                      borderRadius: BorderRadius.circular(8.0),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(
+                          Icons.info_outline,
+                          color: Theme.of(context).colorScheme.primary,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Bogey, 4 Day and Night Shift coming soon',
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Theme.of(context).colorScheme.onSurface,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

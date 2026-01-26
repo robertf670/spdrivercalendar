@@ -1,4 +1,22 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.19.0': [
+    {
+      'title': 'Marked-In Settings Moved to Main Settings',
+      'description': 'Marked-In Status settings are now accessible to all users in Settings > App section.',
+    },
+    {
+      'title': 'TEST FEATURE: Fill Whole Week Feature for M-F Marked-In Users',
+      'description': 'TEST FEATURE: Added checkbox option to fill all weekdays (Mon-Fri) with the same Uni/Euro shift when adding work shifts.',
+    },
+    {
+      'title': 'Rest Days and Sick Day Codes Always Visible',
+      'description': 'Rest days now show "R" on the calendar even when holidays are entered. Sick day codes (S, SC, FM) are also displayed on calendar days.',
+    },
+    {
+      'title': 'Merged Statistics Sections',
+      'description': 'Combined Holiday Days Statistics with Holiday Balance into one section. Merged Shift Type Distribution pie chart with Shift Type Summary statistics for easier viewing.',
+    },
+  ],
   '2.18.2': [
     {
       'title': 'EA Training Feature',

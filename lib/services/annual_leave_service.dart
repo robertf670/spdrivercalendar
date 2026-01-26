@@ -60,7 +60,7 @@ class AnnualLeaveService {
   static Future<bool> _isOnMFSchedule() async {
     final markedInEnabled = await StorageService.getBool(AppConstants.markedInEnabledKey);
     if (markedInEnabled) {
-      final markedInStatus = await StorageService.getString(AppConstants.markedInStatusKey) ?? 'Shift';
+      final markedInStatus = await StorageService.getString(AppConstants.markedInStatusKey) ?? '';
       return markedInStatus == 'M-F';
     }
     // If not marked in, cannot determine schedule - return false

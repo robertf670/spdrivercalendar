@@ -250,8 +250,12 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
   Future<void> _loadMarkedInSettings() async {
     if (!mounted) return;
     
-    final newMarkedInEnabled = await StorageService.getBool(AppConstants.markedInEnabledKey);
-    final newMarkedInStatus = await StorageService.getString(AppConstants.markedInStatusKey) ?? 'Shift';
+    final markedInEnabled = await StorageService.getBool(AppConstants.markedInEnabledKey);
+    final markedInStatus = await StorageService.getString(AppConstants.markedInStatusKey) ?? '';
+    
+    // Determine if marked-in is actually enabled (enabled flag must be true AND status must not be empty)
+    final newMarkedInEnabled = markedInEnabled && markedInStatus.isNotEmpty;
+    final newMarkedInStatus = markedInStatus.isEmpty ? 'Spare' : markedInStatus;
     final newShowDutyCodes = await StorageService.getBool(AppConstants.showDutyCodesOnCalendarKey, defaultValue: true);
     
     // Always update state to ensure calendar rebuilds with latest settings
@@ -499,26 +503,6 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
     
     // Check if marked in is enabled
     if (_markedInEnabled) {
-      // 4 Day marked in logic: W on Fri-Sat-Sun-Mon, R on Tue-Wed-Thu
-      // Bank holidays are WORK days for 4 Day
-      if (_markedInStatus == '4 Day') {
-        // Check if this is a bank holiday - bank holidays are work days for 4 Day
-        final bankHoliday = getBankHoliday(date);
-        if (bankHoliday != null) {
-          return 'W'; // Bank holidays are work days for 4 Day
-        }
-        
-        // weekday: 1=Monday, 2=Tuesday, 3=Wednesday, 4=Thursday, 5=Friday, 6=Saturday, 7=Sunday
-        final weekday = date.weekday;
-        if (weekday == 1 || weekday == 5 || weekday == 6 || weekday == 7) {
-          // Monday (1), Friday (5), Saturday (6), Sunday (7) are work days
-          return 'W';
-        } else {
-          // Tuesday (2), Wednesday (3), Thursday (4) are rest days
-          return 'R';
-        }
-      }
-      
       // M-F marked in logic: W on Mon-Fri, R on Sat-Sun
       // Bank holidays are REST days for M-F
       if (_markedInStatus == 'M-F') {
@@ -537,9 +521,15 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
           return 'R'; // Rest days Sat-Sun
         }
       }
+      
+      // Shift marked in: use normal roster calculation
+      // (Zone selection is stored but doesn't affect shift calculation here)
+      if (_markedInStatus == 'Shift') {
+        return RosterService.getShiftForDate(date, _startDate!, _startWeek);
+      }
     }
     
-    // Normal roster calculation
+    // Default or normal roster calculation
     return RosterService.getShiftForDate(date, _startDate!, _startWeek);
   }
   
@@ -709,19 +699,39 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
   }
 
   // Show dialog to select and add a work shift
-  void _showWorkShiftDialog() {
+  void _showWorkShiftDialog() async {
     final now = DateTime.now();
     final shiftDate = _selectedDay ?? now;
-    String selectedZone = 'Zone 1';
-    String selectedShiftNumber = '';
-    List<String> shiftNumbers = [];
-    bool isLoading = true;
+    
+    // Check if user is M-F marked in and if it's a weekday
+    bool isMFMarkedIn = false;
+    bool isWeekday = false;
+    
+    try {
+      final markedInEnabled = await StorageService.getBool(AppConstants.markedInEnabledKey);
+      final markedInStatus = await StorageService.getString(AppConstants.markedInStatusKey) ?? 'Shift';
+      isMFMarkedIn = markedInEnabled && markedInStatus == 'M-F';
+      
+      final dayOfWeek = RosterService.getDayOfWeek(shiftDate);
+      isWeekday = dayOfWeek != 'Saturday' && dayOfWeek != 'Sunday';
+    } catch (e) {
+      // If we can't check, default to false
+      isMFMarkedIn = false;
+      isWeekday = false;
+    }
     
     // Show dialog with loading state initially
     showDialog(
       context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (context, setState) {
+      builder: (dialogContext) {
+        String selectedZone = 'Zone 1';
+        String selectedShiftNumber = '';
+        List<String> shiftNumbers = [];
+        bool isLoading = true;
+        bool fillWholeWeek = false;
+        
+        return StatefulBuilder(
+          builder: (context, setState) {
           // Function to load shift numbers for selected zone
           void loadShiftNumbers() async {
             // Skip loading for 22B/01 as it's a fixed duty
@@ -1069,6 +1079,38 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                             }
                           },
                         ),
+                // Show checkbox for M-F marked in users selecting Uni/Euro on weekdays
+                Builder(
+                  builder: (context) {
+                    final shouldShowFillWeekCheckbox = isMFMarkedIn && isWeekday && selectedZone == 'Uni/Euro';
+                    if (shouldShowFillWeekCheckbox) {
+                      return Column(
+                        children: [
+                          const SizedBox(height: 16),
+                          Row(
+                            children: [
+                              Checkbox(
+                                value: fillWholeWeek,
+                                onChanged: (value) {
+                                  setState(() {
+                                    fillWholeWeek = value ?? false;
+                                  });
+                                },
+                              ),
+                              const Expanded(
+                                child: Text(
+                                  'Fill whole week (Mon-Fri) with this shift',
+                                  style: TextStyle(fontSize: 14),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      );
+                    }
+                    return const SizedBox.shrink();
+                  },
+                ),
               ],
             ),
             actions: [
@@ -1185,6 +1227,68 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                       
                       // Add event and close dialog
                       await EventService.addEvent(event);
+                      
+                      // If fill whole week is checked, fill all weekdays (Mon-Fri) with the same shift
+                      if (fillWholeWeek && isMFMarkedIn && isWeekday && selectedZone == 'Uni/Euro') {
+                        // Get the start of the week (Sunday)
+                        final weekday = shiftDate.weekday; // 1=Monday, 7=Sunday
+                        // Calculate days to subtract to get to Sunday (weekday 7)
+                        final daysToSunday = weekday == 7 ? 0 : weekday;
+                        final weekStart = shiftDate.subtract(Duration(days: daysToSunday));
+                        
+                        // Loop through Monday to Friday (weekday 1-5)
+                        for (int dayOffset = 1; dayOffset <= 5; dayOffset++) {
+                          final targetDate = weekStart.add(Duration(days: dayOffset));
+                          
+                          // Skip if it's the same day (already handled above)
+                          if (targetDate.year == shiftDate.year &&
+                              targetDate.month == shiftDate.month &&
+                              targetDate.day == shiftDate.day) {
+                            continue;
+                          }
+                          
+                          // Check if there's a bank holiday on this day
+                          final bankHoliday = ShiftService.getBankHoliday(targetDate, ShiftService.bankHolidays);
+                          if (bankHoliday != null) {
+                            continue; // Skip bank holidays
+                          }
+                          
+                          // Get shift times for this day (may differ for different days)
+                          Map<String, dynamic>? targetShiftTimes;
+                          if (selectedZone == 'Uni/Euro') {
+                            targetShiftTimes = await _getShiftTimes(selectedZone, selectedShiftNumber, targetDate);
+                          }
+                          
+                          // Use the same shift times if available, otherwise use original
+                          final finalShiftTimes = targetShiftTimes ?? shiftTimes;
+                          
+                          if (finalShiftTimes != null) {
+                            // Create event for this day
+                            final weekEvent = Event(
+                              id: '${title}_${targetDate.millisecondsSinceEpoch}',
+                              title: title,
+                              startDate: targetDate,
+                              startTime: finalShiftTimes['startTime']!,
+                              endDate: finalShiftTimes['isNextDay'] == true
+                                  ? targetDate.add(const Duration(days: 1))
+                                  : targetDate,
+                              endTime: finalShiftTimes['endTime']!,
+                              breakStartTime: finalShiftTimes['breakStartTime'] as TimeOfDay?,
+                              breakEndTime: finalShiftTimes['breakEndTime'] as TimeOfDay?,
+                              workTime: finalShiftTimes['workTime'] as Duration?,
+                              routes: finalShiftTimes['routes'] as List<String>?,
+                            );
+                            
+                            await EventService.addEvent(weekEvent);
+                            
+                            // Sync to Google if enabled
+                            if (mounted) {
+                              _checkAndSyncToGoogleCalendar(weekEvent, context);
+                            }
+                          }
+                        }
+                      }
+                      
                       if (mounted) {
                         Navigator.of(dialogContext).pop();
                       }
@@ -1218,8 +1322,9 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
               ),
             ],
           );
-        },
-      ),
+          },
+        );
+      },
     );
   }
 
@@ -4627,6 +4732,22 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
     }
   }
 
+  /// Helper method to convert sick day type to display code for calendar
+  /// Returns: 'S' for normal, 'SC' for self-certified, 'FM' for force-majeure
+  String _getSickDayDisplayCode(String? sickDayType) {
+    if (sickDayType == null) return '';
+    switch (sickDayType) {
+      case 'normal':
+        return 'S';
+      case 'self-certified':
+        return 'SC';
+      case 'force-majeure':
+        return 'FM';
+      default:
+        return '';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     // Reload marked in settings immediately when build is called
@@ -5095,7 +5216,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
   }
 
   /// Helper method to determine what text to display on calendar day
-  /// Returns: duty code for regular work shifts, spare title for spare shifts, or shift letter (E/L/M/R)
+  /// Returns: duty code for regular work shifts, spare title for spare shifts, sick day code (S/SC/FM), or shift letter (E/L/M/R)
   String _getCalendarDayDisplayText(DateTime date) {
     final events = getEventsForDay(date);
     final rosterShift = _startDate != null ? getShiftForDate(date) : '';
@@ -5129,6 +5250,16 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
         }
         // For regular work shifts, the title IS the duty code (formatted for display)
         return _formatDisplayText(event.title);
+      }
+    }
+    
+    // Third, check for sick day codes (S, SC, FM)
+    for (final event in events) {
+      if (event.sickDayType != null) {
+        final sickDayCode = _getSickDayDisplayCode(event.sickDayType);
+        if (sickDayCode.isNotEmpty) {
+          return sickDayCode;
+        }
       }
     }
     
@@ -5227,13 +5358,19 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                       fontSize: _getResponsiveDateFontSize(screenWidth),
                     ),
                   ),
-                  if (displayText.isNotEmpty && !isHoliday)
+                  // Show display text if not empty AND (not holiday OR it's a rest day)
+                  // This allows rest day "R" to show even when holidays are present
+                  if (displayText.isNotEmpty && (!isHoliday || shift == 'R'))
                     Text(
                       displayText,
                       style: TextStyle(
                         fontSize: _getResponsiveDutyFontSize(screenWidth),
                         fontWeight: FontWeight.bold,
                         height: 1.0, // Reduce line height
+                        // Use white color for rest days and sick days when they override holidays
+                        color: (shift == 'R' && isHoliday) || hasSickDay 
+                            ? Colors.white 
+                            : null,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.clip,
@@ -5250,7 +5387,8 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                       maxLines: 1,
                       overflow: TextOverflow.clip,
                     )
-                  else if (isHoliday)
+                  // Only show "H" for holidays when it's NOT a rest day
+                  else if (isHoliday && shift != 'R')
                     Text(
                       'H',
                       style: TextStyle(

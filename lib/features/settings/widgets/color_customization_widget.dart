@@ -31,9 +31,10 @@ class _ColorCustomizationWidgetState extends State<ColorCustomizationWidget> {
 
   Future<void> _loadMarkedInStatus() async {
     final markedInEnabled = await StorageService.getBool(AppConstants.markedInEnabledKey);
-    final markedInStatus = await StorageService.getString(AppConstants.markedInStatusKey) ?? 'Shift';
+    final markedInStatus = await StorageService.getString(AppConstants.markedInStatusKey) ?? '';
     setState(() {
-      _isMFMarkedIn = markedInEnabled && (markedInStatus == 'M-F' || markedInStatus == '4 Day');
+      // Only M-F is considered MF marked-in now (4 Day removed)
+      _isMFMarkedIn = markedInEnabled && markedInStatus == 'M-F';
     });
   }
 

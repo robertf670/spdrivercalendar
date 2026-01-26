@@ -11,6 +11,8 @@ import 'package:spdrivercalendar/features/calendar/services/event_service.dart';
 import 'package:spdrivercalendar/features/calendar/services/route_service.dart';
 import 'package:spdrivercalendar/services/bus_tracking_service.dart';
 import 'package:spdrivercalendar/services/color_customization_service.dart';
+import 'package:spdrivercalendar/core/services/storage_service.dart';
+import 'package:spdrivercalendar/core/constants/app_constants.dart';
 
 class EventCard extends StatefulWidget {
   final Event event;
@@ -2344,11 +2346,31 @@ class _EventCardState extends State<EventCard> {
     String selectedDuty = '';
     List<String> duties = [];
     bool isLoading = true;
+    bool fillWholeWeek = false;
+
+    // Check if user is M-F marked in and if it's a weekday (do this outside the builder)
+    bool isMFMarkedIn = false;
+    bool isWeekday = false;
+    
+    try {
+      final markedInEnabled = await StorageService.getBool(AppConstants.markedInEnabledKey);
+      final markedInStatus = await StorageService.getString(AppConstants.markedInStatusKey) ?? '';
+      isMFMarkedIn = markedInEnabled && markedInStatus == 'M-F';
+      
+      final dayOfWeek = RosterService.getDayOfWeek(widget.event.startDate);
+      isWeekday = dayOfWeek != 'Saturday' && dayOfWeek != 'Sunday';
+    } catch (e) {
+      // If we can't check, default to false
+      isMFMarkedIn = false;
+      isWeekday = false;
+    }
 
     showDialog(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
         builder: (context, setState) {
+          // Calculate if checkbox should be shown (reactive to zone changes)
+          final shouldShowFillWeekCheckbox = isMFMarkedIn && isWeekday && selectedZone == 'Uni/Euro' && halfIndicator == null;
           // Function to load duties for selected zone
           void loadDuties() async {
             setState(() {
@@ -2568,6 +2590,27 @@ class _EventCardState extends State<EventCard> {
                           }
                         },
                       ),
+                if (shouldShowFillWeekCheckbox) ...[
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Checkbox(
+                        value: fillWholeWeek,
+                        onChanged: (value) {
+                          setState(() {
+                            fillWholeWeek = value ?? false;
+                          });
+                        },
+                      ),
+                      const Expanded(
+                        child: Text(
+                          'Fill whole week (Mon-Fri) with this duty',
+                          style: TextStyle(fontSize: 14),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ],
             ),
             actions: [
@@ -2635,6 +2678,98 @@ class _EventCardState extends State<EventCard> {
                       
                       // Save the updated event (location data should now be in enhancedAssignedDuties)
                       await EventService.updateEvent(oldEvent, widget.event);
+                      
+                      // If fill whole week is checked, fill all weekdays (Mon-Fri) with the same duty
+                      if (fillWholeWeek && shouldShowFillWeekCheckbox) {
+                        // Get the start of the week (Sunday)
+                        final currentDate = widget.event.startDate;
+                        final weekday = currentDate.weekday; // 1=Monday, 7=Sunday
+                        // Calculate days to subtract to get to Sunday (weekday 7)
+                        final daysToSunday = weekday == 7 ? 0 : weekday;
+                        final weekStart = currentDate.subtract(Duration(days: daysToSunday));
+                        
+                        // Get the spare shift title format (e.g., SP0600)
+                        final spareTitle = widget.event.title;
+                        
+                        // Loop through Monday to Friday (weekday 1-5)
+                        for (int dayOffset = 1; dayOffset <= 5; dayOffset++) {
+                          final targetDate = weekStart.add(Duration(days: dayOffset));
+                          
+                          // Skip if it's the same day (already handled above)
+                          if (targetDate.year == currentDate.year &&
+                              targetDate.month == currentDate.month &&
+                              targetDate.day == currentDate.day) {
+                            continue;
+                          }
+                          
+                          // Check if there's a bank holiday on this day
+                          final bankHoliday = ShiftService.getBankHoliday(targetDate, ShiftService.bankHolidays);
+                          if (bankHoliday != null) {
+                            continue; // Skip bank holidays
+                          }
+                          
+                          // Get events for this day
+                          final dayEvents = EventService.getEventsForDay(targetDate);
+                          
+                          // Find or create a spare shift event for this day
+                          Event? spareEvent;
+                          for (final event in dayEvents) {
+                            if (event.title == spareTitle && event.isWorkShift) {
+                              spareEvent = event;
+                              break;
+                            }
+                          }
+                          
+                          // If no spare shift exists, create one
+                          if (spareEvent == null) {
+                            spareEvent = Event(
+                              id: '${spareTitle}_${targetDate.millisecondsSinceEpoch}',
+                              title: spareTitle,
+                              startDate: targetDate,
+                              startTime: widget.event.startTime,
+                              endDate: targetDate,
+                              endTime: widget.event.endTime,
+                              assignedDuties: [newDuty],
+                            );
+                            // Create the event
+                            await EventService.addEvent(spareEvent);
+                          } else {
+                            // Add the duty to existing event
+                            if (spareEvent.assignedDuties == null) {
+                              spareEvent.assignedDuties = [newDuty];
+                            } else if (spareEvent.assignedDuties!.length < 2) {
+                              // Only add if not already present
+                              if (!spareEvent.assignedDuties!.contains(newDuty)) {
+                                spareEvent.assignedDuties!.add(newDuty);
+                              }
+                            }
+                            
+                            // Save the updated event
+                            final oldSpareEvent = Event(
+                              id: spareEvent.id,
+                              title: spareEvent.title,
+                              startDate: spareEvent.startDate,
+                              startTime: spareEvent.startTime,
+                              endDate: spareEvent.endDate,
+                              endTime: spareEvent.endTime,
+                              workTime: spareEvent.workTime,
+                              breakStartTime: spareEvent.breakStartTime,
+                              breakEndTime: spareEvent.breakEndTime,
+                              assignedDuties: spareEvent.assignedDuties?.map((d) => d).toList(),
+                              busAssignments: spareEvent.busAssignments?.map((k, v) => MapEntry(k, v)),
+                              enhancedAssignedDuties: spareEvent.enhancedAssignedDuties?.map((d) => d.copyWith()).toList(),
+                              firstHalfBus: spareEvent.firstHalfBus,
+                              secondHalfBus: spareEvent.secondHalfBus,
+                              notes: spareEvent.notes,
+                              hasLateBreak: spareEvent.hasLateBreak,
+                              tookFullBreak: spareEvent.tookFullBreak,
+                              overtimeDuration: spareEvent.overtimeDuration,
+                            );
+                            
+                            await EventService.updateEvent(oldSpareEvent, spareEvent);
+                          }
+                        }
+                      }
                       
                       // Close the dialog
                       Navigator.of(dialogContext).pop();

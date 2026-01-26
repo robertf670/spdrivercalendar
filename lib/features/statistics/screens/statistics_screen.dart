@@ -160,9 +160,7 @@ class StatisticsScreenState extends State<StatisticsScreen>
     'Rostered Sunday Pair Hours': false,
     'Shift Type Summary': false,
     'Break Statistics': false,
-    'Holiday Days Statistics': false,
-    'Days In Lieu Balance': false,
-    'Annual Leave Balance': false,
+    'Holiday Balance': false,
     'Sick Days Statistics': false,
     'Most Frequent Shifts': false,
     'Most Frequent Buses': false,
@@ -184,11 +182,19 @@ class StatisticsScreenState extends State<StatisticsScreen>
       _expandedSections['Work Time Statistics'] = prefs.getBool('stats_expanded_work_time') ?? false;
       _expandedSections['Spread Statistics'] = prefs.getBool('stats_expanded_spread') ?? false;
       _expandedSections['Rostered Sunday Pair Hours'] = prefs.getBool('stats_expanded_sunday_pair') ?? false;
-      _expandedSections['Shift Type Summary'] = prefs.getBool('stats_expanded_shift_summary') ?? false;
+      // Migrate Shift Type Distribution to Shift Type Summary if it was expanded
+      final shiftDistributionExpanded = prefs.getBool('stats_expanded_shift_distribution') ?? false;
+      final shiftSummaryExpanded = prefs.getBool('stats_expanded_shift_summary') ?? false;
+      _expandedSections['Shift Type Summary'] = shiftDistributionExpanded || shiftSummaryExpanded;
       _expandedSections['Break Statistics'] = prefs.getBool('stats_expanded_break') ?? false;
-      _expandedSections['Holiday Days Statistics'] = prefs.getBool('stats_expanded_holiday') ?? false;
-      _expandedSections['Days In Lieu Balance'] = prefs.getBool('stats_expanded_days_in_lieu') ?? false;
-      _expandedSections['Annual Leave Balance'] = prefs.getBool('stats_expanded_annual_leave') ?? false;
+      // Migrate Holiday Days Statistics to Holiday Balance if it was expanded
+      final holidayDaysStatsExpanded = prefs.getBool('stats_expanded_holiday') ?? false;
+      final holidayBalanceExpanded = prefs.getBool('stats_expanded_holiday_balance') ?? false;
+      _expandedSections['Holiday Balance'] = holidayDaysStatsExpanded || holidayBalanceExpanded;
+      // Migrate old keys to new combined section
+      final daysInLieuExpanded = prefs.getBool('stats_expanded_days_in_lieu') ?? false;
+      final annualLeaveExpanded = prefs.getBool('stats_expanded_annual_leave') ?? false;
+      _expandedSections['Holiday Balance'] = daysInLieuExpanded || annualLeaveExpanded;
       _expandedSections['Sick Days Statistics'] = prefs.getBool('stats_expanded_sick') ?? false;
       _expandedSections['Most Frequent Shifts'] = prefs.getBool('stats_expanded_frequent_shifts') ?? false;
       _expandedSections['Most Frequent Buses'] = prefs.getBool('stats_expanded_frequent_buses') ?? false;
@@ -215,14 +221,8 @@ class StatisticsScreenState extends State<StatisticsScreen>
       case 'Break Statistics':
         key = 'stats_expanded_break';
         break;
-      case 'Holiday Days Statistics':
-        key = 'stats_expanded_holiday';
-        break;
-      case 'Days In Lieu Balance':
-        key = 'stats_expanded_days_in_lieu';
-        break;
-      case 'Annual Leave Balance':
-        key = 'stats_expanded_annual_leave';
+      case 'Holiday Balance':
+        key = 'stats_expanded_holiday_balance';
         break;
       case 'Sick Days Statistics':
         key = 'stats_expanded_sick';
@@ -661,13 +661,14 @@ class StatisticsScreenState extends State<StatisticsScreen>
         padding: EdgeInsets.all(sizes['padding']!),
         child: Column(
         children: [
-          // Shift Type Pie Chart
+          // Shift Type Summary (combines Distribution pie chart and Summary statistics)
           _buildExpandableSection(
-            title: 'Shift Type Distribution',
-            subtitle: 'Visual breakdown of shift types',
-            icon: Icons.pie_chart,
+            title: 'Shift Type Summary',
+            subtitle: 'Rest Days not included in calculation',
+            icon: Icons.bar_chart,
             children: [
               const SizedBox(height: 8),
+              // Pie Chart
               ShiftTypePieChart(
                 shiftCounts: {
                   'Early': _calculateSummaryStatistics()['earlyShifts'] ?? 0,
@@ -679,18 +680,8 @@ class StatisticsScreenState extends State<StatisticsScreen>
                   'Overtime': _calculateSummaryStatistics()['overtimeShifts'] ?? 0,
                 },
               ),
-            ],
-          ),
-          
-          SizedBox(height: sizes['cardSpacing']!),
-          
-          // Shift Type Summary Card
-          _buildExpandableSection(
-            title: 'Shift Type Summary',
-            subtitle: 'Rest Days not included in calculation',
-            icon: Icons.bar_chart,
-            children: [
-              const SizedBox(height: 8),
+              const SizedBox(height: 16),
+              // Detailed Statistics
               ShiftTypeSummaryCard(
                 stats: _calculateSummaryStatistics(),
                 currentRange: _timeRange,
@@ -770,12 +761,13 @@ class StatisticsScreenState extends State<StatisticsScreen>
           
           SizedBox(height: sizes['cardSpacing']!),
           
-          // Holiday Days Statistics Card
+          // Holiday Balance (combines Holiday Days Statistics and Balance)
           _buildExpandableSection(
-            title: 'Holiday Days Statistics',
+            title: 'Holiday Balance',
             icon: Icons.beach_access,
             children: [
               const SizedBox(height: 8),
+              // Holiday Days Statistics
               _holidayDaysStatsFuture == null
                 ? const Center(child: Padding(
                     padding: EdgeInsets.symmetric(vertical: 16.0),
@@ -819,30 +811,9 @@ class StatisticsScreenState extends State<StatisticsScreen>
                       );
                     },
                   ),
-            ],
-          ),
-          
-          SizedBox(height: sizes['cardSpacing']!),
-          
-          // Days In Lieu Balance Card
-          _buildExpandableSection(
-            title: 'Days In Lieu Balance',
-            icon: Icons.event_available,
-            children: [
-              const SizedBox(height: 8),
-              _buildDaysInLieuBalanceCard(),
-            ],
-          ),
-          
-          SizedBox(height: sizes['cardSpacing']!),
-          
-          // Annual Leave Balance Card
-          _buildExpandableSection(
-            title: 'Annual Leave Balance',
-            icon: Icons.beach_access,
-            children: [
-              const SizedBox(height: 8),
-              _buildAnnualLeaveBalanceCard(),
+              const SizedBox(height: 16),
+              // Balance Card (Annual Leave and Days In Lieu)
+              _buildHolidayBalanceCard(),
             ],
           ),
           
@@ -2251,11 +2222,12 @@ class StatisticsScreenState extends State<StatisticsScreen>
 
   Future<void> _loadMarkedInSettings() async {
     final markedInEnabled = await StorageService.getBool(AppConstants.markedInEnabledKey);
-    final markedInStatus = await StorageService.getString(AppConstants.markedInStatusKey) ?? 'Shift';
+    final markedInStatus = await StorageService.getString(AppConstants.markedInStatusKey) ?? '';
     if (mounted) {
       setState(() {
-        _markedInEnabled = markedInEnabled;
-        _markedInStatus = markedInStatus;
+        // Determine if marked-in is actually enabled (enabled flag must be true AND status must not be empty)
+        _markedInEnabled = markedInEnabled && markedInStatus.isNotEmpty;
+        _markedInStatus = markedInStatus.isEmpty ? 'Spare' : markedInStatus;
       });
     }
   }
@@ -2283,24 +2255,11 @@ class StatisticsScreenState extends State<StatisticsScreen>
         }
       }
       
-      // 4 Day marked in logic: W on Fri-Sat-Sun-Mon, R on Tue-Wed-Thu
-      // Bank holidays are WORK days for 4 Day
-      if (_markedInStatus == '4 Day') {
-        // Check if this is a bank holiday - bank holidays are work days for 4 Day
-        final isBankHolidayDate = await isBankHoliday(date);
-        if (isBankHolidayDate) {
-          return false; // Bank holidays are work days for 4 Day
-        }
-        
-        // weekday: 1=Monday, 2=Tuesday, 3=Wednesday, 4=Thursday, 5=Friday, 6=Saturday, 7=Sunday
-        final weekday = date.weekday;
-        if (weekday == 1 || weekday == 5 || weekday == 6 || weekday == 7) {
-          // Monday (1), Friday (5), Saturday (6), Sunday (7) are work days
-          return false;
-        } else {
-          // Tuesday (2), Wednesday (3), Thursday (4) are rest days
-          return true;
-        }
+      // Shift marked in: use normal roster calculation
+      if (_markedInStatus == 'Shift') {
+        if (_startDate == null) return false;
+        final String shiftType = RosterService.getShiftForDate(date, _startDate!, _startWeek);
+        return shiftType == 'R';
       }
     }
     
@@ -2683,99 +2642,11 @@ class StatisticsScreenState extends State<StatisticsScreen>
     return monthlyData;
   }
 
-  Widget _buildDaysInLieuBalanceCard() {
-    final dayInLieuColor = ColorCustomizationService.getColorForShift('DAY_IN_LIEU');
-    final hasZeroBalance = _daysInLieuRemaining == 0;
-
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 4.0),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppTheme.borderRadius),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Text(
-                        'Remaining',
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '$_daysInLieuRemaining',
-                        style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: hasZeroBalance ? Colors.orange : dayInLieuColor,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Container(
-                  width: 1,
-                  height: 40,
-                  color: Theme.of(context).dividerColor,
-                ),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Text(
-                        'Used',
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '$_daysInLieuUsed',
-                        style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: Theme.of(context).textTheme.headlineMedium?.color,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            if (hasZeroBalance)
-              Padding(
-                padding: const EdgeInsets.only(top: 12.0),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.warning_amber_rounded,
-                      color: Colors.orange,
-                      size: 16,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'No days remaining. Update balance in Settings > Holidays & Leave.',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Colors.orange.shade700,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildAnnualLeaveBalanceCard() {
+  Widget _buildHolidayBalanceCard() {
     final primaryColor = Theme.of(context).colorScheme.primary;
-    final hasZeroBalance = _annualLeaveRemaining == 0;
+    final dayInLieuColor = ColorCustomizationService.getColorForShift('DAY_IN_LIEU');
+    final hasZeroAnnualLeave = _annualLeaveRemaining == 0;
+    final hasZeroDaysInLieu = _daysInLieuRemaining == 0;
 
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 4.0),
@@ -2787,76 +2658,199 @@ class StatisticsScreenState extends State<StatisticsScreen>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Text(
-                        'Remaining',
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '$_annualLeaveRemaining',
-                        style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: hasZeroBalance ? Colors.orange : primaryColor,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Container(
-                  width: 1,
-                  height: 40,
-                  color: Theme.of(context).dividerColor,
-                ),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Text(
-                        'Used (Future)',
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '$_annualLeaveUsed',
-                        style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: Theme.of(context).textTheme.headlineMedium?.color,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            if (hasZeroBalance)
-              Padding(
-                padding: const EdgeInsets.only(top: 12.0),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.warning_amber_rounded,
-                      color: Colors.orange,
-                      size: 16,
+            // Annual Leave Section
+            Padding(
+              padding: const EdgeInsets.only(bottom: 16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Annual Leave',
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
                     ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'No days remaining. Only future holidays count toward used days. Update balance in Settings > Holidays & Leave.',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Colors.orange.shade700,
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Text(
+                              'Remaining',
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '$_annualLeaveRemaining',
+                              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: hasZeroAnnualLeave ? Colors.orange : primaryColor,
+                              ),
+                            ),
+                          ],
                         ),
+                      ),
+                      Container(
+                        width: 1,
+                        height: 40,
+                        color: Theme.of(context).dividerColor,
+                      ),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Text(
+                              'Used (Future)',
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '$_annualLeaveUsed',
+                              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: Theme.of(context).textTheme.headlineMedium?.color,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (hasZeroAnnualLeave)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 12.0),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.warning_amber_rounded,
+                            color: Colors.orange,
+                            size: 16,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'No days remaining. Only future holidays count toward used days.',
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: Colors.orange.shade700,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            // Divider between sections
+            const Divider(height: 24),
+            // Days In Lieu Section
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Days In Lieu',
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Text(
+                            'Remaining',
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '$_daysInLieuRemaining',
+                            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: hasZeroDaysInLieu ? Colors.orange : dayInLieuColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      width: 1,
+                      height: 40,
+                      color: Theme.of(context).dividerColor,
+                    ),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Text(
+                            'Used',
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '$_daysInLieuUsed',
+                            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: Theme.of(context).textTheme.headlineMedium?.color,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
                 ),
+                if (hasZeroDaysInLieu)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 12.0),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.warning_amber_rounded,
+                          color: Colors.orange,
+                          size: 16,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'No days remaining.',
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Colors.orange.shade700,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+            // Common message at bottom
+            Padding(
+              padding: const EdgeInsets.only(top: 16.0),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.info_outline,
+                    size: 16,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Update balances in Settings > Holidays & Leave.',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                ],
               ),
+            ),
           ],
         ),
       ),
