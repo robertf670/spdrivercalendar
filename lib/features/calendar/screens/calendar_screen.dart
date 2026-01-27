@@ -4416,47 +4416,6 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
               const Divider(height: 1),
               const SizedBox(height: 16),
             ],
-            if (event.hasLateBreak) ...[
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade100,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Current Status:', 
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Icon(
-                          event.tookFullBreak 
-                              ? Icons.free_breakfast
-                              : Icons.monetization_on,
-                          size: 16,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          event.tookFullBreak 
-                              ? 'Full Break Taken'
-                              : 'Overtime (${event.overtimeDuration} mins)', 
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-              const Divider(height: 1),
-              const SizedBox(height: 16),
-            ],
             if (event.hasLateFinish) ...[
               Container(
                 padding: const EdgeInsets.all(12),
@@ -4574,8 +4533,10 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
               ),
               child: const Text('Remove'),
             ),
-          TextButton(
-            onPressed: () async {
+          // Only show Full Break button if no break status is set
+          if (!event.hasLateBreak)
+            TextButton(
+              onPressed: () async {
                 // Save the old event for update
                 final oldEvent = Event(
                   id: event.id,
@@ -4598,49 +4559,51 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                   lateFinishDuration: event.lateFinishDuration,
                 );
               
-              // Update event with Full Break option
-              event.hasLateBreak = true;
-              event.tookFullBreak = true;
-              event.overtimeDuration = null;
-              
-              // Save the updated event
-              await EventService.updateEvent(oldEvent, event);
-              
-              // Close the dialog
-              Navigator.of(context).pop();
-              
-              // Update the UI
-              setState(() {});
-              
-              // Show confirmation
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Full Break status saved'),
-                  duration: Duration(seconds: 2),
-                ),
-              );
-              
-              // Force refresh of the event cards
-              _editEvent(Event(
-                id: 'refresh_trigger',
-                title: '',
-                startDate: DateTime.now(),
-                startTime: const TimeOfDay(hour: 0, minute: 0),
-                endDate: DateTime.now(),
-                endTime: const TimeOfDay(hour: 0, minute: 0),
-                busAssignments: {},
-              ));
-            },
-            child: const Text('Full Break'),
-          ),
-          TextButton(
-            onPressed: () {
-              // Close current dialog and show overtime selection dialog
-              Navigator.of(context).pop();
-              _showOvertimeSelectionDialog(event);
-            },
-            child: const Text('Overtime'),
-          ),
+                // Update event with Full Break option
+                event.hasLateBreak = true;
+                event.tookFullBreak = true;
+                event.overtimeDuration = null;
+                
+                // Save the updated event
+                await EventService.updateEvent(oldEvent, event);
+                
+                // Close the dialog
+                Navigator.of(context).pop();
+                
+                // Update the UI
+                setState(() {});
+                
+                // Show confirmation
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Full Break status saved'),
+                    duration: Duration(seconds: 2),
+                  ),
+                );
+                
+                // Force refresh of the event cards
+                _editEvent(Event(
+                  id: 'refresh_trigger',
+                  title: '',
+                  startDate: DateTime.now(),
+                  startTime: const TimeOfDay(hour: 0, minute: 0),
+                  endDate: DateTime.now(),
+                  endTime: const TimeOfDay(hour: 0, minute: 0),
+                  busAssignments: {},
+                ));
+              },
+              child: const Text('Full Break'),
+            ),
+          // Only show Overtime button if no break status is set
+          if (!event.hasLateBreak)
+            TextButton(
+              onPressed: () {
+                // Close current dialog and show overtime selection dialog
+                Navigator.of(context).pop();
+                _showOvertimeSelectionDialog(event);
+              },
+              child: const Text('Overtime'),
+            ),
           const SizedBox(height: 8),
           const Divider(height: 1),
           const SizedBox(height: 8),
@@ -4708,14 +4671,16 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
               ),
               child: const Text('Remove Late Finish'),
             ),
-          TextButton(
-            onPressed: () {
-              // Close current dialog and show late finish selection dialog
-              Navigator.of(context).pop();
-              _showLateFinishSelectionDialog(event);
-            },
-            child: const Text('Late Finish'),
-          ),
+          // Only show Late Finish button if not already set
+          if (!event.hasLateFinish)
+            TextButton(
+              onPressed: () {
+                // Close current dialog and show late finish selection dialog
+                Navigator.of(context).pop();
+                _showLateFinishSelectionDialog(event);
+              },
+              child: const Text('Late Finish'),
+            ),
         ],
       ),
     );
@@ -5004,7 +4969,6 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
           actions: [
             TextButton(
               onPressed: () {
-                customMinutesController.dispose();
                 Navigator.of(context).pop();
               },
               child: const Text('Cancel'),
@@ -5060,13 +5024,10 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                 event.hasLateFinish = true;
                 event.lateFinishDuration = finalDuration;
                 
-                // Dispose controller
-                customMinutesController.dispose();
-                
                 // Save the updated event
                 await EventService.updateEvent(oldEvent, event);
                 
-                // Close the dialog
+                // Close the dialog (controller will be disposed in .then() callback)
                 Navigator.of(context).pop();
                 
                 // Update the UI
@@ -5096,7 +5057,16 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
           ],
         ),
       ),
-    );
+    ).then((_) {
+      // Dispose controller after dialog is fully closed (with small delay to ensure rebuild is complete)
+      Future.delayed(const Duration(milliseconds: 100), () {
+        try {
+          customMinutesController.dispose();
+        } catch (e) {
+          // Controller already disposed or error, ignore
+        }
+      });
+    });
   }
 
   void _showSickDayStatusDialog(Event event) {

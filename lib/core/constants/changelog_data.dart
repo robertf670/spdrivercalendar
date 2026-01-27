@@ -4,6 +4,10 @@ final Map<String, List<Map<String, String>>> changelogData = {
       'title': 'Sick Day Status for Spare Duties',
       'description': 'Added ability to mark spare duties as sick days. Users can now add Normal Sick, Self-Certified, or Force Majeure status to spare shifts directly from the spare shift dialog. Sick day status is properly tracked and displayed on spare duty event cards.',
     },
+    {
+      'title': 'Consistent Break & Finish Dialogs',
+      'description': 'Standardized break status and late finish dialogs across all shift types. Spare duties and regular work shifts now have identical functionality with improved UX: red remove buttons, prevention of duplicate entries, and consistent late finish tracking.',
+    },
   ],
   '2.19.0': [
     {
