@@ -8,6 +8,7 @@ import 'package:spdrivercalendar/core/constants/app_constants.dart';
 import 'package:spdrivercalendar/features/settings/screens/settings_screen.dart' show kNotificationsEnabledKey, kNotificationOffsetHoursKey;
 import 'package:path_provider/path_provider.dart'; // Added for auto-backup
 import 'package:spdrivercalendar/services/color_customization_service.dart';
+import 'package:share_plus/share_plus.dart';
 
 class BackupService {
   // --- Auto-Backup Configuration ---
@@ -49,13 +50,17 @@ class BackupService {
       final Uint8List backupBytes = utf8.encode(backupJson);
 
       // Ask user where to save the file, providing the bytes directly
-      // saveFile returns null on mobile when bytes are provided and saving is successful.
-      await FilePicker.platform.saveFile(
-        dialogTitle: 'Save Backup File',
-        fileName: 'spdrivercalendar_backup.json',
-        type: FileType.custom,
-        allowedExtensions: ['json'],
-        bytes: backupBytes, // Pass the bytes directly
+      // Note: saveFile may not be available in file_picker 10.x, using share_plus as alternative
+      // For now, we'll save to a temporary location and use share functionality
+      final tempDir = await getTemporaryDirectory();
+      final tempFile = File('${tempDir.path}/spdrivercalendar_backup.json');
+      await tempFile.writeAsBytes(backupBytes);
+      
+      // Use share_plus to share/save the file
+      await Share.shareXFiles(
+        [XFile(tempFile.path)],
+        text: 'Backup file',
+        subject: 'SP Driver Calendar Backup',
       );
 
       // On mobile, if bytes are provided, success is indicated by a null return value.
@@ -166,7 +171,7 @@ class BackupService {
           type: FileType.any, // Keep FileType.any
         );
 
-        if (result == null || result.files.single.path == null) {
+        if (result == null || result.files.isEmpty || result.files.single.path == null) {
 
           return false; // User cancelled the picker
         }
