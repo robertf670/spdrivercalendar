@@ -50,8 +50,7 @@ class BackupService {
 
       // Ask user where to save the file, providing the bytes directly
       // saveFile returns null on mobile when bytes are provided and saving is successful.
-      final filePicker = FilePicker.platform;
-      await filePicker.saveFile(
+      await FilePicker.platform.saveFile(
         dialogTitle: 'Save Backup File',
         fileName: 'spdrivercalendar_backup.json',
         type: FileType.custom,
@@ -162,8 +161,7 @@ class BackupService {
         filePath = filePathToRestore;
       } else {
         // Ask user to pick the backup file (original manual restore behavior)
-        final filePicker = FilePicker.platform;
-        FilePickerResult? result = await filePicker.pickFiles(
+        FilePickerResult? result = await FilePicker.platform.pickFiles(
           dialogTitle: 'Select Backup File',
           type: FileType.any, // Keep FileType.any
         );

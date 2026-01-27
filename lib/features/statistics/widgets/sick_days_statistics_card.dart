@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:spdrivercalendar/theme/app_theme.dart';
 import 'time_range_selector.dart';
+import '../../../services/self_certified_sick_days_service.dart';
 
 class SickDaysStatisticsCard extends StatelessWidget {
   final Map<String, dynamic> sickStats;
@@ -140,10 +141,11 @@ class SickDaysStatisticsCard extends StatelessWidget {
           '$normal${total > 0 ? ' ($normalPercent%)' : ''}', 
           Colors.blue,
         ),
-        _buildSickStatRow(
-          'Self-Certified', 
-          '$selfCertified${total > 0 ? ' ($selfCertPercent%)' : ''}', 
-          Colors.orange,
+        _buildSelfCertifiedRow(
+          context,
+          selfCertified,
+          total > 0 ? selfCertPercent : 0,
+          currentRange,
         ),
         _buildSickStatRow(
           'Force Majeure', 
@@ -282,6 +284,227 @@ class SickDaysStatisticsCard extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildSelfCertifiedRow(
+    BuildContext context,
+    int selfCertified,
+    int selfCertPercent,
+    String currentRange,
+  ) {
+    // Always show tracking info for current year
+    final year = DateTime.now().year;
+
+    return FutureBuilder<Map<String, dynamic>>(
+      future: SelfCertifiedSickDaysService.getStatistics(year),
+      builder: (context, snapshot) {
+        // Get all tracking data
+        final firstHalf = snapshot.hasData 
+            ? (snapshot.data!['firstHalf'] as Map<String, dynamic>? ?? {})
+            : {'used': 0, 'remaining': 2, 'limit': 2};
+        final secondHalf = snapshot.hasData
+            ? (snapshot.data!['secondHalf'] as Map<String, dynamic>? ?? {})
+            : {'used': 0, 'remaining': 2, 'limit': 2};
+        final yearStats = snapshot.hasData
+            ? (snapshot.data!['year'] as Map<String, dynamic>? ?? {})
+            : {'used': 0, 'remaining': 4, 'limit': 4};
+
+        final firstHalfUsed = firstHalf['used'] as int? ?? 0;
+        final firstHalfLimit = firstHalf['limit'] as int? ?? 2;
+        final firstHalfRemaining = firstHalf['remaining'] as int? ?? 2;
+        
+        final secondHalfUsed = secondHalf['used'] as int? ?? 0;
+        final secondHalfLimit = secondHalf['limit'] as int? ?? 2;
+        final secondHalfRemaining = secondHalf['remaining'] as int? ?? 2;
+        
+        final yearUsed = yearStats['used'] as int? ?? 0;
+        final yearLimit = yearStats['limit'] as int? ?? 4;
+        final yearRemaining = yearStats['remaining'] as int? ?? 4;
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Main row with count
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Self-Certified',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.normal,
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 4.0),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(12.0),
+                    ),
+                    child: Text(
+                      '$selfCertified${selfCertPercent > 0 ? ' ($selfCertPercent%)' : ''}',
+                      style: TextStyle(
+                        color: Colors.orange,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              // Breakdown section
+              Padding(
+                padding: const EdgeInsets.only(top: 8.0, left: 4.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Limits:',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: Theme.of(context).textTheme.bodySmall?.color,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    // Responsive layout - stack on small screens, row on larger screens
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        final isSmallScreen = constraints.maxWidth < 300;
+                        
+                        if (isSmallScreen) {
+                          // Stack vertically on small screens
+                          return Column(
+                            children: [
+                              _buildLimitItem(
+                                context,
+                                'Jan-Jun',
+                                firstHalfUsed,
+                                firstHalfLimit,
+                                firstHalfRemaining,
+                              ),
+                              const SizedBox(height: 6),
+                              _buildLimitItem(
+                                context,
+                                'Jul-Dec',
+                                secondHalfUsed,
+                                secondHalfLimit,
+                                secondHalfRemaining,
+                              ),
+                              const SizedBox(height: 6),
+                              _buildLimitItem(
+                                context,
+                                'Year Total',
+                                yearUsed,
+                                yearLimit,
+                                yearRemaining,
+                                isTotal: true,
+                              ),
+                            ],
+                          );
+                        } else {
+                          // Row layout on larger screens
+                          return Row(
+                            children: [
+                              Expanded(
+                                child: _buildLimitItem(
+                                  context,
+                                  'Jan-Jun',
+                                  firstHalfUsed,
+                                  firstHalfLimit,
+                                  firstHalfRemaining,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: _buildLimitItem(
+                                  context,
+                                  'Jul-Dec',
+                                  secondHalfUsed,
+                                  secondHalfLimit,
+                                  secondHalfRemaining,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: _buildLimitItem(
+                                  context,
+                                  'Year Total',
+                                  yearUsed,
+                                  yearLimit,
+                                  yearRemaining,
+                                  isTotal: true,
+                                ),
+                              ),
+                            ],
+                          );
+                        }
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildLimitItem(
+    BuildContext context,
+    String label,
+    int used,
+    int limit,
+    int remaining, {
+    bool isTotal = false,
+  }) {
+    final isAtLimit = used >= limit;
+    final color = isAtLimit ? Colors.orange.shade700 : Theme.of(context).textTheme.bodySmall?.color ?? Colors.grey;
+    
+    return Container(
+      padding: const EdgeInsets.all(6.0),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+        borderRadius: BorderRadius.circular(8.0),
+        border: isAtLimit 
+            ? Border.all(color: Colors.orange.withValues(alpha: 0.5), width: 1)
+            : null,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w500,
+              color: color,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            '$used/$limit',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+          if (remaining > 0 && !isAtLimit)
+            Text(
+              '$remaining left',
+              style: TextStyle(
+                fontSize: 9,
+                color: Theme.of(context).textTheme.bodySmall?.color,
+              ),
+            ),
+        ],
+      ),
     );
   }
 }

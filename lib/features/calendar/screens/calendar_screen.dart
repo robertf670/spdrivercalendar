@@ -48,6 +48,7 @@ import '../../../services/universal_board_service.dart';
 import '../../../models/universal_board.dart';
 import '../../../services/days_in_lieu_service.dart';
 import '../../../services/annual_leave_service.dart';
+import '../../../services/self_certified_sick_days_service.dart';
 import '../dialogs/days_in_lieu_setup_dialog.dart';
 import '../dialogs/annual_leave_setup_dialog.dart';
 
@@ -5267,6 +5268,75 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
           ),
           TextButton(
             onPressed: () async {
+              // Check if this is already self-certified (no need to check limits)
+              if (event.sickDayType == 'self-certified') {
+                Navigator.of(context).pop();
+                return;
+              }
+
+              // Get year and half-year info
+              final year = event.startDate.year;
+              final halfYear = SelfCertifiedSickDaysService.getHalfYear(event.startDate);
+                final halfYearName = halfYear == 'first' ? 'First Half (Jan-Jun)' : 'Second Half (Jul-Dec)';
+              
+              // Check limits before allowing self-certified
+              final canAddHalfYear = await SelfCertifiedSickDaysService.canAddSelfCertifiedDay(event.startDate);
+              final canAddYearly = await SelfCertifiedSickDaysService.canAddSelfCertifiedDayYearly(event.startDate);
+              
+              if (!canAddHalfYear || !canAddYearly) {
+                // Show warning dialog
+                final halfYearCount = await SelfCertifiedSickDaysService.getCountForHalfYear(year, halfYear);
+                final yearlyCount = await SelfCertifiedSickDaysService.getCountForYear(year);
+                
+                String warningMessage;
+                if (!canAddHalfYear && !canAddYearly) {
+                  warningMessage = 'You have already used your limit of 2 self-certified days in the $halfYearName and 4 for the year. You cannot add more self-certified days.';
+                } else if (!canAddHalfYear) {
+                  warningMessage = 'You have already used your limit of 2 self-certified days in the $halfYearName. You cannot add more self-certified days for this half-year.';
+                } else {
+                  warningMessage = 'You have already used your limit of 4 self-certified days for the year. You cannot add more self-certified days.';
+                }
+                
+                if (context.mounted) {
+                  showDialog(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: Row(
+                        children: [
+                          const Icon(Icons.warning_amber_rounded, color: Colors.orange),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: const Text('Self-Certified Limit Reached'),
+                          ),
+                        ],
+                      ),
+                      content: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(warningMessage),
+                          const SizedBox(height: 16),
+                          Text(
+                            'Current usage:',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: 8),
+                          Text('$halfYearName: $halfYearCount/2'),
+                          Text('Year total: $yearlyCount/4'),
+                        ],
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          child: const Text('OK'),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+                return;
+              }
+              
               // Save the old event for update
               final oldEvent = Event(
                 id: event.id,
@@ -5301,11 +5371,14 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
               // Update the UI
               setState(() {});
               
-              // Show confirmation
+              // Show confirmation with remaining count
+              final remainingHalfYear = await SelfCertifiedSickDaysService.getRemainingForHalfYear(year, halfYear);
+              final remainingYearly = await SelfCertifiedSickDaysService.getRemainingForYear(year);
+              
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Self-Certified Sick Day saved'),
-                  duration: Duration(seconds: 2),
+                SnackBar(
+                  content: Text('Self-Certified Sick Day saved. Remaining: $remainingHalfYear in $halfYearName, $remainingYearly for year.'),
+                  duration: const Duration(seconds: 3),
                 ),
               );
             },
@@ -7038,6 +7111,50 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
     );
   }
 
+  Future<Map<String, int>> _getHolidayBalances() async {
+    final annualLeaveBalance = await AnnualLeaveService.getBalance();
+    final annualLeaveRemaining = await AnnualLeaveService.getRemainingDays();
+    final annualLeaveUsed = await AnnualLeaveService.getUsedDays();
+    final daysInLieuBalance = await DaysInLieuService.getBalance();
+    final daysInLieuRemaining = await DaysInLieuService.getRemainingDays();
+    final daysInLieuUsed = await DaysInLieuService.getUsedDays();
+    
+    return {
+      'annualLeaveToday': annualLeaveBalance,
+      'annualLeaveRemaining': annualLeaveRemaining,
+      'annualLeaveBooked': annualLeaveUsed,
+      'daysInLieuToday': daysInLieuBalance,
+      'daysInLieuRemaining': daysInLieuRemaining,
+      'daysInLieuBooked': daysInLieuUsed,
+    };
+  }
+
+  Widget _buildBalanceItem(String label, int value, Color color) {
+    return Expanded(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 10,
+              color: Theme.of(context).textTheme.bodySmall?.color,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            '$value',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showAddHolidaysDialog() {
     final scrollController = ScrollController();
     
@@ -7083,6 +7200,121 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                   ),
                 ),
                 const Divider(height: 0),
+                // Balance display (compact)
+                FutureBuilder<Map<String, int>>(
+                  future: _getHolidayBalances(),
+                  builder: (context, snapshot) {
+                    if (!snapshot.hasData) {
+                      return const SizedBox.shrink();
+                    }
+                    final balances = snapshot.data!;
+                    final primaryColor = Theme.of(context).colorScheme.primary;
+                    final dayInLieuColor = ColorCustomizationService.getColorForShift('DAY_IN_LIEU');
+                    
+                    return Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                        border: Border(
+                          bottom: BorderSide(
+                            color: Theme.of(context).dividerColor.withValues(alpha: 0.3),
+                            width: 1,
+                          ),
+                        ),
+                      ),
+                      child: Column(
+                        children: [
+                          // Annual Leave
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      'Annual Leave',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                        color: Theme.of(context).textTheme.bodyMedium?.color,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                                      children: [
+                                        _buildBalanceItem('Today', balances['annualLeaveToday']!, primaryColor),
+                                        Container(
+                                          width: 1,
+                                          height: 20,
+                                          color: Theme.of(context).dividerColor.withValues(alpha: 0.3),
+                                        ),
+                                        _buildBalanceItem('Remaining', balances['annualLeaveRemaining']!, primaryColor),
+                                        Container(
+                                          width: 1,
+                                          height: 20,
+                                          color: Theme.of(context).dividerColor.withValues(alpha: 0.3),
+                                        ),
+                                        _buildBalanceItem('Booked', balances['annualLeaveBooked']!, Theme.of(context).textTheme.bodyMedium?.color ?? Colors.grey),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Container(
+                            height: 1,
+                            color: Theme.of(context).dividerColor.withValues(alpha: 0.3),
+                          ),
+                          const SizedBox(height: 8),
+                          // Days In Lieu
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      'Days In Lieu',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                        color: Theme.of(context).textTheme.bodyMedium?.color,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                                      children: [
+                                        _buildBalanceItem('Today', balances['daysInLieuToday']!, dayInLieuColor),
+                                        Container(
+                                          width: 1,
+                                          height: 20,
+                                          color: Theme.of(context).dividerColor.withValues(alpha: 0.3),
+                                        ),
+                                        _buildBalanceItem('Remaining', balances['daysInLieuRemaining']!, dayInLieuColor),
+                                        Container(
+                                          width: 1,
+                                          height: 20,
+                                          color: Theme.of(context).dividerColor.withValues(alpha: 0.3),
+                                        ),
+                                        _buildBalanceItem('Booked', balances['daysInLieuBooked']!, Theme.of(context).textTheme.bodyMedium?.color ?? Colors.grey),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
                 // Add new holiday section (static at top)
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),

@@ -37,6 +37,18 @@ final Map<String, List<Map<String, String>>> changelogData = {
       'description': 'Rest days now show "R" on the calendar even when holidays are entered. Sick day codes (S, SC, FM) are also displayed on calendar days.',
     },
     {
+      'title': 'Holiday Balance "Today" Feature',
+      'description': 'Added "Today" figure to holiday balance display showing current balance before future bookings are deducted.',
+    },
+    {
+      'title': 'Holiday Balance in Add Holidays Dialog',
+      'description': 'Added compact holiday balance display in Add Holidays dialog showing Today, Remaining, and Booked figures for both Annual Leave and Days In Lieu.',
+    },
+    {
+      'title': 'Self-Certified Sick Days Tracking',
+      'description': 'Added tracking for self-certified sick days with limits: 4 per year (2 per half-year). Shows breakdown of Jan-Jun, Jul-Dec, and Year Total limits in Sick Days Statistics.',
+    },
+    {
       'title': 'Merged Statistics Sections',
       'description': 'Combined Holiday Days Statistics with Holiday Balance into one section. Merged Shift Type Distribution pie chart with Shift Type Summary statistics for easier viewing.',
     },

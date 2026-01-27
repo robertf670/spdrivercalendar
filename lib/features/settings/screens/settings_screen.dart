@@ -940,9 +940,10 @@ class SettingsScreenState extends State<SettingsScreen> {
               icon: Icons.beach_access,
               iconColor: primaryColor,
               title: 'Annual Leave',
+              balance: _annualLeaveBalance,
               remaining: _annualLeaveRemaining,
               used: _annualLeaveUsed,
-              usedLabel: 'Used (Future)',
+              usedLabel: 'Booked',
               onDecrement: () async {
                 if (_annualLeaveBalance > 0) {
                   await AnnualLeaveService.decrementBalance(1);
@@ -954,7 +955,7 @@ class SettingsScreenState extends State<SettingsScreen> {
                 await _loadAnnualLeaveBalance();
               },
               warningText: _annualLeaveRemaining == 0
-                ? 'No days remaining. Only future holidays count toward used days.'
+                ? 'No days remaining. Only future holidays count toward booked days.'
                 : null,
             ),
             
@@ -973,6 +974,7 @@ class SettingsScreenState extends State<SettingsScreen> {
               icon: Icons.event_available,
               iconColor: dayInLieuColor,
               title: 'Days In Lieu',
+              balance: _daysInLieuBalance,
               remaining: _daysInLieuRemaining,
               used: _daysInLieuUsed,
               onDecrement: () async {
@@ -999,9 +1001,10 @@ class SettingsScreenState extends State<SettingsScreen> {
     required IconData icon,
     required Color iconColor,
     required String title,
+    required int balance,
     required int remaining,
     required int used,
-    String usedLabel = 'Used',
+    String usedLabel = 'Booked',
     required VoidCallback onDecrement,
     required VoidCallback onIncrement,
     String? warningText,
@@ -1036,6 +1039,14 @@ class SettingsScreenState extends State<SettingsScreen> {
         // Stats Row
         Row(
           children: [
+            Expanded(
+              child: _buildStatBox(
+                label: 'Today',
+                value: balance.toString(),
+                valueColor: iconColor,
+              ),
+            ),
+            const SizedBox(width: 12),
             Expanded(
               child: _buildStatBox(
                 label: 'Remaining',

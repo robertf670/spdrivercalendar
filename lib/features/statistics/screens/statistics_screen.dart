@@ -148,10 +148,12 @@ class StatisticsScreenState extends State<StatisticsScreen>
   // Days in lieu balance state
   int _daysInLieuRemaining = 0;
   int _daysInLieuUsed = 0;
+  int _daysInLieuBalance = 0;
 
   // Annual leave balance state
   int _annualLeaveRemaining = 0;
   int _annualLeaveUsed = 0;
+  int _annualLeaveBalance = 0;
 
   // Expandable sections state
   final Map<String, bool> _expandedSections = {
@@ -291,10 +293,12 @@ class StatisticsScreenState extends State<StatisticsScreen>
   }
 
   Future<void> _loadDaysInLieuBalance() async {
+    final balance = await DaysInLieuService.getBalance();
     final remaining = await DaysInLieuService.getRemainingDays();
     final used = await DaysInLieuService.getUsedDays();
     if (mounted) {
       setState(() {
+        _daysInLieuBalance = balance;
         _daysInLieuRemaining = remaining;
         _daysInLieuUsed = used;
       });
@@ -302,10 +306,12 @@ class StatisticsScreenState extends State<StatisticsScreen>
   }
 
   Future<void> _loadAnnualLeaveBalance() async {
+    final balance = await AnnualLeaveService.getBalance();
     final remaining = await AnnualLeaveService.getRemainingDays();
     final used = await AnnualLeaveService.getUsedDays();
     if (mounted) {
       setState(() {
+        _annualLeaveBalance = balance;
         _annualLeaveRemaining = remaining;
         _annualLeaveUsed = used;
       });
@@ -2725,6 +2731,30 @@ class StatisticsScreenState extends State<StatisticsScreen>
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
                             Text(
+                              'Today',
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '$_annualLeaveBalance',
+                              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: primaryColor,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        width: 1,
+                        height: 40,
+                        color: Theme.of(context).dividerColor,
+                      ),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Text(
                               'Remaining',
                               style: Theme.of(context).textTheme.bodySmall,
                             ),
@@ -2749,7 +2779,7 @@ class StatisticsScreenState extends State<StatisticsScreen>
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
                             Text(
-                              'Used (Future)',
+                              'Booked',
                               style: Theme.of(context).textTheme.bodySmall,
                             ),
                             const SizedBox(height: 4),
@@ -2778,7 +2808,7 @@ class StatisticsScreenState extends State<StatisticsScreen>
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              'No days remaining. Only future holidays count toward used days.',
+                              'No days remaining. Only future holidays count toward booked days.',
                               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                 color: Colors.orange.shade700,
                               ),
@@ -2811,6 +2841,30 @@ class StatisticsScreenState extends State<StatisticsScreen>
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                           Text(
+                            'Today',
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '$_daysInLieuBalance',
+                            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: dayInLieuColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      width: 1,
+                      height: 40,
+                      color: Theme.of(context).dividerColor,
+                    ),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Text(
                             'Remaining',
                             style: Theme.of(context).textTheme.bodySmall,
                           ),
@@ -2835,7 +2889,7 @@ class StatisticsScreenState extends State<StatisticsScreen>
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                           Text(
-                            'Used',
+                            'Booked',
                             style: Theme.of(context).textTheme.bodySmall,
                           ),
                           const SizedBox(height: 4),
