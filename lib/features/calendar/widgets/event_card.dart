@@ -13,6 +13,7 @@ import 'package:spdrivercalendar/services/bus_tracking_service.dart';
 import 'package:spdrivercalendar/services/color_customization_service.dart';
 import 'package:spdrivercalendar/core/services/storage_service.dart';
 import 'package:spdrivercalendar/core/constants/app_constants.dart';
+import 'package:spdrivercalendar/services/self_certified_sick_days_service.dart';
 
 class EventCard extends StatefulWidget {
   final Event event;
@@ -3489,6 +3490,17 @@ class _EventCardState extends State<EventCard> {
               },
               child: const Text('Break & Finish'),
             ),
+          // Add Sick Day Status button for work shifts (including spare duties)
+          if (widget.event.isWorkShift)
+            TextButton(
+              onPressed: () {
+                // Close the current dialog
+                Navigator.of(context).pop();
+                // Show sick day status dialog
+                _showSickDayStatusDialog(context);
+              },
+              child: const Text('Sick Day Status'),
+            ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(), // Simple close action
             child: const Text('Close'),
@@ -4282,7 +4294,7 @@ class _EventCardState extends State<EventCard> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      'Current Status:',
+                      'Current Break Status:',
                       style: TextStyle(fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 4),
@@ -4295,10 +4307,46 @@ class _EventCardState extends State<EventCard> {
                 ),
               ),
               const SizedBox(height: 16),
+              const Divider(height: 1),
+              const SizedBox(height: 16),
+            ],
+            if (widget.event.hasLateFinish) ...[
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Current Late Finish Status:',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.schedule,
+                          size: 16,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Late Finish: ${widget.event.lateFinishDuration} mins',
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Divider(height: 1),
+              const SizedBox(height: 16),
             ],
             const Text(
-              'Select break status for this spare duty:',
-              style: TextStyle(fontSize: 16),
+              'Select an option:',
+              style: TextStyle(fontSize: 14),
             ),
           ],
         ),
@@ -4350,6 +4398,17 @@ class _EventCardState extends State<EventCard> {
                 // Update the UI
                 setState(() {});
                 
+                // Trigger refresh
+                widget.onEdit(Event(
+                  id: 'refresh_trigger',
+                  title: '',
+                  startDate: widget.event.startDate,
+                  startTime: widget.event.startTime,
+                  endDate: widget.event.endDate,
+                  endTime: widget.event.endTime,
+                  busAssignments: {},
+                ));
+                
                 // Show confirmation
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
@@ -4358,10 +4417,15 @@ class _EventCardState extends State<EventCard> {
                   ),
                 );
               },
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.red,
+              ),
               child: const Text('Remove'),
             ),
-          TextButton(
-            onPressed: () async {
+          // Only show Full Break button if no break status is set
+          if (!widget.event.hasLateBreak)
+            TextButton(
+              onPressed: () async {
               // Save the old event for update
               final oldEvent = Event(
                 id: widget.event.id,
@@ -4373,13 +4437,17 @@ class _EventCardState extends State<EventCard> {
                 workTime: widget.event.workTime,
                 breakStartTime: widget.event.breakStartTime,
                 breakEndTime: widget.event.breakEndTime,
-                assignedDuties: widget.event.assignedDuties,
+                assignedDuties: widget.event.assignedDuties?.map((d) => d).toList(),
+                enhancedAssignedDuties: widget.event.enhancedAssignedDuties?.map((d) => d.copyWith()).toList(),
                 firstHalfBus: widget.event.firstHalfBus,
                 secondHalfBus: widget.event.secondHalfBus,
+                busAssignments: widget.event.busAssignments?.map((k, v) => MapEntry(k, v)),
                 notes: widget.event.notes,
                 hasLateBreak: widget.event.hasLateBreak,
                 tookFullBreak: widget.event.tookFullBreak,
                 overtimeDuration: widget.event.overtimeDuration,
+                hasLateFinish: widget.event.hasLateFinish,
+                lateFinishDuration: widget.event.lateFinishDuration,
               );
               
               // Update event with Full Break option
@@ -4396,6 +4464,17 @@ class _EventCardState extends State<EventCard> {
               // Update the UI
               setState(() {});
               
+              // Trigger refresh
+              widget.onEdit(Event(
+                id: 'refresh_trigger',
+                title: '',
+                startDate: widget.event.startDate,
+                startTime: widget.event.startTime,
+                endDate: widget.event.endDate,
+                endTime: widget.event.endTime,
+                busAssignments: {},
+              ));
+              
               // Show confirmation
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
@@ -4406,13 +4485,478 @@ class _EventCardState extends State<EventCard> {
             },
             child: const Text('Full Break'),
           ),
+          // Only show Overtime button if no break status is set
+          if (!widget.event.hasLateBreak)
+            TextButton(
+              onPressed: () {
+                // Close current dialog and show overtime selection dialog
+                Navigator.of(context).pop();
+                _showOvertimeSelectionDialog(context);
+              },
+              child: const Text('Overtime'),
+            ),
+          const SizedBox(height: 8),
+          const Divider(height: 1),
+          const SizedBox(height: 8),
+          // Late Finish buttons
+          if (widget.event.hasLateFinish)
+            TextButton(
+              onPressed: () async {
+                // Save the old event for update
+                final oldEvent = Event(
+                  id: widget.event.id,
+                  title: widget.event.title,
+                  startDate: widget.event.startDate,
+                  startTime: widget.event.startTime,
+                  endDate: widget.event.endDate,
+                  endTime: widget.event.endTime,
+                  workTime: widget.event.workTime,
+                  breakStartTime: widget.event.breakStartTime,
+                  breakEndTime: widget.event.breakEndTime,
+                  assignedDuties: widget.event.assignedDuties?.map((d) => d).toList(),
+                  enhancedAssignedDuties: widget.event.enhancedAssignedDuties?.map((d) => d.copyWith()).toList(),
+                  firstHalfBus: widget.event.firstHalfBus,
+                  secondHalfBus: widget.event.secondHalfBus,
+                  busAssignments: widget.event.busAssignments?.map((k, v) => MapEntry(k, v)),
+                  notes: widget.event.notes,
+                  hasLateBreak: widget.event.hasLateBreak,
+                  tookFullBreak: widget.event.tookFullBreak,
+                  overtimeDuration: widget.event.overtimeDuration,
+                  hasLateFinish: widget.event.hasLateFinish,
+                  lateFinishDuration: widget.event.lateFinishDuration,
+                );
+                
+                // Reset late finish status
+                widget.event.hasLateFinish = false;
+                widget.event.lateFinishDuration = null;
+                
+                // Save the updated event
+                await EventService.updateEvent(oldEvent, widget.event);
+                
+                // Close the dialog
+                Navigator.of(context).pop();
+                
+                // Update the UI
+                setState(() {});
+                
+                // Trigger refresh
+                widget.onEdit(Event(
+                  id: 'refresh_trigger',
+                  title: '',
+                  startDate: widget.event.startDate,
+                  startTime: widget.event.startTime,
+                  endDate: widget.event.endDate,
+                  endTime: widget.event.endTime,
+                  busAssignments: {},
+                ));
+                
+                // Show confirmation
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Late finish status removed'),
+                    duration: Duration(seconds: 2),
+                  ),
+                );
+              },
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.red,
+              ),
+              child: const Text('Remove Late Finish'),
+            ),
+          // Only show Late Finish button if not already set
+          if (!widget.event.hasLateFinish)
+            TextButton(
+              onPressed: () {
+                // Close current dialog and show late finish selection dialog
+                Navigator.of(context).pop();
+                _showLateFinishSelectionDialog(context);
+              },
+              child: const Text('Late Finish'),
+            ),
+        ],
+      ),
+    );
+  }
+
+  // Show sick day status dialog for spare duties
+  void _showSickDayStatusDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.medical_services, color: Colors.orange),
+            SizedBox(width: 8),
+            Text('Sick Day Status'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (widget.event.sickDayType != null) ...[
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.orange.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Current Status:', 
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.medical_services,
+                          size: 16,
+                          color: Colors.orange.shade700,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          _getSickDayTypeLabel(widget.event.sickDayType!),
+                          style: TextStyle(
+                            color: Colors.orange.shade900,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Divider(height: 1),
+              const SizedBox(height: 16),
+            ],
+            const Text(
+              'Select sick day type:',
+              style: TextStyle(fontSize: 14),
+            ),
+          ],
+        ),
+        actions: [
           TextButton(
             onPressed: () {
-              // Close current dialog and show overtime selection dialog
               Navigator.of(context).pop();
-              _showOvertimeSelectionDialog(context);
             },
-            child: const Text('Overtime'),
+            child: const Text('Cancel'),
+          ),
+          // Clear button if sick day status exists
+          if (widget.event.sickDayType != null)
+            TextButton(
+              onPressed: () async {
+                // Save the old event for update
+                final oldEvent = Event(
+                  id: widget.event.id,
+                  title: widget.event.title,
+                  startDate: widget.event.startDate,
+                  startTime: widget.event.startTime,
+                  endDate: widget.event.endDate,
+                  endTime: widget.event.endTime,
+                  workTime: widget.event.workTime,
+                  breakStartTime: widget.event.breakStartTime,
+                  breakEndTime: widget.event.breakEndTime,
+                  assignedDuties: widget.event.assignedDuties?.map((d) => d).toList(),
+                  enhancedAssignedDuties: widget.event.enhancedAssignedDuties?.map((d) => d.copyWith()).toList(),
+                  firstHalfBus: widget.event.firstHalfBus,
+                  secondHalfBus: widget.event.secondHalfBus,
+                  busAssignments: widget.event.busAssignments?.map((k, v) => MapEntry(k, v)),
+                  notes: widget.event.notes,
+                  hasLateBreak: widget.event.hasLateBreak,
+                  tookFullBreak: widget.event.tookFullBreak,
+                  overtimeDuration: widget.event.overtimeDuration,
+                  sickDayType: widget.event.sickDayType,
+                );
+                
+                // Clear sick day status
+                widget.event.sickDayType = null;
+                
+                // Save the updated event
+                await EventService.updateEvent(oldEvent, widget.event);
+                
+                // Close the dialog
+                Navigator.of(context).pop();
+                
+                // Update the UI
+                setState(() {});
+                
+                // Trigger refresh
+                widget.onEdit(Event(
+                  id: 'refresh_trigger',
+                  title: '',
+                  startDate: widget.event.startDate,
+                  startTime: widget.event.startTime,
+                  endDate: widget.event.endDate,
+                  endTime: widget.event.endTime,
+                  busAssignments: {},
+                ));
+                
+                // Show confirmation
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Sick day status cleared'),
+                    duration: Duration(seconds: 2),
+                  ),
+                );
+              },
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.red,
+              ),
+              child: const Text('Clear'),
+            ),
+          TextButton(
+            onPressed: () async {
+              // Save the old event for update
+              final oldEvent = Event(
+                id: widget.event.id,
+                title: widget.event.title,
+                startDate: widget.event.startDate,
+                startTime: widget.event.startTime,
+                endDate: widget.event.endDate,
+                endTime: widget.event.endTime,
+                workTime: widget.event.workTime,
+                breakStartTime: widget.event.breakStartTime,
+                breakEndTime: widget.event.breakEndTime,
+                assignedDuties: widget.event.assignedDuties?.map((d) => d).toList(),
+                enhancedAssignedDuties: widget.event.enhancedAssignedDuties?.map((d) => d.copyWith()).toList(),
+                firstHalfBus: widget.event.firstHalfBus,
+                secondHalfBus: widget.event.secondHalfBus,
+                busAssignments: widget.event.busAssignments?.map((k, v) => MapEntry(k, v)),
+                notes: widget.event.notes,
+                hasLateBreak: widget.event.hasLateBreak,
+                tookFullBreak: widget.event.tookFullBreak,
+                overtimeDuration: widget.event.overtimeDuration,
+                sickDayType: widget.event.sickDayType,
+              );
+              
+              // Set as Normal Sick
+              widget.event.sickDayType = 'normal';
+              
+              // Save the updated event
+              await EventService.updateEvent(oldEvent, widget.event);
+              
+              // Close the dialog
+              Navigator.of(context).pop();
+              
+              // Update the UI
+              setState(() {});
+              
+              // Trigger refresh
+              widget.onEdit(Event(
+                id: 'refresh_trigger',
+                title: '',
+                startDate: widget.event.startDate,
+                startTime: widget.event.startTime,
+                endDate: widget.event.endDate,
+                endTime: widget.event.endTime,
+                busAssignments: {},
+              ));
+              
+              // Show confirmation
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Normal Sick Day saved'),
+                  duration: Duration(seconds: 2),
+                ),
+              );
+            },
+            child: const Text('Normal Sick'),
+          ),
+          TextButton(
+            onPressed: () async {
+              // Check if this is already self-certified (no need to check limits)
+              if (widget.event.sickDayType == 'self-certified') {
+                Navigator.of(context).pop();
+                return;
+              }
+
+              // Get year and half-year info
+              final year = widget.event.startDate.year;
+              final halfYear = SelfCertifiedSickDaysService.getHalfYear(widget.event.startDate);
+              final halfYearName = halfYear == 'first' ? 'First Half (Jan-Jun)' : 'Second Half (Jul-Dec)';
+              
+              // Check limits before allowing self-certified
+              final canAddHalfYear = await SelfCertifiedSickDaysService.canAddSelfCertifiedDay(widget.event.startDate);
+              final canAddYearly = await SelfCertifiedSickDaysService.canAddSelfCertifiedDayYearly(widget.event.startDate);
+              
+              if (!canAddHalfYear || !canAddYearly) {
+                // Show warning dialog
+                final halfYearCount = await SelfCertifiedSickDaysService.getCountForHalfYear(year, halfYear);
+                final yearlyCount = await SelfCertifiedSickDaysService.getCountForYear(year);
+                
+                String warningMessage;
+                if (!canAddHalfYear && !canAddYearly) {
+                  warningMessage = 'You have already used your limit of 2 self-certified days in the $halfYearName and 4 for the year. You cannot add more self-certified days.';
+                } else if (!canAddHalfYear) {
+                  warningMessage = 'You have already used your limit of 2 self-certified days in the $halfYearName. You cannot add more self-certified days for this half-year.';
+                } else {
+                  warningMessage = 'You have already used your limit of 4 self-certified days for the year. You cannot add more self-certified days.';
+                }
+                
+                if (context.mounted) {
+                  showDialog(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: const Row(
+                        children: [
+                          Icon(Icons.warning_amber_rounded, color: Colors.orange),
+                          SizedBox(width: 8),
+                          Expanded(
+                            child: Text('Self-Certified Limit Reached'),
+                          ),
+                        ],
+                      ),
+                      content: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(warningMessage),
+                          const SizedBox(height: 16),
+                          const Text(
+                            'Current usage:',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: 8),
+                          Text('$halfYearName: $halfYearCount/2'),
+                          Text('Year total: $yearlyCount/4'),
+                        ],
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          child: const Text('OK'),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+                return;
+              }
+              
+              // Save the old event for update
+              final oldEvent = Event(
+                id: widget.event.id,
+                title: widget.event.title,
+                startDate: widget.event.startDate,
+                startTime: widget.event.startTime,
+                endDate: widget.event.endDate,
+                endTime: widget.event.endTime,
+                workTime: widget.event.workTime,
+                breakStartTime: widget.event.breakStartTime,
+                breakEndTime: widget.event.breakEndTime,
+                assignedDuties: widget.event.assignedDuties?.map((d) => d).toList(),
+                enhancedAssignedDuties: widget.event.enhancedAssignedDuties?.map((d) => d.copyWith()).toList(),
+                firstHalfBus: widget.event.firstHalfBus,
+                secondHalfBus: widget.event.secondHalfBus,
+                busAssignments: widget.event.busAssignments?.map((k, v) => MapEntry(k, v)),
+                notes: widget.event.notes,
+                hasLateBreak: widget.event.hasLateBreak,
+                tookFullBreak: widget.event.tookFullBreak,
+                overtimeDuration: widget.event.overtimeDuration,
+                sickDayType: widget.event.sickDayType,
+              );
+              
+              // Set as Self-Certified
+              widget.event.sickDayType = 'self-certified';
+              
+              // Save the updated event
+              await EventService.updateEvent(oldEvent, widget.event);
+              
+              // Close the dialog
+              Navigator.of(context).pop();
+              
+              // Update the UI
+              setState(() {});
+              
+              // Trigger refresh
+              widget.onEdit(Event(
+                id: 'refresh_trigger',
+                title: '',
+                startDate: widget.event.startDate,
+                startTime: widget.event.startTime,
+                endDate: widget.event.endDate,
+                endTime: widget.event.endTime,
+                busAssignments: {},
+              ));
+              
+              // Show confirmation with remaining count
+              final remainingHalfYear = await SelfCertifiedSickDaysService.getRemainingForHalfYear(year, halfYear);
+              final remainingYearly = await SelfCertifiedSickDaysService.getRemainingForYear(year);
+              
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Self-Certified Sick Day saved. Remaining: $remainingHalfYear in $halfYearName, $remainingYearly for year.'),
+                  duration: const Duration(seconds: 3),
+                ),
+              );
+            },
+            child: const Text('Self-Certified'),
+          ),
+          TextButton(
+            onPressed: () async {
+              // Save the old event for update
+              final oldEvent = Event(
+                id: widget.event.id,
+                title: widget.event.title,
+                startDate: widget.event.startDate,
+                startTime: widget.event.startTime,
+                endDate: widget.event.endDate,
+                endTime: widget.event.endTime,
+                workTime: widget.event.workTime,
+                breakStartTime: widget.event.breakStartTime,
+                breakEndTime: widget.event.breakEndTime,
+                assignedDuties: widget.event.assignedDuties?.map((d) => d).toList(),
+                enhancedAssignedDuties: widget.event.enhancedAssignedDuties?.map((d) => d.copyWith()).toList(),
+                firstHalfBus: widget.event.firstHalfBus,
+                secondHalfBus: widget.event.secondHalfBus,
+                busAssignments: widget.event.busAssignments?.map((k, v) => MapEntry(k, v)),
+                notes: widget.event.notes,
+                hasLateBreak: widget.event.hasLateBreak,
+                tookFullBreak: widget.event.tookFullBreak,
+                overtimeDuration: widget.event.overtimeDuration,
+                sickDayType: widget.event.sickDayType,
+              );
+              
+              // Set as Force Majeure
+              widget.event.sickDayType = 'force-majeure';
+              
+              // Save the updated event
+              await EventService.updateEvent(oldEvent, widget.event);
+              
+              // Close the dialog
+              Navigator.of(context).pop();
+              
+              // Update the UI
+              setState(() {});
+              
+              // Trigger refresh
+              widget.onEdit(Event(
+                id: 'refresh_trigger',
+                title: '',
+                startDate: widget.event.startDate,
+                startTime: widget.event.startTime,
+                endDate: widget.event.endDate,
+                endTime: widget.event.endTime,
+                busAssignments: {},
+              ));
+              
+              // Show confirmation
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Force Majeure saved'),
+                  duration: Duration(seconds: 2),
+                ),
+              );
+            },
+            child: const Text('Force Majeure'),
           ),
         ],
       ),
@@ -4435,76 +4979,403 @@ class _EventCardState extends State<EventCard> {
 
   // Show dialog for overtime duration selection
   void _showOvertimeSelectionDialog(BuildContext context) {
+    int selectedDuration = widget.event.overtimeDuration ?? 60; // Default to 60 mins
+    final TextEditingController customMinutesController = TextEditingController(
+      text: widget.event.overtimeDuration?.toString() ?? '',
+    );
+    bool useCustom = false;
+    
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Select Overtime Duration'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('How many minutes of overtime?'),
-            const SizedBox(height: 16),
-            ...([15, 30, 45, 60].map((minutes) => 
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () async {
-                    // Save the old event for update
-                    final oldEvent = Event(
-                      id: widget.event.id,
-                      title: widget.event.title,
-                      startDate: widget.event.startDate,
-                      startTime: widget.event.startTime,
-                      endDate: widget.event.endDate,
-                      endTime: widget.event.endTime,
-                      workTime: widget.event.workTime,
-                      breakStartTime: widget.event.breakStartTime,
-                      breakEndTime: widget.event.breakEndTime,
-                      assignedDuties: widget.event.assignedDuties,
-                      firstHalfBus: widget.event.firstHalfBus,
-                      secondHalfBus: widget.event.secondHalfBus,
-                      notes: widget.event.notes,
-                      hasLateBreak: widget.event.hasLateBreak,
-                      tookFullBreak: widget.event.tookFullBreak,
-                      overtimeDuration: widget.event.overtimeDuration,
-                    );
-                    
-                    // Update event with overtime
-                    widget.event.hasLateBreak = true;
-                    widget.event.tookFullBreak = false;
-                    widget.event.overtimeDuration = minutes;
-                    
-                    // Save the updated event
-                    await EventService.updateEvent(oldEvent, widget.event);
-                    
-                    // Close the dialog
-                    Navigator.of(context).pop();
-                    
-                    // Update the UI
-                    setState(() {});
-                    
-                    // Show confirmation
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('$minutes minutes overtime saved'),
-                        duration: const Duration(seconds: 2),
-                      ),
-                    );
-                  },
-                  child: Text('$minutes minutes'),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.monetization_on, color: Colors.orange),
+              SizedBox(width: 8),
+              Text('Select Overtime'),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Select or enter how many minutes of overtime:',
+                  style: TextStyle(
+                    fontSize: 14,
+                  ),
                 ),
-              ),
-            )),
+                const SizedBox(height: 16),
+                // Dropdown for overtime duration
+                DropdownButtonFormField<int?>(
+                  value: useCustom ? null : selectedDuration,
+                  decoration: const InputDecoration(
+                    labelText: 'Duration (Select)',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: [10, 15, 20, 30, 40, 45, 50, 60, 90, 120].map((int value) {
+                    return DropdownMenuItem<int?>(
+                      value: value,
+                      child: Text('$value mins'),
+                    );
+                  }).toList(),
+                  onChanged: (int? newValue) {
+                    if (newValue != null) {
+                      setState(() {
+                        selectedDuration = newValue;
+                        useCustom = false;
+                        customMinutesController.text = '';
+                      });
+                    }
+                  },
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Or enter custom minutes:',
+                  style: TextStyle(
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                // Text input for custom minutes
+                TextField(
+                  controller: customMinutesController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Minutes',
+                    hintText: 'Enter minutes',
+                    border: OutlineInputBorder(),
+                    suffixText: 'mins',
+                  ),
+                  onChanged: (String value) {
+                    if (value.isNotEmpty) {
+                      final parsed = int.tryParse(value);
+                      if (parsed != null && parsed > 0) {
+                        setState(() {
+                          selectedDuration = parsed;
+                          useCustom = true;
+                        });
+                      } else {
+                        // Invalid input, but keep useCustom true so dropdown clears
+                        setState(() {
+                          useCustom = true;
+                        });
+                      }
+                    } else {
+                      setState(() {
+                        useCustom = false;
+                      });
+                    }
+                  },
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () async {
+                // Validate that we have a valid duration
+                int? finalDuration;
+                if (useCustom && customMinutesController.text.isNotEmpty) {
+                  final parsed = int.tryParse(customMinutesController.text);
+                  if (parsed != null && parsed > 0) {
+                    finalDuration = parsed;
+                  }
+                } else if (!useCustom) {
+                  finalDuration = selectedDuration;
+                }
+                
+                if (finalDuration == null || finalDuration <= 0) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Please enter a valid number of minutes'),
+                      backgroundColor: Colors.red,
+                      duration: Duration(seconds: 2),
+                    ),
+                  );
+                  return;
+                }
+                
+                // Save the old event for update
+                final oldEvent = Event(
+                  id: widget.event.id,
+                  title: widget.event.title,
+                  startDate: widget.event.startDate,
+                  startTime: widget.event.startTime,
+                  endDate: widget.event.endDate,
+                  endTime: widget.event.endTime,
+                  workTime: widget.event.workTime,
+                  breakStartTime: widget.event.breakStartTime,
+                  breakEndTime: widget.event.breakEndTime,
+                  assignedDuties: widget.event.assignedDuties?.map((d) => d).toList(),
+                  enhancedAssignedDuties: widget.event.enhancedAssignedDuties?.map((d) => d.copyWith()).toList(),
+                  firstHalfBus: widget.event.firstHalfBus,
+                  secondHalfBus: widget.event.secondHalfBus,
+                  busAssignments: widget.event.busAssignments?.map((k, v) => MapEntry(k, v)),
+                  notes: widget.event.notes,
+                  hasLateBreak: widget.event.hasLateBreak,
+                  tookFullBreak: widget.event.tookFullBreak,
+                  overtimeDuration: widget.event.overtimeDuration,
+                  hasLateFinish: widget.event.hasLateFinish,
+                  lateFinishDuration: widget.event.lateFinishDuration,
+                );
+                
+                // Update event with Overtime option
+                widget.event.hasLateBreak = true;
+                widget.event.tookFullBreak = false;
+                widget.event.overtimeDuration = finalDuration;
+                
+                // Save the updated event
+                await EventService.updateEvent(oldEvent, widget.event);
+                
+                // Close the dialog (controller will be disposed in .then() callback)
+                Navigator.of(context).pop();
+                
+                // Update the UI
+                setState(() {});
+                
+                // Trigger refresh
+                widget.onEdit(Event(
+                  id: 'refresh_trigger',
+                  title: '',
+                  startDate: widget.event.startDate,
+                  startTime: widget.event.startTime,
+                  endDate: widget.event.endDate,
+                  endTime: widget.event.endTime,
+                  busAssignments: {},
+                ));
+                
+                // Show confirmation
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Overtime ($finalDuration mins) saved'),
+                    duration: const Duration(seconds: 2),
+                  ),
+                );
+              },
+              child: const Text('Save'),
+            ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-        ],
       ),
+    ).then((_) {
+      // Dispose controller after dialog is fully closed (with small delay to ensure rebuild is complete)
+      Future.delayed(const Duration(milliseconds: 100), () {
+        try {
+          customMinutesController.dispose();
+        } catch (e) {
+          // Controller already disposed or error, ignore
+        }
+      });
+    });
+  }
+
+  // Show dialog for late finish duration selection
+  void _showLateFinishSelectionDialog(BuildContext context) {
+    int selectedDuration = widget.event.lateFinishDuration ?? 15; // Default to 15 mins
+    final TextEditingController customMinutesController = TextEditingController(
+      text: widget.event.lateFinishDuration?.toString() ?? '',
     );
+    bool useCustom = false;
+    
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.schedule, color: Colors.orange),
+              SizedBox(width: 8),
+              Text('Select Late Finish'),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Select or enter how many minutes late you finished:',
+                  style: TextStyle(
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                // Dropdown for late finish duration
+                DropdownButtonFormField<int?>(
+                  value: useCustom ? null : selectedDuration,
+                  decoration: const InputDecoration(
+                    labelText: 'Duration (Select)',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: [5, 10, 15, 20, 30, 45, 60, 90, 120].map((int value) {
+                    return DropdownMenuItem<int?>(
+                      value: value,
+                      child: Text('$value mins'),
+                    );
+                  }).toList(),
+                  onChanged: (int? newValue) {
+                    if (newValue != null) {
+                      setState(() {
+                        selectedDuration = newValue;
+                        useCustom = false;
+                        customMinutesController.text = '';
+                      });
+                    }
+                  },
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Or enter custom minutes:',
+                  style: TextStyle(
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                // Text input for custom minutes
+                TextField(
+                  controller: customMinutesController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Minutes',
+                    hintText: 'Enter minutes',
+                    border: OutlineInputBorder(),
+                    suffixText: 'mins',
+                  ),
+                  onChanged: (String value) {
+                    if (value.isNotEmpty) {
+                      final parsed = int.tryParse(value);
+                      if (parsed != null && parsed > 0) {
+                        setState(() {
+                          selectedDuration = parsed;
+                          useCustom = true;
+                        });
+                      } else {
+                        // Invalid input, but keep useCustom true so dropdown clears
+                        setState(() {
+                          useCustom = true;
+                        });
+                      }
+                    } else {
+                      setState(() {
+                        useCustom = false;
+                      });
+                    }
+                  },
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () async {
+                // Validate that we have a valid duration
+                int? finalDuration;
+                if (useCustom && customMinutesController.text.isNotEmpty) {
+                  final parsed = int.tryParse(customMinutesController.text);
+                  if (parsed != null && parsed > 0) {
+                    finalDuration = parsed;
+                  }
+                } else if (!useCustom) {
+                  finalDuration = selectedDuration;
+                }
+                
+                if (finalDuration == null || finalDuration <= 0) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Please enter a valid number of minutes'),
+                      backgroundColor: Colors.red,
+                      duration: Duration(seconds: 2),
+                    ),
+                  );
+                  return;
+                }
+                
+                // Save the old event for update
+                final oldEvent = Event(
+                  id: widget.event.id,
+                  title: widget.event.title,
+                  startDate: widget.event.startDate,
+                  startTime: widget.event.startTime,
+                  endDate: widget.event.endDate,
+                  endTime: widget.event.endTime,
+                  workTime: widget.event.workTime,
+                  breakStartTime: widget.event.breakStartTime,
+                  breakEndTime: widget.event.breakEndTime,
+                  assignedDuties: widget.event.assignedDuties?.map((d) => d).toList(),
+                  enhancedAssignedDuties: widget.event.enhancedAssignedDuties?.map((d) => d.copyWith()).toList(),
+                  busAssignments: widget.event.busAssignments?.map((k, v) => MapEntry(k, v)),
+                  firstHalfBus: widget.event.firstHalfBus,
+                  secondHalfBus: widget.event.secondHalfBus,
+                  notes: widget.event.notes,
+                  hasLateBreak: widget.event.hasLateBreak,
+                  tookFullBreak: widget.event.tookFullBreak,
+                  overtimeDuration: widget.event.overtimeDuration,
+                  hasLateFinish: widget.event.hasLateFinish,
+                  lateFinishDuration: widget.event.lateFinishDuration,
+                );
+                
+                // Update event with Late Finish option
+                widget.event.hasLateFinish = true;
+                widget.event.lateFinishDuration = finalDuration;
+                
+                // Save the updated event
+                await EventService.updateEvent(oldEvent, widget.event);
+                
+                // Close the dialog (controller will be disposed in .then() callback)
+                Navigator.of(context).pop();
+                
+                // Update the UI
+                setState(() {});
+                
+                // Trigger refresh
+                widget.onEdit(Event(
+                  id: 'refresh_trigger',
+                  title: '',
+                  startDate: widget.event.startDate,
+                  startTime: widget.event.startTime,
+                  endDate: widget.event.endDate,
+                  endTime: widget.event.endTime,
+                  busAssignments: {},
+                ));
+                
+                // Show confirmation
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Late finish ($finalDuration mins) saved'),
+                    duration: const Duration(seconds: 2),
+                  ),
+                );
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        ),
+      ),
+    ).then((_) {
+      // Dispose controller after dialog is fully closed (with small delay to ensure rebuild is complete)
+      Future.delayed(const Duration(milliseconds: 100), () {
+        try {
+          customMinutesController.dispose();
+        } catch (e) {
+          // Controller already disposed or error, ignore
+        }
+      });
+    });
   }
 
   // Build the bus assignment UI for spare shifts with full duties

@@ -1,4 +1,10 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.19.1': [
+    {
+      'title': 'Sick Day Status for Spare Duties',
+      'description': 'Added ability to mark spare duties as sick days. Users can now add Normal Sick, Self-Certified, or Force Majeure status to spare shifts directly from the spare shift dialog. Sick day status is properly tracked and displayed on spare duty event cards.',
+    },
+  ],
   '2.19.0': [
     {
       'title': 'Marked-In Settings Moved to Main Settings',
