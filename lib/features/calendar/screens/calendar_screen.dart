@@ -5648,9 +5648,9 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
           focusedDay: _focusedDay,
           calendarFormat: CalendarFormat.month,
           headerVisible: false, // Hide default header since we're using our custom one above
-          // Disable swipe gestures to allow vertical scrolling on calendar days
-          // Users can still tap days to select and use arrow buttons to change months
-          availableGestures: AvailableGestures.none,
+          // Enable horizontal swipe gestures for month navigation
+          // Vertical scrolling still works for page content
+          availableGestures: AvailableGestures.horizontalSwipe,
           selectedDayPredicate: (day) {
             return isSameDay(_selectedDay, day);
           },
@@ -5976,6 +5976,9 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
     final wfoColor = _shiftInfoMap['WFO']?.color;
     final dayInLieuColor = ColorCustomizationService.getColorForShift('DAY_IN_LIEU');
     
+    // Check if any events have notes
+    final hasNotes = events.any((event) => event.notes != null && event.notes!.trim().isNotEmpty);
+    
     // Check for sick day events - priority over other colors
     final sickDayEvent = events.firstWhere(
       (event) => event.sickDayType != null,
@@ -6014,7 +6017,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                         ? wfoColor.withValues(alpha: 0.3)
                         : shiftInfo?.color.withValues(alpha: 0.3);
     
-    final cellContent = _buildDayCellContent(date, displayText, isDayInLieu, isHoliday, shift, hasEvents, hasSickDay, sickDayColor, dayInLieuColor, isUnpaidLeave, hasWfoEvent, wfoColor, shiftInfo, isSaturdayService, badgeSizes, screenWidth);
+    final cellContent = _buildDayCellContent(date, displayText, isDayInLieu, isHoliday, shift, hasEvents, hasSickDay, sickDayColor, dayInLieuColor, isUnpaidLeave, hasWfoEvent, wfoColor, shiftInfo, isSaturdayService, hasNotes, badgeSizes, screenWidth);
     
     // Determine border color for selected days
     final selectedBorderColor = isBankHoliday ? Colors.red : Theme.of(context).colorScheme.primary;
@@ -6053,7 +6056,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                       ),
                     ],
                   ),
-                  child: _buildDayCellContentWithWhiteText(date, displayText, isDayInLieu, isHoliday, shift, hasEvents, hasSickDay, sickDayColor, dayInLieuColor, isUnpaidLeave, hasWfoEvent, wfoColor, shiftInfo, isSaturdayService, badgeSizes, screenWidth),
+                  child: _buildDayCellContentWithWhiteText(date, displayText, isDayInLieu, isHoliday, shift, hasEvents, hasSickDay, sickDayColor, dayInLieuColor, isUnpaidLeave, hasWfoEvent, wfoColor, shiftInfo, isSaturdayService, hasNotes, badgeSizes, screenWidth),
                 )
           : Container(
               margin: const EdgeInsets.all(4.0),
@@ -6093,6 +6096,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
     Color? wfoColor,
     ShiftInfo? shiftInfo,
     bool isSaturdayService,
+    bool hasNotes,
     Map<String, double> badgeSizes,
     double screenWidth,
   ) {
@@ -6183,6 +6187,17 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
               ),
             ),
           ),
+        // Notes indicator positioned in top-right corner
+        if (hasNotes)
+          Positioned(
+            top: badgeSizes['top']!,
+            right: badgeSizes['left']!,
+            child: Icon(
+              Icons.note,
+              size: badgeSizes['fontSize']! * 1.5,
+              color: AppTheme.primaryColor,
+            ),
+          ),
         // Event indicator positioned in bottom-right corner
         // Hidden when day is selected (filled circle mode)
       ],
@@ -6204,6 +6219,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
     Color? wfoColor,
     ShiftInfo? shiftInfo,
     bool isSaturdayService,
+    bool hasNotes,
     Map<String, double> badgeSizes,
     double screenWidth,
   ) {
@@ -6292,6 +6308,17 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                   height: 1.0,
                 ),
               ),
+            ),
+          ),
+        // Notes indicator positioned in top-right corner
+        if (hasNotes)
+          Positioned(
+            top: badgeSizes['top']!,
+            right: badgeSizes['left']!,
+            child: Icon(
+              Icons.note,
+              size: badgeSizes['fontSize']! * 1.5,
+              color: AppTheme.primaryColor,
             ),
           ),
         // Event indicator positioned in bottom-right corner
@@ -7099,28 +7126,411 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
     };
   }
 
-  Widget _buildBalanceItem(String label, int value, Color color) {
-    return Expanded(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 10,
-              color: Theme.of(context).textTheme.bodySmall?.color,
-            ),
+  Widget _buildBalanceItem(String label, int value, Color color, {VoidCallback? onTap}) {
+    // Responsive sizing based on screen width
+    final screenWidth = MediaQuery.of(context).size.width;
+    final labelFontSize = screenWidth < 350 ? 9.0 : screenWidth < 400 ? 9.5 : screenWidth < 600 ? 10.0 : 11.0;
+    final valueFontSize = screenWidth < 350 ? 12.0 : screenWidth < 400 ? 13.0 : screenWidth < 600 ? 14.0 : 15.0;
+    
+    final column = Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: labelFontSize,
+            color: Theme.of(context).textTheme.bodySmall?.color,
           ),
-          const SizedBox(height: 2),
-          Text(
-            '$value',
+        ),
+        const SizedBox(height: 2),
+        Text(
+          '$value',
+          style: TextStyle(
+            fontSize: valueFontSize,
+            fontWeight: FontWeight.bold,
+            color: color,
+          ),
+        ),
+      ],
+    );
+    
+    if (onTap != null) {
+      return InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(4),
+        child: column,
+      );
+    }
+    
+    return column;
+  }
+
+  void _showBookedHolidaysDialog(BuildContext context, String holidayType) async {
+    final holidays = await HolidayService.getHolidays();
+    final today = DateTime.now();
+    final todayNormalized = DateTime(today.year, today.month, today.day);
+    
+    List<Holiday> bookedHolidays = [];
+    
+    if (holidayType == 'annualLeave') {
+      // For Annual Leave: Show winter, summer, and other holidays that start today or in the future
+      bookedHolidays = holidays.where((holiday) {
+        if (holiday.type != 'winter' && holiday.type != 'summer' && holiday.type != 'other') {
+          return false;
+        }
+        final startDateNormalized = DateTime(
+          holiday.startDate.year,
+          holiday.startDate.month,
+          holiday.startDate.day,
+        );
+        return !startDateNormalized.isBefore(todayNormalized);
+      }).toList();
+      
+      // Sort by start date
+      bookedHolidays.sort((a, b) => a.startDate.compareTo(b.startDate));
+    } else if (holidayType == 'daysInLieu') {
+      // For Days In Lieu: Show all day_in_lieu holidays
+      bookedHolidays = holidays.where((holiday) => holiday.type == 'day_in_lieu').toList();
+      
+      // Sort by start date
+      bookedHolidays.sort((a, b) => a.startDate.compareTo(b.startDate));
+    }
+    
+    if (bookedHolidays.isEmpty) {
+      if (!context.mounted) return;
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(
+            holidayType == 'annualLeave' ? 'Booked Annual Leave' : 'Booked Days In Lieu',
             style: TextStyle(
-              fontSize: 14,
               fontWeight: FontWeight.bold,
-              color: color,
             ),
           ),
-        ],
+          content: Text('No holidays booked yet.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Close'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+    
+    if (!context.mounted) return;
+    // Capture holidayType for use in callbacks
+    final capturedHolidayType = holidayType;
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          // Create a mutable list that can be updated
+          final currentHolidays = <Holiday>[...bookedHolidays];
+          
+          return Dialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Container(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(context).size.height * 0.7,
+                maxWidth: MediaQuery.of(context).size.width < 600 
+                    ? MediaQuery.of(context).size.width * 0.95 
+                    : MediaQuery.of(context).size.width < 900 
+                        ? MediaQuery.of(context).size.width * 0.85 
+                        : 600.0,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Header
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
+                      children: [
+                        Icon(
+                          capturedHolidayType == 'annualLeave' ? Icons.beach_access : Icons.event_available,
+                          color: capturedHolidayType == 'annualLeave' 
+                              ? Theme.of(context).colorScheme.primary
+                              : ColorCustomizationService.getColorForShift('DAY_IN_LIEU'),
+                          size: 24,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            capturedHolidayType == 'annualLeave' ? 'Booked Annual Leave' : 'Booked Days In Lieu',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Theme.of(context).textTheme.titleLarge?.color,
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close),
+                          iconSize: 22,
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                          onPressed: () => Navigator.of(context).pop(),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Divider(height: 0),
+                  // List of holidays
+                  Flexible(
+                    child: currentHolidays.isEmpty
+                        ? Padding(
+                            padding: const EdgeInsets.all(24),
+                            child: Center(
+                              child: Text(
+                                'No holidays booked yet.',
+                                style: TextStyle(
+                                  fontStyle: FontStyle.italic,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                            ),
+                          )
+                        : ListView.builder(
+                            shrinkWrap: true,
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            itemCount: currentHolidays.length,
+                            itemBuilder: (context, index) {
+                              // Return widget here
+                              final holiday = currentHolidays[index];
+                              final isWinter = holiday.type == 'winter';
+                              final isSummer = holiday.type == 'summer';
+                              final isDayInLieu = holiday.type == 'day_in_lieu';
+                              
+                              String holidayTypeLabel;
+                              Color holidayColor;
+                              IconData holidayIcon;
+                              
+                              if (isWinter) {
+                                holidayTypeLabel = 'Winter Holiday';
+                                holidayColor = Colors.blue;
+                                holidayIcon = Icons.ac_unit;
+                              } else if (isSummer) {
+                                holidayTypeLabel = 'Summer Holiday';
+                                holidayColor = Colors.orange;
+                                holidayIcon = Icons.wb_sunny;
+                              } else if (isDayInLieu) {
+                                holidayTypeLabel = 'Day In Lieu';
+                                holidayColor = ColorCustomizationService.getColorForShift('DAY_IN_LIEU');
+                                holidayIcon = Icons.event_available;
+                              } else {
+                                holidayTypeLabel = 'Other Holiday';
+                                holidayColor = Colors.grey;
+                                holidayIcon = Icons.event;
+                              }
+                              
+                              final dateText = holiday.startDate == holiday.endDate
+                                  ? DateFormat('MMM d, yyyy').format(holiday.startDate)
+                                  : '${DateFormat('MMM d, yyyy').format(holiday.startDate)} - ${DateFormat('MMM d, yyyy').format(holiday.endDate)}';
+                              
+                              final daysCount = holiday.endDate.difference(holiday.startDate).inDays + 1;
+                              
+                              return Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color: Theme.of(context).brightness == Brightness.dark
+                                        ? Theme.of(context).cardColor
+                                        : Colors.grey.shade50,
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: Theme.of(context).brightness == Brightness.dark
+                                          ? Theme.of(context).dividerColor
+                                          : Colors.grey.shade200,
+                                      width: 1,
+                                    ),
+                                  ),
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(12),
+                                    child: Row(
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.all(8),
+                                          decoration: BoxDecoration(
+                                            color: holidayColor.withValues(alpha: 0.15),
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                          child: Icon(
+                                            holidayIcon,
+                                            color: holidayColor,
+                                            size: 20,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                holidayTypeLabel,
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 14,
+                                                  color: Theme.of(context).textTheme.bodyLarge?.color,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 4),
+                                              Text(
+                                                dateText,
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  color: Theme.of(context).textTheme.bodySmall?.color,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                          decoration: BoxDecoration(
+                                            color: holidayColor.withValues(alpha: 0.15),
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                          child: Text(
+                                            '$daysCount ${daysCount == 1 ? 'day' : 'days'}',
+                                            style: TextStyle(
+                                              color: holidayColor,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 12,
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        InkWell(
+                                          onTap: () async {
+                                            // Show confirmation dialog
+                                            final shouldDelete = await showDialog<bool>(
+                                              context: context,
+                                              builder: (context) => AlertDialog(
+                                                title: const Text('Delete Holiday'),
+                                                content: Text('Are you sure you want to delete this ${holidayTypeLabel.toLowerCase()}?'),
+                                                actions: [
+                                                  TextButton(
+                                                    onPressed: () => Navigator.of(context).pop(false),
+                                                    child: const Text('Cancel'),
+                                                  ),
+                                                  TextButton(
+                                                    onPressed: () => Navigator.of(context).pop(true),
+                                                    style: TextButton.styleFrom(
+                                                      foregroundColor: Colors.red,
+                                                    ),
+                                                    child: const Text('Delete'),
+                                                  ),
+                                                ],
+                                              ),
+                                            );
+                                            
+                                            if (shouldDelete == true && context.mounted) {
+                                              try {
+                                                // Remove the holiday
+                                                await HolidayService.removeHoliday(holiday.id);
+                                                
+                                                // Reload holidays
+                                                final updatedHolidays = await HolidayService.getHolidays();
+                                                final today = DateTime.now();
+                                                final todayNormalized = DateTime(today.year, today.month, today.day);
+                                                
+                                                List<Holiday> updatedBookedHolidays = [];
+                                                
+                                                if (capturedHolidayType == 'annualLeave') {
+                                                  updatedBookedHolidays = updatedHolidays.where((h) {
+                                                    if (h.type != 'winter' && h.type != 'summer' && h.type != 'other') {
+                                                      return false;
+                                                    }
+                                                    final startDateNormalized = DateTime(
+                                                      h.startDate.year,
+                                                      h.startDate.month,
+                                                      h.startDate.day,
+                                                    );
+                                                    return !startDateNormalized.isBefore(todayNormalized);
+                                                  }).toList();
+                                                  updatedBookedHolidays.sort((a, b) => a.startDate.compareTo(b.startDate));
+                                                } else if (capturedHolidayType == 'daysInLieu') {
+                                                  updatedBookedHolidays = updatedHolidays.where((h) => h.type == 'day_in_lieu').toList();
+                                                  updatedBookedHolidays.sort((a, b) => a.startDate.compareTo(b.startDate));
+                                                }
+                                                
+                                                // Update the dialog state
+                                                setDialogState(() {
+                                                  currentHolidays.clear();
+                                                  currentHolidays.addAll(updatedBookedHolidays);
+                                                });
+                                                
+                                                // Reload holidays in the main screen
+                                                await _reloadHolidays();
+                                                
+                                                // Update calendar events
+                                                _updateAllEvents();
+                                                
+                                                // Show success message
+                                                if (context.mounted) {
+                                                  ScaffoldMessenger.of(context).showSnackBar(
+                                                    SnackBar(
+                                                      content: const Row(
+                                                        children: [
+                                                          Icon(Icons.check_circle, color: Colors.white),
+                                                          SizedBox(width: 8),
+                                                          Text('Holiday removed successfully'),
+                                                        ],
+                                                      ),
+                                                      backgroundColor: Colors.green,
+                                                      behavior: SnackBarBehavior.floating,
+                                                    ),
+                                                  );
+                                                }
+                                                
+                                                // If no holidays left, close dialog
+                                                if (updatedBookedHolidays.isEmpty && context.mounted) {
+                                                  Navigator.of(context).pop();
+                                                }
+                                              } catch (e) {
+                                                if (context.mounted) {
+                                                  ScaffoldMessenger.of(context).showSnackBar(
+                                                    SnackBar(
+                                                      content: Text('Error removing holiday: $e'),
+                                                      backgroundColor: Colors.red,
+                                                      behavior: SnackBarBehavior.floating,
+                                                    ),
+                                                  );
+                                                }
+                                              }
+                                            }
+                                          },
+                                          borderRadius: BorderRadius.circular(8),
+                                          child: Container(
+                                            padding: const EdgeInsets.all(8),
+                                            decoration: BoxDecoration(
+                                              color: Colors.red.shade50,
+                                              borderRadius: BorderRadius.circular(8),
+                                            ),
+                                            child: Icon(
+                                              Icons.delete_outline,
+                                              color: Colors.red.shade400,
+                                              size: 20,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -7139,6 +7549,11 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
           child: Container(
             constraints: BoxConstraints(
               maxHeight: MediaQuery.of(context).size.height * 0.8,
+              maxWidth: MediaQuery.of(context).size.width < 600 
+                  ? MediaQuery.of(context).size.width * 0.95 
+                  : MediaQuery.of(context).size.width < 900 
+                      ? MediaQuery.of(context).size.width * 0.85 
+                      : 600.0,
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -7205,28 +7620,38 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                                     Text(
                                       'Annual Leave',
                                       style: TextStyle(
-                                        fontSize: 12,
+                                        fontSize: MediaQuery.of(context).size.width < 350 ? 11.0 : MediaQuery.of(context).size.width < 600 ? 12.0 : 13.0,
                                         fontWeight: FontWeight.w600,
                                         color: Theme.of(context).textTheme.bodyMedium?.color,
                                       ),
                                     ),
                                     const SizedBox(height: 4),
                                     Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceAround,
                                       children: [
-                                        _buildBalanceItem('Today', balances['annualLeaveToday']!, primaryColor),
+                                        Expanded(
+                                          child: _buildBalanceItem('Today', balances['annualLeaveToday']!, primaryColor),
+                                        ),
                                         Container(
                                           width: 1,
                                           height: 20,
                                           color: Theme.of(context).dividerColor.withValues(alpha: 0.3),
                                         ),
-                                        _buildBalanceItem('Remaining', balances['annualLeaveRemaining']!, primaryColor),
+                                        Expanded(
+                                          child: _buildBalanceItem('Remaining', balances['annualLeaveRemaining']!, primaryColor),
+                                        ),
                                         Container(
                                           width: 1,
                                           height: 20,
                                           color: Theme.of(context).dividerColor.withValues(alpha: 0.3),
                                         ),
-                                        _buildBalanceItem('Booked', balances['annualLeaveBooked']!, Theme.of(context).textTheme.bodyMedium?.color ?? Colors.grey),
+                                        Expanded(
+                                          child: _buildBalanceItem(
+                                            'Booked', 
+                                            balances['annualLeaveBooked']!, 
+                                            Theme.of(context).textTheme.bodyMedium?.color ?? Colors.grey,
+                                            onTap: () => _showBookedHolidaysDialog(context, 'annualLeave'),
+                                          ),
+                                        ),
                                       ],
                                     ),
                                   ],
@@ -7251,28 +7676,38 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                                     Text(
                                       'Days In Lieu',
                                       style: TextStyle(
-                                        fontSize: 12,
+                                        fontSize: MediaQuery.of(context).size.width < 350 ? 11.0 : MediaQuery.of(context).size.width < 600 ? 12.0 : 13.0,
                                         fontWeight: FontWeight.w600,
                                         color: Theme.of(context).textTheme.bodyMedium?.color,
                                       ),
                                     ),
                                     const SizedBox(height: 4),
                                     Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceAround,
                                       children: [
-                                        _buildBalanceItem('Today', balances['daysInLieuToday']!, dayInLieuColor),
+                                        Expanded(
+                                          child: _buildBalanceItem('Today', balances['daysInLieuToday']!, dayInLieuColor),
+                                        ),
                                         Container(
                                           width: 1,
                                           height: 20,
                                           color: Theme.of(context).dividerColor.withValues(alpha: 0.3),
                                         ),
-                                        _buildBalanceItem('Remaining', balances['daysInLieuRemaining']!, dayInLieuColor),
+                                        Expanded(
+                                          child: _buildBalanceItem('Remaining', balances['daysInLieuRemaining']!, dayInLieuColor),
+                                        ),
                                         Container(
                                           width: 1,
                                           height: 20,
                                           color: Theme.of(context).dividerColor.withValues(alpha: 0.3),
                                         ),
-                                        _buildBalanceItem('Booked', balances['daysInLieuBooked']!, Theme.of(context).textTheme.bodyMedium?.color ?? Colors.grey),
+                                        Expanded(
+                                          child: _buildBalanceItem(
+                                            'Booked', 
+                                            balances['daysInLieuBooked']!, 
+                                            Theme.of(context).textTheme.bodyMedium?.color ?? Colors.grey,
+                                            onTap: () => _showBookedHolidaysDialog(context, 'daysInLieu'),
+                                          ),
+                                        ),
                                       ],
                                     ),
                                   ],
@@ -9598,6 +10033,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
           shiftInfoMap: _shiftInfoMap,
           startDate: _startDate,
           startWeek: _startWeek,
+          bankHolidays: _bankHolidays,
         ),
       ),
     );

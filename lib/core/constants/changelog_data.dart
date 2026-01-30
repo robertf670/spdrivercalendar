@@ -1,4 +1,38 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.19.2': [
+    {
+      'title': 'Restored Calendar Horizontal Swipe Navigation',
+      'description': 'Restored horizontal swipe gestures on the calendar to navigate between months. Swipe left or right on the calendar to move to the previous or next month.',
+    },
+    {
+      'title': 'Fixed Duty Code Search',
+      'description': 'Fixed duty code search functionality to properly find shifts. Search now checks event titles (where regular work shift duty codes are stored), enhanced duties, and legacy assigned duties. Added normalization to handle UNI: prefix and half-duty suffixes (A/B) for better matching.',
+    },
+    {
+      'title': 'Week View M-F Roster Type Support',
+      'description': 'Fixed Week View to correctly handle M-F roster types. Week View now displays M-F badge in header and properly identifies rest days for M-F schedules.',
+    },
+    {
+      'title': 'Week View Responsiveness and Redesign',
+      'description': 'Fixed RenderFlex overflow issues and redesigned Week View layout. Removed redundant Work/Rest buttons, improved content distribution, and made layout non-scrollable to fit all data on screen.',
+    },
+    {
+      'title': 'Updated Live Update Route Preferences',
+      'description': 'Updated default live update preferences: removed routes 9/122 and replaced with routes 23/24.',
+    },
+    {
+      'title': 'Fixed Holiday Balance Layout',
+      'description': 'Fixed spacing and layout issues in holiday balance display. Balance items now have consistent spacing and responsive sizing across all screen sizes.',
+    },
+    {
+      'title': 'Booked Holidays Management',
+      'description': 'Added ability to view and delete booked holidays directly from the balance display. Clicking on "Booked" shows a list of all booked holidays with delete buttons. Includes confirmation dialog before deletion to prevent accidental removal.',
+    },
+    {
+      'title': 'Note Indicator on Calendar',
+      'description': 'Added a small note icon in the top-right corner of calendar day cells when duties on that day have notes.',
+    },
+  ],
   '2.19.1': [
     {
       'title': 'Sick Day Status for Spare Duties',

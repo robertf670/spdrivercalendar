@@ -95,17 +95,45 @@ class EventSearchService {
     // Duty code filter
     if (dutyCode != null && dutyCode.trim().isNotEmpty) {
       final dutyLower = dutyCode.trim().toLowerCase();
+      // Normalize search term: remove UNI: prefix if present, and handle half-duty suffixes
+      final normalizedSearch = dutyLower.replaceAll('uni:', '').replaceAll(RegExp(r'[ab]$'), '');
+      
       filtered = filtered.where((event) {
-        if (event.hasEnhancedDuties) {
+        // For regular work shifts, the title IS the duty code (e.g., "PZ1/74", "807/20", "1/13X")
+        // Check if title contains the duty code
+        final titleLower = event.title.toLowerCase();
+        // Remove "Shift: " prefix if present
+        final cleanTitle = titleLower.replaceAll('shift: ', '').trim();
+        if (cleanTitle.contains(dutyLower) || cleanTitle.contains(normalizedSearch)) {
+          return true;
+        }
+        
+        // Check enhanced duties
+        if (event.hasEnhancedDuties && event.enhancedAssignedDuties != null) {
           for (final duty in event.enhancedAssignedDuties!) {
-            if (duty.dutyCode.toLowerCase().contains(dutyLower)) {
+            final dutyCodeLower = duty.dutyCode.toLowerCase();
+            // Check exact match (with or without prefix)
+            if (dutyCodeLower.contains(dutyLower)) {
+              return true;
+            }
+            // Check normalized match (without UNI: prefix and half-duty suffix)
+            final normalizedDuty = dutyCodeLower.replaceAll('uni:', '').replaceAll(RegExp(r'[ab]$'), '');
+            if (normalizedDuty.contains(normalizedSearch) || normalizedSearch.contains(normalizedDuty)) {
               return true;
             }
           }
         }
+        // Check legacy assigned duties
         if (event.assignedDuties != null) {
           for (final duty in event.assignedDuties!) {
-            if (duty.toLowerCase().contains(dutyLower)) {
+            final dutyCodeLower = duty.toLowerCase();
+            // Check exact match
+            if (dutyCodeLower.contains(dutyLower)) {
+              return true;
+            }
+            // Check normalized match (without UNI: prefix and half-duty suffix)
+            final normalizedDuty = dutyCodeLower.replaceAll('uni:', '').replaceAll(RegExp(r'[ab]$'), '');
+            if (normalizedDuty.contains(normalizedSearch) || normalizedSearch.contains(normalizedDuty)) {
               return true;
             }
           }

@@ -7,7 +7,7 @@ class UserPreferencesService {
 
   // Default preferred routes
   static const List<String> _defaultPreferredRoutes = [
-    'C1', 'C2', '39', '39A', '9', '122', 'L58', 'L59'
+    'C1', 'C2', '39', '39A', '23', '24', 'L58', 'L59'
   ];
 
   /// Get user's preferred routes for live updates

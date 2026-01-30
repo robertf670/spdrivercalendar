@@ -4,13 +4,17 @@ import 'package:spdrivercalendar/models/shift_info.dart';
 import 'package:spdrivercalendar/features/calendar/services/event_service.dart';
 import 'package:spdrivercalendar/features/calendar/services/roster_service.dart';
 import 'package:spdrivercalendar/models/event.dart';
+import 'package:spdrivercalendar/models/bank_holiday.dart';
 import 'package:spdrivercalendar/theme/app_theme.dart';
+import 'package:spdrivercalendar/core/services/storage_service.dart';
+import 'package:spdrivercalendar/core/constants/app_constants.dart';
 
 class WeekViewScreen extends StatefulWidget {
   final DateTime selectedDate;
   final Map<String, ShiftInfo> shiftInfoMap;
   final DateTime? startDate;
   final int startWeek;
+  final List<BankHoliday>? bankHolidays;
 
   const WeekViewScreen({
     super.key,
@@ -18,6 +22,7 @@ class WeekViewScreen extends StatefulWidget {
     required this.shiftInfoMap,
     this.startDate,
     this.startWeek = 0,
+    this.bankHolidays,
   });
 
   @override
@@ -27,12 +32,26 @@ class WeekViewScreen extends StatefulWidget {
 class WeekViewScreenState extends State<WeekViewScreen> {
   late DateTime _currentWeekStart;
   late List<DateTime> _weekDays;
+  bool _markedInEnabled = false;
+  String _markedInStatus = 'Shift';
 
   @override
   void initState() {
     super.initState();
     _calculateWeekStart();
     _generateWeekDays();
+    _loadMarkedInSettings();
+  }
+
+  Future<void> _loadMarkedInSettings() async {
+    final markedInEnabled = await StorageService.getBool(AppConstants.markedInEnabledKey);
+    final markedInStatus = await StorageService.getString(AppConstants.markedInStatusKey) ?? '';
+    if (mounted) {
+      setState(() {
+        _markedInEnabled = markedInEnabled && markedInStatus.isNotEmpty;
+        _markedInStatus = markedInStatus.isEmpty ? 'Spare' : markedInStatus;
+      });
+    }
   }
 
   void _calculateWeekStart() {
@@ -53,10 +72,6 @@ class WeekViewScreenState extends State<WeekViewScreen> {
     });
   }
 
-  ShiftInfo? _getShiftForDate(DateTime date) {
-    final dateString = DateFormat('yyyy-MM-dd').format(date);
-    return widget.shiftInfoMap[dateString];
-  }
 
   List<Event> _getEventsForDate(DateTime date) {
     return EventService.getEventsForDay(date);
@@ -69,11 +84,81 @@ class WeekViewScreenState extends State<WeekViewScreen> {
            date.day == today.day;
   }
 
+  BankHoliday? _getBankHoliday(DateTime date) {
+    if (widget.bankHolidays == null) return null;
+    try {
+      return widget.bankHolidays!.firstWhere(
+        (bh) => bh.date.year == date.year && 
+                bh.date.month == date.month && 
+                bh.date.day == date.day,
+      );
+    } catch (e) {
+      return null;
+    }
+  }
+
+  String _getShiftForDate(DateTime date) {
+    if (widget.startDate == null) return '';
+    
+    // Check if marked in is enabled
+    if (_markedInEnabled) {
+      // M-F marked in logic: W on Mon-Fri, R on Sat-Sun
+      // Bank holidays are REST days for M-F
+      if (_markedInStatus == 'M-F') {
+        // Check if this is a bank holiday
+        final bankHoliday = _getBankHoliday(date);
+        if (bankHoliday != null) {
+          // If M-F marked in is enabled, bank holidays are always R (Rest)
+          return 'R';
+        }
+        
+        // weekday: 1=Monday, 2=Tuesday, ..., 6=Saturday, 7=Sunday
+        final weekday = date.weekday;
+        if (weekday >= 1 && weekday <= 5) {
+          return 'W'; // Work days Mon-Fri
+        } else {
+          return 'R'; // Rest days Sat-Sun
+        }
+      }
+      
+      // Shift marked in: use normal roster calculation
+      if (_markedInStatus == 'Shift') {
+        return RosterService.getShiftForDate(date, widget.startDate!, widget.startWeek);
+      }
+    }
+    
+    // Default or normal roster calculation
+    return RosterService.getShiftForDate(date, widget.startDate!, widget.startWeek);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Week View'),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Week View'),
+            if (_markedInEnabled && _markedInStatus == 'M-F') ...[
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primaryContainer,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  'M-F',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.onPrimaryContainer,
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.today),
@@ -91,119 +176,115 @@ class WeekViewScreenState extends State<WeekViewScreen> {
         ],
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          child: Column(
-            children: [
-              // Week navigation header
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surface,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
-                      spreadRadius: 0,
-                      blurRadius: 2,
-                      offset: const Offset(0, 1),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.chevron_left),
-                      onPressed: () => _navigateWeek(-1),
-                    ),
-                    Text(
+        child: Column(
+          children: [
+            // Week navigation header
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surface,
+                boxShadow: [
+                  BoxShadow(
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
+                    spreadRadius: 0,
+                    blurRadius: 2,
+                    offset: const Offset(0, 1),
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.chevron_left),
+                    onPressed: () => _navigateWeek(-1),
+                  ),
+                  Flexible(
+                    child: Text(
                       '${DateFormat('MMM d').format(_weekDays.first)} - ${DateFormat('MMM d, yyyy').format(_weekDays.last)}',
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
                       ),
+                      textAlign: TextAlign.center,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    IconButton(
-                      icon: const Icon(Icons.chevron_right),
-                      onPressed: () => _navigateWeek(1),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.chevron_right),
+                    onPressed: () => _navigateWeek(1),
+                  ),
+                ],
+              ),
+            ),
+            
+            // Week view content - Stacked layout (1-3-3) using Expanded to fill space
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                child: Column(
+                  children: [
+                    // Row 1: Sunday only (centered)
+                    Expanded(
+                      child: Row(
+                        children: [
+                          const Expanded(child: SizedBox()), // Left spacer
+                          Expanded(
+                            flex: 2,
+                            child: _buildDayCard(_weekDays[0]), // Sunday (first in the week starting Sunday)
+                          ),
+                          const Expanded(child: SizedBox()), // Right spacer
+                        ],
+                      ),
+                    ),
+                    
+                    const SizedBox(height: 8),
+                    
+                    // Row 2: Monday, Tuesday, Wednesday
+                    Expanded(
+                      child: Row(
+                        children: [
+                          Expanded(child: _buildDayCard(_weekDays[1])), // Monday
+                          const SizedBox(width: 8),
+                          Expanded(child: _buildDayCard(_weekDays[2])), // Tuesday
+                          const SizedBox(width: 8),
+                          Expanded(child: _buildDayCard(_weekDays[3])), // Wednesday
+                        ],
+                      ),
+                    ),
+                    
+                    const SizedBox(height: 8),
+                    
+                    // Row 3: Thursday, Friday, Saturday
+                    Expanded(
+                      child: Row(
+                        children: [
+                          Expanded(child: _buildDayCard(_weekDays[4])), // Thursday
+                          const SizedBox(width: 8),
+                          Expanded(child: _buildDayCard(_weekDays[5])), // Friday
+                          const SizedBox(width: 8),
+                          Expanded(child: _buildDayCard(_weekDays[6])), // Saturday
+                        ],
+                      ),
                     ),
                   ],
                 ),
               ),
-              
-              // Week view content - Stacked layout (1-3-3)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                child: Column(
-                children: [
-                  // Row 1: Sunday only (centered)
-                  SizedBox(
-                    height: 200,
-                    child: Row(
-                      children: [
-                        const Expanded(child: SizedBox()), // Left spacer
-                        Expanded(
-                          flex: 2,
-                          child: _buildDayCard(_weekDays[0]), // Sunday (first in the week starting Sunday)
-                        ),
-                        const Expanded(child: SizedBox()), // Right spacer
-                      ],
-                    ),
-                  ),
-                  
-                  const SizedBox(height: 8),
-                  
-                  // Row 2: Monday, Tuesday, Wednesday
-                  SizedBox(
-                    height: 200,
-                    child: Row(
-                      children: [
-                        Expanded(child: _buildDayCard(_weekDays[1])), // Monday
-                        const SizedBox(width: 8),
-                        Expanded(child: _buildDayCard(_weekDays[2])), // Tuesday
-                        const SizedBox(width: 8),
-                        Expanded(child: _buildDayCard(_weekDays[3])), // Wednesday
-                      ],
-                    ),
-                  ),
-                  
-                  const SizedBox(height: 8),
-                  
-                  // Row 3: Thursday, Friday, Saturday
-                  SizedBox(
-                    height: 200,
-                    child: Row(
-                      children: [
-                        Expanded(child: _buildDayCard(_weekDays[4])), // Thursday
-                        const SizedBox(width: 8),
-                        Expanded(child: _buildDayCard(_weekDays[5])), // Friday
-                        const SizedBox(width: 8),
-                        Expanded(child: _buildDayCard(_weekDays[6])), // Saturday
-                      ],
-                    ),
-                  ),
-                ],
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
 
   Widget _buildDayCard(DateTime day) {
-    final shift = _getShiftForDate(day);
     final sizes = _getResponsiveSizes(context);
     final events = _getEventsForDate(day);
     final workEvents = events.where((event) => event.isWorkShift).toList();
     
-    // Get the actual roster shift type for this date
-    String rosterShiftType = '';
-    bool isRosteredRestDay = false;
-    if (widget.startDate != null) {
-      rosterShiftType = RosterService.getShiftForDate(day, widget.startDate!, widget.startWeek);
-      isRosteredRestDay = rosterShiftType == 'R';
-    }
+    // Get the actual roster shift type for this date (respecting M-F)
+    final rosterShiftType = _getShiftForDate(day);
+    final isRosteredRestDay = rosterShiftType == 'R';
     
     // Get rest day color for visual distinction
     final restDayColor = widget.shiftInfoMap['R']?.color;
@@ -235,9 +316,12 @@ class WeekViewScreenState extends State<WeekViewScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Day header
+          // Day header - compact
           Container(
-            padding: const EdgeInsets.symmetric(vertical: 8),
+            padding: EdgeInsets.symmetric(
+              vertical: sizes['dutyCardPadding']!,
+              horizontal: sizes['dutyCardPadding']! * 0.5,
+            ),
             decoration: BoxDecoration(
               color: _isToday(day) 
                 ? AppTheme.primaryColor.withValues(alpha: 0.1)
@@ -247,9 +331,11 @@ class WeekViewScreenState extends State<WeekViewScreen> {
               borderRadius: const BorderRadius.vertical(top: Radius.circular(11)),
             ),
             child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Flexible(
                       child: Text(
@@ -260,6 +346,8 @@ class WeekViewScreenState extends State<WeekViewScreen> {
                           color: _isToday(day) ? AppTheme.primaryColor : null,
                         ),
                         textAlign: TextAlign.center,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                     if (RosterService.isSaturdayService(day)) ...[
@@ -294,111 +382,125 @@ class WeekViewScreenState extends State<WeekViewScreen> {
                       : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                   ),
                   textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
           ),
           
-          // Day content
+          // Day content - no scrolling, fits all content
           Expanded(
             child: Padding(
-              padding: const EdgeInsets.all(8),
-              child: SingleChildScrollView(
-                child: Column(
+              padding: EdgeInsets.all(sizes['dutyCardPadding']!),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Shift info
-                  if (shift != null) ...[
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
-                      decoration: BoxDecoration(
-                        color: shift.color.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(color: shift.color, width: 1),
-                      ),
-                      child: Text(
-                        shift.name,
-                        style: TextStyle(
-                          fontSize: sizes['shiftName']!,
-                          fontWeight: FontWeight.w600,
-                          color: shift.color,
-                        ),
-                        textAlign: TextAlign.center,
+                  // Work events - fill available space
+                  if (workEvents.isNotEmpty) ...[
+                    Expanded(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.start,
+                        children: [
+                          ...workEvents.take(3).map((event) => Expanded(
+                            child: _buildDayDutyItem(event),
+                          )),
+                          if (workEvents.length > 3)
+                            Padding(
+                              padding: EdgeInsets.only(top: sizes['dutyCardMargin']!),
+                              child: Text(
+                                '+${workEvents.length - 3} more',
+                                style: TextStyle(
+                                  fontSize: sizes['moreText']!,
+                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                                ),
+                              ),
+                            ),
+                        ],
                       ),
                     ),
-                    const SizedBox(height: 8),
-                  ],
-                  
-                  // Work events
-                  if (workEvents.isNotEmpty) ...[
-                    ...workEvents.map((event) => _buildDayDutyItem(event)),
                   ] else ...[
                     // Show different message based on whether it's a rostered rest day or work day without duties
-                    Center(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-                        child: Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: isRosteredRestDay && restDayColor != null
-                                ? restDayColor.withValues(alpha: 0.2)
-                                : Theme.of(context).colorScheme.surfaceContainerLow,
-                            borderRadius: BorderRadius.circular(8),
-                            border: isRosteredRestDay && restDayColor != null
-                                ? Border.all(color: restDayColor.withValues(alpha: 0.4), width: 1.5)
-                                : null,
+                    Expanded(
+                      child: Center(
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(
+                            vertical: sizes['dutyCardMargin']!,
+                            horizontal: sizes['dutyCardPadding']! * 0.5,
                           ),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                isRosteredRestDay ? Icons.free_breakfast : Icons.info_outline,
-                                size: sizes['moreText']! * 4, // Responsive icon size
-                                color: isRosteredRestDay && restDayColor != null
-                                    ? restDayColor
-                                    : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
-                              ),
-                              SizedBox(height: sizes['dutyCardMargin']!),
-                              Text(
-                                isRosteredRestDay ? 'Rest Day' : 'No duties loaded',
-                                style: TextStyle(
-                                  fontSize: sizes['moreText']! + 1,
-                                  fontWeight: isRosteredRestDay ? FontWeight.w600 : FontWeight.normal,
+                          child: Container(
+                            padding: EdgeInsets.all(sizes['dutyCardPadding']!),
+                            decoration: BoxDecoration(
+                              color: isRosteredRestDay && restDayColor != null
+                                  ? restDayColor.withValues(alpha: 0.2)
+                                  : Theme.of(context).colorScheme.surfaceContainerLow,
+                              borderRadius: BorderRadius.circular(8),
+                              border: isRosteredRestDay && restDayColor != null
+                                  ? Border.all(color: restDayColor.withValues(alpha: 0.4), width: 1.5)
+                                  : null,
+                            ),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  isRosteredRestDay ? Icons.free_breakfast : Icons.info_outline,
+                                  size: sizes['moreText']! * 3,
                                   color: isRosteredRestDay && restDayColor != null
                                       ? restDayColor
-                                      : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-                                  fontStyle: isRosteredRestDay ? FontStyle.normal : FontStyle.italic,
+                                      : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
                                 ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ],
+                                SizedBox(height: sizes['dutyCardMargin']!),
+                                Text(
+                                  isRosteredRestDay ? 'Rest Day' : 'No duties loaded',
+                                  style: TextStyle(
+                                    fontSize: sizes['moreText']!,
+                                    fontWeight: isRosteredRestDay ? FontWeight.w600 : FontWeight.normal,
+                                    color: isRosteredRestDay && restDayColor != null
+                                        ? restDayColor
+                                        : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                                    fontStyle: isRosteredRestDay ? FontStyle.normal : FontStyle.italic,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
                     ),
                   ],
                   
-                  // Non-work events
-                  if (events.any((event) => !event.isWorkShift)) ...[
-                    const SizedBox(height: 4),
+                  // Non-work events - show at bottom if space allows
+                  if (events.any((event) => !event.isWorkShift) && workEvents.length <= 2) ...[
+                    SizedBox(height: sizes['dutyCardMargin']!),
                     Container(
-                      padding: const EdgeInsets.all(6),
+                      constraints: const BoxConstraints(
+                        minWidth: 0,
+                        maxWidth: double.infinity,
+                      ),
+                      padding: EdgeInsets.all(sizes['dutyCardPadding']! * 0.75),
                       decoration: BoxDecoration(
                         color: Theme.of(context).colorScheme.surfaceContainerLow,
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Column(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
                             'Other Events',
                             style: TextStyle(
-                              fontSize: 10,
+                              fontSize: sizes['moreText']! * 0.9,
                               fontWeight: FontWeight.w500,
                               color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                             ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          const SizedBox(height: 2),
-                          ...events.where((event) => !event.isWorkShift).take(2).map((event) => 
+                          SizedBox(height: sizes['dutyCardMargin']! * 0.5),
+                          ...events.where((event) => !event.isWorkShift).take(1).map((event) => 
                             Text(
                               event.title,
                               style: TextStyle(fontSize: sizes['eventTitle']!),
@@ -407,17 +509,18 @@ class WeekViewScreenState extends State<WeekViewScreen> {
                               textAlign: TextAlign.center,
                             ),
                           ),
-                          if (events.where((event) => !event.isWorkShift).length > 2)
+                          if (events.where((event) => !event.isWorkShift).length > 1)
                             Text(
-                              '+${events.where((event) => !event.isWorkShift).length - 2} more',
-                              style: TextStyle(fontSize: sizes['moreText']!),
+                              '+${events.where((event) => !event.isWorkShift).length - 1} more',
+                              style: TextStyle(fontSize: sizes['moreText']! * 0.85),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                         ],
                       ),
                     ),
                   ],
                 ],
-                ),
               ),
             ),
           ),
@@ -431,15 +534,23 @@ class WeekViewScreenState extends State<WeekViewScreen> {
     final sizes = _getResponsiveSizes(context);
     
     return Container(
-      width: double.infinity,
+      constraints: const BoxConstraints(
+        minWidth: 0,
+        maxWidth: double.infinity,
+      ),
       padding: EdgeInsets.all(sizes['dutyCardPadding']!),
-      margin: EdgeInsets.only(bottom: sizes['dutyCardMargin']!),
+      margin: EdgeInsets.symmetric(
+        vertical: sizes['dutyCardMargin']! * 0.5,
+        horizontal: sizes['dutyCardMargin']! * 0.5,
+      ),
       decoration: BoxDecoration(
         color: AppTheme.primaryColor.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(4),
         border: Border.all(color: AppTheme.primaryColor.withValues(alpha: 0.3), width: 1),
       ),
       child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.max,
         children: [
           // Duty title
           Text(
@@ -454,52 +565,58 @@ class WeekViewScreenState extends State<WeekViewScreen> {
             overflow: TextOverflow.ellipsis,
           ),
           
-          const SizedBox(height: 6),
+          SizedBox(height: sizes['dutyCardMargin']!),
           
           // Start - End time (stacked vertically)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 4),
-            child: Column(
-              children: [
-                Text(
-                  event.formattedStartTime,
-                  style: TextStyle(
-                    fontSize: sizes['timeText']!, 
-                    fontWeight: FontWeight.w600,
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                event.formattedStartTime,
+                style: TextStyle(
+                  fontSize: sizes['timeText']!, 
+                  fontWeight: FontWeight.w600,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
-                Icon(
-                  Icons.keyboard_arrow_down,
-                  size: sizes['arrowIcon']!,
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              Icon(
+                Icons.keyboard_arrow_down,
+                size: sizes['arrowIcon']!,
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+              ),
+              Text(
+                event.formattedEndTime,
+                style: TextStyle(
+                  fontSize: sizes['timeText']!, 
+                  fontWeight: FontWeight.w600,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
-                Text(
-                  event.formattedEndTime,
-                  style: TextStyle(
-                    fontSize: sizes['timeText']!, 
-                    fontWeight: FontWeight.w600,
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
-                ),
-              ],
-            ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
           ),
           
           // Break times
           if (hasBreaks) ...[
-            const SizedBox(height: 3),
+            SizedBox(height: sizes['dutyCardMargin']!),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(Icons.pause_circle_outline, size: sizes['breakIcon']!),
                 const SizedBox(width: 3),
-                Text(
-                  '${_formatTimeOfDay(event.breakStartTime!)}-${_formatTimeOfDay(event.breakEndTime!)}',
-                  style: TextStyle(
-                    fontSize: sizes['breakText']!,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                Flexible(
+                  child: Text(
+                    '${_formatTimeOfDay(event.breakStartTime!)}-${_formatTimeOfDay(event.breakEndTime!)}',
+                    style: TextStyle(
+                      fontSize: sizes['breakText']!,
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
                   ),
                 ),
               ],
@@ -508,9 +625,12 @@ class WeekViewScreenState extends State<WeekViewScreen> {
           
           // Work time
           if (event.workTime != null) ...[
-            const SizedBox(height: 3),
+            SizedBox(height: sizes['dutyCardMargin']!),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+              padding: EdgeInsets.symmetric(
+                horizontal: sizes['dutyCardPadding']! * 0.5,
+                vertical: sizes['dutyCardMargin']! * 0.25,
+              ),
               decoration: BoxDecoration(
                 color: AppTheme.primaryColor.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(8),
@@ -522,6 +642,8 @@ class WeekViewScreenState extends State<WeekViewScreen> {
                   fontWeight: FontWeight.w500,
                   color: AppTheme.primaryColor,
                 ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
           ],
@@ -538,103 +660,67 @@ class WeekViewScreenState extends State<WeekViewScreen> {
     return '$hour:$minute';
   }
 
-  // Responsive sizing helper method
+  // Responsive sizing helper method - optimized for compact fit
   Map<String, double> _getResponsiveSizes(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
     
-    // Very small screens (narrow phones) - ULTRA conservative to prevent overflow
-    if (screenWidth < 350) {
+    // Calculate compact sizing based on screen dimensions
+    final isSmallScreen = screenWidth < 400 || screenHeight < 700;
+    final isMediumScreen = screenWidth < 600 && screenHeight < 900;
+    
+    // Very small screens - compact sizing
+    if (isSmallScreen) {
       return {
-        'dayName': 11.0,  // even smaller
-        'date': 9.0,      // even smaller
-        'shiftName': 8.0,   // even smaller
-        'dutyTitle': 8.0,   // even smaller
-        'timeText': 10.0,   // made bigger for readability
-        'breakText': 7.0,   // keep small
-        'workDuration': 6.0,  // even smaller
-        'eventTitle': 7.0,    // even smaller
-        'moreText': 6.0,      // even smaller
-        'arrowIcon': 8.0,     // slightly bigger for visibility
-        'breakIcon': 7.0,     // keep small
-        // Container dimensions - ULTRA conservative for very small screens
-        'dutyCardPadding': 3.0,  // even smaller
-        'dutyCardMargin': 1.0,    // even smaller
+        'dayName': 12.0,
+        'date': 10.0,
+        'shiftName': 9.0,
+        'dutyTitle': 9.0,
+        'timeText': 11.0,
+        'breakText': 8.0,
+        'workDuration': 8.0,
+        'eventTitle': 8.0,
+        'moreText': 7.0,
+        'arrowIcon': 10.0,
+        'breakIcon': 8.0,
+        'dutyCardPadding': 4.0,
+        'dutyCardMargin': 2.0,
       };
     }
-    // Mid-range phones (like S23) - MUCH MORE generous for readability 
-    else if (screenWidth < 450) {
+    // Medium screens - balanced sizing
+    else if (isMediumScreen) {
       return {
-        'dayName': 20.0,  // +4 (more generous)
-        'date': 17.0,     // +4 (more generous)
-        'shiftName': 16.0,   // +4 (more generous)
-        'dutyTitle': 15.0,   // +4 (more generous)
-        'timeText': 14.0,    // +4 (MUCH bigger - was 12, now 14)
-        'breakText': 13.0,   // +4 (more generous)
-        'workDuration': 12.0,  // +4 (more generous)
-        'eventTitle': 13.0,    // +4 (more generous)
-        'moreText': 12.0,      // +4 (more generous)
-        'arrowIcon': 12.0,     // +2 (bigger)
-        'breakIcon': 14.0,     // +4 (more generous)
-        // Container dimensions - MORE generous for mid-range phones but contained
-        'dutyCardPadding': 12.0,  // +4 (generous but not excessive)
-        'dutyCardMargin': 8.0,    // +2 (reasonable spacing)
+        'dayName': 14.0,
+        'date': 12.0,
+        'shiftName': 11.0,
+        'dutyTitle': 11.0,
+        'timeText': 12.0,
+        'breakText': 10.0,
+        'workDuration': 10.0,
+        'eventTitle': 10.0,
+        'moreText': 9.0,
+        'arrowIcon': 11.0,
+        'breakIcon': 10.0,
+        'dutyCardPadding': 6.0,
+        'dutyCardMargin': 3.0,
       };
     }
-    // Larger phones and small tablets
-    else if (screenWidth < 600) {
-      return {
-        'dayName': 20.0,  // +4
-        'date': 17.0,     // +4
-        'shiftName': 16.0,   // +4
-        'dutyTitle': 15.0,   // +4
-        'timeText': 13.0,    // +3
-        'breakText': 13.0,   // +4
-        'workDuration': 12.0,  // +4
-        'eventTitle': 13.0,    // +4
-        'moreText': 12.0,      // +4
-        'arrowIcon': 12.0,     // +2
-        'breakIcon': 14.0,     // +4
-        // Container dimensions - larger for good-sized phones but contained
-        'dutyCardPadding': 12.0,  // +4 (generous but controlled)
-        'dutyCardMargin': 10.0,    // +4 (good spacing)
-      };
-    }
-    // Medium sizes for tablets or larger phones
-    else if (screenWidth < 900) {
-      return {
-        'dayName': 20.0,  // +3
-        'date': 17.0,     // +3
-        'shiftName': 16.0,   // +3
-        'dutyTitle': 15.0,   // +3
-        'timeText': 14.0,    // +3
-        'breakText': 13.0,   // +3
-        'workDuration': 12.0,  // +3
-        'eventTitle': 13.0,    // +3
-        'moreText': 12.0,      // +3
-        'arrowIcon': 14.0,     // +3
-        'breakIcon': 14.0,     // +3
-        // Container dimensions - moderate for medium screens
-        'dutyCardPadding': 10.0,  // controlled sizing
-        'dutyCardMargin': 8.0,   // controlled spacing
-      };
-    }
-    // Large sizes for desktop/large tablets
+    // Larger screens - comfortable sizing
     else {
       return {
-        'dayName': 22.0,  // +4
-        'date': 19.0,     // +4
-        'shiftName': 18.0,   // +4
-        'dutyTitle': 17.0,   // +4
-        'timeText': 16.0,    // +4
-        'breakText': 15.0,   // +4
-        'workDuration': 14.0,  // +4
-        'eventTitle': 15.0,    // +4
-        'moreText': 14.0,      // +4
-        'arrowIcon': 16.0,     // +4
-        'breakIcon': 16.0,     // +4
-        // Container dimensions - controlled even for large screens
-        'dutyCardPadding': 12.0,  // generous but contained
-        'dutyCardMargin': 10.0,   // good spacing
+        'dayName': 16.0,
+        'date': 14.0,
+        'shiftName': 13.0,
+        'dutyTitle': 13.0,
+        'timeText': 13.0,
+        'breakText': 11.0,
+        'workDuration': 11.0,
+        'eventTitle': 11.0,
+        'moreText': 10.0,
+        'arrowIcon': 12.0,
+        'breakIcon': 11.0,
+        'dutyCardPadding': 8.0,
+        'dutyCardMargin': 4.0,
       };
     }
   }
