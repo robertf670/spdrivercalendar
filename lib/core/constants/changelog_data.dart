@@ -1,4 +1,10 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.19.3': [
+    {
+      'title': 'Note Icon Color Matching',
+      'description': 'Updated note indicator icon to match the calendar cell color. The icon now displays in the same color as the shift type, sick day, holiday, or other status indicator, providing better visual consistency.',
+    },
+  ],
   '2.19.2': [
     {
       'title': 'Restored Calendar Horizontal Swipe Navigation',

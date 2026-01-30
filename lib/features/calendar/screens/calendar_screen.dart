@@ -6017,7 +6017,20 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                         ? wfoColor.withValues(alpha: 0.3)
                         : shiftInfo?.color.withValues(alpha: 0.3);
     
-    final cellContent = _buildDayCellContent(date, displayText, isDayInLieu, isHoliday, shift, hasEvents, hasSickDay, sickDayColor, dayInLieuColor, isUnpaidLeave, hasWfoEvent, wfoColor, shiftInfo, isSaturdayService, hasNotes, badgeSizes, screenWidth);
+    // Calculate base cell color (without alpha) for note icon
+    final cellColor = hasSickDay && sickDayColor != null
+        ? sickDayColor
+        : isDayInLieu
+            ? dayInLieuColor
+            : isUnpaidLeave
+                ? Colors.purple
+                : isHoliday 
+                    ? holidayColor
+                    : hasWfoEvent && wfoColor != null
+                        ? wfoColor
+                        : (shiftInfo?.color ?? Theme.of(context).primaryColor);
+    
+    final cellContent = _buildDayCellContent(date, displayText, isDayInLieu, isHoliday, shift, hasEvents, hasSickDay, sickDayColor, dayInLieuColor, isUnpaidLeave, hasWfoEvent, wfoColor, shiftInfo, isSaturdayService, hasNotes, cellColor, badgeSizes, screenWidth);
     
     // Determine border color for selected days
     final selectedBorderColor = isBankHoliday ? Colors.red : Theme.of(context).colorScheme.primary;
@@ -6056,7 +6069,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                       ),
                     ],
                   ),
-                  child: _buildDayCellContentWithWhiteText(date, displayText, isDayInLieu, isHoliday, shift, hasEvents, hasSickDay, sickDayColor, dayInLieuColor, isUnpaidLeave, hasWfoEvent, wfoColor, shiftInfo, isSaturdayService, hasNotes, badgeSizes, screenWidth),
+                  child: _buildDayCellContentWithWhiteText(date, displayText, isDayInLieu, isHoliday, shift, hasEvents, hasSickDay, sickDayColor, dayInLieuColor, isUnpaidLeave, hasWfoEvent, wfoColor, shiftInfo, isSaturdayService, hasNotes, cellColor, badgeSizes, screenWidth),
                 )
           : Container(
               margin: const EdgeInsets.all(4.0),
@@ -6097,6 +6110,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
     ShiftInfo? shiftInfo,
     bool isSaturdayService,
     bool hasNotes,
+    Color cellColor,
     Map<String, double> badgeSizes,
     double screenWidth,
   ) {
@@ -6195,7 +6209,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
             child: Icon(
               Icons.note,
               size: badgeSizes['fontSize']! * 1.5,
-              color: AppTheme.primaryColor,
+              color: cellColor,
             ),
           ),
         // Event indicator positioned in bottom-right corner
@@ -6220,6 +6234,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
     ShiftInfo? shiftInfo,
     bool isSaturdayService,
     bool hasNotes,
+    Color cellColor,
     Map<String, double> badgeSizes,
     double screenWidth,
   ) {
@@ -6318,7 +6333,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
             child: Icon(
               Icons.note,
               size: badgeSizes['fontSize']! * 1.5,
-              color: AppTheme.primaryColor,
+              color: cellColor,
             ),
           ),
         // Event indicator positioned in bottom-right corner
