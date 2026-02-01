@@ -487,6 +487,7 @@ class AdminPanelScreenState extends State<AdminPanelScreen> {
   }
 
   void _showUpdateDialog({LiveUpdate? existingUpdate}) {
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
     showDialog(
       context: context,
       builder: (context) => UpdateDialog(
@@ -496,7 +497,7 @@ class AdminPanelScreenState extends State<AdminPanelScreen> {
             if (existingUpdate != null) {
               await LiveUpdatesService.updateUpdate(update);
               if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
+                scaffoldMessenger.showSnackBar(
                   const SnackBar(
                     content: Text('Update saved successfully'),
                     backgroundColor: Colors.green,
@@ -506,7 +507,7 @@ class AdminPanelScreenState extends State<AdminPanelScreen> {
             } else {
               await LiveUpdatesService.addUpdate(update);
               if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
+                scaffoldMessenger.showSnackBar(
                   const SnackBar(
                     content: Text('Update created successfully'),
                     backgroundColor: Colors.green,
@@ -516,7 +517,7 @@ class AdminPanelScreenState extends State<AdminPanelScreen> {
             }
           } catch (e) {
             if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
+              scaffoldMessenger.showSnackBar(
                 SnackBar(
                   content: Text('Error: $e'),
                   backgroundColor: Colors.red,
@@ -532,6 +533,7 @@ class AdminPanelScreenState extends State<AdminPanelScreen> {
   // Reset votes method removed - polls are now managed in PollManagementScreen
 
   void _confirmDelete(LiveUpdate update) {
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -548,7 +550,7 @@ class AdminPanelScreenState extends State<AdminPanelScreen> {
               try {
                 await LiveUpdatesService.deleteUpdate(update.id);
                 if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  scaffoldMessenger.showSnackBar(
                     SnackBar(
                       content: Text('Update "${update.title}" deleted'),
                       backgroundColor: Colors.green,
@@ -557,7 +559,7 @@ class AdminPanelScreenState extends State<AdminPanelScreen> {
                 }
               } catch (e) {
                 if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  scaffoldMessenger.showSnackBar(
                     SnackBar(
                       content: Text('Error deleting update: $e'),
                       backgroundColor: Colors.red,
@@ -1137,6 +1139,7 @@ class UpdateDialogState extends State<UpdateDialog> {
           });
         }
 
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Successfully extracted content from webpage${routes.isNotEmpty ? " - Found routes: ${routes.join(", ")}" : ""}'),
@@ -1151,6 +1154,7 @@ class UpdateDialogState extends State<UpdateDialog> {
       try {
         await _tryAlternativeWebScraping(url);
       } catch (alternativeError) {
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Cannot access webpage (403 blocked). Using URL-based parsing instead.'),

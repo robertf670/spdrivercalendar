@@ -478,11 +478,10 @@ class LiveUpdatesDetailsScreenState extends State<LiveUpdatesDetailsScreen> {
                           icon: const Icon(Icons.close, size: 18),
                           onPressed: () async {
                             await PollService.dismissPoll(poll.id);
-                            if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Poll dismissed')),
-                              );
-                            }
+                            if (!context.mounted) return;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Poll dismissed')),
+                            );
                           },
                           tooltip: 'Dismiss',
                         ),

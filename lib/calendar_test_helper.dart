@@ -744,6 +744,7 @@ class CalendarTestHelper {
       int successCount = 0;
       
       for (final eventData in missingSyncEvents) {
+        if (!context.mounted) break;
         final eventTitle = eventData['title'] as String? ?? 'Work Shift';
         
         final success = await addWorkShiftToCalendar(

@@ -1473,7 +1473,7 @@ class _EventCardState extends State<EventCard> {
           // Use customizable color from ColorCustomizationService
           final dayInLieuColor = ColorCustomizationService.getColorForShift('DAY_IN_LIEU');
           holidayColor = MaterialColor(
-            dayInLieuColor.value,
+            dayInLieuColor.toARGB32(),
             <int, Color>{
               50: dayInLieuColor.withValues(alpha: 0.1),
               100: dayInLieuColor.withValues(alpha: 0.2),
@@ -2394,6 +2394,7 @@ class _EventCardState extends State<EventCard> {
       isWeekday = false;
     }
 
+    if (!context.mounted) return;
     showDialog(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
@@ -2801,7 +2802,9 @@ class _EventCardState extends State<EventCard> {
                       }
                       
                       // Close the dialog
-                      Navigator.of(dialogContext).pop();
+                      if (context.mounted) {
+                        Navigator.of(dialogContext).pop();
+                      }
                       
                       // Load the duty details and refresh UI safely
                       if (mounted) {
@@ -3269,8 +3272,8 @@ class _EventCardState extends State<EventCard> {
                            decoration: BoxDecoration(
                              color: Theme.of(context).brightness == Brightness.dark
                                  ? (widget.event.getBusForDuty(duty['dutyCode'] ?? '') != null 
-                                     ? Colors.green.shade900.withOpacity(0.3)
-                                     : Colors.orange.shade900.withOpacity(0.3))
+                                     ? Colors.green.shade900.withValues(alpha: 0.3)
+                                     : Colors.orange.shade900.withValues(alpha: 0.3))
                                  : (widget.event.getBusForDuty(duty['dutyCode'] ?? '') != null 
                                      ? Colors.green.withValues(alpha: 0.1)
                                      : Colors.orange.withValues(alpha: 0.1)),
@@ -3423,11 +3426,14 @@ class _EventCardState extends State<EventCard> {
                 );
 
                 if (shouldDelete == true) {
-                  // Capture navigator before async operation
-                  final navigator = Navigator.of(context);
-                  
                   // Delete the event
                   await EventService.deleteEvent(widget.event);
+                  
+                  // Check if context is still valid
+                  if (!context.mounted) return;
+                  
+                  // Capture navigator after checking mounted
+                  final navigator = Navigator.of(context);
                   
                   // Close the dialog
                   navigator.pop();
@@ -3795,7 +3801,7 @@ class _EventCardState extends State<EventCard> {
                   _updateDutyBus(dutyCode, busNumber, refreshDialog).then((_) {
                     // Success - no action needed
                   }).catchError((error) {
-                    if (mounted) {
+                    if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           content: Text('Failed to assign bus: ${error.toString()}'),
@@ -3832,10 +3838,12 @@ class _EventCardState extends State<EventCard> {
                 try {
                   final navigator = Navigator.of(dialogContext);
                   await _updateDutyBus(dutyCode, null, refreshDialog);
-                  navigator.pop();
+                  if (context.mounted) {
+                    navigator.pop();
+                  }
                 } catch (error) {
                   // Show error to user but don't close dialog
-                  if (mounted) {
+                  if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text('Failed to remove bus: ${error.toString()}'),
@@ -3859,10 +3867,12 @@ class _EventCardState extends State<EventCard> {
                 
                 final navigator = Navigator.of(dialogContext);
                 await _updateDutyBus(dutyCode, normalizedBusNumber?.isEmpty == true ? null : normalizedBusNumber, refreshDialog);
-                navigator.pop();
+                if (context.mounted) {
+                  navigator.pop();
+                }
               } catch (error) {
                 // Show error to user but don't close dialog
-                if (mounted) {
+                if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text('Failed to assign bus: ${error.toString()}'),
@@ -4389,33 +4399,36 @@ class _EventCardState extends State<EventCard> {
                 widget.event.tookFullBreak = false;
                 widget.event.overtimeDuration = null;
                 
-                // Save the updated event
-                await EventService.updateEvent(oldEvent, widget.event);
-                
-                // Close the dialog
-                Navigator.of(context).pop();
-                
-                // Update the UI
-                setState(() {});
-                
-                // Trigger refresh
-                widget.onEdit(Event(
-                  id: 'refresh_trigger',
-                  title: '',
-                  startDate: widget.event.startDate,
-                  startTime: widget.event.startTime,
-                  endDate: widget.event.endDate,
-                  endTime: widget.event.endTime,
-                  busAssignments: {},
-                ));
-                
-                // Show confirmation
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Break status removed'),
-                    duration: Duration(seconds: 2),
-                  ),
-                );
+              // Save the updated event
+              await EventService.updateEvent(oldEvent, widget.event);
+              
+              // Check if context is still valid
+              if (!context.mounted) return;
+              
+              // Close the dialog
+              Navigator.of(context).pop();
+              
+              // Update the UI
+              setState(() {});
+              
+              // Trigger refresh
+              widget.onEdit(Event(
+                id: 'refresh_trigger',
+                title: '',
+                startDate: widget.event.startDate,
+                startTime: widget.event.startTime,
+                endDate: widget.event.endDate,
+                endTime: widget.event.endTime,
+                busAssignments: {},
+              ));
+              
+              // Show confirmation
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Break status removed'),
+                  duration: Duration(seconds: 2),
+                ),
+              );
               },
               style: TextButton.styleFrom(
                 foregroundColor: Colors.red,
@@ -4457,6 +4470,9 @@ class _EventCardState extends State<EventCard> {
               
               // Save the updated event
               await EventService.updateEvent(oldEvent, widget.event);
+              
+              // Check if context is still valid
+              if (!context.mounted) return;
               
               // Close the dialog
               Navigator.of(context).pop();
@@ -4532,6 +4548,9 @@ class _EventCardState extends State<EventCard> {
                 
                 // Save the updated event
                 await EventService.updateEvent(oldEvent, widget.event);
+                
+                // Check if context is still valid
+                if (!context.mounted) return;
                 
                 // Close the dialog
                 Navigator.of(context).pop();
@@ -4682,6 +4701,9 @@ class _EventCardState extends State<EventCard> {
                 // Save the updated event
                 await EventService.updateEvent(oldEvent, widget.event);
                 
+                // Check if context is still valid
+                if (!context.mounted) return;
+                
                 // Close the dialog
                 Navigator.of(context).pop();
                 
@@ -4742,6 +4764,9 @@ class _EventCardState extends State<EventCard> {
               
               // Save the updated event
               await EventService.updateEvent(oldEvent, widget.event);
+              
+              // Check if context is still valid
+              if (!context.mounted) return;
               
               // Close the dialog
               Navigator.of(context).pop();
@@ -4870,6 +4895,9 @@ class _EventCardState extends State<EventCard> {
               // Save the updated event
               await EventService.updateEvent(oldEvent, widget.event);
               
+              // Check if context is still valid
+              if (!context.mounted) return;
+              
               // Close the dialog
               Navigator.of(context).pop();
               
@@ -4890,6 +4918,9 @@ class _EventCardState extends State<EventCard> {
               // Show confirmation with remaining count
               final remainingHalfYear = await SelfCertifiedSickDaysService.getRemainingForHalfYear(year, halfYear);
               final remainingYearly = await SelfCertifiedSickDaysService.getRemainingForYear(year);
+              
+              // Check again after async operations
+              if (!context.mounted) return;
               
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
@@ -4930,6 +4961,9 @@ class _EventCardState extends State<EventCard> {
               
               // Save the updated event
               await EventService.updateEvent(oldEvent, widget.event);
+              
+              // Check if context is still valid
+              if (!context.mounted) return;
               
               // Close the dialog
               Navigator.of(context).pop();
@@ -5136,6 +5170,9 @@ class _EventCardState extends State<EventCard> {
                 // Save the updated event
                 await EventService.updateEvent(oldEvent, widget.event);
                 
+                // Check if context is still valid
+                if (!context.mounted) return;
+                
                 // Close the dialog (controller will be disposed in .then() callback)
                 Navigator.of(context).pop();
                 
@@ -5336,6 +5373,9 @@ class _EventCardState extends State<EventCard> {
                 // Save the updated event
                 await EventService.updateEvent(oldEvent, widget.event);
                 
+                // Check if context is still valid
+                if (!context.mounted) return;
+                
                 // Close the dialog (controller will be disposed in .then() callback)
                 Navigator.of(context).pop();
                 
@@ -5499,7 +5539,7 @@ class _EventCardState extends State<EventCard> {
                             // Force dialog to rebuild with updated data
                           });
                         } catch (refreshError) {
-                          Navigator.of(context).pop();
+                          // Dialog might have been closed, ignore error
                         }
                       }
                     },
@@ -5551,7 +5591,7 @@ class _EventCardState extends State<EventCard> {
                     margin: const EdgeInsets.only(bottom: 8),
                     decoration: BoxDecoration(
                       color: Theme.of(context).brightness == Brightness.dark
-                          ? Colors.green.shade900.withOpacity(0.3)
+                          ? Colors.green.shade900.withValues(alpha: 0.3)
                           : Colors.green.shade50,
                       borderRadius: BorderRadius.circular(6),
                       border: Border.all(
@@ -5603,12 +5643,12 @@ class _EventCardState extends State<EventCard> {
                           children: [
                             // Track button for first half bus
                             GestureDetector(
-                              onTap: _busTrackingLoading['tracking_${_firstHalfBus}'] == true
+                              onTap: _busTrackingLoading['tracking_$_firstHalfBus'] == true
                                   ? null
                                   : () => _trackBus(_firstHalfBus!),
                               child: Container(
                                 padding: EdgeInsets.all(iconPadding),
-                                child: _busTrackingLoading['tracking_${_firstHalfBus}'] == true
+                                child: _busTrackingLoading['tracking_$_firstHalfBus'] == true
                                     ? SizedBox(
                                         width: iconSize - 2,
                                         height: iconSize - 2,
@@ -5717,7 +5757,7 @@ class _EventCardState extends State<EventCard> {
                     margin: const EdgeInsets.only(bottom: 8),
                     decoration: BoxDecoration(
                       color: Theme.of(context).brightness == Brightness.dark
-                          ? Colors.green.shade900.withOpacity(0.3)
+                          ? Colors.green.shade900.withValues(alpha: 0.3)
                           : Colors.green.shade50,
                       borderRadius: BorderRadius.circular(6),
                       border: Border.all(
@@ -5769,12 +5809,12 @@ class _EventCardState extends State<EventCard> {
                           children: [
                             // Track button for second half bus
                             GestureDetector(
-                              onTap: _busTrackingLoading['tracking_${_secondHalfBus}'] == true
+                              onTap: _busTrackingLoading['tracking_$_secondHalfBus'] == true
                                   ? null
                                   : () => _trackBus(_secondHalfBus!),
                               child: Container(
                                 padding: EdgeInsets.all(iconPadding),
-                                child: _busTrackingLoading['tracking_${_secondHalfBus}'] == true
+                                child: _busTrackingLoading['tracking_$_secondHalfBus'] == true
                                     ? SizedBox(
                                         width: iconSize - 2,
                                         height: iconSize - 2,

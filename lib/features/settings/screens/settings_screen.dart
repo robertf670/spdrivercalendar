@@ -1387,6 +1387,9 @@ class SettingsScreenState extends State<SettingsScreen> {
       // Check sync status
       final syncResult = await CalendarTestHelper.checkCalendarSyncStatus();
       
+      // Check if context is still valid before using it
+      if (!context.mounted) return;
+      
       // Close loading dialog
       navigator.pop();
       
@@ -1464,7 +1467,7 @@ class SettingsScreenState extends State<SettingsScreen> {
       final result = await CalendarTestHelper.syncMissingEventsToGoogleCalendar(context);
       
       // Close the dialog using the captured context
-      if (dialogContext != null) {
+      if (dialogContext != null && dialogContext!.mounted) {
         Navigator.pop(dialogContext!);
       }
       
@@ -1488,7 +1491,7 @@ class SettingsScreenState extends State<SettingsScreen> {
       }
     } catch (e) {
       // Close the dialog using the captured context
-      if (dialogContext != null) {
+      if (dialogContext != null && dialogContext!.mounted) {
         Navigator.pop(dialogContext!);
       }
       
@@ -1549,6 +1552,7 @@ class SettingsScreenState extends State<SettingsScreen> {
           });
           final prefs = await SharedPreferences.getInstance();
           await prefs.setBool(AppConstants.autoBackupEnabledKey, value);
+          if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(value ? 'Automatic backups enabled' : 'Automatic backups disabled')),
           );
@@ -1556,6 +1560,7 @@ class SettingsScreenState extends State<SettingsScreen> {
           if (value) {
              _showLoadingDialog("Creating initial auto-backup...");
             bool success = await BackupService.createAutoBackup();
+            if (!mounted) return;
             Navigator.of(context, rootNavigator: true).pop(); // Close loading dialog
             if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -1587,9 +1592,8 @@ class SettingsScreenState extends State<SettingsScreen> {
   Future<void> _showAutoBackupSelectionDialog() async {
     _showLoadingDialog("Loading auto-backups...");
     List<File> autoBackups = await BackupService.listAutoBackups();
-    Navigator.of(context, rootNavigator: true).pop(); // Close loading dialog
-
     if (!mounted) return;
+    Navigator.of(context, rootNavigator: true).pop(); // Close loading dialog
 
     if (autoBackups.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -1672,6 +1676,7 @@ class SettingsScreenState extends State<SettingsScreen> {
     final bool success = await BackupService.createBackup();
     
     // Close loading dialog
+    if (!mounted) return;
     Navigator.of(context, rootNavigator: true).pop();
 
     if (mounted) {
@@ -1711,6 +1716,7 @@ class SettingsScreenState extends State<SettingsScreen> {
     final bool success = await BackupService.restoreBackup(filePathToRestore: filePathToRestore);
 
     // Close loading dialog
+    if (!mounted) return;
     // Use a local variable for context that might be used in an async gap.
     final navContext = Navigator.of(context, rootNavigator: true);
     navContext.pop();
@@ -2475,7 +2481,7 @@ class SettingsScreenState extends State<SettingsScreen> {
                                       ],
                                     ),
                                   );
-                                }).toList(),
+                                }),
                               ],
                             ),
                           );

@@ -167,10 +167,13 @@ class MyAppState extends State<MyApp> with WidgetsBindingObserver {
               AppConstants.welcomeRoute: (context) => WelcomeScreen(
                 onGetStarted: () async {
                   await StorageService.saveBool(AppConstants.hasSeenWelcomeKey, true);
+                  if (!context.mounted) return;
                   final isFromSettings = ModalRoute.of(context)?.settings.arguments as bool? ?? false;
                   if (isFromSettings) {
+                    if (!context.mounted) return;
                     Navigator.pop(context);
                   } else {
+                    if (!context.mounted) return;
                     Navigator.pushReplacementNamed(context, AppConstants.googleLoginRoute);
                   }
                 },

@@ -2039,33 +2039,6 @@ class StatisticsScreenState extends State<StatisticsScreen>
     return Map.fromEntries(sortedEntries);
   }
 
-  // Helper method to check if a shift is a workout shift
-  bool _isWorkoutShift(Event event) {
-    try {
-      // We can't use async methods in this context, so we'll use a heuristic
-      // based on common workout shift patterns. This is the same approach used elsewhere
-      // in the codebase for performance reasons.
-      
-      // Common workout shift patterns - duties that are typically workouts
-      // This is a simplified check - the full check would require async break time lookup
-      final title = event.title.toLowerCase();
-      
-      // Check for common workout patterns (you may need to adjust these based on your data)
-      if (title.contains('workout') || 
-          title.contains('wo') ||
-          // Add other patterns as needed
-          false) {
-        return true;
-      }
-      
-      // For now, we'll return false and let the system handle it as a regular shift
-      // The overtime detection is the more important fix for the user's immediate need
-      return false;
-    } catch (e) {
-      return false;
-    }
-  }
-
   // --- Add Calculation Logic --- 
 
   Future<void> _calculateSundayPairStatistics() async {

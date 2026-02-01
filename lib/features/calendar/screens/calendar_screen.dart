@@ -87,7 +87,6 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
   DateTime _focusedDay = DateTime.now();
   DateTime? _startDate;
   int _startWeek = 0;
-  int _selectedYear = DateTime.now().year;
   List<BankHoliday>? _bankHolidays;
   List<Holiday> _holidays = [];
   late AnimationController _animationController;
@@ -385,7 +384,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
       }
     } catch (e) {
       // Handle error gracefully - but log it for debugging
-      print('Error reloading holidays: $e');
+      debugPrint('Error reloading holidays: $e');
     }
   }
 
@@ -710,7 +709,6 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
     
     // Check if user is M-F marked in and if it's a weekday
     bool isMFMarkedIn = false;
-    bool isWeekday = false;
     // Check if user is marked-in on Shift status and get their zone
     bool isShiftMarkedIn = false;
     String markedInZone = '';
@@ -725,16 +723,15 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
         isShiftMarkedIn = true;
         markedInZone = await StorageService.getString(AppConstants.markedInZoneKey) ?? 'Zone 1';
       }
-      
-      final dayOfWeek = RosterService.getDayOfWeek(shiftDate);
-      isWeekday = dayOfWeek != 'Saturday' && dayOfWeek != 'Sunday';
     } catch (e) {
       // If we can't check, default to false
       isMFMarkedIn = false;
-      isWeekday = false;
       isShiftMarkedIn = false;
       markedInZone = '';
     }
+    
+    // Check if widget is still mounted after async operations
+    if (!mounted) return;
     
     // Show dialog with loading state initially
     showDialog(
@@ -1407,11 +1404,10 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                       // Handle potential null shiftTimes (error loading CSV etc.)
                       if (shiftTimes == null) {
                          // Could not retrieve shift times
-                         if (mounted) {
-                          ScaffoldMessenger.of(dialogContext).showSnackBar(
-                            const SnackBar(content: Text('Error retrieving shift times. Please try again.')),
-                          );
-                         }
+                         if (!mounted) return;
+                         ScaffoldMessenger.of(dialogContext).showSnackBar(
+                           const SnackBar(content: Text('Error retrieving shift times. Please try again.')),
+                         );
                          return; // Stop execution if times are null
                       }
                       
@@ -1482,30 +1478,27 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                           // Use the same shift times if available, otherwise use original
                           final finalShiftTimes = targetShiftTimes ?? shiftTimes;
                           
-                          if (finalShiftTimes != null) {
-                            // Create event for this day
-                            final weekEvent = Event(
-                              id: '${title}_${targetDate.millisecondsSinceEpoch}',
-                              title: title,
-                              startDate: targetDate,
-                              startTime: finalShiftTimes['startTime']!,
-                              endDate: finalShiftTimes['isNextDay'] == true
-                                  ? targetDate.add(const Duration(days: 1))
-                                  : targetDate,
-                              endTime: finalShiftTimes['endTime']!,
-                              breakStartTime: finalShiftTimes['breakStartTime'] as TimeOfDay?,
-                              breakEndTime: finalShiftTimes['breakEndTime'] as TimeOfDay?,
-                              workTime: finalShiftTimes['workTime'] as Duration?,
-                              routes: finalShiftTimes['routes'] as List<String>?,
-                            );
-                            
-                            await EventService.addEvent(weekEvent);
-                            
-                            // Sync to Google if enabled
-                            if (mounted) {
-                              _checkAndSyncToGoogleCalendar(weekEvent, context);
-                            }
-                          }
+                          // Create event for this day
+                          final weekEvent = Event(
+                            id: '${title}_${targetDate.millisecondsSinceEpoch}',
+                            title: title,
+                            startDate: targetDate,
+                            startTime: finalShiftTimes['startTime']!,
+                            endDate: finalShiftTimes['isNextDay'] == true
+                                ? targetDate.add(const Duration(days: 1))
+                                : targetDate,
+                            endTime: finalShiftTimes['endTime']!,
+                            breakStartTime: finalShiftTimes['breakStartTime'] as TimeOfDay?,
+                            breakEndTime: finalShiftTimes['breakEndTime'] as TimeOfDay?,
+                            workTime: finalShiftTimes['workTime'] as Duration?,
+                            routes: finalShiftTimes['routes'] as List<String>?,
+                          );
+                          
+                          await EventService.addEvent(weekEvent);
+                          
+                          // Sync to Google if enabled
+                          if (!mounted) return;
+                          _checkAndSyncToGoogleCalendar(weekEvent, context);
                         }
                       }
                       
@@ -1553,41 +1546,36 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                           // Use the same shift times if available, otherwise use original
                           final finalShiftTimes = targetShiftTimes ?? shiftTimes;
                           
-                          if (finalShiftTimes != null) {
-                            // Create event for this day
-                            final repeatEvent = Event(
-                              id: '${title}_${targetDate.millisecondsSinceEpoch}',
-                              title: title,
-                              startDate: targetDate,
-                              startTime: finalShiftTimes['startTime']!,
-                              endDate: finalShiftTimes['isNextDay'] == true
-                                  ? targetDate.add(const Duration(days: 1))
-                                  : targetDate,
-                              endTime: finalShiftTimes['endTime']!,
-                              breakStartTime: finalShiftTimes['breakStartTime'] as TimeOfDay?,
-                              breakEndTime: finalShiftTimes['breakEndTime'] as TimeOfDay?,
-                              workTime: finalShiftTimes['workTime'] as Duration?,
-                              routes: finalShiftTimes['routes'] as List<String>?,
-                            );
-                            
-                            await EventService.addEvent(repeatEvent);
-                            
-                            // Sync to Google if enabled
-                            if (mounted) {
-                              _checkAndSyncToGoogleCalendar(repeatEvent, context);
-                            }
-                          }
+                          // Create event for this day
+                          final repeatEvent = Event(
+                            id: '${title}_${targetDate.millisecondsSinceEpoch}',
+                            title: title,
+                            startDate: targetDate,
+                            startTime: finalShiftTimes['startTime']!,
+                            endDate: finalShiftTimes['isNextDay'] == true
+                                ? targetDate.add(const Duration(days: 1))
+                                : targetDate,
+                            endTime: finalShiftTimes['endTime']!,
+                            breakStartTime: finalShiftTimes['breakStartTime'] as TimeOfDay?,
+                            breakEndTime: finalShiftTimes['breakEndTime'] as TimeOfDay?,
+                            workTime: finalShiftTimes['workTime'] as Duration?,
+                            routes: finalShiftTimes['routes'] as List<String>?,
+                          );
+                          
+                          await EventService.addEvent(repeatEvent);
+                          
+                          // Sync to Google if enabled
+                          if (!mounted) return;
+                          _checkAndSyncToGoogleCalendar(repeatEvent, context);
                         }
                       }
                       
-                      if (mounted) {
-                        Navigator.of(dialogContext).pop();
-                      }
+                      if (!mounted) return;
+                      Navigator.of(dialogContext).pop();
                       
                       // Sync to Google if enabled (before any other async operations)
-                      if (mounted) {
-                        _checkAndSyncToGoogleCalendar(event, context);
-                      }
+                      if (!mounted) return;
+                      _checkAndSyncToGoogleCalendar(event, context);
                       
                       // Force UI refresh immediately after adding an event
                       if (mounted) {
@@ -1836,14 +1824,13 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                         // Validate rest day again before saving
                         final String currentShiftType = getShiftForDate(shiftDate);
                         if (currentShiftType != 'R') {
-                          if (mounted) {
-                            ScaffoldMessenger.of(dialogContext).showSnackBar(
-                              const SnackBar(
-                                content: Text('Work For Others can only be added on rest days.'),
-                                backgroundColor: Colors.red,
-                              ),
-                            );
-                          }
+                          if (!mounted) return;
+                          ScaffoldMessenger.of(dialogContext).showSnackBar(
+                            const SnackBar(
+                              content: Text('Work For Others can only be added on rest days.'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
                           return;
                         }
                         
@@ -1866,11 +1853,10 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                         
                         // Handle potential null shiftTimes
                         if (shiftTimes == null) {
-                          if (mounted) {
-                            ScaffoldMessenger.of(dialogContext).showSnackBar(
-                              const SnackBar(content: Text('Error retrieving shift times. Please try again.')),
-                            );
-                          }
+                          if (!mounted) return;
+                          ScaffoldMessenger.of(dialogContext).showSnackBar(
+                            const SnackBar(content: Text('Error retrieving shift times. Please try again.')),
+                          );
                           return;
                         }
                         
@@ -1893,14 +1879,12 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                         
                         // Add event and close dialog
                         await EventService.addEvent(event);
-                        if (mounted) {
-                          Navigator.of(dialogContext).pop();
-                        }
+                        if (!mounted) return;
+                        Navigator.of(dialogContext).pop();
                         
                         // Sync to Google if enabled
-                        if (mounted) {
-                          _checkAndSyncToGoogleCalendar(event, context);
-                        }
+                        if (!mounted) return;
+                        _checkAndSyncToGoogleCalendar(event, context);
                         
                         // Force UI refresh
                         if (mounted) {
@@ -2806,7 +2790,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                                 padding: EdgeInsets.symmetric(horizontal: containerPadding, vertical: containerPadding * 0.75),
                                 decoration: BoxDecoration(
                                   color: Theme.of(context).brightness == Brightness.dark
-                                      ? Theme.of(context).cardColor.withOpacity(0.5)
+                                      ? Theme.of(context).cardColor.withValues(alpha: 0.5)
                                       : Colors.white,
                                   borderRadius: BorderRadius.circular(6),
                                   border: Border.all(
@@ -2959,20 +2943,19 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                                           await _syncBusAssignmentsToGoogleCalendar(updatedEvent);
                                           
                                           // Refresh the UI
-                                          if (mounted) {
-                                            setState(() {});
-                                            // Close the current dialog
-                                            Navigator.of(context).pop();
-                                            // Reopen the dialog with the updated event
-                                            _editEvent(updatedEvent);
-                                          }
+                                          if (!mounted) return;
+                                          setState(() {});
+                                          // Close the current dialog
+                                          Navigator.of(context).pop();
+                                          // Reopen the dialog with the updated event
+                                          _editEvent(updatedEvent);
                                         }
-                                        },
-                                        child: Container(
-                                          padding: EdgeInsets.all(iconPadding),
-                                          child: Icon(Icons.swap_horiz, size: iconSize, color: Colors.orange),
-                                        ),
+                                      },
+                                      child: Container(
+                                        padding: EdgeInsets.all(iconPadding),
+                                        child: Icon(Icons.swap_horiz, size: iconSize, color: Colors.orange),
                                       ),
+                                    ),
                                       // Remove bus button
                                       GestureDetector(
                                         onTap: () async {
@@ -3030,13 +3013,12 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                                             await _syncBusAssignmentsToGoogleCalendar(updatedEvent);
                                             
                                             // Refresh the UI
-                                            if (mounted) {
-                                              setState(() {});
-                                              // Close the current dialog
-                                              Navigator.of(context).pop();
-                                              // Reopen the dialog with the updated event
-                                              _editEvent(updatedEvent);
-                                            }
+                                            if (!mounted) return;
+                                            setState(() {});
+                                            // Close the current dialog
+                                            Navigator.of(context).pop();
+                                            // Reopen the dialog with the updated event
+                                            _editEvent(updatedEvent);
                                           },
                                           child: Container(
                                             padding: EdgeInsets.all(iconPadding),
@@ -3068,7 +3050,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                                 padding: EdgeInsets.symmetric(horizontal: containerPadding, vertical: containerPadding * 0.75),
                                 decoration: BoxDecoration(
                                   color: Theme.of(context).brightness == Brightness.dark
-                                      ? Theme.of(context).cardColor.withOpacity(0.5)
+                                      ? Theme.of(context).cardColor.withValues(alpha: 0.5)
                                       : Colors.white,
                                   borderRadius: BorderRadius.circular(6),
                                   border: Border.all(
@@ -3221,13 +3203,12 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                                           await _syncBusAssignmentsToGoogleCalendar(updatedEvent);
                                           
                                           // Refresh the UI
-                                          if (mounted) {
-                                            setState(() {});
-                                            // Close the current dialog
-                                            Navigator.of(context).pop();
-                                            // Reopen the dialog with the updated event
-                                            _editEvent(updatedEvent);
-                                          }
+                                          if (!mounted) return;
+                                          setState(() {});
+                                          // Close the current dialog
+                                          Navigator.of(context).pop();
+                                          // Reopen the dialog with the updated event
+                                          _editEvent(updatedEvent);
                                         }
                                       },
                                       child: Container(
@@ -3292,13 +3273,12 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                                         await _syncBusAssignmentsToGoogleCalendar(updatedEvent);
                                         
                                         // Refresh the UI
-                                        if (mounted) {
-                                          setState(() {});
-                                          // Close the current dialog
-                                          Navigator.of(context).pop();
-                                          // Reopen the dialog with the updated event
-                                          _editEvent(updatedEvent);
-                                        }
+                                        if (!mounted) return;
+                                        setState(() {});
+                                        // Close the current dialog
+                                        Navigator.of(context).pop();
+                                        // Reopen the dialog with the updated event
+                                        _editEvent(updatedEvent);
                                       },
                                       child: Container(
                                         padding: EdgeInsets.all(iconPadding),
@@ -3798,6 +3778,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                             );
                             
                             // Delete from Google Calendar
+                            if (!mounted) return;
                             await CalendarTestHelper.deleteEventFromCalendar(
                               context: context,
                               title: event.title,
@@ -4234,7 +4215,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                                   ],
                                 ),
                               );
-                            }).toList(),
+                            }),
                           ],
                         ),
                       );
@@ -4347,9 +4328,11 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                 
                 await EventService.updateEvent(oldEvent, event);
                 
+                if (!mounted) return;
                 setState(() {});
               }
               
+              if (!mounted) return;
               Navigator.of(context).pop();
             },
             child: const Text('Save'),
@@ -4504,12 +4487,14 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                 await EventService.updateEvent(oldEvent, event);
                 
                 // Close the dialog
+                if (!mounted) return;
                 Navigator.of(context).pop();
                 
                 // Update the UI
                 setState(() {});
                 
                 // Show confirmation
+                if (!mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
                     content: Text('Break status removed'),
@@ -4568,12 +4553,14 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                 await EventService.updateEvent(oldEvent, event);
                 
                 // Close the dialog
+                if (!mounted) return;
                 Navigator.of(context).pop();
                 
                 // Update the UI
                 setState(() {});
                 
                 // Show confirmation
+                if (!mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
                     content: Text('Full Break status saved'),
@@ -4642,12 +4629,14 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                 await EventService.updateEvent(oldEvent, event);
                 
                 // Close the dialog
+                if (!mounted) return;
                 Navigator.of(context).pop();
                 
                 // Update the UI
                 setState(() {});
                 
                 // Show confirmation
+                if (!mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
                     content: Text('Late finish status removed'),
@@ -4768,12 +4757,14 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                     await EventService.updateEvent(oldEvent, event);
                     
                     // Close the dialog
+                    if (!mounted) return;
                     Navigator.of(context).pop();
                     
                     // Update the UI
                     this.setState(() {});
                     
                     // Show confirmation
+                    if (!mounted) return;
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
                         content: Text('Overtime (1 hour) saved'),
@@ -5028,6 +5019,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                 await EventService.updateEvent(oldEvent, event);
                 
                 // Close the dialog (controller will be disposed in .then() callback)
+                if (!mounted) return;
                 Navigator.of(context).pop();
                 
                 // Update the UI
@@ -5592,11 +5584,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                 icon: const Icon(Icons.chevron_left),
                 onPressed: () {
                   setState(() {
-                    _focusedDay = DateTime(
-                      _focusedDay.year,
-                      _focusedDay.month - 1,
-                      _focusedDay.day,
-                    );
+                    _focusedDay = _navigateToMonth(_focusedDay, -1);
                   });
                 },
               ),
@@ -5628,11 +5616,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                 icon: const Icon(Icons.chevron_right),
                 onPressed: () {
                   setState(() {
-                    _focusedDay = DateTime(
-                      _focusedDay.year,
-                      _focusedDay.month + 1,
-                      _focusedDay.day,
-                    );
+                    _focusedDay = _navigateToMonth(_focusedDay, 1);
                   });
                 },
               ),
@@ -5706,193 +5690,6 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
           ),
         ),
       ],
-    );
-  }
-
-  // Add this new method to show month/year picker
-  void _showMonthYearPicker() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (BuildContext modalContext) {
-        return StatefulBuilder(
-          builder: (BuildContext context, StateSetter setModalState) {
-            return Container(
-              decoration: BoxDecoration(
-                color: Theme.of(context).scaffoldBackgroundColor,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Drag handle
-                  Container(
-                    margin: const EdgeInsets.only(top: 8),
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).dividerColor,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                  // Header
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Select Month',
-                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        TextButton(
-                          onPressed: () {
-                            setState(() {
-                              _focusedDay = DateTime.now();
-                              _selectedDay = DateTime.now();
-                            });
-                            Navigator.pop(context);
-                          },
-                          child: const Text('Current Month'),
-                        ),
-                      ],
-                    ),
-                  ),
-                  // Year selector
-                  Container(
-                    height: 32,
-                    margin: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.chevron_left),
-                          iconSize: 20,
-                          onPressed: () {
-                            setModalState(() {
-                              _selectedYear = _selectedYear - 1;
-                            });
-                          },
-                        ),
-                        GestureDetector(
-                          onTap: () {
-                            final yearToShow = _selectedYear;
-                            Navigator.pop(modalContext); // Close the month/year picker
-                            // Navigate to year view after modal closes
-                            Future.delayed(const Duration(milliseconds: 100), () {
-                              if (mounted) {
-                                _showYearView(yearToShow);
-                              }
-                            });
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.5), // Use theme color
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                color: Theme.of(context).dividerColor,
-                              ),
-                            ),
-                            child: Text(
-                              '$_selectedYear',
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.chevron_right),
-                          iconSize: 20,
-                          onPressed: () {
-                            setModalState(() {
-                              _selectedYear = _selectedYear + 1;
-                            });
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                  // Month grid
-                  Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: GridView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 6,
-                        childAspectRatio: 1.5,
-                        mainAxisSpacing: 8,
-                        crossAxisSpacing: 8,
-                      ),
-                      itemCount: 12,
-                      itemBuilder: (context, index) {
-                        final month = index + 1;
-                        final date = DateTime(_selectedYear, month);
-                        final isSelected = _focusedDay.year == _selectedYear && 
-                                         _focusedDay.month == month;
-                        final isCurrentMonth = date.year == DateTime.now().year &&
-                                             date.month == DateTime.now().month;
-                        
-                        return Material(
-                          color: Colors.transparent,
-                          child: InkWell(
-                            onTap: () {
-                              setState(() {
-                                _focusedDay = date;
-                                _selectedDay = date;
-                              });
-                              Navigator.pop(context);
-                            },
-                            borderRadius: BorderRadius.circular(8),
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: isSelected
-                                    ? Theme.of(context).colorScheme.primary
-                                    : isCurrentMonth
-                                        ? Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.2)
-                                        : null,
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(
-                                  color: isCurrentMonth && !isSelected
-                                      ? Theme.of(context).colorScheme.primary
-                                      : Colors.transparent,
-                                  width: 1,
-                                ),
-                              ),
-                              child: Center(
-                                child: Text(
-                                  DateFormat('MMM').format(date),
-                                  style: TextStyle(
-                                    color: isSelected
-                                        ? Theme.of(context).colorScheme.onPrimary
-                                        : isCurrentMonth
-                                            ? Theme.of(context).colorScheme.primary
-                                            : null,
-                                    fontSize: 12,
-                                    fontWeight: isSelected || isCurrentMonth ? FontWeight.bold : null,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                  // Bottom padding for safe area
-                  const SizedBox(height: 16),
-                ],
-              ),
-            );
-          },
-        );
-      },
     );
   }
 
@@ -6740,7 +6537,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                           '$totalHolidays ${totalHolidays == 1 ? 'holiday' : 'holidays'} across $totalYears ${totalYears == 1 ? 'year' : 'years'}',
                           style: TextStyle(
                             fontSize: sizes['subtitleFontSize']!,
-                            color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
+                            color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
                           ),
                         ),
                       ],
@@ -6909,7 +6706,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                   ),
                 ],
               );
-            }).toList(),
+            }),
           ],
         ],
       ),
@@ -7026,7 +6823,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                   dateText,
                   style: TextStyle(
                     fontSize: sizes['itemSubtitleFontSize']!,
-                    color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
+                    color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
                   ),
                 ),
               ],
@@ -7099,7 +6896,9 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                   _updateAllEvents();
                   
                   // Close and reopen the dialog to refresh the view
+                  if (!mounted) return;
                   Navigator.of(context).pop();
+                  if (!mounted) return;
                   _showAddHolidaysDialog();
                 }
               }
@@ -7980,7 +7779,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
                           color: Theme.of(context).brightness == Brightness.dark
-                              ? Colors.blue.shade900.withOpacity(0.3)
+                              ? Colors.blue.shade900.withValues(alpha: 0.3)
                               : Colors.blue.shade50,
                           borderRadius: BorderRadius.circular(12),
                         ),
@@ -8032,7 +7831,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                                   decoration: BoxDecoration(
                                     color: Theme.of(context).brightness == Brightness.dark
                                         ? (hasHolidays 
-                                            ? Colors.blue.shade900.withOpacity(0.3)
+                                            ? Colors.blue.shade900.withValues(alpha: 0.3)
                                             : Theme.of(context).cardColor)
                                         : (hasHolidays 
                                             ? Colors.blue.shade50 
@@ -8080,7 +7879,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                                           ),
                                           decoration: BoxDecoration(
                                             color: Theme.of(context).brightness == Brightness.dark
-                                                ? Colors.blue.shade800.withOpacity(0.5)
+                                                ? Colors.blue.shade800.withValues(alpha: 0.5)
                                                 : Colors.blue.shade100,
                                             borderRadius: BorderRadius.circular(8),
                                           ),
@@ -8108,7 +7907,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
                             color: Theme.of(context).brightness == Brightness.dark
-                                ? Colors.blue.shade900.withOpacity(0.3)
+                                ? Colors.blue.shade900.withValues(alpha: 0.3)
                                 : Colors.blue.shade50,
                             borderRadius: BorderRadius.circular(8),
                           ),
@@ -8201,7 +8000,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
                       color: Theme.of(context).brightness == Brightness.dark
-                          ? Colors.blue.shade900.withOpacity(0.3)
+                          ? Colors.blue.shade900.withValues(alpha: 0.3)
                           : Colors.blue.shade50,
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -8273,7 +8072,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                             decoration: BoxDecoration(
                               color: Theme.of(context).brightness == Brightness.dark
                                   ? (alreadyHasHoliday 
-                                      ? Theme.of(context).cardColor.withOpacity(0.5)
+                                      ? Theme.of(context).cardColor.withValues(alpha: 0.5)
                                       : Theme.of(context).cardColor)
                                   : (alreadyHasHoliday 
                                       ? Colors.grey.shade100 
@@ -8316,17 +8115,17 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                                   await _reloadHolidays();
                                   
                                   // Close the dialog
+                                  if (!mounted) return;
                                   Navigator.of(context).pop();
                                   
                                   // Show success message
-                                  if (mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text('Winter holiday for $year added successfully'),
-                                        backgroundColor: Colors.green,
-                                      ),
-                                    );
-                                  }
+                                  if (!mounted) return;
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('Winter holiday for $year added successfully'),
+                                      backgroundColor: Colors.green,
+                                    ),
+                                  );
                                 },
                                 borderRadius: BorderRadius.circular(8),
                                 child: Padding(
@@ -8339,7 +8138,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                                           color: Theme.of(context).brightness == Brightness.dark
                                               ? (alreadyHasHoliday 
                                                   ? Theme.of(context).dividerColor
-                                                  : Colors.blue.shade900.withOpacity(0.3))
+                                                  : Colors.blue.shade900.withValues(alpha: 0.3))
                                               : (alreadyHasHoliday 
                                                   ? Colors.grey.shade300 
                                                   : Colors.blue.shade50),
@@ -8381,7 +8180,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                                                 'Already added',
                                                 style: TextStyle(
                                                   fontSize: 11,
-                                                  color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
+                                                  color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
                                                   fontStyle: FontStyle.italic,
                                                 ),
                                               ),
@@ -8482,7 +8281,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
                   color: Theme.of(context).brightness == Brightness.dark
-                      ? Colors.orange.shade900.withOpacity(0.3)
+                      ? Colors.orange.shade900.withValues(alpha: 0.3)
                       : Colors.orange.shade50,
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -8657,7 +8456,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
                           color: Theme.of(context).brightness == Brightness.dark
-                              ? Colors.orange.shade900.withOpacity(0.3)
+                              ? Colors.orange.shade900.withValues(alpha: 0.3)
                               : Colors.orange.shade50,
                           borderRadius: BorderRadius.circular(12),
                         ),
@@ -8709,7 +8508,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                                   decoration: BoxDecoration(
                                     color: Theme.of(context).brightness == Brightness.dark
                                         ? (hasHolidays 
-                                            ? Colors.orange.shade900.withOpacity(0.3)
+                                            ? Colors.orange.shade900.withValues(alpha: 0.3)
                                             : Theme.of(context).cardColor)
                                         : (hasHolidays 
                                             ? Colors.orange.shade50 
@@ -8757,7 +8556,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                                           ),
                                           decoration: BoxDecoration(
                                             color: Theme.of(context).brightness == Brightness.dark
-                                                ? Colors.orange.shade800.withOpacity(0.5)
+                                                ? Colors.orange.shade800.withValues(alpha: 0.5)
                                                 : Colors.orange.shade100,
                                             borderRadius: BorderRadius.circular(8),
                                           ),
@@ -8785,7 +8584,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
                             color: Theme.of(context).brightness == Brightness.dark
-                                ? Colors.orange.shade900.withOpacity(0.3)
+                                ? Colors.orange.shade900.withValues(alpha: 0.3)
                                 : Colors.orange.shade50,
                             borderRadius: BorderRadius.circular(8),
                           ),
@@ -8862,7 +8661,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
                       color: Theme.of(context).brightness == Brightness.dark
-                          ? Colors.orange.shade900.withOpacity(0.3)
+                          ? Colors.orange.shade900.withValues(alpha: 0.3)
                           : Colors.orange.shade50,
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -8934,7 +8733,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                             decoration: BoxDecoration(
                               color: Theme.of(context).brightness == Brightness.dark
                                   ? (alreadyHasHoliday 
-                                      ? Theme.of(context).cardColor.withOpacity(0.5)
+                                      ? Theme.of(context).cardColor.withValues(alpha: 0.5)
                                       : Theme.of(context).cardColor)
                                   : (alreadyHasHoliday 
                                       ? Colors.grey.shade100 
@@ -8979,18 +8778,18 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                                   await _reloadHolidays();
                                   
                                   // Close the dialog
+                                  if (!mounted) return;
                                   Navigator.of(context).pop();
                                   
                                   // Show success message
-                                  if (mounted) {
-                                    final durationText = durationWeeks == 1 ? '1 week' : '2 weeks';
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text('Summer holiday ($durationText) for $year added successfully'),
-                                        backgroundColor: Colors.green,
-                                      ),
-                                    );
-                                  }
+                                  if (!mounted) return;
+                                  final durationText = durationWeeks == 1 ? '1 week' : '2 weeks';
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('Summer holiday ($durationText) for $year added successfully'),
+                                      backgroundColor: Colors.green,
+                                    ),
+                                  );
                                 },
                                 borderRadius: BorderRadius.circular(8),
                                 child: Padding(
@@ -9003,7 +8802,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                                           color: Theme.of(context).brightness == Brightness.dark
                                               ? (alreadyHasHoliday 
                                                   ? Theme.of(context).dividerColor
-                                                  : Colors.orange.shade900.withOpacity(0.3))
+                                                  : Colors.orange.shade900.withValues(alpha: 0.3))
                                               : (alreadyHasHoliday 
                                                   ? Colors.grey.shade300 
                                                   : Colors.orange.shade50),
@@ -9044,7 +8843,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                                               'Ends: ${DateFormat('MMM d, yyyy').format(date.add(const Duration(days: 13)))}',
                                               style: TextStyle(
                                                 fontSize: 11,
-                                                color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
+                                                color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
                                               ),
                                             ),
                                             if (alreadyHasHoliday)
@@ -9052,7 +8851,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                                                 'Already added',
                                                 style: TextStyle(
                                                   fontSize: 11,
-                                                  color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
+                                                  color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
                                                   fontStyle: FontStyle.italic,
                                                 ),
                                               ),
@@ -9088,13 +8887,13 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                       Icon(
                         Icons.swipe,
                         size: 16,
-                        color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.6),
+                        color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.6),
                       ),
                       const SizedBox(width: 4),
                       Text(
                         'Scroll to see more dates',
                         style: TextStyle(
-                          color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
+                          color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
                           fontSize: 12,
                         ),
                       ),
@@ -9315,21 +9114,21 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                           await _reloadHolidays();
                           
                           // Close the dialog
+                          if (!mounted) return;
                           Navigator.of(context).pop();
                           
                           // Show success message
-                          if (mounted) {
-                            final message = successCount == 1
-                                ? 'Holiday added successfully'
-                                : '$successCount holidays added successfully';
-                            
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(message),
-                                backgroundColor: Colors.green,
-                              ),
-                            );
-                          }
+                          if (!mounted) return;
+                          final message = successCount == 1
+                              ? 'Holiday added successfully'
+                              : '$successCount holidays added successfully';
+                          
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(message),
+                              backgroundColor: Colors.green,
+                            ),
+                          );
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.green,
@@ -9639,26 +9438,25 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                           await _reloadHolidays();
                           
                           // Close the dialog
+                          if (!mounted) return;
                           Navigator.of(context).pop();
                           
                           // Force calendar rebuild to show the new unpaid leave
-                          if (mounted) {
-                            setState(() {});
-                          }
+                          if (!mounted) return;
+                          setState(() {});
                           
                           // Show success message
-                          if (mounted) {
-                            final message = successCount == 1
-                                ? 'Unpaid leave added successfully'
-                                : '$successCount unpaid leave days added successfully';
-                            
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(message),
-                                backgroundColor: Colors.purple,
-                              ),
-                            );
-                          }
+                          if (!mounted) return;
+                          final message = successCount == 1
+                              ? 'Unpaid leave added successfully'
+                              : '$successCount unpaid leave days added successfully';
+                          
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(message),
+                              backgroundColor: Colors.purple,
+                            ),
+                          );
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.purple,
@@ -9688,6 +9486,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
     final remaining = await DaysInLieuService.getRemainingDays();
     final hasZeroBalance = remaining == 0;
     
+    if (!mounted) return;
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
@@ -9933,26 +9732,25 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                           await _reloadHolidays();
                           
                           // Close the dialog
+                          if (!mounted) return;
                           Navigator.of(context).pop();
                           
                           // Force calendar rebuild to show the new day in lieu entries
-                          if (mounted) {
-                            setState(() {});
-                          }
+                          if (!mounted) return;
+                          setState(() {});
                           
                           // Show success message
-                          if (mounted) {
-                            final message = successCount == 1
-                                ? 'Day In Lieu added successfully'
-                                : '$successCount days in lieu added successfully';
-                            
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(message),
-                                backgroundColor: dayInLieuColor,
-                              ),
-                            );
-                          }
+                          if (!mounted) return;
+                          final message = successCount == 1
+                              ? 'Day In Lieu added successfully'
+                              : '$successCount days in lieu added successfully';
+                          
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(message),
+                              backgroundColor: dayInLieuColor,
+                            ),
+                          );
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: dayInLieuColor,
@@ -10104,6 +9902,32 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
   }
 
 
+
+  // Helper method to safely navigate to next/previous month
+  // Clamps the day to the last valid day of the target month to prevent overflow
+  DateTime _navigateToMonth(DateTime currentDate, int monthOffset) {
+    int targetYear = currentDate.year;
+    int targetMonth = currentDate.month + monthOffset;
+    
+    // Handle year overflow/underflow
+    if (targetMonth > 12) {
+      targetMonth = 1;
+      targetYear++;
+    } else if (targetMonth < 1) {
+      targetMonth = 12;
+      targetYear--;
+    }
+    
+    // Get the last valid day of the target month
+    final lastDayOfTargetMonth = DateTime(targetYear, targetMonth + 1, 0).day;
+    
+    // Clamp the day to be within valid range (1 to lastDayOfTargetMonth)
+    final targetDay = currentDate.day > lastDayOfTargetMonth 
+        ? lastDayOfTargetMonth 
+        : currentDate.day;
+    
+    return DateTime(targetYear, targetMonth, targetDay);
+  }
 
   // Add this method to handle calendar page changes
   void _onPageChanged(DateTime focusedDay) async {
@@ -10732,6 +10556,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                               await EventService.preloadMonth(_focusedDay);
                               
                               // Force rebuild
+                              if (!mounted) return;
                               setState(() {
                                 // Trigger a rebuild with explicit re-selection of day
                                 _selectedDay = null;
@@ -10741,11 +10566,13 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                               await Future.delayed(const Duration(milliseconds: 100));
                               
                               // Set selected day back to event date and rebuild again
+                              if (!mounted) return;
                               setState(() {
                                 _selectedDay = event.startDate;
                               });
                               
                               // Show confirmation after everything is done
+                              if (!mounted) return;
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
                                   content: Text('Overtime duty $title added'),

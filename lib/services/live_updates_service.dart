@@ -39,21 +39,35 @@ class LiveUpdatesService {
   /// Get only currently active updates (between start and end time)
   /// Also includes active polls and ended polls within results window
   static Stream<List<LiveUpdate>> getActiveUpdatesStream() {
-    final now = DateTime.now();
+    // Listen to all documents and filter in memory for real-time updates
     return _firestore
         .collection(_collection)
-        .where('endTime', isGreaterThan: Timestamp.fromDate(now))
         .orderBy('endTime')
         .snapshots()
         .asyncMap((snapshot) async {
+      final now = DateTime.now();
       final allItems = snapshot.docs.map((doc) {
         final data = doc.data();
         return LiveUpdate.fromFirestore(doc.id, data);
       }).toList();
       
+      // Filter items that haven't ended yet (or are polls within results window)
+      final relevantItems = allItems.where((item) {
+        // Include if endTime is in the future
+        if (item.endTime.isAfter(now)) {
+          return true;
+        }
+        // Include ended polls if they're within results window
+        if (item.isPoll && item.resultsVisibleUntil != null && 
+            item.resultsVisibleUntil!.isAfter(now)) {
+          return true;
+        }
+        return false;
+      }).toList();
+      
       // Separate updates and polls
-      final updates = allItems.where((item) => item.isUpdate && item.isActive).toList();
-      final activePolls = allItems.where((item) => item.isPoll && item.isActive).toList();
+      final updates = relevantItems.where((item) => item.isUpdate && item.isActive).toList();
+      final activePolls = relevantItems.where((item) => item.isPoll && item.isActive).toList();
       
       // Filter updates by user preferences
       final filteredUpdates = await UserPreferencesService.filterUpdatesByPreference<LiveUpdate>(
@@ -61,8 +75,10 @@ class LiveUpdatesService {
         (update) => update.routesAffected,
       );
       
-      // Get ended polls within results window
-      final endedPolls = await _getEndedPollsInResultsWindow();
+      // Get ended polls within results window from relevant items
+      final endedPolls = relevantItems
+          .where((item) => item.isPoll && !item.isActive && item.shouldShowPoll)
+          .toList();
       
       // Filter out dismissed polls
       final dismissedIds = await PollService.getDismissedPollIds();
@@ -73,25 +89,6 @@ class LiveUpdatesService {
       // Combine: filtered updates + active polls + visible ended polls
       return [...filteredUpdates, ...activePolls, ...visibleEndedPolls];
     });
-  }
-  
-  /// Get ended polls that are still within results window
-  static Future<List<LiveUpdate>> _getEndedPollsInResultsWindow() async {
-    try {
-      final now = DateTime.now();
-      final snapshot = await _firestore
-          .collection(_collection)
-          .where('type', isEqualTo: 'poll')
-          .where('resultsVisibleUntil', isGreaterThan: Timestamp.fromDate(now))
-          .get();
-      
-      return snapshot.docs.map((doc) {
-        final data = doc.data();
-        return LiveUpdate.fromFirestore(doc.id, data);
-      }).where((poll) => poll.shouldShowPoll && !poll.isActive).toList();
-    } catch (e) {
-      return [];
-    }
   }
 
   /// Get filtered updates based on user preferences for relevance
@@ -133,8 +130,14 @@ class LiveUpdatesService {
   static Future<String> addUpdate(LiveUpdate update) async {
     try {
       final data = update.toFirestore();
-      final docRef = await _firestore.collection(_collection).add(data);
-      return docRef.id;
+      // Use the provided ID if available, otherwise let Firestore generate one
+      if (update.id.isNotEmpty) {
+        await _firestore.collection(_collection).doc(update.id).set(data);
+        return update.id;
+      } else {
+        final docRef = await _firestore.collection(_collection).add(data);
+        return docRef.id;
+      }
     } catch (e) {
       throw Exception('Failed to add update: $e');
     }

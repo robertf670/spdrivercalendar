@@ -457,6 +457,7 @@ class PollManagementScreenState extends State<PollManagementScreen> {
   }
   
   void _showPollDialog({LiveUpdate? existingPoll}) {
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
     showDialog(
       context: context,
       builder: (context) => PollDialog(
@@ -466,7 +467,7 @@ class PollManagementScreenState extends State<PollManagementScreen> {
             if (existingPoll != null) {
               await LiveUpdatesService.updateUpdate(poll);
               if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
+                scaffoldMessenger.showSnackBar(
                   const SnackBar(
                     content: Text('Poll saved successfully'),
                     backgroundColor: Colors.green,
@@ -476,7 +477,7 @@ class PollManagementScreenState extends State<PollManagementScreen> {
             } else {
               await LiveUpdatesService.addUpdate(poll);
               if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
+                scaffoldMessenger.showSnackBar(
                   const SnackBar(
                     content: Text('Poll created successfully'),
                     backgroundColor: Colors.green,
@@ -486,7 +487,7 @@ class PollManagementScreenState extends State<PollManagementScreen> {
             }
           } catch (e) {
             if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
+              scaffoldMessenger.showSnackBar(
                 SnackBar(
                   content: Text('Error: $e'),
                   backgroundColor: Colors.red,
@@ -501,6 +502,7 @@ class PollManagementScreenState extends State<PollManagementScreen> {
 
   void _confirmResetVotes(LiveUpdate poll) {
     final totalVotes = poll.totalVotes ?? 0;
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -513,7 +515,7 @@ class PollManagementScreenState extends State<PollManagementScreen> {
         ),
         content: Text(
           'Are you sure you want to reset all votes for "${poll.title}"?\n\n'
-          'This will delete all ${totalVotes} vote(s) and cannot be undone.',
+          'This will delete all $totalVotes vote(s) and cannot be undone.',
         ),
         actions: [
           TextButton(
@@ -527,7 +529,7 @@ class PollManagementScreenState extends State<PollManagementScreen> {
                 final optionCount = poll.pollOptions?.length ?? 0;
                 await PollService.resetPollVotes(poll.id, optionCount);
                 if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  scaffoldMessenger.showSnackBar(
                     SnackBar(
                       content: Text('All votes reset for "${poll.title}"'),
                       backgroundColor: Colors.green,
@@ -536,7 +538,7 @@ class PollManagementScreenState extends State<PollManagementScreen> {
                 }
               } catch (e) {
                 if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  scaffoldMessenger.showSnackBar(
                     SnackBar(
                       content: Text('Error resetting votes: $e'),
                       backgroundColor: Colors.red,
@@ -554,6 +556,7 @@ class PollManagementScreenState extends State<PollManagementScreen> {
   }
 
   void _confirmDelete(LiveUpdate poll) {
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -570,7 +573,7 @@ class PollManagementScreenState extends State<PollManagementScreen> {
               try {
                 await LiveUpdatesService.deleteUpdate(poll.id);
                 if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  scaffoldMessenger.showSnackBar(
                     SnackBar(
                       content: Text('Poll "${poll.title}" deleted'),
                       backgroundColor: Colors.green,
@@ -579,7 +582,7 @@ class PollManagementScreenState extends State<PollManagementScreen> {
                 }
               } catch (e) {
                 if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  scaffoldMessenger.showSnackBar(
                     SnackBar(
                       content: Text('Error deleting poll: $e'),
                       backgroundColor: Colors.red,

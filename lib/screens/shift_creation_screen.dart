@@ -62,6 +62,7 @@ class ShiftCreationScreenState extends State<ShiftCreationScreen> {
                   );
                   
                   if (date != null) {
+                    if (!context.mounted) return;
                     final time = await showTimePicker(
                       context: context,
                       initialTime: TimeOfDay.fromDateTime(_startTime),
@@ -101,6 +102,7 @@ class ShiftCreationScreenState extends State<ShiftCreationScreen> {
                   );
                   
                   if (date != null) {
+                    if (!context.mounted) return;
                     final time = await showTimePicker(
                       context: context,
                       initialTime: TimeOfDay.fromDateTime(_endTime),
@@ -190,7 +192,7 @@ class ShiftCreationScreenState extends State<ShiftCreationScreen> {
         await ShiftService.saveShift(shift);
         
         // If the user wants to add to Google Calendar, do so
-        if (_addToGoogleCalendar && mounted) {
+        if (_addToGoogleCalendar && currentContext.mounted) {
           final success = await shift.addToGoogleCalendar(currentContext);
           if (!success) {
 

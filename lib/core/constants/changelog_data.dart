@@ -1,4 +1,16 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.19.5': [
+    {
+      'title': 'Fixed Calendar Month Navigation Overflow',
+      'description': 'Fixed an issue where navigating from months with 31 days (like January) to February would skip February and jump to March. The calendar now correctly clamps the day to the last valid day of the target month when navigating between months.',
+    },
+  ],
+  '2.19.4': [
+    {
+      'title': 'Fixed Poll and Live Update Real-Time Sync',
+      'description': 'Fixed an issue where newly created polls and live updates were not appearing on other devices in real-time.',
+    },
+  ],
   '2.19.3': [
     {
       'title': 'Note Icon Color Matching',
