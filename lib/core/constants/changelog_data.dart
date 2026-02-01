@@ -4,6 +4,10 @@ final Map<String, List<Map<String, String>>> changelogData = {
       'title': 'Fixed Calendar Month Navigation Overflow',
       'description': 'Fixed an issue where navigating from months with 31 days (like January) to February would skip February and jump to March. The calendar now correctly clamps the day to the last valid day of the target month when navigating between months.',
     },
+    {
+      'title': 'Year View Performance Optimization',
+      'description': 'Significantly improved Year View loading performance and responsiveness.',
+    },
   ],
   '2.19.4': [
     {

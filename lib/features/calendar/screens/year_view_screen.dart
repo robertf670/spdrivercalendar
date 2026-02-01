@@ -10,6 +10,39 @@ import 'package:spdrivercalendar/services/color_customization_service.dart';
 import 'package:spdrivercalendar/core/services/storage_service.dart';
 import 'package:spdrivercalendar/core/constants/app_constants.dart';
 
+// Cached data structure for a single day
+class _DayCellData {
+  final String shift;
+  final ShiftInfo? shiftInfo;
+  final List<Event> events;
+  final BankHoliday? bankHoliday;
+  final Holiday? holiday;
+  final Holiday? dayInLieuHoliday;
+  final Holiday? unpaidLeaveHoliday;
+  final bool isSaturdayService;
+  final bool hasWfoEvent;
+  final Color? cellColor;
+  final Color eventDotColor;
+  final bool hasSickDay;
+  final Color? sickDayColor;
+
+  _DayCellData({
+    required this.shift,
+    this.shiftInfo,
+    required this.events,
+    this.bankHoliday,
+    this.holiday,
+    this.dayInLieuHoliday,
+    this.unpaidLeaveHoliday,
+    required this.isSaturdayService,
+    required this.hasWfoEvent,
+    this.cellColor,
+    required this.eventDotColor,
+    required this.hasSickDay,
+    this.sickDayColor,
+  });
+}
+
 class YearViewScreen extends StatefulWidget {
   final int year;
   final Map<String, ShiftInfo> shiftInfoMap;
@@ -37,17 +70,63 @@ class YearViewScreenState extends State<YearViewScreen> {
   late int _currentYear; // Store year in state to avoid closure issues
   bool _markedInEnabled = false;
   String _markedInStatus = 'Shift';
-  bool _isLoadingMonths = true; // Track loading state
+  
+  // Progressive loading state
+  final Set<int> _loadedMonths = {}; // Track which months have finished loading
+  bool _isInitialLoad = true; // Track if this is the first load
+  
+  // Caching system
+  Map<String, _DayCellData> _dayCellCache = {}; // Cache key: "year-month-day"
+  Map<String, BankHoliday> _bankHolidayMap = {}; // Pre-indexed bank holidays
+  Map<String, List<Holiday>> _holidayMap = {}; // Pre-indexed holidays by date
+  Map<String, bool> _saturdayServiceCache = {}; // Cache Saturday service checks
+  
+  // Pre-computed colors (avoid repeated lookups)
+  final Color _dayInLieuColor = ColorCustomizationService.getColorForShift('DAY_IN_LIEU');
+  final Color _unpaidLeaveColor = Colors.purple;
+  final Color _winterHolidayColor = Colors.blue;
+  final Color _summerHolidayColor = Colors.orange;
+  final Color _otherHolidayColor = Colors.green;
 
   @override
   void initState() {
     super.initState();
-    _currentYear = widget.year; // Initialize with widget.year
+    _currentYear = widget.year;
     _loadMarkedInSettings();
-    // Preload all 12 months before showing the grid to improve performance
+    _buildIndexes();
+    // Start progressive loading immediately
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _preloadAllMonths();
+      _preloadMonthsProgressive();
     });
+  }
+
+  void _buildIndexes() {
+    // Pre-index bank holidays for O(1) lookup
+    _bankHolidayMap.clear();
+    if (widget.bankHolidays != null) {
+      for (final bh in widget.bankHolidays!) {
+        final key = _getDateKey(bh.date);
+        _bankHolidayMap[key] = bh;
+      }
+    }
+    
+    // Pre-index holidays by date for O(1) lookup
+    _holidayMap.clear();
+    for (final holiday in widget.holidays) {
+      // Add holiday to all dates it spans
+      final start = DateTime(holiday.startDate.year, holiday.startDate.month, holiday.startDate.day);
+      final end = DateTime(holiday.endDate.year, holiday.endDate.month, holiday.endDate.day);
+      var current = start;
+      while (current.isBefore(end) || current.isAtSameMomentAs(end)) {
+        final key = _getDateKey(current);
+        _holidayMap.putIfAbsent(key, () => []).add(holiday);
+        current = current.add(const Duration(days: 1));
+      }
+    }
+  }
+
+  String _getDateKey(DateTime date) {
+    return '${date.year}-${date.month}-${date.day}';
   }
 
   Future<void> _loadMarkedInSettings() async {
@@ -68,32 +147,186 @@ class YearViewScreenState extends State<YearViewScreen> {
     // Update state if year changed
     if (oldWidget.year != widget.year) {
       _currentYear = widget.year;
-      // Reload all months when year changes
-      _isLoadingMonths = true;
-      _preloadAllMonths();
+      _loadedMonths.clear();
+      _dayCellCache.clear();
+      _saturdayServiceCache.clear();
+      _isInitialLoad = true;
+      _buildIndexes();
+      _preloadMonthsProgressive();
     }
     // Reload marked-in settings in case they changed
+    if (oldWidget.holidays != widget.holidays || 
+        oldWidget.bankHolidays != widget.bankHolidays) {
+      _buildIndexes();
+      _dayCellCache.clear(); // Clear cache when holidays change
+    }
     _loadMarkedInSettings();
   }
 
-  Future<void> _preloadAllMonths() async {
-    // Preload all 12 months in parallel for better performance
-    // This prevents expensive synchronous calls during build
+  Future<void> _preloadMonthsProgressive() async {
+    // Load months progressively - show them as they finish loading
+    // This provides immediate feedback instead of blocking until all 12 are ready
+    
+    // Start loading all months in parallel
     final futures = <Future>[];
     for (int month = 1; month <= 12; month++) {
       final date = DateTime(_currentYear, month, 1);
-      futures.add(EventService.preloadMonth(date).catchError((_) {}));
-    }
-    // Wait for all months to load before showing the grid
-    await Future.wait(futures);
-    if (mounted) {
-      setState(() {
-        _isLoadingMonths = false;
+      final future = EventService.preloadMonth(date).then((_) {
+        if (mounted) {
+          setState(() {
+            _loadedMonths.add(month);
+            // Build cache for this month
+            _buildMonthCache(month);
+          });
+        }
+      }).catchError((_) {
+        // Still mark as loaded even if there's an error
+        if (mounted) {
+          setState(() {
+            _loadedMonths.add(month);
+          });
+        }
       });
+      futures.add(future);
+    }
+    
+    // Don't wait for all - let them complete progressively
+    // This allows UI to update as months finish loading
+    _isInitialLoad = false;
+    if (mounted) {
+      setState(() {});
     }
   }
 
-  String getShiftForDate(DateTime date) {
+  void _buildMonthCache(int month) {
+    // Pre-compute and cache all day cell data for a month
+    final daysInMonth = DateTime(_currentYear, month + 1, 0).day;
+    
+    for (int day = 1; day <= daysInMonth; day++) {
+      final date = DateTime(_currentYear, month, day);
+      final key = _getDateKey(date);
+      
+      // Skip if already cached
+      if (_dayCellCache.containsKey(key)) continue;
+      
+      // Compute all data for this day
+      final shift = _getShiftForDate(date);
+      final shiftInfo = widget.shiftInfoMap[shift];
+      final events = EventService.getEventsForDay(date);
+      final bankHoliday = _bankHolidayMap[key];
+      
+      // Get holidays for this date (O(1) lookup)
+      final dateHolidays = _holidayMap[key] ?? [];
+      final holiday = dateHolidays.isNotEmpty ? dateHolidays.first : null;
+      final dayInLieuHoliday = dateHolidays.firstWhere(
+        (h) => h.type == 'day_in_lieu',
+        orElse: () => Holiday(id: '', startDate: DateTime.now(), endDate: DateTime.now(), type: ''),
+      );
+      final unpaidLeaveHoliday = dateHolidays.firstWhere(
+        (h) => h.type == 'unpaid_leave',
+        orElse: () => Holiday(id: '', startDate: DateTime.now(), endDate: DateTime.now(), type: ''),
+      );
+      
+      // Cache Saturday service check
+      final saturdayServiceKey = '${date.year}-${date.month}-${date.day}';
+      if (!_saturdayServiceCache.containsKey(saturdayServiceKey)) {
+        _saturdayServiceCache[saturdayServiceKey] = RosterService.isSaturdayService(date);
+      }
+      final isSaturdayService = _saturdayServiceCache[saturdayServiceKey]!;
+      
+      // Check for WFO event
+      final hasWfoEvent = events.any((event) => event.isWorkForOthers);
+      final wfoColor = widget.shiftInfoMap['WFO']?.color;
+      
+      // Check for sick day
+      final sickDayEvent = events.firstWhere(
+        (event) => event.sickDayType != null,
+        orElse: () => Event(
+          id: '',
+          title: '',
+          startDate: date,
+          startTime: const TimeOfDay(hour: 0, minute: 0),
+          endDate: date,
+          endTime: const TimeOfDay(hour: 0, minute: 0),
+          isHoliday: false,
+          hasLateBreak: false,
+          tookFullBreak: false,
+          isWorkForOthers: false,
+        ),
+      );
+      final hasSickDay = sickDayEvent.sickDayType != null;
+      final sickDayColor = hasSickDay 
+          ? ColorCustomizationService.getColorForSickType(sickDayEvent.sickDayType) 
+          : null;
+      
+      // Determine holiday color
+      Color holidayColorValue = _otherHolidayColor;
+      if (holiday != null) {
+        switch (holiday.type) {
+          case 'winter':
+            holidayColorValue = _winterHolidayColor;
+            break;
+          case 'summer':
+            holidayColorValue = _summerHolidayColor;
+            break;
+          case 'other':
+            holidayColorValue = _otherHolidayColor;
+            break;
+        }
+      }
+      
+      // Determine cell color
+      Color? cellColor;
+      if (hasSickDay && sickDayColor != null) {
+        cellColor = sickDayColor.withValues(alpha: 0.3);
+      } else if (dayInLieuHoliday.id.isNotEmpty) {
+        cellColor = _dayInLieuColor.withValues(alpha: 0.3);
+      } else if (unpaidLeaveHoliday.id.isNotEmpty) {
+        cellColor = _unpaidLeaveColor.withValues(alpha: 0.3);
+      } else if (holiday != null) {
+        cellColor = holidayColorValue.withValues(alpha: 0.3);
+      } else if (hasWfoEvent && wfoColor != null) {
+        cellColor = wfoColor.withValues(alpha: 0.3);
+      } else if (shiftInfo != null) {
+        cellColor = shiftInfo.color.withValues(alpha: 0.3);
+      }
+      
+      // Determine event dot color
+      Color eventDotColor = Colors.grey;
+      if (hasSickDay && sickDayColor != null) {
+        eventDotColor = sickDayColor;
+      } else if (dayInLieuHoliday.id.isNotEmpty) {
+        eventDotColor = _dayInLieuColor;
+      } else if (unpaidLeaveHoliday.id.isNotEmpty) {
+        eventDotColor = _unpaidLeaveColor;
+      } else if (holiday != null) {
+        eventDotColor = holidayColorValue;
+      } else if (hasWfoEvent && wfoColor != null) {
+        eventDotColor = wfoColor;
+      } else if (shiftInfo != null) {
+        eventDotColor = shiftInfo.color;
+      }
+      
+      // Cache the computed data
+      _dayCellCache[key] = _DayCellData(
+        shift: shift,
+        shiftInfo: shiftInfo,
+        events: events,
+        bankHoliday: bankHoliday,
+        holiday: holiday,
+        dayInLieuHoliday: dayInLieuHoliday.id.isNotEmpty ? dayInLieuHoliday : null,
+        unpaidLeaveHoliday: unpaidLeaveHoliday.id.isNotEmpty ? unpaidLeaveHoliday : null,
+        isSaturdayService: isSaturdayService,
+        hasWfoEvent: hasWfoEvent,
+        cellColor: cellColor,
+        eventDotColor: eventDotColor,
+        hasSickDay: hasSickDay,
+        sickDayColor: sickDayColor,
+      );
+    }
+  }
+
+  String _getShiftForDate(DateTime date) {
     if (widget.startDate == null) return '';
     
     // Check if marked in is enabled
@@ -101,9 +334,9 @@ class YearViewScreenState extends State<YearViewScreen> {
       // M-F marked in logic: W on Mon-Fri, R on Sat-Sun
       // Bank holidays are REST days for M-F
       if (_markedInStatus == 'M-F') {
-        // Check if this is a bank holiday
-        final bankHoliday = getBankHoliday(date);
-        if (bankHoliday != null) {
+        // Check if this is a bank holiday (O(1) lookup)
+        final key = _getDateKey(date);
+        if (_bankHolidayMap.containsKey(key)) {
           // If M-F marked in is enabled, bank holidays are always R (Rest)
           return 'R';
         }
@@ -118,7 +351,6 @@ class YearViewScreenState extends State<YearViewScreen> {
       }
       
       // Shift marked in: use normal roster calculation
-      // (Zone selection is stored but doesn't affect shift calculation here)
       if (_markedInStatus == 'Shift') {
         return RosterService.getShiftForDate(date, widget.startDate!, widget.startWeek);
       }
@@ -126,23 +358,6 @@ class YearViewScreenState extends State<YearViewScreen> {
     
     // Default or normal roster calculation
     return RosterService.getShiftForDate(date, widget.startDate!, widget.startWeek);
-  }
-
-  List<Event> getEventsForDay(DateTime date) {
-    return EventService.getEventsForDay(date);
-  }
-
-  BankHoliday? getBankHoliday(DateTime date) {
-    if (widget.bankHolidays == null) return null;
-    try {
-      return widget.bankHolidays!.firstWhere(
-        (bh) => bh.date.year == date.year && 
-                bh.date.month == date.month && 
-                bh.date.day == date.day,
-      );
-    } catch (e) {
-      return null;
-    }
   }
 
   bool isToday(DateTime date) {
@@ -168,9 +383,13 @@ class YearViewScreenState extends State<YearViewScreen> {
               if (currentYear != _currentYear) {
                 setState(() {
                   _currentYear = currentYear;
-                  _isLoadingMonths = true;
+                  _loadedMonths.clear();
+                  _dayCellCache.clear();
+                  _saturdayServiceCache.clear();
+                  _isInitialLoad = true;
                 });
-                _preloadAllMonths();
+                _buildIndexes();
+                _preloadMonthsProgressive();
               }
             },
           ),
@@ -203,9 +422,13 @@ class YearViewScreenState extends State<YearViewScreen> {
                       onTap: () {
                         setState(() {
                           _currentYear = _currentYear - 1;
-                          _isLoadingMonths = true;
+                          _loadedMonths.clear();
+                          _dayCellCache.clear();
+                          _saturdayServiceCache.clear();
+                          _isInitialLoad = true;
                         });
-                        _preloadAllMonths();
+                        _buildIndexes();
+                        _preloadMonthsProgressive();
                       },
                       child: Container(
                         padding: const EdgeInsets.all(8),
@@ -259,9 +482,13 @@ class YearViewScreenState extends State<YearViewScreen> {
                       onTap: () {
                         setState(() {
                           _currentYear = _currentYear + 1;
-                          _isLoadingMonths = true;
+                          _loadedMonths.clear();
+                          _dayCellCache.clear();
+                          _saturdayServiceCache.clear();
+                          _isInitialLoad = true;
                         });
-                        _preloadAllMonths();
+                        _buildIndexes();
+                        _preloadMonthsProgressive();
                       },
                       child: Container(
                         padding: const EdgeInsets.all(8),
@@ -276,9 +503,9 @@ class YearViewScreenState extends State<YearViewScreen> {
               ),
             ),
             
-            // Scrollable year view with all months in a grid
+            // Progressive loading indicator or grid
             Expanded(
-              child: _isLoadingMonths
+              child: _isInitialLoad && _loadedMonths.isEmpty
                   ? Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -331,9 +558,18 @@ class YearViewScreenState extends State<YearViewScreen> {
                             itemCount: 12,
                             itemBuilder: (context, index) {
                               final month = index + 1;
-                              // Use _currentYear from state, not widget.year, to avoid closure issues
                               final currentYear = _currentYear;
-                              return _buildMonthCalendar(month, currentYear, screenWidth);
+                              final isLoaded = _loadedMonths.contains(month);
+                              
+                              // Show loading placeholder for months not yet loaded
+                              if (!isLoaded) {
+                                return _buildLoadingPlaceholder(month, screenWidth);
+                              }
+                              
+                              // Wrap each month in RepaintBoundary for performance
+                              return RepaintBoundary(
+                                child: _buildMonthCalendar(month, currentYear, screenWidth),
+                              );
                             },
                           ),
                         );
@@ -346,9 +582,47 @@ class YearViewScreenState extends State<YearViewScreen> {
     );
   }
 
+  Widget _buildLoadingPlaceholder(int month, double screenWidth) {
+    final isSmallScreen = screenWidth < 600;
+    final isLargeScreen = screenWidth > 900;
+    final monthPadding = isSmallScreen ? 8.0 : (isLargeScreen ? 12.0 : 10.0);
+    final monthDate = DateTime(_currentYear, month, 1);
+    final monthName = DateFormat('MMMM').format(monthDate);
+    
+    return Container(
+      padding: EdgeInsets.all(monthPadding),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.15),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            monthName.toUpperCase(),
+            style: TextStyle(
+              fontSize: isSmallScreen ? 11.0 : (isLargeScreen ? 13.0 : 12.0),
+              fontWeight: FontWeight.bold,
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildMonthCalendar(int month, [int? explicitYear, double? screenWidth]) {
     // Use explicit year if provided, otherwise use _currentYear from state
-    // This ensures we use the correct year from state, not widget.year
     final currentYear = explicitYear ?? _currentYear;
     final monthDate = DateTime(currentYear, month, 1);
     final monthName = DateFormat('MMMM').format(monthDate);
@@ -387,9 +661,7 @@ class YearViewScreenState extends State<YearViewScreen> {
         borderRadius: BorderRadius.circular(12),
         onTap: () {
           // Navigate back to calendar screen with this month selected
-          // CRITICAL: Use currentYear parameter which comes from _currentYear state variable
-          // This ensures we use the correct year even after navigating between years
-          final yearToUse = currentYear; // This should be 2025 if we navigated to 2025
+          final yearToUse = currentYear;
           final monthToUse = month;
           
           // Create date with explicit values
@@ -551,82 +823,53 @@ class YearViewScreenState extends State<YearViewScreen> {
     final eventDotOffset = isSmallScreen ? 1.0 : (isLargeScreen ? 3.0 : 2.0);
     final satBadgeOffset = isSmallScreen ? 0.5 : (isLargeScreen ? 2.0 : 1.0);
     
-    final shift = getShiftForDate(date);
-    final shiftInfo = widget.shiftInfoMap[shift];
-    final events = getEventsForDay(date);
-    final bankHoliday = getBankHoliday(date);
-    final isBankHoliday = bankHoliday != null;
-    final isHoliday = widget.holidays.any((h) => h.containsDate(date));
-    final dayInLieuHoliday = widget.holidays.firstWhere(
-      (h) => h.containsDate(date) && h.type == 'day_in_lieu',
-      orElse: () => Holiday(id: '', startDate: DateTime.now(), endDate: DateTime.now(), type: ''),
-    );
-    final isDayInLieu = dayInLieuHoliday.id.isNotEmpty;
-    final unpaidLeaveHoliday = widget.holidays.firstWhere(
-      (h) => h.containsDate(date) && h.type == 'unpaid_leave',
-      orElse: () => Holiday(id: '', startDate: DateTime.now(), endDate: DateTime.now(), type: ''),
-    );
-    final isUnpaidLeave = unpaidLeaveHoliday.id.isNotEmpty;
-    final isSaturdayService = RosterService.isSaturdayService(date);
+    // Get cached data (O(1) lookup)
+    final key = _getDateKey(date);
+    final cachedData = _dayCellCache[key];
     
-    // Check if there's a WFO event on this day
-    final hasWfoEvent = events.any((event) => event.isWorkForOthers);
-    final wfoColor = widget.shiftInfoMap['WFO']?.color;
-    final dayInLieuColor = ColorCustomizationService.getColorForShift('DAY_IN_LIEU');
-    
-    // Check for sick day events - priority over other colors
-    final sickDayEvent = events.firstWhere(
-      (event) => event.sickDayType != null,
-      orElse: () => Event(
-        id: '',
-        title: '',
-        startDate: date,
-        startTime: const TimeOfDay(hour: 0, minute: 0),
-        endDate: date,
-        endTime: const TimeOfDay(hour: 0, minute: 0),
-        isHoliday: false,
-        hasLateBreak: false,
-        tookFullBreak: false,
-        isWorkForOthers: false,
-      ),
-    );
-    final hasSickDay = sickDayEvent.sickDayType != null;
-    final sickDayColor = hasSickDay ? ColorCustomizationService.getColorForSickType(sickDayEvent.sickDayType) : null;
-    
-    // Determine holiday color (needed for event dot)
-    Color holidayColor = Colors.green;
-    if (isHoliday) {
-      final holiday = widget.holidays.firstWhere((h) => h.containsDate(date));
-      switch (holiday.type) {
-        case 'winter':
-          holidayColor = Colors.blue;
-          break;
-        case 'summer':
-          holidayColor = Colors.orange;
-          break;
-        case 'other':
-          holidayColor = Colors.green;
-          break;
-        default:
-          holidayColor = Colors.green;
-      }
+    // If not cached (for outside month days or not yet loaded), compute on the fly
+    if (cachedData == null) {
+      // For outside month days, use minimal computation
+      final bankHoliday = _bankHolidayMap[key];
+      final isBankHoliday = bankHoliday != null;
+      
+      return Opacity(
+        opacity: isOutsideMonth ? 0.25 : 1.0,
+        child: Container(
+          margin: EdgeInsets.all(dayCellMargin),
+          height: dayCellHeight,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(5),
+            border: isToday(date)
+                ? Border.all(
+                    color: isBankHoliday ? Colors.red : Colors.blue,
+                    width: 2.5,
+                  )
+                : isBankHoliday
+                    ? Border.all(
+                        color: Colors.red,
+                        width: 2,
+                      )
+                    : null,
+          ),
+          child: Center(
+            child: Text(
+              '${date.day}',
+              style: TextStyle(
+                fontSize: dayNumberFontSize,
+                fontWeight: isToday(date) ? FontWeight.bold : FontWeight.w500,
+                color: isToday(date) 
+                    ? (isBankHoliday ? Colors.red : Colors.blue)
+                    : Theme.of(context).colorScheme.onSurface,
+              ),
+            ),
+          ),
+        ),
+      );
     }
     
-    // Determine cell color
-    Color? cellColor;
-    if (hasSickDay && sickDayColor != null) {
-      cellColor = sickDayColor.withValues(alpha: 0.3);
-    } else if (isDayInLieu) {
-      cellColor = dayInLieuColor.withValues(alpha: 0.3);
-    } else if (isUnpaidLeave) {
-      cellColor = Colors.purple.withValues(alpha: 0.3);
-    } else if (isHoliday) {
-      cellColor = holidayColor.withValues(alpha: 0.3);
-    } else if (hasWfoEvent && wfoColor != null) {
-      cellColor = wfoColor.withValues(alpha: 0.3);
-    } else if (shiftInfo != null) {
-      cellColor = shiftInfo.color.withValues(alpha: 0.3);
-    }
+    // Use cached data for fast rendering
+    final isBankHoliday = cachedData.bankHoliday != null;
     
     return Opacity(
       opacity: isOutsideMonth ? 0.25 : 1.0,
@@ -634,7 +877,7 @@ class YearViewScreenState extends State<YearViewScreen> {
         margin: EdgeInsets.all(dayCellMargin),
         height: dayCellHeight,
         decoration: BoxDecoration(
-          color: cellColor,
+          color: cachedData.cellColor,
           borderRadius: BorderRadius.circular(5),
           border: isToday(date)
               ? Border.all(
@@ -664,7 +907,7 @@ class YearViewScreenState extends State<YearViewScreen> {
               ),
             ),
             // Saturday service indicator
-            if (isSaturdayService && !isOutsideMonth)
+            if (cachedData.isSaturdayService && !isOutsideMonth)
               Positioned(
                 top: satBadgeOffset,
                 left: satBadgeOffset,
@@ -690,7 +933,7 @@ class YearViewScreenState extends State<YearViewScreen> {
                 ),
               ),
             // Event indicator dot
-            if (events.isNotEmpty && !isOutsideMonth)
+            if (cachedData.events.isNotEmpty && !isOutsideMonth)
               Positioned(
                 bottom: eventDotOffset,
                 right: eventDotOffset,
@@ -698,17 +941,7 @@ class YearViewScreenState extends State<YearViewScreen> {
                   width: eventDotSize,
                   height: eventDotSize,
                   decoration: BoxDecoration(
-                    color: hasSickDay && sickDayColor != null
-                        ? sickDayColor
-                        : isDayInLieu
-                            ? dayInLieuColor
-                            : isUnpaidLeave
-                                ? Colors.purple
-                                : isHoliday
-                                    ? holidayColor
-                                    : hasWfoEvent && wfoColor != null
-                                        ? wfoColor
-                                        : shiftInfo?.color ?? Colors.grey,
+                    color: cachedData.eventDotColor,
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
