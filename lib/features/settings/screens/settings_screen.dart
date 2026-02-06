@@ -60,7 +60,7 @@ class SettingsScreenState extends State<SettingsScreen> {
   bool _autoBackupEnabled = false;
   
   // Display settings
-  bool _showOvernightDutiesOnBothDays = true; // Default to true to preserve current behavior
+  bool _showOvernightDutiesOnBothDays = false; // Default to false (OFF)
   bool _showDutyCodesOnCalendar = true; // Default to true (ON)
   bool _animatedSelectedDay = true; // Default to true (ON) - animated border
   
@@ -166,8 +166,8 @@ class SettingsScreenState extends State<SettingsScreen> {
     // Load auto-backup setting - default to true
     _autoBackupEnabled = prefs.getBool(AppConstants.autoBackupEnabledKey) ?? true;
     
-    // Load display settings - default to true to preserve current behavior
-    _showOvernightDutiesOnBothDays = prefs.getBool(AppConstants.showOvernightDutiesOnBothDaysKey) ?? true;
+    // Load display settings - default to false (OFF)
+    _showOvernightDutiesOnBothDays = prefs.getBool(AppConstants.showOvernightDutiesOnBothDaysKey) ?? false;
     _showDutyCodesOnCalendar = prefs.getBool(AppConstants.showDutyCodesOnCalendarKey) ?? true;
     _animatedSelectedDay = prefs.getBool(AppConstants.animatedSelectedDayKey) ?? true;
     

@@ -1,4 +1,18 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.19.6': [
+    {
+      'title': 'Fixed Year View M-F Pattern Display',
+      'description': 'Fixed Year View to correctly display M-F shift pattern when M-F is enabled.',
+    },
+    {
+      'title': 'Improved Week View Responsiveness',
+      'description': 'Improved Week View layout and spacing for better fit across different screen sizes.',
+    },
+    {
+      'title': 'Updated Overnight Duties Default Setting',
+      'description': 'Changed default setting for "Show overnight duties on both days" to OFF.',
+    },
+  ],
   '2.19.5': [
     {
       'title': 'Fixed Calendar Month Navigation Overflow',

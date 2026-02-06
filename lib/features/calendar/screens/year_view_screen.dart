@@ -92,11 +92,12 @@ class YearViewScreenState extends State<YearViewScreen> {
   void initState() {
     super.initState();
     _currentYear = widget.year;
-    _loadMarkedInSettings();
     _buildIndexes();
-    // Start progressive loading immediately
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _preloadMonthsProgressive();
+    // Load settings first, then build cache
+    _loadMarkedInSettings().then((_) {
+      if (mounted) {
+        _preloadMonthsProgressive();
+      }
     });
   }
 
@@ -133,11 +134,27 @@ class YearViewScreenState extends State<YearViewScreen> {
     final markedInEnabled = await StorageService.getBool(AppConstants.markedInEnabledKey);
     final markedInStatus = await StorageService.getString(AppConstants.markedInStatusKey) ?? '';
     if (mounted) {
+      // Check if M-F settings changed
+      final newMarkedInEnabled = markedInEnabled && markedInStatus.isNotEmpty;
+      final newMarkedInStatus = markedInStatus.isEmpty ? 'Spare' : markedInStatus;
+      final settingsChanged = _markedInEnabled != newMarkedInEnabled || 
+                              _markedInStatus != newMarkedInStatus;
+      
       setState(() {
         // Determine if marked-in is actually enabled (enabled flag must be true AND status must not be empty)
-        _markedInEnabled = markedInEnabled && markedInStatus.isNotEmpty;
-        _markedInStatus = markedInStatus.isEmpty ? 'Spare' : markedInStatus;
+        _markedInEnabled = newMarkedInEnabled;
+        _markedInStatus = newMarkedInStatus;
       });
+      
+      // If M-F settings changed, clear cache and rebuild
+      if (settingsChanged) {
+        _dayCellCache.clear();
+        _loadedMonths.clear();
+        _isInitialLoad = true;
+        if (mounted) {
+          _preloadMonthsProgressive();
+        }
+      }
     }
   }
 
@@ -160,6 +177,14 @@ class YearViewScreenState extends State<YearViewScreen> {
       _buildIndexes();
       _dayCellCache.clear(); // Clear cache when holidays change
     }
+    _loadMarkedInSettings();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Reload marked-in settings when screen becomes visible again
+    // This ensures settings are fresh when navigating back to the screen
     _loadMarkedInSettings();
   }
 

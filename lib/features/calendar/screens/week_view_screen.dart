@@ -220,55 +220,67 @@ class WeekViewScreenState extends State<WeekViewScreen> {
             
             // Week view content - Stacked layout (1-3-3) using Expanded to fill space
             Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                child: Column(
-                  children: [
-                    // Row 1: Sunday only (centered)
-                    Expanded(
-                      child: Row(
-                        children: [
-                          const Expanded(child: SizedBox()), // Left spacer
-                          Expanded(
-                            flex: 2,
-                            child: _buildDayCard(_weekDays[0]), // Sunday (first in the week starting Sunday)
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final sizes = _getResponsiveSizes(context);
+                  final cardSpacing = sizes['cardSpacing']!;
+                  final verticalSpacing = sizes['verticalSpacing']!;
+                  final horizontalPadding = sizes['horizontalPadding']!;
+                  
+                  return Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: horizontalPadding,
+                      vertical: verticalSpacing * 0.5,
+                    ),
+                    child: Column(
+                      children: [
+                        // Row 1: Sunday only (centered)
+                        Expanded(
+                          child: Row(
+                            children: [
+                              Expanded(child: SizedBox()), // Left spacer
+                              Expanded(
+                                flex: 2,
+                                child: _buildDayCard(_weekDays[0]), // Sunday
+                              ),
+                              Expanded(child: SizedBox()), // Right spacer
+                            ],
                           ),
-                          const Expanded(child: SizedBox()), // Right spacer
-                        ],
-                      ),
+                        ),
+                        
+                        SizedBox(height: verticalSpacing),
+                        
+                        // Row 2: Monday, Tuesday, Wednesday
+                        Expanded(
+                          child: Row(
+                            children: [
+                              Expanded(child: _buildDayCard(_weekDays[1])), // Monday
+                              SizedBox(width: cardSpacing),
+                              Expanded(child: _buildDayCard(_weekDays[2])), // Tuesday
+                              SizedBox(width: cardSpacing),
+                              Expanded(child: _buildDayCard(_weekDays[3])), // Wednesday
+                            ],
+                          ),
+                        ),
+                        
+                        SizedBox(height: verticalSpacing),
+                        
+                        // Row 3: Thursday, Friday, Saturday
+                        Expanded(
+                          child: Row(
+                            children: [
+                              Expanded(child: _buildDayCard(_weekDays[4])), // Thursday
+                              SizedBox(width: cardSpacing),
+                              Expanded(child: _buildDayCard(_weekDays[5])), // Friday
+                              SizedBox(width: cardSpacing),
+                              Expanded(child: _buildDayCard(_weekDays[6])), // Saturday
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
-                    
-                    const SizedBox(height: 8),
-                    
-                    // Row 2: Monday, Tuesday, Wednesday
-                    Expanded(
-                      child: Row(
-                        children: [
-                          Expanded(child: _buildDayCard(_weekDays[1])), // Monday
-                          const SizedBox(width: 8),
-                          Expanded(child: _buildDayCard(_weekDays[2])), // Tuesday
-                          const SizedBox(width: 8),
-                          Expanded(child: _buildDayCard(_weekDays[3])), // Wednesday
-                        ],
-                      ),
-                    ),
-                    
-                    const SizedBox(height: 8),
-                    
-                    // Row 3: Thursday, Friday, Saturday
-                    Expanded(
-                      child: Row(
-                        children: [
-                          Expanded(child: _buildDayCard(_weekDays[4])), // Thursday
-                          const SizedBox(width: 8),
-                          Expanded(child: _buildDayCard(_weekDays[5])), // Friday
-                          const SizedBox(width: 8),
-                          Expanded(child: _buildDayCard(_weekDays[6])), // Saturday
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
+                  );
+                },
               ),
             ),
           ],
@@ -392,136 +404,97 @@ class WeekViewScreenState extends State<WeekViewScreen> {
           // Day content - no scrolling, fits all content
           Expanded(
             child: Padding(
-              padding: EdgeInsets.all(sizes['dutyCardPadding']!),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Work events - fill available space
-                  if (workEvents.isNotEmpty) ...[
-                    Expanded(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.start,
-                        children: [
-                          ...workEvents.take(3).map((event) => Expanded(
-                            child: _buildDayDutyItem(event),
-                          )),
-                          if (workEvents.length > 3)
-                            Padding(
-                              padding: EdgeInsets.only(top: sizes['dutyCardMargin']!),
-                              child: Text(
-                                '+${workEvents.length - 3} more',
-                                style: TextStyle(
-                                  fontSize: sizes['moreText']!,
-                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+              padding: EdgeInsets.only(
+                top: sizes['dutyCardPadding']!,
+                bottom: sizes['dutyCardPadding']!,
+                left: sizes['blueBoxMargin']!,
+                right: sizes['blueBoxMargin']!,
+              ),
+              child: workEvents.isNotEmpty
+                  ? Column(
+                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      children: [
+                        // Work events - distribute space evenly
+                        ...workEvents.take(3).map((event) => Expanded(
+                          flex: 1,
+                          child: _buildDayDutyItem(event),
+                        )),
+                        if (workEvents.length > 3)
+                          Padding(
+                            padding: EdgeInsets.only(top: sizes['dutyCardMargin']!),
+                            child: Text(
+                              '+${workEvents.length - 3} more',
+                              style: TextStyle(
+                                fontSize: sizes['moreText']!,
+                                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                              ),
+                            ),
+                          ),
+                      ],
+                    )
+                  : Column(
+                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        // Show different message based on whether it's a rostered rest day or work day without duties
+                        Expanded(
+                          child: Center(
+                            child: Padding(
+                              padding: EdgeInsets.only(
+                                top: sizes['dutyCardMargin']!,
+                                bottom: sizes['dutyCardMargin']!,
+                                left: sizes['blueBoxMargin']!,
+                                right: sizes['blueBoxMargin']!,
+                              ),
+                              child: Container(
+                                padding: EdgeInsets.symmetric(
+                                  vertical: sizes['dutyCardPadding']!,
+                                  horizontal: sizes['dutyCardPadding']! * 0.5,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: isRosteredRestDay && restDayColor != null
+                                      ? restDayColor.withValues(alpha: 0.2)
+                                      : Theme.of(context).colorScheme.surfaceContainerLow,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: isRosteredRestDay && restDayColor != null
+                                      ? Border.all(color: restDayColor.withValues(alpha: 0.4), width: 1.5)
+                                      : null,
+                                ),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      isRosteredRestDay ? Icons.free_breakfast : Icons.info_outline,
+                                      size: sizes['moreText']! * 3,
+                                      color: isRosteredRestDay && restDayColor != null
+                                          ? restDayColor
+                                          : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
+                                    ),
+                                    SizedBox(height: sizes['dutyCardMargin']!),
+                                    Text(
+                                      isRosteredRestDay ? 'Rest Day' : 'No duties loaded',
+                                      style: TextStyle(
+                                        fontSize: sizes['moreText']!,
+                                        fontWeight: isRosteredRestDay ? FontWeight.w600 : FontWeight.normal,
+                                        color: isRosteredRestDay && restDayColor != null
+                                            ? restDayColor
+                                            : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                                        fontStyle: isRosteredRestDay ? FontStyle.normal : FontStyle.italic,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
                                 ),
                               ),
                             ),
-                        ],
-                      ),
-                    ),
-                  ] else ...[
-                    // Show different message based on whether it's a rostered rest day or work day without duties
-                    Expanded(
-                      child: Center(
-                        child: Padding(
-                          padding: EdgeInsets.symmetric(
-                            vertical: sizes['dutyCardMargin']!,
-                            horizontal: sizes['dutyCardPadding']! * 0.5,
-                          ),
-                          child: Container(
-                            padding: EdgeInsets.all(sizes['dutyCardPadding']!),
-                            decoration: BoxDecoration(
-                              color: isRosteredRestDay && restDayColor != null
-                                  ? restDayColor.withValues(alpha: 0.2)
-                                  : Theme.of(context).colorScheme.surfaceContainerLow,
-                              borderRadius: BorderRadius.circular(8),
-                              border: isRosteredRestDay && restDayColor != null
-                                  ? Border.all(color: restDayColor.withValues(alpha: 0.4), width: 1.5)
-                                  : null,
-                            ),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  isRosteredRestDay ? Icons.free_breakfast : Icons.info_outline,
-                                  size: sizes['moreText']! * 3,
-                                  color: isRosteredRestDay && restDayColor != null
-                                      ? restDayColor
-                                      : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
-                                ),
-                                SizedBox(height: sizes['dutyCardMargin']!),
-                                Text(
-                                  isRosteredRestDay ? 'Rest Day' : 'No duties loaded',
-                                  style: TextStyle(
-                                    fontSize: sizes['moreText']!,
-                                    fontWeight: isRosteredRestDay ? FontWeight.w600 : FontWeight.normal,
-                                    color: isRosteredRestDay && restDayColor != null
-                                        ? restDayColor
-                                        : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-                                    fontStyle: isRosteredRestDay ? FontStyle.normal : FontStyle.italic,
-                                  ),
-                                  textAlign: TextAlign.center,
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ],
-                            ),
                           ),
                         ),
-                      ),
+                      ],
                     ),
-                  ],
-                  
-                  // Non-work events - show at bottom if space allows
-                  if (events.any((event) => !event.isWorkShift) && workEvents.length <= 2) ...[
-                    SizedBox(height: sizes['dutyCardMargin']!),
-                    Container(
-                      constraints: const BoxConstraints(
-                        minWidth: 0,
-                        maxWidth: double.infinity,
-                      ),
-                      padding: EdgeInsets.all(sizes['dutyCardPadding']! * 0.75),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.surfaceContainerLow,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            'Other Events',
-                            style: TextStyle(
-                              fontSize: sizes['moreText']! * 0.9,
-                              fontWeight: FontWeight.w500,
-                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          SizedBox(height: sizes['dutyCardMargin']! * 0.5),
-                          ...events.where((event) => !event.isWorkShift).take(1).map((event) => 
-                            Text(
-                              event.title,
-                              style: TextStyle(fontSize: sizes['eventTitle']!),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              textAlign: TextAlign.center,
-                            ),
-                          ),
-                          if (events.where((event) => !event.isWorkShift).length > 1)
-                            Text(
-                              '+${events.where((event) => !event.isWorkShift).length - 1} more',
-                              style: TextStyle(fontSize: sizes['moreText']! * 0.85),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ],
-              ),
             ),
           ),
         ],
@@ -533,16 +506,17 @@ class WeekViewScreenState extends State<WeekViewScreen> {
     final hasBreaks = event.breakStartTime != null && event.breakEndTime != null;
     final sizes = _getResponsiveSizes(context);
     
-    return Container(
-      constraints: const BoxConstraints(
-        minWidth: 0,
-        maxWidth: double.infinity,
-      ),
-      padding: EdgeInsets.all(sizes['dutyCardPadding']!),
-      margin: EdgeInsets.symmetric(
-        vertical: sizes['dutyCardMargin']! * 0.5,
-        horizontal: sizes['dutyCardMargin']! * 0.5,
-      ),
+    return SizedBox(
+      width: double.infinity,
+      child: Container(
+        padding: EdgeInsets.symmetric(
+          vertical: sizes['dutyCardPadding']!,
+          horizontal: sizes['blueBoxPadding']!,
+        ),
+        margin: EdgeInsets.only(
+          top: sizes['dutyCardMargin']! * 0.5,
+          bottom: sizes['dutyCardMargin']! * 0.5,
+        ),
       decoration: BoxDecoration(
         color: AppTheme.primaryColor.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(4),
@@ -550,7 +524,7 @@ class WeekViewScreenState extends State<WeekViewScreen> {
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
-        mainAxisSize: MainAxisSize.max,
+        mainAxisSize: MainAxisSize.min,
         children: [
           // Duty title
           Text(
@@ -565,7 +539,7 @@ class WeekViewScreenState extends State<WeekViewScreen> {
             overflow: TextOverflow.ellipsis,
           ),
           
-          SizedBox(height: sizes['dutyCardMargin']!),
+          SizedBox(height: sizes['dutyCardMargin']! * 0.75),
           
           // Start - End time (stacked vertically)
           Column(
@@ -581,11 +555,13 @@ class WeekViewScreenState extends State<WeekViewScreen> {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
+              SizedBox(height: sizes['dutyCardMargin']! * 0.3),
               Icon(
                 Icons.keyboard_arrow_down,
                 size: sizes['arrowIcon']!,
                 color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
               ),
+              SizedBox(height: sizes['dutyCardMargin']! * 0.3),
               Text(
                 event.formattedEndTime,
                 style: TextStyle(
@@ -601,13 +577,13 @@ class WeekViewScreenState extends State<WeekViewScreen> {
           
           // Break times
           if (hasBreaks) ...[
-            SizedBox(height: sizes['dutyCardMargin']!),
+            SizedBox(height: sizes['dutyCardMargin']! * 0.75),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(Icons.pause_circle_outline, size: sizes['breakIcon']!),
-                const SizedBox(width: 3),
+                SizedBox(width: sizes['dutyCardMargin']! * 0.5),
                 Flexible(
                   child: Text(
                     '${_formatTimeOfDay(event.breakStartTime!)}-${_formatTimeOfDay(event.breakEndTime!)}',
@@ -623,13 +599,13 @@ class WeekViewScreenState extends State<WeekViewScreen> {
             ),
           ],
           
-          // Work time
+          // Work time - always show if available
           if (event.workTime != null) ...[
-            SizedBox(height: sizes['dutyCardMargin']!),
+            SizedBox(height: sizes['dutyCardMargin']! * 0.75),
             Container(
               padding: EdgeInsets.symmetric(
                 horizontal: sizes['dutyCardPadding']! * 0.5,
-                vertical: sizes['dutyCardMargin']! * 0.25,
+                vertical: sizes['dutyCardMargin']! * 0.3,
               ),
               decoration: BoxDecoration(
                 color: AppTheme.primaryColor.withValues(alpha: 0.15),
@@ -648,6 +624,7 @@ class WeekViewScreenState extends State<WeekViewScreen> {
             ),
           ],
         ],
+      ),
       ),
     );
   }
@@ -685,6 +662,11 @@ class WeekViewScreenState extends State<WeekViewScreen> {
         'breakIcon': 8.0,
         'dutyCardPadding': 4.0,
         'dutyCardMargin': 2.0,
+        'cardSpacing': 4.0,
+        'verticalSpacing': 6.0,
+        'horizontalPadding': 4.0,
+        'blueBoxMargin': 3.0,
+        'blueBoxPadding': 3.0,
       };
     }
     // Medium screens - balanced sizing
@@ -703,6 +685,11 @@ class WeekViewScreenState extends State<WeekViewScreen> {
         'breakIcon': 10.0,
         'dutyCardPadding': 6.0,
         'dutyCardMargin': 3.0,
+        'cardSpacing': 6.0,
+        'verticalSpacing': 8.0,
+        'horizontalPadding': 6.0,
+        'blueBoxMargin': 4.0,
+        'blueBoxPadding': 4.0,
       };
     }
     // Larger screens - comfortable sizing
@@ -721,6 +708,11 @@ class WeekViewScreenState extends State<WeekViewScreen> {
         'breakIcon': 11.0,
         'dutyCardPadding': 8.0,
         'dutyCardMargin': 4.0,
+        'cardSpacing': 8.0,
+        'verticalSpacing': 8.0,
+        'horizontalPadding': 8.0,
+        'blueBoxMargin': 5.0,
+        'blueBoxPadding': 5.0,
       };
     }
   }
