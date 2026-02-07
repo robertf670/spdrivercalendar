@@ -896,7 +896,7 @@ class _EventCardState extends State<EventCard> {
       return;
     }
     
-    final dayOfWeek = DateFormat('EEEE').format(widget.event.startDate).toLowerCase();
+    final dayOfWeek = RosterService.getDayOfWeek(widget.event.startDate);
     final isWeekday = widget.event.startDate.weekday >= 1 && widget.event.startDate.weekday <= 5;
     final bankHoliday = ShiftService.getBankHoliday(widget.event.startDate, ShiftService.bankHolidays);
     

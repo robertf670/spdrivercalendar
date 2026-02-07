@@ -666,13 +666,6 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                 _promptForOvertimeHalfType(); // Call the function to show overtime options
               },
             ),
-            TextButton( // EA Training button
-              child: const Text('EA Training'),
-              onPressed: () {
-                Navigator.of(context).pop();
-                _showEATrainingDialog();
-              },
-            ),
             // Only show Work For Others button on rest days
             if (getShiftForDate(_selectedDay ?? DateTime.now()) == 'R')
               TextButton(
@@ -9977,109 +9970,6 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
         );
       },
     );
-  }
-
-  // Show dialog to select and add EA Training (1HR or 2HR)
-  void _showEATrainingDialog() {
-    final now = DateTime.now();
-    final shiftDate = _selectedDay ?? now;
-    
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('Add EA Training for ${DateFormat('dd/MM/yyyy').format(shiftDate)}'),
-          content: const Text('Select the type of EA Training:'),
-          actions: [
-            TextButton(
-              child: const Text('Cancel'),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-            ),
-            TextButton(
-              child: const Text('EA Type Training 1HR'),
-              onPressed: () async {
-                Navigator.of(context).pop();
-                await _addEATrainingEvent('EA Type Training 1HR', shiftDate);
-              },
-            ),
-            TextButton(
-              child: const Text('EA Type Training 2HR'),
-              onPressed: () async {
-                Navigator.of(context).pop();
-                await _addEATrainingEvent('EA Type Training 2HR', shiftDate);
-              },
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  // Helper method to add EA Training event
-  Future<void> _addEATrainingEvent(String trainingType, DateTime shiftDate) async {
-    try {
-      // Create event with default times (hidden from user, just for internal tracking)
-      final event = Event(
-        id: const Uuid().v4(),
-        title: trainingType,
-        startDate: shiftDate,
-        startTime: const TimeOfDay(hour: 0, minute: 0), // Default time, not displayed
-        endDate: shiftDate,
-        endTime: const TimeOfDay(hour: 0, minute: 0), // Default time, not displayed
-        startLocation: null, // No location
-        finishLocation: null, // No location
-      );
-      
-      // Add the event
-      await EventService.addEvent(event);
-      
-      if (mounted) {
-        // Show confirmation
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('$trainingType added'),
-            backgroundColor: Colors.green,
-            duration: const Duration(seconds: 2),
-          ),
-        );
-        
-        // Force reload events for current month
-        await EventService.preloadMonth(_focusedDay);
-        
-        // Force rebuild
-        setState(() {
-          _selectedDay = null;
-        });
-        
-        await Future.delayed(const Duration(milliseconds: 100));
-        
-        setState(() {
-          _selectedDay = shiftDate;
-        });
-        
-        // Force complete refresh
-        _editEvent(Event(
-          id: 'refresh_trigger',
-          title: '',
-          startDate: DateTime.now(),
-          startTime: const TimeOfDay(hour: 0, minute: 0),
-          endDate: DateTime.now(),
-          endTime: const TimeOfDay(hour: 0, minute: 0),
-          busAssignments: {},
-        ));
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error adding EA Training: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
   }
 
   // Method to show overtime duty selection dialog with filtered duties by half type

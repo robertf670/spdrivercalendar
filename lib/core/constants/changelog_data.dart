@@ -1,4 +1,14 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.19.7': [
+    {
+      'title': 'Fixed Spare Duty Saturday Times Display',
+      'description': 'Fixed an issue where spare duties added to Saturday were showing M-F times and locations instead of Saturday times and locations.',
+    },
+    {
+      'title': 'Removed EA Training from Add Shift Dialog',
+      'description': 'Removed EA Training option from the add shift dialog.',
+    },
+  ],
   '2.19.6': [
     {
       'title': 'Fixed Year View M-F Pattern Display',
