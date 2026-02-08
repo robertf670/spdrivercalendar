@@ -401,7 +401,7 @@ class WeekViewScreenState extends State<WeekViewScreen> {
             ),
           ),
           
-          // Day content - no scrolling, fits all content
+          // Day content - scrollable to fit all content
           Expanded(
             child: Padding(
               padding: EdgeInsets.only(
@@ -411,27 +411,27 @@ class WeekViewScreenState extends State<WeekViewScreen> {
                 right: sizes['blueBoxMargin']!,
               ),
               child: workEvents.isNotEmpty
-                  ? Column(
-                      mainAxisSize: MainAxisSize.min,
-                      mainAxisAlignment: MainAxisAlignment.start,
-                      children: [
-                        // Work events - distribute space evenly
-                        ...workEvents.take(3).map((event) => Expanded(
-                          flex: 1,
-                          child: _buildDayDutyItem(event),
-                        )),
-                        if (workEvents.length > 3)
-                          Padding(
-                            padding: EdgeInsets.only(top: sizes['dutyCardMargin']!),
-                            child: Text(
-                              '+${workEvents.length - 3} more',
-                              style: TextStyle(
-                                fontSize: sizes['moreText']!,
-                                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                  ? SingleChildScrollView(
+                      physics: const ClampingScrollPhysics(),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        mainAxisAlignment: MainAxisAlignment.start,
+                        children: [
+                          // Work events - stack vertically, no Expanded wrapper
+                          ...workEvents.take(3).map((event) => _buildDayDutyItem(event)),
+                          if (workEvents.length > 3)
+                            Padding(
+                              padding: EdgeInsets.only(top: sizes['dutyCardMargin']!),
+                              child: Text(
+                                '+${workEvents.length - 3} more',
+                                style: TextStyle(
+                                  fontSize: sizes['moreText']!,
+                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                                ),
                               ),
                             ),
-                          ),
-                      ],
+                        ],
+                      ),
                     )
                   : Column(
                       mainAxisSize: MainAxisSize.min,
@@ -539,7 +539,7 @@ class WeekViewScreenState extends State<WeekViewScreen> {
             overflow: TextOverflow.ellipsis,
           ),
           
-          SizedBox(height: sizes['dutyCardMargin']! * 0.75),
+          SizedBox(height: sizes['dutyCardMargin']! * 0.4),
           
           // Start - End time (stacked vertically)
           Column(
@@ -577,7 +577,7 @@ class WeekViewScreenState extends State<WeekViewScreen> {
           
           // Break times
           if (hasBreaks) ...[
-            SizedBox(height: sizes['dutyCardMargin']! * 0.75),
+            SizedBox(height: sizes['dutyCardMargin']! * 0.4),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               mainAxisSize: MainAxisSize.min,
@@ -601,7 +601,7 @@ class WeekViewScreenState extends State<WeekViewScreen> {
           
           // Work time - always show if available
           if (event.workTime != null) ...[
-            SizedBox(height: sizes['dutyCardMargin']! * 0.75),
+            SizedBox(height: sizes['dutyCardMargin']! * 0.4),
             Container(
               padding: EdgeInsets.symmetric(
                 horizontal: sizes['dutyCardPadding']! * 0.5,
@@ -648,20 +648,21 @@ class WeekViewScreenState extends State<WeekViewScreen> {
     
     // Very small screens - compact sizing
     if (isSmallScreen) {
+      final isVerySmall = screenWidth < 350;
       return {
         'dayName': 12.0,
         'date': 10.0,
         'shiftName': 9.0,
-        'dutyTitle': 9.0,
-        'timeText': 11.0,
-        'breakText': 8.0,
-        'workDuration': 8.0,
+        'dutyTitle': isVerySmall ? 8.0 : 9.0,
+        'timeText': isVerySmall ? 10.0 : 11.0,
+        'breakText': isVerySmall ? 7.0 : 8.0,
+        'workDuration': isVerySmall ? 7.0 : 8.0,
         'eventTitle': 8.0,
         'moreText': 7.0,
-        'arrowIcon': 10.0,
-        'breakIcon': 8.0,
-        'dutyCardPadding': 4.0,
-        'dutyCardMargin': 2.0,
+        'arrowIcon': isVerySmall ? 8.0 : 10.0,
+        'breakIcon': isVerySmall ? 7.0 : 8.0,
+        'dutyCardPadding': isVerySmall ? 2.0 : 4.0,
+        'dutyCardMargin': isVerySmall ? 1.0 : 2.0,
         'cardSpacing': 4.0,
         'verticalSpacing': 6.0,
         'horizontalPadding': 4.0,

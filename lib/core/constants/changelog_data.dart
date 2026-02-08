@@ -1,4 +1,18 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.19.8': [
+    {
+      'title': 'Fixed Spare Duty Assigned Duties Work Time Calculation',
+      'description': 'Fixed work time calculation for spare duties with assigned duties to correctly subtract break time, matching normal PZ duties.',
+    },
+    {
+      'title': 'Fixed Spare Duty Location Time Display',
+      'description': 'Fixed spare duty assigned duties to show depart time at locations instead of report time (e.g., shows actual time at B Walk, not report time).',
+    },
+    {
+      'title': 'Fixed Week View Duty Card Overflow',
+      'description': 'Fixed overflow issue in Week View where duty cards with multiple details (break times, work time) were overflowing their containers. Duties now stack vertically and the list is scrollable.',
+    },
+  ],
   '2.19.7': [
     {
       'title': 'Fixed Spare Duty Saturday Times Display',

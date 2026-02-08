@@ -1170,10 +1170,14 @@ class _EventCardState extends State<EventCard> {
             final dutyInFile = parts[0].trim();
             if (dutyInFile == codeWithoutPrefix || dutyInFile == codeWithoutHalf) {
               // Found the duty
-              final dutyStartTime = parts[2].trim();
-              final dutyEndTime = parts[10].trim();
-              final startLocation = parts[4].trim();
-              final endLocation = parts[11].trim();
+              // CSV format: shift,duty,report,depart,location,startbreak,startbreaklocation,breakreport,finishbreak,finishbreaklocation,finish,finishlocation,signoff,spread,work,relief,routes
+              final dutyStartTime = parts.length > 3 ? parts[3].trim() : ''; // Column 3: depart (actual start time at location)
+              final dutyEndTime = parts.length > 10 ? parts[10].trim() : ''; // Column 10: finish
+              final startLocation = parts.length > 4 ? parts[4].trim() : '';
+              final endLocation = parts.length > 11 ? parts[11].trim() : '';
+              final breakStartTime = parts.length > 5 ? parts[5].trim() : ''; // Column 5: startbreak
+              final breakEndTime = parts.length > 8 ? parts[8].trim() : ''; // Column 8: finishbreak
+              final workTime = parts.length > 14 ? parts[14].trim() : ''; // Column 14: work (already has break subtracted)
               
               // For half duties, calculate the appropriate time
               if (isFirstHalf) {
@@ -1191,7 +1195,7 @@ class _EventCardState extends State<EventCard> {
                   final mappedBreakStartLoc = breakStartLoc.isNotEmpty && breakStartLoc.toLowerCase() != 'nan' ? mapLocationName(breakStartLoc) : '';
                   _allDutyDetails.add({
                     'dutyCode': originalDutyCode,
-                    'startTime': dutyStartTime,
+                    'startTime': dutyStartTime, // Use depart time (column 3), not report time
                     'endTime': breakStartTimeStr,
                     'startLocation': startLocation.isNotEmpty && startLocation.toLowerCase() != 'nan' ? mapLocationName(startLocation) : '',
                     'endLocation': mappedBreakStartLoc.isNotEmpty ? mappedBreakStartLoc : (endLocation.isNotEmpty && endLocation.toLowerCase() != 'nan' ? mapLocationName(endLocation) : ''),
@@ -1212,7 +1216,7 @@ class _EventCardState extends State<EventCard> {
                   
                   _allDutyDetails.add({
                     'dutyCode': originalDutyCode,
-                    'startTime': dutyStartTime,
+                    'startTime': dutyStartTime, // Use depart time (column 3), not report time
                     'endTime': DateFormat('HH:mm:ss').format(halfwayPoint),
                     'startLocation': startLocation.isNotEmpty && startLocation.toLowerCase() != 'nan' ? mapLocationName(startLocation) : '',
                     'endLocation': mappedBreakStartLoc.isNotEmpty ? mappedBreakStartLoc : (endLocation.isNotEmpty && endLocation.toLowerCase() != 'nan' ? mapLocationName(endLocation) : ''),
@@ -1279,12 +1283,15 @@ class _EventCardState extends State<EventCard> {
                 
                 _allDutyDetails.add({
                   'dutyCode': originalDutyCode,
-                  'startTime': dutyStartTime,
+                  'startTime': dutyStartTime, // Use depart time (column 3), not report time
                   'endTime': dutyEndTime,
                   'startLocation': mappedStartLocation,
                   'endLocation': mappedEndLocation,
                   'startBreakLocation': mappedBreakStartLoc,
                   'finishBreakLocation': mappedBreakEndLoc,
+                  'breakStartTime': breakStartTime.isNotEmpty && breakStartTime.toLowerCase() != 'nan' && breakStartTime.toLowerCase() != 'workout' ? breakStartTime : null,
+                  'breakEndTime': breakEndTime.isNotEmpty && breakEndTime.toLowerCase() != 'nan' && breakEndTime.toLowerCase() != 'workout' ? breakEndTime : null,
+                  'workTime': workTime.isNotEmpty && workTime.toLowerCase() != 'nan' ? workTime : null, // CSV work time (already has break subtracted)
                   'location': mappedStartLocation.isNotEmpty && mappedEndLocation.isNotEmpty 
                               ? '$mappedStartLocation - $mappedEndLocation'
                               : mappedStartLocation.isNotEmpty 
@@ -3549,7 +3556,24 @@ class _EventCardState extends State<EventCard> {
       
       // Calculate work duration for this duty
       String workDuration = '';
-      if (duty['startTime'] != null && duty['endTime'] != null) {
+      
+      // First, try to use workTime from CSV (column 14) - this already has break subtracted
+      if (duty['workTime'] != null && duty['workTime']!.toString().isNotEmpty) {
+        try {
+          final workTimeStr = duty['workTime']!.toString();
+          final timeParts = workTimeStr.split(':');
+          if (timeParts.length >= 2) {
+            final hours = int.parse(timeParts[0]);
+            final minutes = int.parse(timeParts[1]);
+            workDuration = '${hours}h ${minutes}m';
+          }
+        } catch (e) {
+          // Failed to parse CSV workTime, fall through to calculation
+        }
+      }
+      
+      // If CSV workTime not available, calculate from start/end times and subtract break
+      if (workDuration.isEmpty && duty['startTime'] != null && duty['endTime'] != null) {
         final startParts = duty['startTime']!.split(':');
         final endParts = duty['endTime']!.split(':');
         
@@ -3562,6 +3586,30 @@ class _EventCardState extends State<EventCard> {
             // Handle potential overnight shifts
             if (duration.isNegative) {
               duration += const Duration(days: 1);
+            }
+
+            // Subtract break time if available
+            if (duty['breakStartTime'] != null && duty['breakEndTime'] != null) {
+              try {
+                final breakStartStr = duty['breakStartTime']!.toString();
+                final breakEndStr = duty['breakEndTime']!.toString();
+                final breakStartParts = breakStartStr.split(':');
+                final breakEndParts = breakEndStr.split(':');
+                
+                if (breakStartParts.length >= 2 && breakEndParts.length >= 2) {
+                  final breakStart = DateTime(2024, 1, 1, int.parse(breakStartParts[0]), int.parse(breakStartParts[1]));
+                  final breakEnd = DateTime(2024, 1, 1, int.parse(breakEndParts[0]), int.parse(breakEndParts[1]));
+                  var breakDuration = breakEnd.difference(breakStart);
+                  if (breakDuration.isNegative) {
+                    breakDuration += const Duration(days: 1);
+                  }
+                  
+                  // Subtract break duration from total duration
+                  duration = duration - breakDuration;
+                }
+              } catch (e) {
+                // Failed to parse break times, use total duration without subtracting break
+              }
             }
 
             final hours = duration.inHours;
