@@ -19,6 +19,10 @@ class MonthlyCalendarWidgetProvider : AppWidgetProvider() {
         private const val HOLIDAYS_KEY = "flutter.holidays"
         private const val START_DATE_KEY = "flutter.startDate"
         private const val START_WEEK_KEY = "flutter.startWeek"
+        private const val MARKED_IN_ENABLED_KEY = "flutter.markedInEnabled"
+        private const val MARKED_IN_STATUS_KEY = "flutter.markedInStatus"
+        private const val BANK_HOLIDAY_DATES_KEY = "flutter.bankHolidayDates"
+        private const val REST_DAY_SWAPS_KEY = "flutter.restDaySwaps"
         const val ACTION_REFRESH = "ie.qqrxi.spdrivercalendar.ACTION_REFRESH_MONTHLY"
         const val ACTION_PREV_MONTH = "ie.qqrxi.spdrivercalendar.ACTION_PREV_MONTH"
         const val ACTION_NEXT_MONTH = "ie.qqrxi.spdrivercalendar.ACTION_NEXT_MONTH"
@@ -117,6 +121,9 @@ class MonthlyCalendarWidgetProvider : AppWidgetProvider() {
                 // Get roster settings
                 val startDateStr = prefs.getString(START_DATE_KEY, null) ?: prefs.getString("startDate", null)
                 
+                // Get events
+                val eventsJson = prefs.getString(EVENTS_KEY, null) ?: prefs.getString("events", null)
+                
                 // Handle startWeek - might be stored as Int or Long
                 val startWeek = try {
                     val weekValue = prefs.getAll()[START_WEEK_KEY] ?: prefs.getAll()["startWeek"]
@@ -132,16 +139,23 @@ class MonthlyCalendarWidgetProvider : AppWidgetProvider() {
                     prefs.getInt("startWeek", 0)
                 }
                 
-                // Get events
-                val eventsJson = prefs.getString(EVENTS_KEY, null) ?: prefs.getString("events", null)
                 val eventsMap = parseEvents(eventsJson)
                 
                 // Get holidays
                 val holidaysJson = prefs.getString(HOLIDAYS_KEY, null) ?: prefs.getString("holidays", null)
                 val holidays = parseHolidays(holidaysJson)
                 
+                // Get marked-in settings (M-F shift pattern)
+                val markedInEnabled = prefs.getBoolean(MARKED_IN_ENABLED_KEY, false)
+                val markedInStatus = prefs.getString(MARKED_IN_STATUS_KEY, "") ?: ""
+                val isMFMarkedIn = markedInEnabled && markedInStatus == "M-F"
+                
+                // Get bank holiday dates (for M-F: bank holidays = Rest, matches calendar)
+                val bankHolidayDates = loadBankHolidayDates(context, prefs)
+                val restDaySwaps = loadRestDaySwaps(prefs)
+                
                 // Calculate and display calendar grid
-                displayCalendar(views, context, colorContext, currentYear, currentMonth, startDateStr, startWeek, eventsMap, holidays)
+                displayCalendar(views, context, colorContext, currentYear, currentMonth, startDateStr, startWeek, eventsMap, holidays, isMFMarkedIn, bankHolidayDates, restDaySwaps)
                 
                 // Set up click intent to open the app
                 val intent = android.content.Intent(context, MainActivity::class.java)
@@ -208,6 +222,24 @@ class MonthlyCalendarWidgetProvider : AppWidgetProvider() {
             }
         }
         
+        private fun loadRestDaySwaps(prefs: SharedPreferences): Map<String, String> {
+            val json = prefs.getString(REST_DAY_SWAPS_KEY, null) ?: prefs.getString("restDaySwaps", null) ?: return emptyMap()
+            if (json.isEmpty()) return emptyMap()
+            return try {
+                val array = JSONArray(json)
+                val map = mutableMapOf<String, String>()
+                for (i in 0 until array.length()) {
+                    val obj = array.getJSONObject(i)
+                    val workDate = obj.optString("workDate", "")
+                    val restDate = obj.optString("restDate", "")
+                    val shiftType = obj.optString("shiftType", "L")
+                    if (workDate.isNotEmpty()) map[workDate] = "Rˢ"  // Swapped rest indicator
+                    if (restDate.isNotEmpty()) map[restDate] = "${shiftType}ˢ"  // Swapped work indicator
+                }
+                map
+            } catch (e: Exception) { emptyMap() }
+        }
+        
         private fun displayCalendar(
             views: RemoteViews,
             context: Context,
@@ -217,7 +249,10 @@ class MonthlyCalendarWidgetProvider : AppWidgetProvider() {
             startDateStr: String?,
             startWeek: Int,
             eventsMap: Map<String, List<EventInfo>>,
-            holidays: List<HolidayInfo>
+            holidays: List<HolidayInfo>,
+            isMFMarkedIn: Boolean = false,
+            bankHolidayDates: Set<String> = emptySet(),
+            restDaySwaps: Map<String, String> = emptyMap()
         ) {
             try {
                 val calendar = Calendar.getInstance()
@@ -293,12 +328,12 @@ class MonthlyCalendarWidgetProvider : AppWidgetProvider() {
                         
                         if (displayDate != null) {
                             // Get roster pattern, event status, and holiday status
-                            val pattern = getRosterPattern(displayDate.time, startDateStr, startWeek)
-                            val hasEvent = eventsMap.containsKey(formatDateKey(displayDate.time))
+                            val dateKey = formatDateKey(displayDate.time)
+                            val pattern = getRosterPattern(displayDate.time, startDateStr, startWeek, isMFMarkedIn, bankHolidayDates, restDaySwaps)
+                            val hasEvent = eventsMap.containsKey(dateKey)
                             val holidayType = getHolidayTypeForDate(displayDate.time, holidays)
-                            val isHoliday = holidayType != null
                             
-                            // Build display text: "day\npattern" or "day •" if event, "day H" if holiday, "day UL" if unpaid leave
+                            // Build display text
                             val displayText = buildDayText(displayDay, pattern, hasEvent, holidayType)
                             
                             views.setTextViewText(dayId, displayText)
@@ -316,20 +351,18 @@ class MonthlyCalendarWidgetProvider : AppWidgetProvider() {
                                 // More transparent/dimmed color for adjacent months
                                 views.setTextColor(dayId, colorContext.getColor(R.color.widget_text_dimmed))
                             } else {
-                                // Set color based on pattern for current month, or holiday color
-                                val holidayType = getHolidayTypeForDate(displayDate.time, holidays)
-                                val color = if (holidayType != null) {
-                                    when (holidayType) {
-                                        "unpaid_leave" -> android.R.color.holo_purple // Unpaid Leave - purple
-                                        "day_in_lieu" -> android.R.color.holo_blue_dark // Day In Lieu - indigo/blue
-                                        else -> android.R.color.holo_blue_light // Other holidays - light blue
+                                // Set color - rest day (including swapped Rˢ), then holiday, then pattern
+                                val color = when {
+                                    pattern == "R" || pattern == "Rˢ" -> R.color.widget_text_rest
+                                    holidayType != null -> when (holidayType) {
+                                        "unpaid_leave" -> android.R.color.holo_purple
+                                        "day_in_lieu" -> android.R.color.holo_blue_dark
+                                        else -> android.R.color.holo_blue_light
                                     }
-                                } else {
-                                    when (pattern) {
-                                        "E" -> R.color.widget_text_accent // Early - blue
-                                        "L" -> android.R.color.holo_orange_dark // Late - orange
-                                        "R" -> R.color.widget_text_rest // Rest - darker/bolder gray
-                                        "M" -> android.R.color.holo_purple // Middle - purple
+                                    else -> when {
+                                        pattern.startsWith("E") || pattern.startsWith("W") -> R.color.widget_text_accent
+                                        pattern.startsWith("L") -> android.R.color.holo_orange_dark
+                                        pattern.startsWith("M") -> android.R.color.holo_purple
                                         else -> R.color.widget_text_primary
                                     }
                                 }
@@ -350,15 +383,91 @@ class MonthlyCalendarWidgetProvider : AppWidgetProvider() {
             }
         }
         
-        private fun getRosterPattern(date: Date, startDateStr: String?, startWeek: Int): String? {
+        private fun loadBankHolidayDates(context: Context, prefs: SharedPreferences): Set<String> {
+            // Try SharedPreferences first (persisted by Flutter app at startup)
+            var json = prefs.getString(BANK_HOLIDAY_DATES_KEY, null)
+            if (json.isNullOrEmpty()) json = prefs.getString("bankHolidayDates", null)
+            var dates = parseBankHolidayDates(json)
+            // Fallback: load from assets if prefs empty (e.g. widget shown before app opened)
+            if (dates.isEmpty()) {
+                dates = loadBankHolidaysFromAssets(context)
+            }
+            return dates
+        }
+        
+        private fun parseHolidayDate(dateStr: String): Date? {
+            if (dateStr.isEmpty()) return null
+            val formats = listOf(
+                "yyyy-MM-dd'T'HH:mm:ss.SSS",
+                "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
+                "yyyy-MM-dd'T'HH:mm:ss",
+                "yyyy-MM-dd"
+            )
+            for (format in formats) {
+                try {
+                    SimpleDateFormat(format, Locale.US).parse(dateStr)?.let { return it }
+                } catch (_: Exception) { }
+            }
+            // Fallback: extract yyyy-MM-dd if string contains T
+            val datePart = if (dateStr.contains("T")) dateStr.split("T")[0] else dateStr
+            return try { SimpleDateFormat("yyyy-MM-dd", Locale.US).parse(datePart) } catch (_: Exception) { null }
+        }
+        
+        private fun parseBankHolidayDates(json: String?): Set<String> {
+            if (json == null || json.isEmpty()) return emptySet()
+            return try {
+                val array = JSONArray(json)
+                (0 until array.length()).map { array.getString(it) }.toSet()
+            } catch (e: Exception) { emptySet() }
+        }
+        
+        private fun loadBankHolidaysFromAssets(context: Context): Set<String> {
+            val pathsToTry = listOf("flutter_assets/assets/bank_holidays.json", "assets/bank_holidays.json")
+            for (path in pathsToTry) {
+                try {
+                    val dates = context.assets.open(path).bufferedReader().use { reader ->
+                        val content = reader.readText()
+                        val root = JSONObject(content)
+                        val yearsArray = root.getJSONArray("IrelandBankHolidays")
+                        val set = mutableSetOf<String>()
+                        for (i in 0 until yearsArray.length()) {
+                            val yearObj = yearsArray.getJSONObject(i)
+                            val holidaysArray = yearObj.getJSONArray("holidays")
+                            for (j in 0 until holidaysArray.length()) {
+                                val holiday = holidaysArray.getJSONObject(j)
+                                val dateStr = holiday.optString("date", "")
+                                if (dateStr.isNotEmpty()) set.add(dateStr)
+                            }
+                        }
+                        set
+                    }
+                    if (dates.isNotEmpty()) return dates
+                } catch (e: Exception) { /* try next path */ }
+            }
+            return emptySet()
+        }
+        
+        private fun getRosterPattern(date: Date, startDateStr: String?, startWeek: Int, isMFMarkedIn: Boolean = false, bankHolidayDates: Set<String> = emptySet(), restDaySwaps: Map<String, String> = emptyMap()): String? {
+            val dateKey = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(date)
+            restDaySwaps[dateKey]?.let { return it }
+            
+            val calendar = Calendar.getInstance()
+            calendar.time = date
+            
+            // M-F marked in: W on Mon-Fri, R on Sat-Sun, R on bank holidays (matches calendar exactly)
+            if (isMFMarkedIn) {
+                val dateKey = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(date)
+                if (bankHolidayDates.contains(dateKey)) return "R"  // Bank holiday = Rest
+                val dayOfWeek = calendar.get(Calendar.DAY_OF_WEEK)
+                return if (dayOfWeek >= Calendar.MONDAY && dayOfWeek <= Calendar.FRIDAY) "W" else "R"
+            }
+            
             if (startDateStr == null) return null
             
             try {
                 val startDate = SimpleDateFormat("yyyy-MM-dd", Locale.US).parse(startDateStr)
                     ?: return null
                 
-                val calendar = Calendar.getInstance()
-                calendar.time = date
                 val dayOfWeek = calendar.get(Calendar.DAY_OF_WEEK) // 1=Sunday, 7=Saturday
                 val dayIndex = (dayOfWeek + 6) % 7 // Convert to 0=Sunday
                 
@@ -436,18 +545,18 @@ class MonthlyCalendarWidgetProvider : AppWidgetProvider() {
         
         private fun buildDayText(day: Int, pattern: String?, hasEvent: Boolean, holidayType: String?): String {
             val eventMarker = if (hasEvent) " •" else ""
-            // If it's a holiday, show marker based on type
-            return if (holidayType != null) {
-                val marker = when (holidayType) {
-                    "unpaid_leave" -> "UL"
-                    "day_in_lieu" -> "DIL"
-                    else -> "H"
+            return when {
+                pattern == "R" || pattern == "Rˢ" -> "$day\n${pattern ?: "R"}$eventMarker"
+                holidayType != null -> {
+                    val marker = when (holidayType) {
+                        "unpaid_leave" -> "UL"
+                        "day_in_lieu" -> "DIL"
+                        else -> "H"
+                    }
+                    "$day\n$marker$eventMarker"
                 }
-                "$day\n$marker$eventMarker"
-            } else if (pattern != null) {
-                "$day\n$pattern$eventMarker"
-            } else {
-                "$day$eventMarker"
+                pattern != null -> "$day\n$pattern$eventMarker"
+                else -> "$day$eventMarker"
             }
         }
         
@@ -466,10 +575,9 @@ class MonthlyCalendarWidgetProvider : AppWidgetProvider() {
                     
                     if (startDateStr.isNotEmpty() && endDateStr.isNotEmpty()) {
                         try {
-                            val startDate = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US).parse(startDateStr)
-                                ?: SimpleDateFormat("yyyy-MM-dd", Locale.US).parse(startDateStr)
-                            val endDate = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US).parse(endDateStr)
-                                ?: SimpleDateFormat("yyyy-MM-dd", Locale.US).parse(endDateStr)
+                            // Dart toIso8601String() produces "yyyy-MM-ddTHH:mm:ss.mmm" - try formats in order
+                            val startDate = parseHolidayDate(startDateStr)
+                            val endDate = parseHolidayDate(endDateStr)
                             
                             if (startDate != null && endDate != null) {
                                 holidays.add(HolidayInfo(startDate, endDate, type))

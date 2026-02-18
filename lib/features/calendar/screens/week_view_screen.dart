@@ -8,6 +8,7 @@ import 'package:spdrivercalendar/models/bank_holiday.dart';
 import 'package:spdrivercalendar/theme/app_theme.dart';
 import 'package:spdrivercalendar/core/services/storage_service.dart';
 import 'package:spdrivercalendar/core/constants/app_constants.dart';
+import 'package:spdrivercalendar/services/rest_day_swap_service.dart';
 
 class WeekViewScreen extends StatefulWidget {
   final DateTime selectedDate;
@@ -97,38 +98,30 @@ class WeekViewScreenState extends State<WeekViewScreen> {
     }
   }
 
-  String _getShiftForDate(DateTime date) {
+  String _getRosterShiftForDate(DateTime date) {
     if (widget.startDate == null) return '';
-    
-    // Check if marked in is enabled
     if (_markedInEnabled) {
-      // M-F marked in logic: W on Mon-Fri, R on Sat-Sun
-      // Bank holidays are REST days for M-F
       if (_markedInStatus == 'M-F') {
-        // Check if this is a bank holiday
         final bankHoliday = _getBankHoliday(date);
-        if (bankHoliday != null) {
-          // If M-F marked in is enabled, bank holidays are always R (Rest)
-          return 'R';
-        }
-        
-        // weekday: 1=Monday, 2=Tuesday, ..., 6=Saturday, 7=Sunday
+        if (bankHoliday != null) return 'R';
         final weekday = date.weekday;
-        if (weekday >= 1 && weekday <= 5) {
-          return 'W'; // Work days Mon-Fri
-        } else {
-          return 'R'; // Rest days Sat-Sun
-        }
+        if (weekday >= 1 && weekday <= 5) return 'W';
+        return 'R';
       }
-      
-      // Shift marked in: use normal roster calculation
       if (_markedInStatus == 'Shift') {
         return RosterService.getShiftForDate(date, widget.startDate!, widget.startWeek);
       }
     }
-    
-    // Default or normal roster calculation
     return RosterService.getShiftForDate(date, widget.startDate!, widget.startWeek);
+  }
+
+  String _getShiftForDate(DateTime date) {
+    return RestDaySwapService.getShiftForDate(
+      date,
+      startDate: widget.startDate,
+      startWeek: widget.startWeek,
+      rosterGetter: _getRosterShiftForDate,
+    ).shift;
   }
 
   @override

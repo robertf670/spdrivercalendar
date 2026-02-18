@@ -81,36 +81,44 @@ class BillsScreenState extends State<BillsScreen> {
     });
 
     try {
-      // Construct the filename based on selected values
-      String filename;
-      
-      if (_selectedZone == 'Zone 4') {
-        // Handle Zone 4 (Route 23/24 files)
-        String dayTypeForFilename = _selectedDayType;
-        if (_selectedDayType == 'Sat') {
-          dayTypeForFilename = 'SAT';
-        } else if (_selectedDayType == 'Sun') {
-          dayTypeForFilename = 'SUN';
+      List<String> lines;
+
+      if (_selectedZone == 'Uni/Euro') {
+        // Uni/Euro: M-F uses both 7DAYs and M-F files; Sat/Sun use 7DAYs only
+        final csv7Days = await rootBundle.loadString('assets/UNI_7DAYs.csv');
+        if (_selectedDayType == 'M-F') {
+          final csvMF = await rootBundle.loadString('assets/UNI_M-F.csv');
+          lines = _mergeUniEuroCsvLines(csv7Days, csvMF);
+        } else {
+          lines = csv7Days.split('\n');
         }
-        filename = '${dayTypeForFilename}_ROUTE2324.csv';
       } else {
-        // Handle existing zone files (Zone 1 and Zone 3)
-        final zoneNumber = _selectedZone.replaceAll('Zone ', '');
-        // Format filenames with correct capitalization
-        String dayTypeForFilename = _selectedDayType;
-        if (_selectedDayType == 'Sat') {
-          dayTypeForFilename = 'SAT';
-        } else if (_selectedDayType == 'Sun') {
-          dayTypeForFilename = 'SUN';
+        // Construct the filename based on selected values
+        String filename;
+        if (_selectedZone == 'Zone 4') {
+          // Handle Zone 4 (Route 23/24 files)
+          String dayTypeForFilename = _selectedDayType;
+          if (_selectedDayType == 'Sat') {
+            dayTypeForFilename = 'SAT';
+          } else if (_selectedDayType == 'Sun') {
+            dayTypeForFilename = 'SUN';
+          }
+          filename = '${dayTypeForFilename}_ROUTE2324.csv';
+        } else {
+          // Handle existing zone files (Zone 1 and Zone 3)
+          final zoneNumber = _selectedZone.replaceAll('Zone ', '');
+          String dayTypeForFilename = _selectedDayType;
+          if (_selectedDayType == 'Sat') {
+            dayTypeForFilename = 'SAT';
+          } else if (_selectedDayType == 'Sun') {
+            dayTypeForFilename = 'SUN';
+          }
+          filename = '${dayTypeForFilename}_DUTIES_PZ$zoneNumber.csv';
         }
-        filename = '${dayTypeForFilename}_DUTIES_PZ$zoneNumber.csv';
+        final path = 'assets/$filename';
+        final String csvData = await rootBundle.loadString(path);
+        lines = csvData.split('\n');
       }
-      
-      final path = 'assets/$filename';
-      
-      // Load the CSV content
-      final String csvData = await rootBundle.loadString(path);
-      final List<String> lines = csvData.split('\n');
 
       if (lines.isEmpty) {
         setState(() {
@@ -230,6 +238,33 @@ class BillsScreenState extends State<BillsScreen> {
         _errorMessage = 'Error loading data: ${e.toString()}';
       });
     }
+  }
+
+  /// Merges UNI_7DAYs and UNI_M-F CSV content. Headers from first file;
+  /// data rows deduplicated by shift (first column), first occurrence wins.
+  List<String> _mergeUniEuroCsvLines(String csv7Days, String csvMF) {
+    final lines7Days = csv7Days.split('\n');
+    final linesMF = csvMF.split('\n');
+    if (lines7Days.isEmpty) return linesMF;
+    if (linesMF.isEmpty) return lines7Days;
+
+    final result = <String>[lines7Days[0]]; // header from 7DAYs
+    final seenShifts = <String>{};
+
+    void addRows(List<String> fileLines) {
+      for (var i = 1; i < fileLines.length; i++) {
+        if (fileLines[i].trim().isEmpty) continue;
+        final parts = _parseCsvLine(fileLines[i]);
+        if (parts.isEmpty) continue;
+        final shift = parts[0];
+        if (!seenShifts.add(shift)) continue; // skip duplicate
+        result.add(fileLines[i]);
+      }
+    }
+
+    addRows(lines7Days);
+    addRows(linesMF);
+    return result;
   }
 
   // Simple CSV line parser
@@ -499,7 +534,7 @@ class BillsScreenState extends State<BillsScreen> {
                             padding: EdgeInsets.only(right: 16.0),
                             child: Icon(Icons.arrow_drop_down_circle, color: AppTheme.primaryColor),
                           ),
-                          items: ['Zone 1', 'Zone 3', 'Zone 4'].map((String value) {
+                          items: ['Zone 1', 'Zone 3', 'Zone 4', 'Uni/Euro'].map((String value) {
                             return DropdownMenuItem<String>(
                               value: value,
                               child: Padding(

@@ -3,12 +3,15 @@ import 'package:spdrivercalendar/models/bank_holiday.dart';
 import 'package:spdrivercalendar/models/shift_info.dart';
 import 'package:spdrivercalendar/theme/app_theme.dart';
 import 'package:spdrivercalendar/features/calendar/services/roster_service.dart';
+import 'package:spdrivercalendar/services/rest_day_swap_service.dart';
 
 class ShiftDetailsCard extends StatelessWidget {
   final DateTime date;
   final String shift;
   final Map<String, ShiftInfo> shiftInfoMap;
   final BankHoliday? bankHoliday;
+  final bool hasDayNote;
+  final VoidCallback onShowDayNotes;
 
   const ShiftDetailsCard({
     super.key,
@@ -16,6 +19,8 @@ class ShiftDetailsCard extends StatelessWidget {
     required this.shift,
     required this.shiftInfoMap,
     this.bankHoliday,
+    required this.hasDayNote,
+    required this.onShowDayNotes,
   });
 
   @override
@@ -28,9 +33,11 @@ class ShiftDetailsCard extends StatelessWidget {
     final isSaturdayService = RosterService.isSaturdayService(date);
     
     // Get display name for the shift - show "Relief Shift" for Middle shifts on Saturdays
-    final String shiftDisplayName = (shift == 'M' && isSaturday) 
+    final String shiftName = (shift == 'M' && isSaturday) 
         ? 'Relief' 
         : shiftInfo?.name ?? 'Unknown';
+    final bool isSwapped = RestDaySwapService.isSwappedRestDay(date) || RestDaySwapService.isSwappedWorkDay(date);
+    final String shiftDisplayName = isSwapped ? '$shiftName Shift Swapped' : '$shiftName Shift';
     
     // Calculate responsive badge sizes
     final screenWidth = MediaQuery.of(context).size.width;
@@ -80,7 +87,7 @@ class ShiftDetailsCard extends StatelessWidget {
                           children: [
                             Flexible(
                               child: Text(
-                                '$shiftDisplayName Shift',
+                                shiftDisplayName,
                                 style: Theme.of(context).textTheme.titleMedium,
                               ),
                             ),
@@ -139,6 +146,45 @@ class ShiftDetailsCard extends StatelessWidget {
                   ],
                 ),
               ),
+            // Notes icon - same as event cards
+            Padding(
+              padding: const EdgeInsets.only(left: 8.0),
+              child: InkWell(
+                onTap: onShowDayNotes,
+                borderRadius: BorderRadius.circular(12),
+                child: Padding(
+                  padding: const EdgeInsets.all(4.0),
+                  child: Stack(
+                    children: [
+                      Icon(
+                        hasDayNote ? Icons.notes : Icons.notes_outlined,
+                        size: 18,
+                        color: hasDayNote
+                            ? (Theme.of(context).brightness == Brightness.dark
+                                ? Colors.white.withValues(alpha: 0.9)
+                                : Colors.black.withValues(alpha: 0.8))
+                            : (shiftInfo?.color ?? Colors.blue).withValues(alpha: 0.6),
+                      ),
+                      if (hasDayNote)
+                        Positioned(
+                          right: 0,
+                          top: 0,
+                          child: Container(
+                            width: 6,
+                            height: 6,
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).brightness == Brightness.dark
+                                  ? Colors.white
+                                  : Colors.black.withValues(alpha: 0.7),
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           ],
         ),
       ),

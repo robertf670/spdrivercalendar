@@ -8,6 +8,7 @@ import 'package:spdrivercalendar/core/constants/app_constants.dart';
 import 'package:spdrivercalendar/features/settings/screens/settings_screen.dart' show kNotificationsEnabledKey, kNotificationOffsetHoursKey;
 import 'package:path_provider/path_provider.dart'; // Added for auto-backup
 import 'package:spdrivercalendar/services/color_customization_service.dart';
+import 'package:spdrivercalendar/services/day_note_service.dart';
 import 'package:share_plus/share_plus.dart';
 
 class BackupService {
@@ -19,6 +20,7 @@ class BackupService {
   // List all SharedPreferences keys to back up
   static final List<String> _backupKeys = [
     AppConstants.eventsStorageKey,       // Events data
+    AppConstants.dayNotesStorageKey,    // Day notes
     'holidays',                          // Holiday data (ASSUMED KEY - PLEASE VERIFY/CHANGE)
     AppConstants.startDateKey,           // Roster start date
     AppConstants.startWeekKey,           // Roster start week
@@ -30,7 +32,8 @@ class BackupService {
     kNotificationOffsetHoursKey,         // Notification offset setting
     // Add any other keys you want to back up here
     AppConstants.hasSeenWelcomeKey, // Example: Add welcome flag
-    AppConstants.hasCompletedGoogleLoginKey // Example: Add google login flag
+    AppConstants.hasCompletedGoogleLoginKey, // Example: Add google login flag
+    AppConstants.restDaySwapsKey, // Rest day swaps
   ];
 
   static Future<bool> createBackup() async {
@@ -238,7 +241,8 @@ class BackupService {
                               key.startsWith('start') || // Support start date/week keys
                               key.startsWith('dark') ||  // Support dark mode
                               key.startsWith('welcome') || // Support welcome flags
-                              key.startsWith('sync'); // Support sync settings
+                              key.startsWith('sync') || // Support sync settings
+                              key.startsWith('restDay'); // Rest day swaps
           
           if (shouldRestore) {
             // Need to check the type and use the correct setter
@@ -289,9 +293,9 @@ class BackupService {
 
 
       
-      // Consider success if we restored at least some data
+      // Invalidate caches that read from SharedPreferences
       if (restoredCount > 0) {
-
+        DayNoteService.invalidateCache();
         return true;
       } else {
 

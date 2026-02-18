@@ -2,15 +2,17 @@ import 'package:flutter/material.dart';
 
 class AppConstants {
   static const String appName = 'Spare Driver Shift Calendar';
-  static const String appVersion = '2.19.8';
+  static const String appVersion = '2.19.9';
   
   // Storage Keys
   static const String eventsStorageKey = 'events';
+  static const String dayNotesStorageKey = 'day_notes';
   static const String startDateKey = 'startDate';
   static const String startWeekKey = 'startWeek';
   static const String endDateKey = 'endDate';
   static const String shiftTypeKey = 'shiftType';
   static const String restDaysKey = 'restDays';
+  static const String restDaySwapsKey = 'restDaySwaps';
   static const String isDarkModeKey = 'isDarkMode';
   static const String hasSeenWelcomeKey = 'hasSeenWelcome';
   static const String hasCompletedGoogleLoginKey = 'hasCompletedGoogleLogin';
@@ -33,6 +35,9 @@ class AppConstants {
   static const String markedInEnabledKey = 'markedInEnabled';
   static const String markedInStatusKey = 'markedInStatus';
   static const String markedInZoneKey = 'markedInZone'; // Zone selection when Shift is selected (Zone 1, Zone 3, Zone 4)
+
+  // Bank holidays (persisted for home screen widget - JSON array of "yyyy-MM-dd" strings)
+  static const String bankHolidayDatesKey = 'bankHolidayDates';
 
   // Pay Rate
   static const String spreadPayRateKey = 'spreadPayRate';

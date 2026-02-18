@@ -616,6 +616,23 @@ class TodayShiftWidgetProvider : AppWidgetProvider() {
                    title.matches(Regex("^\\d+/.*"))
         }
         
+        private fun parseHolidayDate(dateStr: String): Date? {
+            if (dateStr.isEmpty()) return null
+            val formats = listOf(
+                "yyyy-MM-dd'T'HH:mm:ss.SSS",
+                "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
+                "yyyy-MM-dd'T'HH:mm:ss",
+                "yyyy-MM-dd"
+            )
+            for (format in formats) {
+                try {
+                    SimpleDateFormat(format, Locale.US).parse(dateStr)?.let { return it }
+                } catch (_: Exception) { }
+            }
+            val datePart = if (dateStr.contains("T")) dateStr.split("T")[0] else dateStr
+            return try { SimpleDateFormat("yyyy-MM-dd", Locale.US).parse(datePart) } catch (_: Exception) { null }
+        }
+        
         private fun getTodayHolidayType(context: Context): String? {
             val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             val holidaysJson = prefs.getString(HOLIDAYS_KEY, null) ?: prefs.getString("holidays", null)
@@ -637,10 +654,8 @@ class TodayShiftWidgetProvider : AppWidgetProvider() {
                     
                     if (startDateStr.isNotEmpty() && endDateStr.isNotEmpty()) {
                         try {
-                            val startDate = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US).parse(startDateStr)
-                                ?: SimpleDateFormat("yyyy-MM-dd", Locale.US).parse(startDateStr)
-                            val endDate = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US).parse(endDateStr)
-                                ?: SimpleDateFormat("yyyy-MM-dd", Locale.US).parse(endDateStr)
+                            val startDate = parseHolidayDate(startDateStr)
+                            val endDate = parseHolidayDate(endDateStr)
                             
                             if (startDate != null && endDate != null) {
                                 val startCal = Calendar.getInstance()

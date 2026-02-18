@@ -5,6 +5,7 @@ import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:spdrivercalendar/core/constants/app_constants.dart';
 import 'package:spdrivercalendar/core/services/storage_service.dart';
 import 'package:spdrivercalendar/features/calendar/services/shift_service.dart';
+import 'package:spdrivercalendar/features/calendar/services/roster_service.dart';
 import 'package:spdrivercalendar/features/welcome/screens/welcome_screen.dart';
 import 'package:spdrivercalendar/features/google/screens/google_login_screen.dart';
 import 'package:spdrivercalendar/features/calendar/screens/calendar_screen.dart';
@@ -12,6 +13,7 @@ import 'package:spdrivercalendar/features/whatsnew/screens/whats_new_screen.dart
 import 'package:spdrivercalendar/theme/app_theme.dart';
 import 'package:spdrivercalendar/google_calendar_service.dart';
 import 'package:spdrivercalendar/services/rest_days_service.dart';
+import 'package:spdrivercalendar/services/rest_day_swap_service.dart';
 import 'package:spdrivercalendar/core/config/flutter_config.dart';
 import 'package:spdrivercalendar/core/widgets/rebuild_text.dart';
 import 'package:spdrivercalendar/services/notification_service.dart';
@@ -24,10 +26,25 @@ import 'package:spdrivercalendar/features/settings/screens/version_history_scree
 import 'package:spdrivercalendar/services/color_customization_service.dart';
 import 'package:spdrivercalendar/services/user_activity_service.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'dart:convert';
 
 // Global Firebase Analytics instance
 late FirebaseAnalytics analytics;
 late FirebaseAnalyticsObserver observer;
+
+/// Persists bank holiday dates to SharedPreferences for the home screen widget.
+/// The widget reads these to match M-F pattern (bank holidays = Rest for M-F users).
+Future<void> _persistBankHolidaysForWidget() async {
+  try {
+    final holidays = await RosterService.loadBankHolidays();
+    final dateStrings = holidays
+        .map((h) => '${h.date.year.toString().padLeft(4, '0')}-${h.date.month.toString().padLeft(2, '0')}-${h.date.day.toString().padLeft(2, '0')}')
+        .toList();
+    await StorageService.saveString(AppConstants.bankHolidayDatesKey, jsonEncode(dateStrings));
+  } catch (_) {
+    // Ignore - widget will fall back to weekday check only
+  }
+}
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -57,6 +74,7 @@ Future<void> main() async {
     FlutterConfig.configure(),
     StorageService.init(),
     RestDaysService.initialize(),
+    RestDaySwapService.initialize(),
     GoogleCalendarService.initialize(),
     ShiftService.initialize(),
     ColorCustomizationService.initialize(),
@@ -64,6 +82,9 @@ Future<void> main() async {
 
   // Initialize EventService AFTER StorageService is ready (as it reads from SharedPreferences)
   await EventService.initializeService();
+
+  // Persist bank holidays for home screen widget (M-F pattern matching)
+  await _persistBankHolidaysForWidget();
 
   // Track user activity for analytics (after StorageService is ready)
   UserActivityService.trackUserActivity();

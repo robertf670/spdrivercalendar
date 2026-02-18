@@ -2,9 +2,27 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart'; // For date formatting
 import 'package:spdrivercalendar/models/event.dart'; // Assuming Event model path
 import 'package:spdrivercalendar/features/calendar/services/event_service.dart'; // Assuming EventService path
+import 'package:spdrivercalendar/services/day_note_service.dart';
 import 'package:spdrivercalendar/theme/app_theme.dart'; // For consistent styling
 import 'package:spdrivercalendar/features/notes/screens/edit_note_screen.dart'; // Import the edit screen
 import 'package:collection/collection.dart'; // Import for groupBy
+
+/// Unified note item for display - can be from an event or a day note.
+class _NoteListItem {
+  final DateTime date;
+  final String title;
+  final String note;
+  final bool isDayNote;
+  final Event? event;
+
+  _NoteListItem({
+    required this.date,
+    required this.title,
+    required this.note,
+    this.isDayNote = false,
+    this.event,
+  });
+}
 
 class AllNotesScreen extends StatefulWidget {
   const AllNotesScreen({super.key});
@@ -14,8 +32,8 @@ class AllNotesScreen extends StatefulWidget {
 }
 
 class AllNotesScreenState extends State<AllNotesScreen> {
-  List<Event> _allNotes = []; // Holds all notes originally loaded
-  Map<String, List<Event>> _groupedNotes = {}; // Map for grouped notes
+  List<_NoteListItem> _allNotes = []; // Holds all notes (event + day notes)
+  Map<String, List<_NoteListItem>> _groupedNotes = {}; // Map for grouped notes
   bool _isLoading = true;
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
@@ -66,27 +84,53 @@ class AllNotesScreenState extends State<AllNotesScreen> {
       _isLoading = true;
     });
     try {
-      // Get all events with notes using the new method
-      final eventsWithNotes = await EventService.getAllEventsWithNotes();
+      // Load event notes and day notes in parallel
+      final results = await Future.wait([
+        EventService.getAllEventsWithNotes(),
+        DayNoteService.getAllDayNotes(),
+      ]);
+      final eventsWithNotes = results[0] as List<Event>;
+      final dayNotes = results[1] as List<({DateTime date, String note})>;
+
+      final items = <_NoteListItem>[];
+
+      // Add event notes
       final uniqueEventsWithNotes = <String, Event>{};
       for (var event in eventsWithNotes) {
-         final eventId = event.id;
-         if (eventId.isNotEmpty) { 
-             uniqueEventsWithNotes[eventId] = event;
-         }
+        if (event.id.isNotEmpty && event.notes != null && event.notes!.trim().isNotEmpty) {
+          uniqueEventsWithNotes[event.id] = event;
+        }
       }
-      final uniqueList = uniqueEventsWithNotes.values.toList();
-      uniqueList.sort((a, b) => b.startDate.compareTo(a.startDate));
+      for (var event in uniqueEventsWithNotes.values) {
+        items.add(_NoteListItem(
+          date: event.startDate,
+          title: event.title,
+          note: event.notes!,
+          isDayNote: false,
+          event: event,
+        ));
+      }
+
+      // Add day notes (exclude dates that already have event notes with same content to avoid dupes - actually show both, they're different)
+      for (var entry in dayNotes) {
+        items.add(_NoteListItem(
+          date: entry.date,
+          title: 'Day note',
+          note: entry.note,
+          isDayNote: true,
+        ));
+      }
+
+      items.sort((a, b) => b.date.compareTo(a.date));
 
       if (mounted) {
         setState(() {
-          _allNotes = uniqueList; // Store all loaded notes
-          _filterAndGroupNotes(); // Group notes after loading
+          _allNotes = items;
+          _filterAndGroupNotes();
           _isLoading = false;
         });
       }
     } catch (e) {
-
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -101,48 +145,44 @@ class AllNotesScreenState extends State<AllNotesScreen> {
   // --- Combined Filter and Group Logic ---
   void _filterAndGroupNotes() {
     final query = _searchQuery.toLowerCase();
-    List<Event> filtered = _allNotes;
+    List<_NoteListItem> filtered = _allNotes;
 
     // Apply month filter if selected
     if (_selectedMonth != null) {
-      filtered = filtered.where((event) {
-        final eventDate = event.startDate;
-        return eventDate.year == _selectedMonth!.year && 
-               eventDate.month == _selectedMonth!.month;
+      filtered = filtered.where((item) {
+        return item.date.year == _selectedMonth!.year &&
+               item.date.month == _selectedMonth!.month;
       }).toList();
     }
 
-    // Apply search filter
+    // Apply search filter (title and note content)
     if (query.isNotEmpty) {
-      filtered = filtered.where((event) {
-        final titleMatch = event.title.toLowerCase().contains(query);
-        final noteMatch = event.notes?.toLowerCase().contains(query) ?? false;
+      filtered = filtered.where((item) {
+        final titleMatch = item.title.toLowerCase().contains(query);
+        final noteMatch = item.note.toLowerCase().contains(query);
         return titleMatch || noteMatch;
       }).toList();
     }
 
     // Group the filtered notes by date key
     setState(() {
-      _groupedNotes = groupBy(filtered, (Event event) => _getGroupKey(event.startDate));
+      _groupedNotes = groupBy(filtered, (item) => _getGroupKey(item.date));
     });
   }
 
-  // --- Delete Note Logic ---
-  Future<void> _deleteNote(Event eventToDelete) async {
-    final updatedEvent = eventToDelete.copyWith(notes: ''); 
+  // --- Delete Event Note Logic ---
+  Future<void> _deleteEventNote(Event eventToDelete) async {
+    final updatedEvent = eventToDelete.copyWith(notes: '');
     try {
       await EventService.updateEvent(eventToDelete, updatedEvent);
       if (mounted) {
-        // Remove from the master list first
-        _allNotes.removeWhere((event) => event.id == eventToDelete.id);
-        // Then re-filter and re-group
-        _filterAndGroupNotes(); 
+        _allNotes.removeWhere((item) => !item.isDayNote && item.event?.id == eventToDelete.id);
+        _filterAndGroupNotes();
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Note deleted'), duration: Duration(seconds: 2)),
         );
       }
     } catch (e) {
-
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to delete note: ${e.toString()}')),
@@ -151,36 +191,62 @@ class AllNotesScreenState extends State<AllNotesScreen> {
     }
   }
 
+  // --- Delete Day Note Logic ---
+  Future<void> _deleteDayNote(DateTime date) async {
+    try {
+      await DayNoteService.saveDayNote(date, null);
+      if (mounted) {
+        _allNotes.removeWhere((item) => item.isDayNote && _isSameDay(item.date, date));
+        _filterAndGroupNotes();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Note deleted'), duration: Duration(seconds: 2)),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to delete note: ${e.toString()}')),
+        );
+      }
+    }
+  }
+
+  bool _isSameDay(DateTime a, DateTime b) =>
+      a.year == b.year && a.month == b.month && a.day == b.day;
+
   // --- Confirmation Dialog ---
-  Future<void> _showDeleteConfirmationDialog(Event eventToDelete) async {
+  Future<void> _showDeleteConfirmationDialog(_NoteListItem item) async {
+    final label = item.isDayNote ? 'Day note' : item.title;
     return showDialog<void>(
       context: context,
-      barrierDismissible: false, 
+      barrierDismissible: false,
       builder: (BuildContext dialogContext) {
         return AlertDialog(
           title: const Text('Delete Note?'),
           content: SingleChildScrollView(
             child: ListBody(
               children: <Widget>[
-                Text('Are you sure you want to delete the note for "${eventToDelete.title}" on ${DateFormat('dd/MM/yyyy').format(eventToDelete.startDate)}?'),
+                Text('Are you sure you want to delete the note for "$label" on ${DateFormat('dd/MM/yyyy').format(item.date)}?'),
                 const SizedBox(height: 8),
-                Text('Note: ${eventToDelete.notes}', style: const TextStyle(fontStyle: FontStyle.italic, color: Colors.grey)),
+                Text('Note: ${item.note}', style: const TextStyle(fontStyle: FontStyle.italic, color: Colors.grey)),
               ],
             ),
           ),
           actions: <Widget>[
             TextButton(
               child: const Text('Cancel'),
-              onPressed: () {
-                Navigator.of(dialogContext).pop(); 
-              },
+              onPressed: () => Navigator.of(dialogContext).pop(),
             ),
             TextButton(
               style: TextButton.styleFrom(foregroundColor: Colors.red),
               child: const Text('Delete'),
               onPressed: () {
-                Navigator.of(dialogContext).pop(); 
-                _deleteNote(eventToDelete);     
+                Navigator.of(dialogContext).pop();
+                if (item.isDayNote) {
+                  _deleteDayNote(item.date);
+                } else if (item.event != null) {
+                  _deleteEventNote(item.event!);
+                }
               },
             ),
           ],
@@ -189,16 +255,81 @@ class AllNotesScreenState extends State<AllNotesScreen> {
     );
   }
 
-  // --- Navigate to Edit Screen ---
+  // --- Navigate to Edit Screen (event notes) ---
   Future<void> _navigateToEditNoteScreen(Event event) async {
     final result = await Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => EditNoteScreen(event: event)),
     );
-
-    // If the edit screen returned true (meaning saved), refresh the notes list
     if (result == true && mounted) {
-      _loadNotes(); // Reload notes to see the changes
+      _loadNotes();
+    }
+  }
+
+  // --- Edit Day Note Dialog ---
+  Future<void> _showDayNoteEditDialog(DateTime date, String currentNote) async {
+    final notesController = TextEditingController(text: currentNote);
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+
+    final saved = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            const Icon(Icons.notes_rounded, color: AppTheme.primaryColor),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Edit note for ${DateFormat('EEE, MMM d').format(date)}',
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+        content: SizedBox(
+          width: screenWidth * 0.9,
+          height: screenHeight * 0.4,
+          child: TextField(
+            controller: notesController,
+            maxLines: null,
+            minLines: null,
+            expands: true,
+            textAlignVertical: TextAlignVertical.top,
+            decoration: InputDecoration(
+              hintText: 'Add notes for this day...',
+              border: const OutlineInputBorder(),
+              fillColor: Theme.of(context).brightness == Brightness.dark
+                  ? Colors.grey.shade800
+                  : Colors.grey.shade100,
+              filled: true,
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => notesController.clear(),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Clear'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final updatedNote = notesController.text.trim();
+              await DayNoteService.saveDayNote(date, updatedNote.isEmpty ? null : updatedNote);
+              if (context.mounted) Navigator.of(context).pop(true);
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+
+    if (saved == true && mounted) {
+      _loadNotes();
     }
   }
 
@@ -544,47 +675,45 @@ class AllNotesScreenState extends State<AllNotesScreen> {
                 ),
                 // --- Notes within the Group ---
                 ListView.builder(
-                  shrinkWrap: true, // Important for nested ListView
-                  physics: const NeverScrollableScrollPhysics(), // Disable scrolling for inner list
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
                   itemCount: notesInGroup.length,
                   itemBuilder: (context, noteIndex) {
-                    final event = notesInGroup[noteIndex];
+                    final item = notesInGroup[noteIndex];
                     return Card(
-                      margin: const EdgeInsets.symmetric(vertical: 4.0), // Reduced vertical margin
+                      margin: const EdgeInsets.symmetric(vertical: 4.0),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(AppTheme.borderRadius),
                       ),
                       elevation: 1,
                       child: ListTile(
                         contentPadding: const EdgeInsets.only(left: 16.0, right: 0, top: 10.0, bottom: 10.0),
-                        // Note: Title is now the Duty/Event Title within the group
                         title: GestureDetector(
-                           onTap: () => _navigateToDateInCalendar(event.startDate),
-                           child: Text(
-                             DateFormat('dd/MM/yyyy').format(event.startDate),
-                             style: TextStyle(
-                               fontSize: 12, // Smaller date text when grouped
-                               // Use a theme-aware color with opacity for better dark mode visibility
-                               color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
-                               decoration: TextDecoration.underline,
-                             ),
-                           ),
-                         ),
+                          onTap: () => _navigateToDateInCalendar(item.date),
+                          child: Text(
+                            DateFormat('dd/MM/yyyy').format(item.date),
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
+                              decoration: TextDecoration.underline,
+                            ),
+                          ),
+                        ),
                         subtitle: Padding(
-                          padding: const EdgeInsets.only(top: 4.0), 
+                          padding: const EdgeInsets.only(top: 4.0),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                               Text(
-                                event.title, // Duty/Event Title is prominent now
+                              Text(
+                                item.title,
                                 style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 15),
                               ),
                               const SizedBox(height: 8),
                               Text(
-                                event.notes ?? '', 
+                                item.note,
                                 style: TextStyle(fontSize: 14, color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.8)),
                                 maxLines: 10,
-                                overflow: TextOverflow.ellipsis, 
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ],
                           ),
@@ -592,9 +721,15 @@ class AllNotesScreenState extends State<AllNotesScreen> {
                         trailing: IconButton(
                           icon: Icon(Icons.delete_outline, color: Colors.redAccent.withValues(alpha: 0.8)),
                           tooltip: 'Delete Note',
-                          onPressed: () => _showDeleteConfirmationDialog(event),
+                          onPressed: () => _showDeleteConfirmationDialog(item),
                         ),
-                        onTap: () => _navigateToEditNoteScreen(event),
+                        onTap: () {
+                          if (item.isDayNote) {
+                            _showDayNoteEditDialog(item.date, item.note);
+                          } else if (item.event != null) {
+                            _navigateToEditNoteScreen(item.event!);
+                          }
+                        },
                       ),
                     );
                   },

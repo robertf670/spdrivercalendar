@@ -27,6 +27,7 @@ import 'package:share_plus/share_plus.dart';
 import '../../../services/days_in_lieu_service.dart';
 import '../../../services/annual_leave_service.dart';
 import '../../../services/color_customization_service.dart';
+import '../../../services/rest_day_swap_service.dart';
 
 enum ShiftType {
   early,   // 04:00 - 09:59
@@ -87,6 +88,8 @@ class StatisticsScreenState extends State<StatisticsScreen>
   // State for bus frequency display
   int _numberOfBusesToShow = 3;
   final List<int> _busNumberOptions = [3, 5, 10];
+  int _numberOfBusesPerZoneToShow = 3;
+  final List<int> _busPerZoneNumberOptions = [3, 5, 10];
 
   // State for shift frequency display
   int _numberOfShiftsToShow = 3;
@@ -124,6 +127,9 @@ class StatisticsScreenState extends State<StatisticsScreen>
   
   // State variable for monthly trend data
   Future<Map<String, Duration>>? _monthlyTrendFuture;
+
+  // State variable for summary stats (shift type counts, etc.)
+  Future<Map<String, dynamic>>? _summaryStatsFuture;
 
   // State variables for Sunday Pair Statistics
   DateTime? _currentBlockLsunDate, _currentBlockEsunDate;
@@ -166,6 +172,7 @@ class StatisticsScreenState extends State<StatisticsScreen>
     'Sick Days Statistics': false,
     'Most Frequent Shifts': false,
     'Most Frequent Buses': false,
+    'Top Bus per Zone': false,
     'Most Frequent Start Hours': false,
   };
   
@@ -200,6 +207,7 @@ class StatisticsScreenState extends State<StatisticsScreen>
       _expandedSections['Sick Days Statistics'] = prefs.getBool('stats_expanded_sick') ?? false;
       _expandedSections['Most Frequent Shifts'] = prefs.getBool('stats_expanded_frequent_shifts') ?? false;
       _expandedSections['Most Frequent Buses'] = prefs.getBool('stats_expanded_frequent_buses') ?? false;
+      _expandedSections['Top Bus per Zone'] = prefs.getBool('stats_expanded_top_bus_per_zone') ?? false;
       _expandedSections['Most Frequent Start Hours'] = prefs.getBool('stats_expanded_frequent_hours') ?? false;
     });
   }
@@ -235,6 +243,9 @@ class StatisticsScreenState extends State<StatisticsScreen>
       case 'Most Frequent Buses':
         key = 'stats_expanded_frequent_buses';
         break;
+      case 'Top Bus per Zone':
+        key = 'stats_expanded_top_bus_per_zone';
+        break;
       case 'Most Frequent Start Hours':
         key = 'stats_expanded_frequent_hours';
         break;
@@ -250,6 +261,7 @@ class StatisticsScreenState extends State<StatisticsScreen>
     if (widget.events != oldWidget.events) {
       _workTimeStatsFuture = _calculateWorkTimeStatistics();
       _spreadStatsFuture = _calculateSpreadStatistics();
+      _summaryStatsFuture = _calculateSummaryStatistics();
     }
   }
 
@@ -284,10 +296,10 @@ class StatisticsScreenState extends State<StatisticsScreen>
        setState(() {
          _workTimeStatsFuture = _calculateWorkTimeStatistics();
          _spreadStatsFuture = _calculateSpreadStatistics();
+         _summaryStatsFuture = _calculateSummaryStatistics();
          _holidayDaysStatsFuture = _calculateHolidayDaysStatistics();
          _monthlyTrendFuture = _calculateMonthlyTrends();
-         // Trigger Sunday pair calculation (no need to await here, UI will update)
-         _calculateSundayPairStatistics(); 
+         _calculateSundayPairStatistics();
        });
     }
   }
@@ -440,6 +452,41 @@ class StatisticsScreenState extends State<StatisticsScreen>
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  /// Styled "Top N" selector - Material 3 SegmentedButton, responsive
+  Widget _buildTopNSelector({
+    required int value,
+    required List<int> options,
+    required ValueChanged<int> onChanged,
+  }) {
+    final theme = Theme.of(context);
+    final screenWidth = MediaQuery.of(context).size.width;
+    // Scale padding down on smaller screens to prevent overflow
+    final hPad = screenWidth < 350 ? 10.0 : screenWidth < 450 ? 12.0 : 16.0;
+    final vPad = screenWidth < 350 ? 6.0 : screenWidth < 450 ? 8.0 : 10.0;
+    final fontSize = screenWidth < 350 ? 12.0 : screenWidth < 450 ? 13.0 : 14.0;
+
+    return SegmentedButton<int>(
+      segments: options.map((opt) => ButtonSegment<int>(
+        value: opt,
+        label: Text('$opt', style: TextStyle(fontSize: fontSize)),
+      )).toList(),
+      selected: {value},
+      onSelectionChanged: (Set<int> newSelection) {
+        if (newSelection.isNotEmpty) onChanged(newSelection.first);
+      },
+      showSelectedIcon: false,
+      style: SegmentedButton.styleFrom(
+        padding: EdgeInsets.symmetric(horizontal: hPad, vertical: vPad),
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        visualDensity: screenWidth < 350 ? VisualDensity(horizontal: -2, vertical: -1) : VisualDensity.compact,
+        backgroundColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+        foregroundColor: theme.colorScheme.onSurface,
+        selectedBackgroundColor: theme.colorScheme.primary,
+        selectedForegroundColor: theme.colorScheme.onPrimary,
       ),
     );
   }
@@ -685,32 +732,46 @@ class StatisticsScreenState extends State<StatisticsScreen>
             icon: Icons.bar_chart,
             children: [
               const SizedBox(height: 8),
-              // Pie Chart
-              ShiftTypePieChart(
-                shiftCounts: {
-                  'Early': _calculateSummaryStatistics()['earlyShifts'] ?? 0,
-                  'Relief': _calculateSummaryStatistics()['reliefShifts'] ?? 0,
-                  'Late': _calculateSummaryStatistics()['lateShifts'] ?? 0,
-                  'Night': _calculateSummaryStatistics()['nightShifts'] ?? 0,
-                  'Spare': _calculateSummaryStatistics()['spareShifts'] ?? 0,
-                  'Bogey': _calculateSummaryStatistics()['bogeyShifts'] ?? 0,
-                  'Overtime': _calculateSummaryStatistics()['overtimeShifts'] ?? 0,
-                },
-              ),
-              const SizedBox(height: 16),
-              // Detailed Statistics
-              ShiftTypeSummaryCard(
-                stats: _calculateSummaryStatistics(),
-                currentRange: _timeRange,
-                availableRanges: _timeRanges,
-                onChanged: (newRange) {
-                  if (newRange != null) {
-                    setState(() {
-                      _timeRange = newRange;
-                    });
-                  }
-                },
-              ),
+              _summaryStatsFuture == null
+                  ? const Center(child: CircularProgressIndicator())
+                  : FutureBuilder<Map<String, dynamic>>(
+                      future: _summaryStatsFuture,
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState == ConnectionState.waiting) {
+                          return const Center(child: CircularProgressIndicator());
+                        }
+                        final stats = snapshot.data ?? {};
+                        return Column(
+                          children: [
+                            ShiftTypePieChart(
+                              shiftCounts: {
+                                'Early': stats['earlyShifts'] ?? 0,
+                                'Relief': stats['reliefShifts'] ?? 0,
+                                'Late': stats['lateShifts'] ?? 0,
+                                'Night': stats['nightShifts'] ?? 0,
+                                'Spare': stats['spareShifts'] ?? 0,
+                                'Bogey': stats['bogeyShifts'] ?? 0,
+                                'Overtime': stats['overtimeShifts'] ?? 0,
+                              },
+                            ),
+                            const SizedBox(height: 16),
+                            ShiftTypeSummaryCard(
+                              stats: stats,
+                              currentRange: _timeRange,
+                              availableRanges: _timeRanges,
+                              onChanged: (newRange) {
+                                if (newRange != null) {
+                                  setState(() {
+                                    _timeRange = newRange;
+                                    _summaryStatsFuture = _calculateSummaryStatistics();
+                                  });
+                                }
+                              },
+                            ),
+                          ],
+                        );
+                      },
+                    ),
             ],
           ),
           
@@ -723,12 +784,13 @@ class StatisticsScreenState extends State<StatisticsScreen>
             icon: Icons.calculate,
             children: [
               const SizedBox(height: 8),
-              _workTimeStatsFuture == null || _spreadStatsFuture == null
+              _workTimeStatsFuture == null || _spreadStatsFuture == null || _summaryStatsFuture == null
                 ? const Center(child: CircularProgressIndicator())
                 : FutureBuilder(
                     future: Future.wait([
                       _workTimeStatsFuture!,
                       _spreadStatsFuture!,
+                      _summaryStatsFuture!,
                     ]),
                     builder: (context, snapshot) {
                       if (snapshot.connectionState == ConnectionState.waiting) {
@@ -739,7 +801,7 @@ class StatisticsScreenState extends State<StatisticsScreen>
                       }
                       final workTimeStats = snapshot.data![0];
                       final spreadStats = snapshot.data![1];
-                      final summaryStats = _calculateSummaryStatistics();
+                      final summaryStats = snapshot.data![2];
                       return EarningsCalculatorCard(
                         totalWorkTime: workTimeStats['total'] ?? Duration.zero,
                         thisWeekSpreadTime: spreadStats['thisWeek'] ?? Duration.zero,
@@ -885,24 +947,10 @@ class StatisticsScreenState extends State<StatisticsScreen>
                 Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
-                    DropdownButton<int>(
+                    _buildTopNSelector(
                       value: _numberOfShiftsToShow,
-                      style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
-                      iconEnabledColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                      dropdownColor: Theme.of(context).colorScheme.surface,
-                      items: _shiftNumberOptions.map((int value) {
-                        return DropdownMenuItem<int>(
-                          value: value,
-                          child: Text('Top $value', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
-                        );
-                      }).toList(),
-                      onChanged: (int? newValue) {
-                        if (newValue != null) {
-                          setState(() {
-                            _numberOfShiftsToShow = newValue;
-                          });
-                        }
-                      },
+                      options: _shiftNumberOptions,
+                      onChanged: (v) => setState(() => _numberOfShiftsToShow = v),
                     ),
                   ],
                 ),
@@ -928,24 +976,10 @@ class StatisticsScreenState extends State<StatisticsScreen>
                 Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
-                    DropdownButton<int>(
+                    _buildTopNSelector(
                       value: _numberOfBusesToShow,
-                      style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
-                      iconEnabledColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                      dropdownColor: Theme.of(context).colorScheme.surface,
-                      items: _busNumberOptions.map((int value) {
-                        return DropdownMenuItem<int>(
-                          value: value,
-                          child: Text('Top $value', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
-                        );
-                      }).toList(),
-                      onChanged: (int? newValue) {
-                        if (newValue != null) {
-                          setState(() {
-                            _numberOfBusesToShow = newValue;
-                          });
-                        }
-                      },
+                      options: _busNumberOptions,
+                      onChanged: (v) => setState(() => _numberOfBusesToShow = v),
                     ),
                   ],
                 ),
@@ -955,6 +989,74 @@ class StatisticsScreenState extends State<StatisticsScreen>
                     _getMostFrequentBuses().entries.take(_numberOfBusesToShow)
                   ),
                   emptyDataMessage: 'No bus assignment data available',
+                ),
+              ],
+            ),
+
+            SizedBox(height: sizes['cardSpacing']!),
+
+            // --- Top Bus per Zone ---
+            _buildExpandableSection(
+              title: 'Top Bus per Zone',
+              subtitle: 'Most driven buses in Zone 1, Zone 3, Zone 4, Uni/Euro',
+              icon: Icons.location_on,
+              children: [
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    _buildTopNSelector(
+                      value: _numberOfBusesPerZoneToShow,
+                      options: _busPerZoneNumberOptions,
+                      onChanged: (v) => setState(() => _numberOfBusesPerZoneToShow = v),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Builder(
+                  builder: (context) {
+                    final topPerZone = _getTopBusesPerZone();
+                    if (topPerZone.isEmpty) {
+                      return Padding(
+                        padding: EdgeInsets.symmetric(vertical: sizes['padding']! * 2),
+                        child: Text(
+                          'No zone data available. Add bus assignments to PZ1, PZ3, PZ4, or Uni/Euro duties.',
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                            fontSize: (sizes['fontSize'] ?? 14) - 1,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      );
+                    }
+                    final zoneOrder = ['Zone 1', 'Zone 3', 'Zone 4', 'Uni/Euro'];
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: zoneOrder.where((z) => topPerZone.containsKey(z)).map((zone) {
+                        final busData = topPerZone[zone]!;
+                        return Padding(
+                          padding: EdgeInsets.only(bottom: sizes['cardSpacing']! * 0.8),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                zone,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: (sizes['fontSize'] ?? 14) + 1,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              FrequencyChart(
+                                frequencyData: busData,
+                                emptyDataMessage: 'No bus data',
+                              ),
+                            ],
+                          ),
+                        );
+                      }).toList(),
+                    );
+                  },
                 ),
               ],
             ),
@@ -971,24 +1073,10 @@ class StatisticsScreenState extends State<StatisticsScreen>
                 Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
-                    DropdownButton<int>(
+                    _buildTopNSelector(
                       value: _numberOfStartHoursToShow,
-                      style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
-                      iconEnabledColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                      dropdownColor: Theme.of(context).colorScheme.surface,
-                      items: _startHourNumberOptions.map((int value) {
-                        return DropdownMenuItem<int>(
-                          value: value,
-                          child: Text('Top $value', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
-                        );
-                      }).toList(),
-                      onChanged: (int? newValue) {
-                        if (newValue != null) {
-                          setState(() {
-                            _numberOfStartHoursToShow = newValue;
-                          });
-                        }
-                      },
+                      options: _startHourNumberOptions,
+                      onChanged: (v) => setState(() => _numberOfStartHoursToShow = v),
                     ),
                   ],
                 ),
@@ -1046,7 +1134,7 @@ class StatisticsScreenState extends State<StatisticsScreen>
     return Map.fromEntries(sortedEntries);
   }
 
-  Map<String, dynamic> _calculateSummaryStatistics() {
+  Future<Map<String, dynamic>> _calculateSummaryStatistics() async {
     final DateTime now = DateTime.now();
     DateTime startDate;
     DateTime endDate;
@@ -1099,55 +1187,33 @@ class StatisticsScreenState extends State<StatisticsScreen>
     final Set<String> processedIds = {};
     
     // --- Refactored Processing Logic --- 
-    widget.events.forEach((date, events) { // Iterate through all dates in the events map
-      for (final event in events) { // Iterate through events on that date
-        // Skip if already processed (handles cases where event might span midnight)
+    for (final entry in widget.events.entries) {
+      final events = entry.value;
+      for (final event in events) {
         if (processedIds.contains(event.id)) continue;
-        
-        // Check if event falls within the selected date range
-        // Use event.startDate for the check
         if (!event.startDate.isBefore(startDate) && 
             event.startDate.isBefore(endDate.add(const Duration(days: 1)))) {
-          
-          processedIds.add(event.id); // Mark as processed
-
-          // First check if this is a Work For Others shift
+          processedIds.add(event.id);
           if (event.isWorkForOthers) {
             workForOthersShifts++;
-            continue; // Skip further processing for WFO shifts (they're not counted in restDaysWorked)
+            continue;
           }
-
-          // Then check if this is an overtime shift
           if (event.isWorkShift && event.title.contains('(OT)')) {
             overtimeShifts++;
-            continue; // Skip further processing for overtime shifts
+            continue;
           }
-          
-          // Only consider non-overtime work shifts for regular statistics
           if (!event.isWorkShift) continue;
-
-          // Determine if this date was a rostered Rest Day
-          final String rosterShiftType = (_startDate != null) 
-              ? RosterService.getShiftForDate(event.startDate, _startDate!, _startWeek)
-              : ''; // Default to empty if roster not loaded
-          final bool isRest = rosterShiftType == 'R';
-
-          if (isRest) {
-            // If it was a rest day, just increment the specific counter
+          final bool countAsRestDayWorked = await _isRestDay(event.startDate);
+          if (countAsRestDayWorked) {
             restDaysWorked++;
           } else {
-            // --- If NOT a rest day, proceed with original categorization --- 
-            totalShifts++; // Increment total only for non-rest day shifts
-            
+            totalShifts++;
             final shiftCode = event.title;
-            
-            // First check special shift types
             if (shiftCode.startsWith('SP') || shiftCode == '22B/01') {
               spareShifts++;
             } else if (shiftCode.endsWith('X')) {
               bogeyShifts++;
             } else {
-              // Now categorize by time of day if not Spare or Bogey
               final startHour = event.startTime.hour;
               if (startHour >= 4 && startHour < 10) {
                 earlyShifts++;
@@ -1159,12 +1225,10 @@ class StatisticsScreenState extends State<StatisticsScreen>
                 nightShifts++;
               }
             }
-            // Bank holidays logic would ideally be integrated here too if needed
-            // Currently bankHolidayShifts is not being calculated.
           }
         }
       }
-    });
+    }
     // --- End Refactored Logic --- 
     
     // Format date range for display
@@ -1738,12 +1802,8 @@ class StatisticsScreenState extends State<StatisticsScreen>
       // Use the date from the event entry key, assuming it's midnight UTC or similar
       final normalizedDate = DateTime.utc(date.year, date.month, date.day);
 
-      // Skip if this is a rest day based on roster
-      final String shiftType = (_startDate != null)
-          ? RosterService.getShiftForDate(normalizedDate, _startDate!, _startWeek)
-          : ''; // Default to empty if roster not loaded
-      final bool isRest = shiftType == 'R';
-
+      // Skip if this is a rest day (respects M-F, swaps - swapped work days are normal work)
+      final bool isRest = await _isRestDay(normalizedDate);
       if (isRest) {
          continue;
       }
@@ -2009,34 +2069,128 @@ class StatisticsScreenState extends State<StatisticsScreen>
 
   Map<String, int> _getMostFrequentBuses() {
     Map<String, int> busCounts = {};
-    Set<String> processedIds = {}; // Add duplicate prevention
-    
+    Set<String> processedIds = {};
+
     widget.events.forEach((date, events) {
       for (final event in events) {
-        // FIXED: Added duplicate prevention for midnight-spanning events
         if (processedIds.contains(event.id)) continue;
         processedIds.add(event.id);
-
-        // Use getAllBusesUsed() to get all buses (primary + breakdown buses) for statistics
-        // Include all work shifts including overtime shifts
         final allBuses = event.getAllBusesUsed();
         for (final busNumber in allBuses) {
           if (busNumber.isNotEmpty) {
-            if (busCounts.containsKey(busNumber)) {
-              busCounts[busNumber] = busCounts[busNumber]! + 1;
-            } else {
-              busCounts[busNumber] = 1;
-            }
+            busCounts[busNumber] = (busCounts[busNumber] ?? 0) + 1;
           }
         }
       }
     });
-    
-    // Sort by frequency (highest to lowest)
+
     final sortedEntries = busCounts.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
-    
     return Map.fromEntries(sortedEntries);
+  }
+
+  /// Returns zone name from duty code: Zone 1, Zone 3, Zone 4, or Uni/Euro
+  String? _getZoneFromDutyCode(String dutyCode) {
+    final code = dutyCode.startsWith('UNI:') ? dutyCode.substring(4) : dutyCode;
+    if (code.startsWith('PZ1') || code.contains('PZ1/')) return 'Zone 1';
+    if (code.startsWith('PZ3') || code.contains('PZ3/')) return 'Zone 3';
+    if (code.startsWith('PZ4') || code.contains('PZ4/')) return 'Zone 4';
+    if (code.startsWith('UNI') || RegExp(r'^\d{2,3}/').hasMatch(code)) return 'Uni/Euro';
+    return null;
+  }
+
+  /// For spare shifts, get (bus, zone) pairs from duty assignments
+  List<({String bus, String zone})> _getBusZonePairsForEvent(Event event) {
+    final pairs = <({String bus, String zone})>[];
+    final dutyCodes = event.getCurrentDutyCodes();
+
+    if (dutyCodes.isEmpty) {
+      final zone = _getZoneFromDutyCode(event.title);
+      if (zone != null) {
+        for (final bus in event.getAllBusesUsed()) {
+          if (bus.isNotEmpty) pairs.add((bus: bus, zone: zone));
+        }
+      }
+      return pairs;
+    }
+
+    for (var i = 0; i < dutyCodes.length; i++) {
+      final zone = _getZoneFromDutyCode(dutyCodes[i]);
+      if (zone == null) continue;
+      String? bus;
+      if (event.enhancedAssignedDuties != null && i < event.enhancedAssignedDuties!.length) {
+        bus = event.enhancedAssignedDuties![i].assignedBus;
+      }
+      if (bus == null && i == 0 && event.firstHalfBus != null) bus = event.firstHalfBus;
+      if (bus == null && i == 1 && event.secondHalfBus != null) bus = event.secondHalfBus;
+      if (bus == null && event.busAssignments != null) {
+        bus = event.busAssignments![dutyCodes[i]];
+      }
+      if (bus != null && bus.isNotEmpty) pairs.add((bus: bus, zone: zone));
+    }
+    for (final bus in event.additionalBusesUsed ?? []) {
+      if (bus.isNotEmpty && dutyCodes.isNotEmpty) {
+        final zone = _getZoneFromDutyCode(dutyCodes.first);
+        if (zone != null) pairs.add((bus: bus, zone: zone));
+      }
+    }
+    for (final bus in event.firstHalfAdditionalBuses ?? []) {
+      if (bus.isNotEmpty && dutyCodes.isNotEmpty) {
+        final zone = _getZoneFromDutyCode(dutyCodes.first);
+        if (zone != null) pairs.add((bus: bus, zone: zone));
+      }
+    }
+    for (final bus in event.secondHalfAdditionalBuses ?? []) {
+      if (bus.isNotEmpty && dutyCodes.length > 1) {
+        final zone = _getZoneFromDutyCode(dutyCodes[1]);
+        if (zone != null) pairs.add((bus: bus, zone: zone));
+      }
+    }
+    if (event.additionalBusesByDuty != null) {
+      for (final entry in event.additionalBusesByDuty!.entries) {
+        final zone = _getZoneFromDutyCode(entry.key);
+        if (zone != null) {
+          for (final bus in entry.value) {
+            if (bus.isNotEmpty) pairs.add((bus: bus, zone: zone));
+          }
+        }
+      }
+    }
+    return pairs;
+  }
+
+  /// Top N buses per zone: Zone 1, Zone 3, Zone 4, Uni/Euro
+  /// Returns Map<zoneName, Map<busNumber, count>> limited to top N per zone
+  Map<String, Map<String, int>> _getTopBusesPerZone() {
+    final zoneBusCounts = <String, Map<String, int>>{
+      'Zone 1': {},
+      'Zone 3': {},
+      'Zone 4': {},
+      'Uni/Euro': {},
+    };
+    Set<String> processedIds = {};
+
+    for (final entry in widget.events.entries) {
+      for (final event in entry.value) {
+        if (processedIds.contains(event.id)) continue;
+        processedIds.add(event.id);
+        for (final pair in _getBusZonePairsForEvent(event)) {
+          zoneBusCounts[pair.zone] ??= {};
+          zoneBusCounts[pair.zone]![pair.bus] =
+              (zoneBusCounts[pair.zone]![pair.bus] ?? 0) + 1;
+        }
+      }
+    }
+
+    final result = <String, Map<String, int>>{};
+    for (final entry in zoneBusCounts.entries) {
+      if (entry.value.isEmpty) continue;
+      final sorted = entry.value.entries.toList()
+        ..sort((a, b) => b.value.compareTo(a.value));
+      final topN = sorted.take(_numberOfBusesPerZoneToShow);
+      result[entry.key] = Map.fromEntries(topN);
+    }
+    return result;
   }
 
   // --- Add Calculation Logic --- 
@@ -2227,8 +2381,13 @@ class StatisticsScreenState extends State<StatisticsScreen>
     }
   }
 
-  // Check if a date is a rest day, respecting marked-in status
+  // Check if a date is a rest day, respecting marked-in status and rest day swaps
   Future<bool> _isRestDay(DateTime date) async {
+    // Swapped work days are normal work - never treat as rest day for pay/statistics
+    if (RestDaySwapService.isSwappedWorkDay(date)) return false;
+    // Swapped rest days are always rest (regardless of M-F or roster)
+    if (RestDaySwapService.isSwappedRestDay(date)) return true;
+
     // Check if marked in is enabled
     if (_markedInEnabled) {
       // M-F marked in logic: W on Mon-Fri, R on Sat-Sun
@@ -2261,7 +2420,7 @@ class StatisticsScreenState extends State<StatisticsScreen>
     // Normal roster calculation
     if (_startDate == null) return false;
     final String shiftType = RosterService.getShiftForDate(date, _startDate!, _startWeek);
-    return shiftType == 'R';
+    return shiftType == 'R' || RestDaySwapService.isSwappedRestDay(date);
   }
 
   // Add new method to calculate break and finish statistics
@@ -2935,7 +3094,7 @@ class StatisticsScreenState extends State<StatisticsScreen>
     try {
       // Get current statistics
       final workTimeStats = await _workTimeStatsFuture ?? {};
-      final shiftTypeStats = _calculateSummaryStatistics();
+      final shiftTypeStats = await _calculateSummaryStatistics();
       final breakStats = _calculateBreakStatistics();
       
       // Convert shift type stats to Map<String, int>

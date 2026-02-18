@@ -1,4 +1,42 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.19.9': [
+    {
+      'title': 'Rest Day Swap',
+      'description': 'Swap a work day with a rest day within the same week (e.g. work Thursday instead of Monday). Swapped work days use normal rates, not rest day rates. Swapped rest days show Rˢ indicator; swapped work days show Eˢ/Lˢ/Mˢ on calendar. Shift details card shows "Shift Swapped" when applicable.',
+    },
+    {
+      'title': 'Day Notes',
+      'description': 'Added the ability to add notes to any day via the Work Shift card. Notes icon (same as event cards) indicates when a note exists and opens the notes dialog when tapped.',
+    },
+    {
+      'title': 'Rest Day Color on Holiday Days',
+      'description': 'Calendar cells now show rest day colour when a holiday falls on a rostered rest day (e.g., Sun/Thurs rest during a week holiday).',
+    },
+    {
+      'title': 'Fixed Search Page Initial Load',
+      'description': 'Search page now shows all events when opened instead of opening empty until filters are changed.',
+    },
+    {
+      'title': 'Calendar Widget M-F Pattern',
+      'description': 'Home screen calendar widget now follows M-F marked-in setting, matching the main calendar.',
+    },
+    {
+      'title': 'Calendar Widget Rest Day on Holiday',
+      'description': 'Widget rest day colour and label (R) now take precedence when a holiday falls on a rest day, matching the main calendar.',
+    },
+    {
+      'title': 'Fixed Calendar Widget Not Showing Holidays',
+      'description': 'Fixed holiday date parsing so user-created holidays (summer, winter, etc.) now display correctly on the home screen widget.',
+    },
+    {
+      'title': 'Top Bus per Zone',
+      'description': 'Added Top Bus per Zone in Statistics (Frequency tab) showing most driven buses for Zone 1, Zone 3, Zone 4, and Uni/Euro.',
+    },
+    {
+      'title': 'Uni/Euro Shifts on Bills Screen',
+      'description': 'Added Uni/Euro zone to Bills screen. M-F shows combined duties from 7DAYs and M-F bills; Sat/Sun show 7DAYs only.',
+    },
+  ],
   '2.19.8': [
     {
       'title': 'Fixed Spare Duty Assigned Duties Work Time Calculation',

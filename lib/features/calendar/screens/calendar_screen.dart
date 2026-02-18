@@ -23,7 +23,8 @@ import 'package:spdrivercalendar/google_calendar_service.dart';
 import 'package:flutter/services.dart'; // For rootBundle
 import 'package:spdrivercalendar/features/calendar/services/shift_service.dart';
 
-import 'package:spdrivercalendar/services/rest_days_service.dart'; // Added import
+import 'package:spdrivercalendar/services/rest_days_service.dart';
+import 'package:spdrivercalendar/services/rest_day_swap_service.dart';
 import 'package:spdrivercalendar/features/contacts/contacts_page.dart'; // Add this line
 import 'package:spdrivercalendar/core/services/cache_service.dart'; // Added import
 import 'package:spdrivercalendar/features/notes/screens/all_notes_screen.dart'; // Import the new screen
@@ -49,6 +50,7 @@ import '../../../models/universal_board.dart';
 import '../../../services/days_in_lieu_service.dart';
 import '../../../services/annual_leave_service.dart';
 import '../../../services/self_certified_sick_days_service.dart';
+import '../../../services/day_note_service.dart';
 import '../dialogs/days_in_lieu_setup_dialog.dart';
 import '../dialogs/annual_leave_setup_dialog.dart';
 
@@ -208,6 +210,11 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
           ),
         );
       }
+    });
+
+    // Load day notes for the shift details card
+    DayNoteService.loadDayNotes().then((_) {
+      if (mounted) setState(() {});
     });
 
     // Schedule automatic update check after calendar loads
@@ -501,40 +508,45 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
     }
   }
   
-  // Calculate the shift for a given date
-  String getShiftForDate(DateTime date) {
+  // Roster-only shift (no swap overrides) - used by RestDaySwapService fallback
+  String _getRosterShiftForDate(DateTime date) {
     if (_startDate == null) return '';
-    
-    // Check if marked in is enabled
+
     if (_markedInEnabled) {
-      // M-F marked in logic: W on Mon-Fri, R on Sat-Sun
-      // Bank holidays are REST days for M-F
       if (_markedInStatus == 'M-F') {
-        // Check if this is a bank holiday
         final bankHoliday = getBankHoliday(date);
-        if (bankHoliday != null) {
-          // If M-F marked in is enabled, bank holidays are always R (Rest)
-          return 'R';
-        }
-        
-        // weekday: 1=Monday, 2=Tuesday, ..., 6=Saturday, 7=Sunday
+        if (bankHoliday != null) return 'R';
         final weekday = date.weekday;
-        if (weekday >= 1 && weekday <= 5) {
-          return 'W'; // Work days Mon-Fri
-        } else {
-          return 'R'; // Rest days Sat-Sun
-        }
+        if (weekday >= 1 && weekday <= 5) return 'W';
+        return 'R';
       }
-      
-      // Shift marked in: use normal roster calculation
-      // (Zone selection is stored but doesn't affect shift calculation here)
       if (_markedInStatus == 'Shift') {
         return RosterService.getShiftForDate(date, _startDate!, _startWeek);
       }
     }
-    
-    // Default or normal roster calculation
     return RosterService.getShiftForDate(date, _startDate!, _startWeek);
+  }
+
+  // Full shift lookup with swap overrides
+  ShiftLookupResult getShiftResultForDate(DateTime date) {
+    return RestDaySwapService.getShiftForDate(
+      date,
+      startDate: _startDate,
+      startWeek: _startWeek,
+      rosterGetter: _getRosterShiftForDate,
+    );
+  }
+
+  // Calculate the shift for a given date (includes swap overrides)
+  String getShiftForDate(DateTime date) => getShiftResultForDate(date).shift;
+
+  /// True if day should show rest day badge/indicators.
+  /// False for swapped work days (working on swapped day = normal work, not rest day rate).
+  bool _isRosteredRestDay(DateTime date) {
+    final result = getShiftResultForDate(date);
+    if (result.shift != 'R') return false;
+    if (result.isSwappedWork) return false; // Swapped work = not a rest day for badge/rate
+    return true;
   }
   
   // Get events for a specific day
@@ -673,6 +685,15 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                 onPressed: () {
                   Navigator.of(context).pop();
                   _showWorkForOthersDialog();
+                },
+              ),
+            // Rest day swap - swap work day with rest day in same week
+            if (_startDate != null)
+              TextButton(
+                child: const Text('Swap rest day'),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  _showRestDaySwapDialog();
                 },
               ),
           ],
@@ -1905,6 +1926,140 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
     );
   }
 
+  void _showRestDaySwapDialog() async {
+    final selected = _selectedDay ?? DateTime.now();
+    final shiftResult = getShiftResultForDate(selected);
+    final isWorkDay = shiftResult.shift != 'R' && shiftResult.shift.isNotEmpty;
+    final isRestDay = shiftResult.shift == 'R';
+
+    // Check if this day is already in a swap (offer remove)
+    RestDaySwap? existingSwap;
+    for (final s in RestDaySwapService.getSwaps()) {
+      final norm = DateTime(selected.year, selected.month, selected.day);
+      if ((s.workDate.year == norm.year && s.workDate.month == norm.month && s.workDate.day == norm.day) ||
+          (s.restDate.year == norm.year && s.restDate.month == norm.month && s.restDate.day == norm.day)) {
+        existingSwap = s;
+        break;
+      }
+    }
+
+    if (existingSwap != null) {
+      final swap = existingSwap!;
+      final remove = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Remove rest day swap'),
+          content: Text(
+            'This day is part of a swap. Remove it? '
+            '(${DateFormat('EEE d MMM').format(swap.workDate)} ↔ ${DateFormat('EEE d MMM').format(swap.restDate)})',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Remove swap'),
+            ),
+          ],
+        ),
+      );
+      if (remove == true && mounted) {
+        await RestDaySwapService.removeSwapForDate(selected);
+        setState(() {});
+      }
+      return;
+    }
+
+    if (!isWorkDay && !isRestDay) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Select a work day or rest day to swap.')),
+      );
+      return;
+    }
+
+    // Get week (Sun–Sat) containing selected day
+    final weekday = selected.weekday % 7; // 0=Sun, 1=Mon, ...
+    final weekStart = selected.subtract(Duration(days: weekday));
+
+    final candidates = <DateTime>[];
+    final swappedDateKeys = <String>{};
+    for (final s in RestDaySwapService.getSwaps()) {
+      swappedDateKeys.add('${s.workDate.year}-${s.workDate.month}-${s.workDate.day}');
+      swappedDateKeys.add('${s.restDate.year}-${s.restDate.month}-${s.restDate.day}');
+    }
+    for (var i = 0; i < 7; i++) {
+      final d = weekStart.add(Duration(days: i));
+      if (d.year == selected.year && d.month == selected.month && d.day == selected.day) continue;
+      if (swappedDateKeys.contains('${d.year}-${d.month}-${d.day}')) continue;
+      final rosterShift = _getRosterShiftForDate(d);
+      if (isWorkDay && rosterShift == 'R') {
+        candidates.add(d);
+      } else if (isRestDay && rosterShift != 'R' && rosterShift.isNotEmpty) {
+        candidates.add(d);
+      }
+    }
+
+    if (candidates.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No suitable day to swap with in this week.')),
+      );
+      return;
+    }
+
+    final picked = await showDialog<DateTime>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(isWorkDay ? 'Swap with rest day' : 'Swap with work day'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: candidates.map((d) {
+              final res = getShiftResultForDate(d);
+              final label = isWorkDay ? 'Rest' : res.shift;
+              return ListTile(
+                title: Text('${DateFormat('EEEE d MMM').format(d)} ($label)'),
+                onTap: () => Navigator.pop(ctx, d),
+              );
+            }).toList(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+        ],
+      ),
+    );
+
+    if (picked != null && mounted) {
+      final workDate = isWorkDay ? selected : picked;
+      final restDate = isWorkDay ? picked : selected;
+      final shiftType = _getRosterShiftForDate(workDate);
+      if (shiftType == 'R' || shiftType.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not determine shift type.')),
+        );
+        return;
+      }
+      await RestDaySwapService.addSwap(
+        workDate: workDate,
+        restDate: restDate,
+        shiftType: shiftType,
+      );
+      setState(() {});
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Swapped ${DateFormat('EEE').format(workDate)} with ${DateFormat('EEE').format(restDate)}.'),
+          ),
+        );
+      }
+    }
+  }
+
   // Get shift times from CSV file
   Future<Map<String, dynamic>?> _getShiftTimes(String zone, String shiftNumber, DateTime shiftDate, {bool isOvertimeShift = false}) async { // Return type changed to nullable
           // Getting shift times
@@ -2409,8 +2564,9 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
       descriptionParts.add('(Work For Others)');
     } else {
       // Add rest day indicator if applicable (only if not WFO)
-      final String shiftType = getShiftForDate(event.startDate);
-      final bool isRest = shiftType == 'R';
+      // Swapped work days do NOT get rest day indicator - they're normal work
+      final result = getShiftResultForDate(event.startDate);
+      final bool isRest = result.shift == 'R' && !result.isSwappedWork;
       if (isRest) {
         descriptionParts.add('(Working on Rest Day)');
       }
@@ -4335,6 +4491,84 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
     );
   }
 
+  void _showDayNotesDialog(DateTime date) {
+    final notesController = TextEditingController(text: DayNoteService.getDayNote(date));
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            const Icon(Icons.notes_rounded, color: AppTheme.primaryColor),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Notes for ${DateFormat('EEE, MMM d').format(date)}',
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+        contentPadding: const EdgeInsets.fromLTRB(24.0, 20.0, 24.0, 0),
+        content: StatefulBuilder(
+          builder: (BuildContext context, StateSetter setState) {
+          final screenWidth = MediaQuery.of(context).size.width;
+          final screenHeight = MediaQuery.of(context).size.height;
+          return SizedBox(
+            width: screenWidth * 0.9,
+            height: screenHeight * 0.4,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8.0),
+              child: TextField(
+                controller: notesController,
+                maxLines: null,
+                minLines: null,
+                expands: true,
+                textAlignVertical: TextAlignVertical.top,
+                decoration: InputDecoration(
+                  hintText: 'Add notes for this day...',
+                  border: const OutlineInputBorder(),
+                  fillColor: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.grey.shade800
+                      : Colors.grey.shade100,
+                  filled: true,
+                ),
+              ),
+            ),
+          );
+        },
+        ),
+        actionsPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              notesController.clear();
+            },
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.red,
+            ),
+            child: const Text('Clear'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final updatedNotes = notesController.text.trim();
+              await DayNoteService.saveDayNote(date, updatedNotes.isEmpty ? null : updatedNotes);
+              if (!mounted) return;
+              setState(() {});
+              if (!mounted) return;
+              Navigator.of(context).pop();
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
   // --- Add the new _showBreakStatusDialog function below ---
   void _showBreakStatusDialog(Event event) {
     showDialog(
@@ -5534,6 +5768,8 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                                 shift: getShiftForDate(_selectedDay!),
                                 shiftInfoMap: _shiftInfoMap,
                                 bankHoliday: getBankHoliday(_selectedDay!),
+                                hasDayNote: DayNoteService.hasNoteForDate(_selectedDay!),
+                                onShowDayNotes: () => _showDayNotesDialog(_selectedDay!),
                               ),
                             ),
                           if (_selectedDay != null)
@@ -5703,6 +5939,12 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
     
     // If duty codes display is disabled, always return shift letter
     if (!_showDutyCodesOnCalendar) {
+      if (rosterShift == 'R' && RestDaySwapService.isSwappedRestDay(date)) {
+        return 'Rˢ';
+      }
+      if (RestDaySwapService.isSwappedWorkDay(date) && rosterShift.isNotEmpty) {
+        return '${rosterShift}ˢ';
+      }
       return rosterShift;
     }
     
@@ -5744,6 +5986,14 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
     }
     
     // Fallback to roster shift letter (E/L/M/R)
+    // Show swapped rest indicator (Rˢ) for days that are rest due to a swap
+    if (rosterShift == 'R' && RestDaySwapService.isSwappedRestDay(date)) {
+      return 'Rˢ';
+    }
+    // Show swapped work indicator (Eˢ/Lˢ/Mˢ) for days that are work due to a swap
+    if (RestDaySwapService.isSwappedWorkDay(date) && rosterShift.isNotEmpty) {
+      return '${rosterShift}ˢ';
+    }
     return rosterShift;
   }
 
@@ -5766,8 +6016,9 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
     final wfoColor = _shiftInfoMap['WFO']?.color;
     final dayInLieuColor = ColorCustomizationService.getColorForShift('DAY_IN_LIEU');
     
-    // Check if any events have notes
-    final hasNotes = events.any((event) => event.notes != null && event.notes!.trim().isNotEmpty);
+    // Check if any events have notes or if there's a day note
+    final hasNotes = events.any((event) => event.notes != null && event.notes!.trim().isNotEmpty) ||
+        DayNoteService.hasNoteForDate(date);
     
     // Check for sick day events - priority over other colors
     final sickDayEvent = events.firstWhere(
@@ -5795,30 +6046,39 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
     final screenWidth = MediaQuery.of(context).size.width;
     final badgeSizes = _getCalendarBadgeSizes(screenWidth);
 
+    // Rest day color takes precedence when holiday falls on a rest day
+    final isRestDay = shift == 'R';
+    final restDayColor = _shiftInfoMap['R']?.color;
+    final useRestDayColorForHoliday = isRestDay && restDayColor != null && (isDayInLieu || isUnpaidLeave || isHoliday);
+
     final backgroundColor = hasSickDay && sickDayColor != null
         ? sickDayColor.withValues(alpha: 0.3)
-        : isDayInLieu
-            ? dayInLieuColor.withValues(alpha: 0.3)
-            : isUnpaidLeave
-                ? Colors.purple.withValues(alpha: 0.3)
-                : isHoliday 
-                    ? holidayColor.withValues(alpha: 0.3)
-                    : hasWfoEvent && wfoColor != null
-                        ? wfoColor.withValues(alpha: 0.3)
-                        : shiftInfo?.color.withValues(alpha: 0.3);
+        : useRestDayColorForHoliday
+            ? restDayColor.withValues(alpha: 0.3)
+            : isDayInLieu
+                ? dayInLieuColor.withValues(alpha: 0.3)
+                : isUnpaidLeave
+                    ? Colors.purple.withValues(alpha: 0.3)
+                    : isHoliday 
+                        ? holidayColor.withValues(alpha: 0.3)
+                        : hasWfoEvent && wfoColor != null
+                            ? wfoColor.withValues(alpha: 0.3)
+                            : shiftInfo?.color.withValues(alpha: 0.3);
     
     // Calculate base cell color (without alpha) for note icon
     final cellColor = hasSickDay && sickDayColor != null
         ? sickDayColor
-        : isDayInLieu
-            ? dayInLieuColor
-            : isUnpaidLeave
-                ? Colors.purple
-                : isHoliday 
-                    ? holidayColor
-                    : hasWfoEvent && wfoColor != null
-                        ? wfoColor
-                        : (shiftInfo?.color ?? Theme.of(context).primaryColor);
+        : useRestDayColorForHoliday
+            ? restDayColor
+            : isDayInLieu
+                ? dayInLieuColor
+                : isUnpaidLeave
+                    ? Colors.purple
+                    : isHoliday 
+                        ? holidayColor
+                        : hasWfoEvent && wfoColor != null
+                            ? wfoColor
+                            : (shiftInfo?.color ?? Theme.of(context).primaryColor);
     
     final cellContent = _buildDayCellContent(date, displayText, isDayInLieu, isHoliday, shift, hasEvents, hasSickDay, sickDayColor, dayInLieuColor, isUnpaidLeave, hasWfoEvent, wfoColor, shiftInfo, isSaturdayService, hasNotes, cellColor, badgeSizes, screenWidth);
     
@@ -6135,17 +6395,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
               width: 6, // Smaller dot
               height: 6, // Smaller dot
               decoration: BoxDecoration(
-                color: hasSickDay && sickDayColor != null
-                    ? sickDayColor
-                    : isDayInLieu
-                        ? dayInLieuColor
-                        : isUnpaidLeave
-                            ? Colors.purple
-                            : isHoliday 
-                                ? holidayColor 
-                                : hasWfoEvent && wfoColor != null
-                                    ? wfoColor
-                                    : (shiftInfo?.color ?? Theme.of(context).primaryColor),
+                color: cellColor,
                 shape: BoxShape.circle,
               ),
             ),
@@ -6277,7 +6527,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                     shiftType: shiftType,
                     shiftInfoMap: _shiftInfoMap,
                     isBankHoliday: getBankHoliday(event.startDate) != null,
-                    isRestDay: getShiftForDate(event.startDate) == 'R',
+                    isRestDay: _isRosteredRestDay(event.startDate),
                     onEdit: _editEvent, // Use _editEvent for all types, EventCard handles spare logic
                     onShowNotes: _showNotesDialog, // Pass the function here
                     onBusAssignmentUpdate: _syncBusAssignmentsToGoogleCalendar, // Pass the bus sync callback

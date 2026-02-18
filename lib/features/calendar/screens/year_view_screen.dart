@@ -9,6 +9,7 @@ import 'package:spdrivercalendar/models/bank_holiday.dart';
 import 'package:spdrivercalendar/services/color_customization_service.dart';
 import 'package:spdrivercalendar/core/services/storage_service.dart';
 import 'package:spdrivercalendar/core/constants/app_constants.dart';
+import 'package:spdrivercalendar/services/rest_day_swap_service.dart';
 
 // Cached data structure for a single day
 class _DayCellData {
@@ -300,10 +301,18 @@ class YearViewScreenState extends State<YearViewScreen> {
         }
       }
       
+      // Rest day color takes precedence when holiday falls on a rest day
+      final isRestDay = shift == 'R';
+      final useRestDayColorForHoliday = isRestDay &&
+          shiftInfo != null &&
+          (dayInLieuHoliday.id.isNotEmpty || unpaidLeaveHoliday.id.isNotEmpty || holiday != null);
+
       // Determine cell color
       Color? cellColor;
       if (hasSickDay && sickDayColor != null) {
         cellColor = sickDayColor.withValues(alpha: 0.3);
+      } else if (useRestDayColorForHoliday) {
+        cellColor = shiftInfo.color.withValues(alpha: 0.3);
       } else if (dayInLieuHoliday.id.isNotEmpty) {
         cellColor = _dayInLieuColor.withValues(alpha: 0.3);
       } else if (unpaidLeaveHoliday.id.isNotEmpty) {
@@ -320,6 +329,8 @@ class YearViewScreenState extends State<YearViewScreen> {
       Color eventDotColor = Colors.grey;
       if (hasSickDay && sickDayColor != null) {
         eventDotColor = sickDayColor;
+      } else if (useRestDayColorForHoliday) {
+        eventDotColor = shiftInfo.color;
       } else if (dayInLieuHoliday.id.isNotEmpty) {
         eventDotColor = _dayInLieuColor;
       } else if (unpaidLeaveHoliday.id.isNotEmpty) {
@@ -351,38 +362,30 @@ class YearViewScreenState extends State<YearViewScreen> {
     }
   }
 
-  String _getShiftForDate(DateTime date) {
+  String _getRosterShiftForDate(DateTime date) {
     if (widget.startDate == null) return '';
-    
-    // Check if marked in is enabled
     if (_markedInEnabled) {
-      // M-F marked in logic: W on Mon-Fri, R on Sat-Sun
-      // Bank holidays are REST days for M-F
       if (_markedInStatus == 'M-F') {
-        // Check if this is a bank holiday (O(1) lookup)
         final key = _getDateKey(date);
-        if (_bankHolidayMap.containsKey(key)) {
-          // If M-F marked in is enabled, bank holidays are always R (Rest)
-          return 'R';
-        }
-        
-        // weekday: 1=Monday, 2=Tuesday, ..., 6=Saturday, 7=Sunday
+        if (_bankHolidayMap.containsKey(key)) return 'R';
         final weekday = date.weekday;
-        if (weekday >= 1 && weekday <= 5) {
-          return 'W'; // Work days Mon-Fri
-        } else {
-          return 'R'; // Rest days Sat-Sun
-        }
+        if (weekday >= 1 && weekday <= 5) return 'W';
+        return 'R';
       }
-      
-      // Shift marked in: use normal roster calculation
       if (_markedInStatus == 'Shift') {
         return RosterService.getShiftForDate(date, widget.startDate!, widget.startWeek);
       }
     }
-    
-    // Default or normal roster calculation
     return RosterService.getShiftForDate(date, widget.startDate!, widget.startWeek);
+  }
+
+  String _getShiftForDate(DateTime date) {
+    return RestDaySwapService.getShiftForDate(
+      date,
+      startDate: widget.startDate,
+      startWeek: widget.startWeek,
+      rosterGetter: _getRosterShiftForDate,
+    ).shift;
   }
 
   bool isToday(DateTime date) {

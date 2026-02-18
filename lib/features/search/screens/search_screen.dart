@@ -46,6 +46,8 @@ class SearchScreenState extends State<SearchScreen> {
     _searchController.addListener(_performSearch);
     _busController.addListener(_performSearch);
     _dutyController.addListener(_performSearch);
+    // Run initial search to show all events when no filters are in place
+    WidgetsBinding.instance.addPostFrameCallback((_) => _performSearch());
   }
   
   @override
