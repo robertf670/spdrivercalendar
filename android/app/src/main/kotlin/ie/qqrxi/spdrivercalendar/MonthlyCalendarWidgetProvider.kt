@@ -360,9 +360,9 @@ class MonthlyCalendarWidgetProvider : AppWidgetProvider() {
                                         else -> android.R.color.holo_blue_light
                                     }
                                     else -> when {
-                                        pattern.startsWith("E") || pattern.startsWith("W") -> R.color.widget_text_accent
-                                        pattern.startsWith("L") -> android.R.color.holo_orange_dark
-                                        pattern.startsWith("M") -> android.R.color.holo_purple
+                                        (pattern?.startsWith("E") == true) || (pattern?.startsWith("W") == true) -> R.color.widget_text_accent
+                                        pattern?.startsWith("L") == true -> android.R.color.holo_orange_dark
+                                        pattern?.startsWith("M") == true -> android.R.color.holo_purple
                                         else -> R.color.widget_text_primary
                                     }
                                 }
