@@ -39,6 +39,32 @@ class ContactsPageState extends State<ContactsPage> {
     }
   }
 
+  // Helper function to launch URL in external browser
+  Future<void> _launchUrl(String url, BuildContext context) async {
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+
+    final Uri uri = Uri.parse(url);
+    try {
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        scaffoldMessenger.showSnackBar(
+          SnackBar(
+            content: Text('Could not open link'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      scaffoldMessenger.showSnackBar(
+        SnackBar(
+          content: Text('Error opening link: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
   // Helper function to launch email
   Future<void> _launchEmail(String email, BuildContext context) async {
     final scaffoldMessenger = ScaffoldMessenger.of(context);
@@ -248,7 +274,7 @@ class ContactsPageState extends State<ContactsPage> {
                   vertical: 8,
                 ),
                 children: [
-            // Main Depot Contact
+            // Main Depot Contact - number 1, where we work from
             _buildContactCard(
               title: 'Phibsboro Depot',
               subtitle: '01 703 3462',
@@ -257,6 +283,26 @@ class ContactsPageState extends State<ContactsPage> {
               onTap: () => _launchPhoneCall('017033462', context),
               context: context,
               actionIcon: Icons.phone,
+            ),
+
+            // HR & Pay Section
+            _buildSectionHeader(
+              'HR & Pay',
+              Icons.paid,
+              Colors.orange,
+              context,
+            ),
+            _buildContactCard(
+              title: 'People XD (Core HR)',
+              subtitle: 'Payslips, holiday allowance & more',
+              icon: Icons.paid,
+              iconColor: Colors.orange,
+              onTap: () => _launchUrl(
+                'https://my.corehr.com/pls/coreportal_dbp/cp_por_public_main_page.display_login_page',
+                context,
+              ),
+              context: context,
+              actionIcon: Icons.open_in_new,
             ),
             
             // Depot Management Section

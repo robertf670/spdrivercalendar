@@ -313,13 +313,26 @@ class TodayShiftWidgetProvider : AppWidgetProvider() {
                 
                 if (eventsArray == null) return null
                 
-                // Find the first work shift for today
+                // Find the first work shift for today (that REPORTS today, not overnight duties that only finish today)
                 for (i in 0 until eventsArray.length()) {
                     val eventObj = eventsArray.getJSONObject(i)
                     val title = eventObj.getString("title")
                     
                     // Check if it's a work shift
                     if (isWorkShift(title)) {
+                        // Skip overnight duties where today is the end date but not the start date
+                        // (duty reported yesterday, finished in early hours today - not "today's" shift)
+                        val startDateStr = eventObj.optString("startDate", "")
+                        val endDateStr = eventObj.optString("endDate", "")
+                        if (startDateStr.isNotEmpty() && endDateStr.isNotEmpty()) {
+                            val eventStartDateKey = extractDateKey(startDateStr)
+                            val eventEndDateKey = extractDateKey(endDateStr)
+                            if (eventStartDateKey != null && eventEndDateKey != null &&
+                                eventStartDateKey != todayKey && eventEndDateKey == todayKey) {
+                                continue // Overnight duty that only finishes today - skip it
+                            }
+                        }
+
                         val startTimeObj = eventObj.getJSONObject("startTime")
                         val endTimeObj = eventObj.getJSONObject("endTime")
                         val startTime = String.format(
@@ -574,6 +587,13 @@ class TodayShiftWidgetProvider : AppWidgetProvider() {
         private fun formatDateKey(date: Date): String {
             val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.US)
             return sdf.format(date)
+        }
+
+        private fun extractDateKey(dateStr: String): String? {
+            if (dateStr.isEmpty()) return null
+            return try {
+                if (dateStr.contains("T")) dateStr.split("T")[0] else dateStr
+            } catch (_: Exception) { null }
         }
         
         private fun calculateDuration(startTime: String, endTime: String): String? {

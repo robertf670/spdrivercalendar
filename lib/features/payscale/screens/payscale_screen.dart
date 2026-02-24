@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:spdrivercalendar/theme/app_theme.dart';
 
 class PayscaleScreen extends StatefulWidget {
@@ -18,6 +19,33 @@ class PayscaleScreenState extends State<PayscaleScreen> {
   void initState() {
     super.initState();
     _loadPayscaleData();
+  }
+
+  static const String _coreHrUrl =
+      'https://my.corehr.com/pls/coreportal_dbp/cp_por_public_main_page.display_login_page';
+
+  Future<void> _launchCoreHr(BuildContext context) async {
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    final Uri uri = Uri.parse(_coreHrUrl);
+    try {
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        scaffoldMessenger.showSnackBar(
+          const SnackBar(
+            content: Text('Could not open People XD'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      scaffoldMessenger.showSnackBar(
+        SnackBar(
+          content: Text('Error opening link: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   Future<void> _loadPayscaleData() async {
@@ -180,6 +208,75 @@ class PayscaleScreenState extends State<PayscaleScreen> {
     }
   }
 
+  Widget _buildCoreHrLink(BuildContext context, Map<String, double> sizes) {
+    final theme = Theme.of(context);
+    final cardBg = theme.brightness == Brightness.dark
+        ? theme.cardColor
+        : Colors.white;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => _launchCoreHr(context),
+        borderRadius: BorderRadius.circular(AppTheme.borderRadius),
+        child: Container(
+          padding: EdgeInsets.all(sizes['padding']!),
+          decoration: BoxDecoration(
+            color: cardBg,
+            borderRadius: BorderRadius.circular(AppTheme.borderRadius),
+            border: Border.all(
+              color: AppTheme.primaryColor.withValues(alpha: 0.3),
+              width: 1,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: theme.shadowColor.withValues(alpha: 0.08),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Icon(
+                Icons.paid,
+                color: AppTheme.primaryColor,
+                size: sizes['headerFontSize']! + 10,
+              ),
+              SizedBox(width: sizes['padding']!),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'People XD (Core HR)',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.primaryColor,
+                      ),
+                    ),
+                    SizedBox(height: sizes['padding']! * 0.25),
+                    Text(
+                      'View payslips, holiday allowance & more',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.open_in_new,
+                size: sizes['headerFontSize']! + 4,
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildPayscaleTable() {
     if (_payscaleData == null || _payscaleData!.isEmpty) {
       return const Center(child: Text('No pay scale data available'));
@@ -265,6 +362,8 @@ class PayscaleScreenState extends State<PayscaleScreen> {
               color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
+          SizedBox(height: sizes['padding']! * 1.25),
+          _buildCoreHrLink(context, sizes),
           SizedBox(height: sizes['padding']! * 1.25),
           Expanded(
             child: Container(

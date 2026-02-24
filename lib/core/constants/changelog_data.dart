@@ -1,4 +1,14 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '2.19.10': [
+    {
+      'title': 'People XD (Core HR) Link',
+      'description': 'Added link to People XD (Core HR) for payslips and holiday allowance on the Pay Scale screen and Important Contacts page.',
+    },
+    {
+      'title': 'Today Shift Widget Overnight Duties Fix',
+      'description': 'Fixed Today Shift widget showing overnight duties on the next day. The widget now only shows duties that report today, not duties that finished in the early hours of today after starting yesterday.',
+    },
+  ],
   '2.19.9': [
     {
       'title': 'Rest Day Swap',
