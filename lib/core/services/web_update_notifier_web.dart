@@ -16,7 +16,7 @@ void initWebUpdateNotifier(GlobalKey<NavigatorState>? navigatorKey) {
   }
 
   checkAndShow();
-  Timer.periodic(const Duration(minutes: 5), (_) => checkAndShow());
+  Timer.periodic(const Duration(minutes: 1), (_) => checkAndShow());
 }
 
 Future<void> _checkForUpdate(
