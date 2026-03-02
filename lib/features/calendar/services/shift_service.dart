@@ -31,14 +31,16 @@ class ShiftService {
     
     // Handle Spare shifts - check if they have exactly one full duty
     if (shiftCode.startsWith('SP')) {
-      // Check if spare shift has exactly one full duty for break time display
+      String? dutyCode;
       if (event.assignedDuties != null && event.assignedDuties!.length == 1) {
-        String dutyCode = event.assignedDuties![0];
+        dutyCode = event.assignedDuties![0];
+      } else if (event.enhancedAssignedDuties != null && event.enhancedAssignedDuties!.length == 1) {
+        dutyCode = event.enhancedAssignedDuties![0].dutyCode;
+      }
+      if (dutyCode != null) {
         dutyCode = dutyCode.startsWith('UNI:') ? dutyCode.substring(4) : dutyCode;
-        
         // Only show break times for full duties (not ending with A or B)
         if (!dutyCode.endsWith('A') && !dutyCode.endsWith('B')) {
-          // Create a temporary event with the duty code to get break times
           final tempEvent = Event(
             id: 'temp',
             title: dutyCode,
@@ -47,8 +49,6 @@ class ShiftService {
             endDate: event.endDate,
             endTime: event.endTime,
           );
-          
-          // Recursively call getBreakTime with the duty code
           return await getBreakTime(tempEvent);
         }
       }
@@ -224,6 +224,37 @@ class ShiftService {
           }
         }
         
+        // Fallback: "1/01" may be shorthand for "PZ1/01" (zone 1, duty 01) in PZ files
+        final shortDutyMatch = RegExp(r'^(\d{1,2})/(\d{2})$').firstMatch(shiftCode);
+        if (shortDutyMatch != null) {
+          final zoneFromCode = shortDutyMatch.group(1)!;
+          final pzShiftCode = 'PZ$shiftCode';
+          // Try current file first
+          for (final line in lines) {
+            if (line.trim().isEmpty) continue;
+            final parts = line.split(',');
+            if (parts.length < 4) continue;
+            final shift = parts[0];
+            if (shift == pzShiftCode) {
+              return _parseBreakTime(parts);
+            }
+          }
+          // If not in current zone's file, try the zone indicated by the code (e.g. 2/03 -> PZ2 file)
+          if (zoneFromCode != zoneNumber) {
+            try {
+              final altFilename = RosterService.getShiftFilename(zoneFromCode, dayOfWeekForFilename, date);
+              final altFile = await rootBundle.loadString('assets/$altFilename');
+              for (final line in altFile.split('\n')) {
+                if (line.trim().isEmpty) continue;
+                final parts = line.split(',');
+                if (parts.length < 4) continue;
+                if (parts[0] == pzShiftCode) {
+                  return _parseBreakTime(parts);
+                }
+              }
+            } catch (_) {}
+          }
+        }
       } catch (e) {
         // Failed to load CSV file, continue to return default
       }

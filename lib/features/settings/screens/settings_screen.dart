@@ -63,6 +63,7 @@ class SettingsScreenState extends State<SettingsScreen> {
   bool _showOvernightDutiesOnBothDays = false; // Default to false (OFF)
   bool _showDutyCodesOnCalendar = true; // Default to true (ON)
   bool _animatedSelectedDay = true; // Default to true (ON) - animated border
+  bool _highlightWorkoutDays = false; // Default to false (OFF)
   
   // Pay rate setting
   String _spreadPayRate = 'year1+2'; // Default to Year 1/2
@@ -170,6 +171,7 @@ class SettingsScreenState extends State<SettingsScreen> {
     _showOvernightDutiesOnBothDays = prefs.getBool(AppConstants.showOvernightDutiesOnBothDaysKey) ?? false;
     _showDutyCodesOnCalendar = prefs.getBool(AppConstants.showDutyCodesOnCalendarKey) ?? true;
     _animatedSelectedDay = prefs.getBool(AppConstants.animatedSelectedDayKey) ?? true;
+    _highlightWorkoutDays = prefs.getBool(AppConstants.highlightWorkoutDaysKey) ?? false;
     
     // Load pay rate setting - default to Year 1/2
     _spreadPayRate = prefs.getString(AppConstants.spreadPayRateKey) ?? 'year1+2';
@@ -332,6 +334,15 @@ class SettingsScreenState extends State<SettingsScreen> {
     // The calendar will refresh automatically when navigating back to it
   }
 
+  Future<void> _toggleHighlightWorkoutDays(bool value) async {
+    setState(() {
+      _highlightWorkoutDays = value;
+    });
+    await StorageService.saveBool(AppConstants.highlightWorkoutDaysKey, value);
+    
+    // The calendar will refresh automatically when navigating back to it
+  }
+
   void _onColorsChanged() {
     // Trigger a rebuild to refresh any UI that depends on colors
     setState(() {});
@@ -404,6 +415,7 @@ class SettingsScreenState extends State<SettingsScreen> {
                       ),
                       _buildOvernightDutiesToggle(),
                       _buildDutyCodesToggle(),
+                      _buildHighlightWorkoutDaysToggle(),
                       _buildAnimatedSelectedDayToggle(),
                     ],
                   ),
@@ -1989,6 +2001,22 @@ class SettingsScreenState extends State<SettingsScreen> {
         secondary: const Icon(Icons.calendar_view_day),
         value: _showDutyCodesOnCalendar,
         onChanged: _toggleDutyCodesDisplay,
+      ),
+    );
+  }
+
+  Widget _buildHighlightWorkoutDaysToggle() {
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 4.0),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppTheme.borderRadius),
+      ),
+      child: SwitchListTile(
+        title: const Text('Highlight Workout Days'),
+        subtitle: const Text('When enabled, calendar cells with workout duties use the Workout color'),
+        secondary: const Icon(Icons.directions_run),
+        value: _highlightWorkoutDays,
+        onChanged: _toggleHighlightWorkoutDays,
       ),
     );
   }

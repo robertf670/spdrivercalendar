@@ -1,4 +1,14 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '3.0.2': [
+    {
+      'title': 'Workout Day Highlight',
+      'description': 'Optional toggle to highlight workout days on the calendar with a custom colour. Enable in Settings → Appearance; colour customisable in Shift Colors.',
+    },
+    {
+      'title': 'Release Pipeline',
+      'description': 'Web deploy now only runs if APK build succeeds. If Android build fails, web is not deployed.',
+    },
+  ],
   '3.0.1': [
     {
       'title': 'Rest Days Calendar Refresh',

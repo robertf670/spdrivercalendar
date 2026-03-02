@@ -66,6 +66,9 @@ class _ColorCustomizationWidgetState extends State<ColorCustomizationWidget> {
       if (!_currentColors.containsKey('SICK_FORCE_MAJEURE')) {
         _currentColors['SICK_FORCE_MAJEURE'] = ColorCustomizationService.getColorForShift('SICK_FORCE_MAJEURE');
       }
+      if (!_currentColors.containsKey('WORKOUT')) {
+        _currentColors['WORKOUT'] = ColorCustomizationService.getColorForShift('WORKOUT');
+      }
       _hasCustomColors = ColorCustomizationService.hasCustomColors();
     });
   }
@@ -250,7 +253,7 @@ class _ColorCustomizationWidgetState extends State<ColorCustomizationWidget> {
                   ),
                 ],
                 const SizedBox(height: 8),
-                // Always show Work For Others and Day In Lieu color pickers side by side
+                // Always show Work For Others, Day In Lieu and Workout color pickers
                 Row(
                   children: [
                     Expanded(
@@ -260,6 +263,16 @@ class _ColorCustomizationWidgetState extends State<ColorCustomizationWidget> {
                     Expanded(
                       child: _buildColorTile('DAY_IN_LIEU', 'Day In Lieu', _currentColors['DAY_IN_LIEU'] ?? ColorCustomizationService.getColorForShift('DAY_IN_LIEU'), displayText: 'Lieu'),
                     ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildColorTile('WORKOUT', 'Workout', _currentColors['WORKOUT'] ?? ColorCustomizationService.getColorForShift('WORKOUT'), displayText: 'WO'),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(child: Container()),
                   ],
                 ),
                 const SizedBox(height: 8),
@@ -290,7 +303,6 @@ class _ColorCustomizationWidgetState extends State<ColorCustomizationWidget> {
                       child: _buildColorTile('SICK_FORCE_MAJEURE', 'Force Majeure', _currentColors['SICK_FORCE_MAJEURE'] ?? ColorCustomizationService.getColorForShift('SICK_FORCE_MAJEURE'), displayText: 'Force'),
                     ),
                     const SizedBox(width: 8),
-                    // Empty space to maintain grid alignment
                     Expanded(child: Container()),
                   ],
                 ),

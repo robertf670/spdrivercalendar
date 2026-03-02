@@ -105,6 +105,8 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
   // Display settings
   bool _showDutyCodesOnCalendar = true; // Default to true (ON)
   bool _animatedSelectedDay = true; // Default to true (ON) - animated border
+  bool _highlightWorkoutDays = false; // Default to false (OFF)
+  Set<DateTime>? _workoutDates; // Cached workout dates for visible month (null = loading)
 
   // Holiday section expanded state (year -> expanded)
   final Map<int, bool> _holidayYearExpanded = {};
@@ -266,21 +268,66 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
     final newMarkedInStatus = markedInStatus.isEmpty ? 'Spare' : markedInStatus;
     final newShowDutyCodes = await StorageService.getBool(AppConstants.showDutyCodesOnCalendarKey, defaultValue: true);
     final newAnimatedSelectedDay = await StorageService.getBool(AppConstants.animatedSelectedDayKey, defaultValue: true);
+    final newHighlightWorkoutDays = await StorageService.getBool(AppConstants.highlightWorkoutDaysKey, defaultValue: false);
     
     // Always update state to ensure calendar rebuilds with latest settings
     if (mounted) {
       final needsUpdate = _markedInEnabled != newMarkedInEnabled || 
                          _markedInStatus != newMarkedInStatus ||
                          _showDutyCodesOnCalendar != newShowDutyCodes ||
-                         _animatedSelectedDay != newAnimatedSelectedDay;
+                         _animatedSelectedDay != newAnimatedSelectedDay ||
+                         _highlightWorkoutDays != newHighlightWorkoutDays;
       _markedInEnabled = newMarkedInEnabled;
       _markedInStatus = newMarkedInStatus;
       _showDutyCodesOnCalendar = newShowDutyCodes;
       _animatedSelectedDay = newAnimatedSelectedDay;
+      _highlightWorkoutDays = newHighlightWorkoutDays;
       
       if (needsUpdate) {
         setState(() {});
+        if (_highlightWorkoutDays) {
+          _loadWorkoutDatesForMonth(_focusedDay);
+        } else {
+          _workoutDates = {};
+        }
       }
+    }
+  }
+
+  /// Load workout dates for the visible month (async); used when highlight workout is enabled.
+  Future<void> _loadWorkoutDatesForMonth(DateTime month) async {
+    if (!_highlightWorkoutDays) return;
+    
+    setState(() => _workoutDates = null); // Mark as loading
+    
+    final workoutSet = <DateTime>{};
+    final firstDay = DateTime(month.year, month.month, 1);
+    final lastDay = DateTime(month.year, month.month + 1, 0);
+    
+    await EventService.preloadMonth(month);
+    
+    for (var d = firstDay; d.isBefore(lastDay) || d.isAtSameMomentAs(lastDay); d = d.add(const Duration(days: 1))) {
+      final events = EventService.getEventsForDay(d);
+      for (final event in events) {
+        if (event.isHoliday || event.sickDayType != null) continue;
+        final dutyCode = event.title.replaceAll('Shift: ', '').trim();
+        if (!event.title.startsWith('Shift:') && !event.title.startsWith('SP') &&
+            !RegExp(r'^\d{1,3}/\d{1,2}').hasMatch(dutyCode) &&
+            !event.title.toUpperCase().contains('PZ')) continue;
+        try {
+          final breakTime = await ShiftService.getBreakTime(event);
+          if (breakTime != null && breakTime.toLowerCase() == 'workout') {
+            workoutSet.add(DateTime(d.year, d.month, d.day));
+            break; // One workout per day is enough
+          }
+        } catch (_) {
+          // Ignore per-event errors
+        }
+      }
+    }
+    
+    if (mounted) {
+      setState(() => _workoutDates = workoutSet);
     }
   }
 
@@ -6016,6 +6063,12 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
     final wfoColor = _shiftInfoMap['WFO']?.color;
     final dayInLieuColor = ColorCustomizationService.getColorForShift('DAY_IN_LIEU');
     
+    // Check if this day has a workout (when highlight is enabled and data is loaded)
+    final hasWorkoutOnDay = _highlightWorkoutDays && 
+        _workoutDates != null && 
+        _workoutDates!.any((d) => d.year == date.year && d.month == date.month && d.day == date.day);
+    final workoutColor = ColorCustomizationService.getColorForShift('WORKOUT');
+    
     // Check if any events have notes or if there's a day note
     final hasNotes = events.any((event) => event.notes != null && event.notes!.trim().isNotEmpty) ||
         DayNoteService.hasNoteForDate(date);
@@ -6063,7 +6116,9 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                         ? holidayColor.withValues(alpha: 0.3)
                         : hasWfoEvent && wfoColor != null
                             ? wfoColor.withValues(alpha: 0.3)
-                            : shiftInfo?.color.withValues(alpha: 0.3);
+                            : hasWorkoutOnDay
+                                ? workoutColor.withValues(alpha: 0.3)
+                                : shiftInfo?.color.withValues(alpha: 0.3);
     
     // Calculate base cell color (without alpha) for note icon
     final cellColor = hasSickDay && sickDayColor != null
@@ -6078,7 +6133,9 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                         ? holidayColor
                         : hasWfoEvent && wfoColor != null
                             ? wfoColor
-                            : (shiftInfo?.color ?? Theme.of(context).primaryColor);
+                            : hasWorkoutOnDay
+                                ? workoutColor
+                                : (shiftInfo?.color ?? Theme.of(context).primaryColor);
     
     final cellContent = _buildDayCellContent(date, displayText, isDayInLieu, isHoliday, shift, hasEvents, hasSickDay, sickDayColor, dayInLieuColor, isUnpaidLeave, hasWfoEvent, wfoColor, shiftInfo, isSaturdayService, hasNotes, cellColor, badgeSizes, screenWidth);
     
@@ -6522,6 +6579,9 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                 children: events.map((event) {
                   // Use WFO shift type if this is a Work For Others event
                   final String shiftType = event.isWorkForOthers ? 'WFO' : getShiftForDate(event.startDate);
+                  final eventDate = DateTime(event.startDate.year, event.startDate.month, event.startDate.day);
+                  final isWorkoutDay = _workoutDates != null &&
+                      _workoutDates!.any((d) => d.year == eventDate.year && d.month == eventDate.month && d.day == eventDate.day);
                   return EventCard(
                     event: event,
                     shiftType: shiftType,
@@ -6531,6 +6591,8 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                     onEdit: _editEvent, // Use _editEvent for all types, EventCard handles spare logic
                     onShowNotes: _showNotesDialog, // Pass the function here
                     onBusAssignmentUpdate: _syncBusAssignmentsToGoogleCalendar, // Pass the bus sync callback
+                    highlightWorkoutDays: _highlightWorkoutDays,
+                    isWorkoutDay: isWorkoutDay,
                   );
                 }).toList(),
               ),
@@ -10175,15 +10237,22 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
   // Add this method to handle calendar page changes
   void _onPageChanged(DateTime focusedDay) async {
     if (!mounted) return; // Prevent setState after dispose
-    
+
     setState(() {
       _focusedDay = focusedDay;
     });
-    
+
     // Preload the new month's events and wait for completion to ensure UI updates
     try {
       await EventService.preloadMonth(focusedDay);
-      
+
+      // Load workout dates for highlight if enabled
+      if (_highlightWorkoutDays) {
+        _loadWorkoutDatesForMonth(focusedDay);
+      } else if (mounted) {
+        _workoutDates = {};
+      }
+
       // Trigger UI refresh after events are loaded to show indicator dots
       if (mounted) {
         setState(() {});

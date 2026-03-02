@@ -24,6 +24,10 @@ class EventCard extends StatefulWidget {
   final bool isRestDay;
   final Function(Event) onShowNotes;
   final Function(Event)? onBusAssignmentUpdate;
+  /// When true and [highlightWorkoutDays] is on, use workout color. Uses pre-computed data to avoid lag.
+  final bool isWorkoutDay;
+  /// Only use workout color when this is true (matches Settings toggle).
+  final bool highlightWorkoutDays;
 
   const EventCard({
     super.key,
@@ -35,6 +39,8 @@ class EventCard extends StatefulWidget {
     this.isRestDay = false,
     required this.onShowNotes,
     this.onBusAssignmentUpdate,
+    this.isWorkoutDay = false,
+    this.highlightWorkoutDays = false,
   });
 
   @override
@@ -1582,11 +1588,20 @@ class _EventCardState extends State<EventCard> {
     
     // Check for WFO events first - they should use WFO color
     final wfoColor = widget.shiftInfoMap['WFO']?.color;
+    
     if (widget.event.isWorkForOthers && wfoColor != null) {
       if (Theme.of(context).brightness == Brightness.dark) {
         cardColor = wfoColor.withValues(alpha: 0.2);
       } else {
         cardColor = wfoColor.withValues(alpha: 0.2);
+      }
+    } else if (isWorkShift && widget.highlightWorkoutDays && widget.isWorkoutDay) {
+      // Workout duties use workout color only when toggle is on (matches calendar cell, no lag)
+      final workoutColor = ColorCustomizationService.getColorForShift('WORKOUT');
+      if (Theme.of(context).brightness == Brightness.dark) {
+        cardColor = workoutColor.withValues(alpha: 0.2);
+      } else {
+        cardColor = workoutColor.withValues(alpha: 0.2);
       }
     } else if (isWorkShift) {
       if (widget.isRestDay) {
@@ -1599,8 +1614,8 @@ class _EventCardState extends State<EventCard> {
       cardColor = shiftInfo?.color.withValues(alpha: 0.1) ?? Colors.grey.withValues(alpha: 0.1);
     }
     
-    // In dark mode, adjust card colors (only if not already set for WFO)
-    if (!widget.event.isWorkForOthers && Theme.of(context).brightness == Brightness.dark) {
+    // In dark mode, adjust card colors (only if not already set for WFO or workout)
+    if (!widget.event.isWorkForOthers && !(widget.highlightWorkoutDays && widget.isWorkoutDay) && Theme.of(context).brightness == Brightness.dark) {
       if (isWorkShift) {
         if (widget.isRestDay) {
           cardColor = widget.shiftInfoMap['R']?.color.withValues(alpha: 0.3) ?? Colors.blueGrey.shade700;

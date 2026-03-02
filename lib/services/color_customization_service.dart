@@ -13,6 +13,7 @@ class ColorCustomizationService {
   static const String _sickNormalColorKey = 'custom_sick_normal_color';
   static const String _sickSelfCertifiedColorKey = 'custom_sick_self_certified_color';
   static const String _sickForceMajeureColorKey = 'custom_sick_force_majeure_color';
+  static const String _workoutColorKey = 'custom_workout_color';
 
   // Default colors from AppTheme
   static const Color _defaultEarlyColor = Color(0xFF66BB6A);  // Green
@@ -25,6 +26,7 @@ class ColorCustomizationService {
   static const Color _defaultSickNormalColor = Color(0xFFE53935);   // Red for Normal Sick (distinct from Late orange)
   static const Color _defaultSickSelfCertifiedColor = Color(0xFFFFB300);   // Amber/Yellow for Self-Certified (distinct from all shift colors)
   static const Color _defaultSickForceMajeureColor = Color(0xFFC2185B);   // Deep Pink/Magenta for Force Majeure (distinct from all)
+  static const Color _defaultWorkoutColor = Color(0xFF26A69A);   // Teal for workout duties (distinct from other shift colors)
 
   static Map<String, Color> _customColors = {};
   static bool _isInitialized = false;
@@ -49,6 +51,7 @@ class ColorCustomizationService {
       'SICK_NORMAL': Color(prefs.getInt(_sickNormalColorKey) ?? _defaultSickNormalColor.toARGB32()),
       'SICK_SELF_CERTIFIED': Color(prefs.getInt(_sickSelfCertifiedColorKey) ?? _defaultSickSelfCertifiedColor.toARGB32()),
       'SICK_FORCE_MAJEURE': Color(prefs.getInt(_sickForceMajeureColorKey) ?? _defaultSickForceMajeureColor.toARGB32()),
+      'WORKOUT': Color(prefs.getInt(_workoutColorKey) ?? _defaultWorkoutColor.toARGB32()),
     };
     
     _isInitialized = true;
@@ -75,6 +78,7 @@ class ColorCustomizationService {
       defaultColors['SICK_NORMAL'] = _defaultSickNormalColor;
       defaultColors['SICK_SELF_CERTIFIED'] = _defaultSickSelfCertifiedColor;
       defaultColors['SICK_FORCE_MAJEURE'] = _defaultSickForceMajeureColor;
+      defaultColors['WORKOUT'] = _defaultWorkoutColor;
       return defaultColors;
     }
     return Map.from(_customColors);
@@ -85,6 +89,7 @@ class ColorCustomizationService {
     if (!_isInitialized) {
       if (shiftType == 'W') return _defaultWorkColor;
       if (shiftType == 'WFO') return _defaultWfoColor;
+      if (shiftType == 'WORKOUT') return _defaultWorkoutColor;
       if (shiftType == 'DAY_IN_LIEU') return _defaultDayInLieuColor;
       if (shiftType == 'SICK_NORMAL') return _defaultSickNormalColor;
       if (shiftType == 'SICK_SELF_CERTIFIED') return _defaultSickSelfCertifiedColor;
@@ -97,7 +102,8 @@ class ColorCustomizationService {
         (shiftType == 'DAY_IN_LIEU' ? _defaultDayInLieuColor :
          (shiftType == 'SICK_NORMAL' ? _defaultSickNormalColor :
           (shiftType == 'SICK_SELF_CERTIFIED' ? _defaultSickSelfCertifiedColor :
-           (shiftType == 'SICK_FORCE_MAJEURE' ? _defaultSickForceMajeureColor : _defaultRestColor))))));
+           (shiftType == 'SICK_FORCE_MAJEURE' ? _defaultSickForceMajeureColor :
+           (shiftType == 'WORKOUT' ? _defaultWorkoutColor : _defaultRestColor)))))));
   }
   
   /// Get color for a sick day type (converts from event sickDayType to color key)
@@ -153,6 +159,9 @@ class ColorCustomizationService {
       case 'SICK_FORCE_MAJEURE':
         await prefs.setInt(_sickForceMajeureColorKey, color.toARGB32());
         break;
+      case 'WORKOUT':
+        await prefs.setInt(_workoutColorKey, color.toARGB32());
+        break;
     }
     
     // Notify listeners of color changes
@@ -174,6 +183,7 @@ class ColorCustomizationService {
     await prefs.remove(_sickNormalColorKey);
     await prefs.remove(_sickSelfCertifiedColorKey);
     await prefs.remove(_sickForceMajeureColorKey);
+    await prefs.remove(_workoutColorKey);
     
     // Reset to default colors
     _customColors = {
@@ -187,6 +197,7 @@ class ColorCustomizationService {
       'SICK_NORMAL': _defaultSickNormalColor,
       'SICK_SELF_CERTIFIED': _defaultSickSelfCertifiedColor,
       'SICK_FORCE_MAJEURE': _defaultSickForceMajeureColor,
+      'WORKOUT': _defaultWorkoutColor,
     };
     
     // Notify listeners of color changes
@@ -222,6 +233,7 @@ class ColorCustomizationService {
       'SICK_NORMAL': _defaultSickNormalColor,
       'SICK_SELF_CERTIFIED': _defaultSickSelfCertifiedColor,
       'SICK_FORCE_MAJEURE': _defaultSickForceMajeureColor,
+      'WORKOUT': _defaultWorkoutColor,
     };
   }
 
@@ -239,6 +251,7 @@ class ColorCustomizationService {
       'SICK_NORMAL': _customColors['SICK_NORMAL']?.toARGB32(),
       'SICK_SELF_CERTIFIED': _customColors['SICK_SELF_CERTIFIED']?.toARGB32(),
       'SICK_FORCE_MAJEURE': _customColors['SICK_FORCE_MAJEURE']?.toARGB32(),
+      'WORKOUT': _customColors['WORKOUT']?.toARGB32(),
     }
     };
   }
@@ -258,6 +271,7 @@ class ColorCustomizationService {
       if (colorData['SICK_NORMAL'] != null) await setShiftColor('SICK_NORMAL', Color(colorData['SICK_NORMAL']));
       if (colorData['SICK_SELF_CERTIFIED'] != null) await setShiftColor('SICK_SELF_CERTIFIED', Color(colorData['SICK_SELF_CERTIFIED']));
       if (colorData['SICK_FORCE_MAJEURE'] != null) await setShiftColor('SICK_FORCE_MAJEURE', Color(colorData['SICK_FORCE_MAJEURE']));
+      if (colorData['WORKOUT'] != null) await setShiftColor('WORKOUT', Color(colorData['WORKOUT']));
     }
   }
 } 
