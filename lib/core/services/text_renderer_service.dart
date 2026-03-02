@@ -1,9 +1,9 @@
 import 'package:flutter/services.dart';
-import 'dart:io' show Platform;
+import 'package:spdrivercalendar/core/config/platform_utils.dart';
 
 class TextRendererService {
   static Future<void> configure() async {
-    if (Platform.isAndroid) {
+    if (PlatformUtils.isAndroid) {
       // Disable Impeller
       await SystemChannels.platform.invokeMethod<void>('SystemNavigator.cleanUp');
       

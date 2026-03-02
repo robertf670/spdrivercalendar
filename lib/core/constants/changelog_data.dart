@@ -1,4 +1,22 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '3.0.0': [
+    {
+      'title': 'PWA (Progressive Web App)',
+      'description': 'Added web version so iOS users and others can use the app in the browser. Add to home screen for an app-like experience.',
+    },
+    {
+      'title': 'Access Screen',
+      'description': 'Web version requires a Work Access Code on first use. Once entered, access is remembered so you never have to authenticate again.',
+    },
+    {
+      'title': 'Available at app.ixrqq.pro',
+      'description': 'Web version is hosted at app.ixrqq.pro for easy access on any device.',
+    },
+    {
+      'title': 'Update Notification',
+      'description': 'Web version shows an "Update available. Reload" notification when a new version is deployed.',
+    },
+  ],
   '2.19.11': [
     {
       'title': 'Duty 307/03 Finish Time Corrected',

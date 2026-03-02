@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'dart:io' show Platform;
+import 'package:spdrivercalendar/core/config/platform_utils.dart';
 
 class FlutterConfig {
   static Future<void> configure() async {
-    if (Platform.isAndroid) {
+    if (PlatformUtils.isAndroid) {
       // Ensure Flutter binding is initialized
       WidgetsFlutterBinding.ensureInitialized();
       

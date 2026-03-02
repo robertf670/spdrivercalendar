@@ -1,0 +1,121 @@
+# Build Android APK + Flutter Web PWA on version tags (v*)
+name: Build and Deploy
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-apk:
+    name: Build Android APK
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.32.5'
+          channel: 'stable'
+
+      - name: Decode Google Services JSON
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON_CONTENT }}
+        run: |
+          if [ -z "$GOOGLE_SERVICES_JSON" ]; then
+            echo "Warning: GOOGLE_SERVICES_JSON secret not set. Using fallback."
+            cat > android/app/google-services.json << 'EOF'
+          {"project_info":{"project_number":"1051329330296","project_id":"spdrivercalendar-fallback"},"client":[{"client_info":{"mobilesdk_app_id":"1:1051329330296:android:fallback","android_client_info":{"package_name":"ie.qqrxi.spdrivercalendar"}}}],"configuration_version":"1"}
+          EOF
+          else
+            echo "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
+          fi
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Setup Release Keystore
+        env:
+          RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          if [ -z "$RELEASE_KEYSTORE_BASE64" ] || [ -z "$KEYSTORE_PASSWORD" ] || [ -z "$KEY_ALIAS" ] || [ -z "$KEY_PASSWORD" ]; then
+            echo "ERROR: Missing release keystore secrets!"
+            exit 1
+          fi
+          echo "$RELEASE_KEYSTORE_BASE64" | base64 -d > android/app/release-keystore.jks
+          cat > android/key.properties << EOF
+          storePassword=$KEYSTORE_PASSWORD
+          keyPassword=$KEY_PASSWORD
+          keyAlias=$KEY_ALIAS
+          storeFile=release-keystore.jks
+          EOF
+
+      - name: Build APK
+        env:
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+          GRADLE_OPTS: "-Xmx6144m -XX:MaxMetaspaceSize=1024m -XX:+HeapDumpOnOutOfMemoryError"
+        run: flutter build apk --release --dart-define=ADMIN_PASSWORD=${ADMIN_PASSWORD}
+
+      - name: Rename APK
+        run: |
+          VERSION=${{ github.ref_name }}
+          cp build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/spdrivercalendar-$VERSION.apk
+
+      - name: Create Release and Upload APK
+        uses: softprops/action-gh-release@v1
+        with:
+          name: Release ${{ github.ref_name }}
+          body: |
+            ## Release ${{ github.ref_name }}
+            📱 **Download APK** below for Android.
+            🌐 **PWA** deployed to Vercel (if configured).
+          files: build/app/outputs/flutter-apk/spdrivercalendar-${{ github.ref_name }}.apk
+          draft: false
+
+  build-web:
+    name: Build and Deploy Web (Vercel)
+    runs-on: ubuntu-latest
+    needs: []  # Run in parallel with APK job
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.32.5'
+          channel: 'stable'
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Build Flutter Web
+        env:
+          WORK_ACCESS_HASH: ${{ secrets.WORK_ACCESS_HASH }}
+        run: |
+          if [ -n "$WORK_ACCESS_HASH" ]; then
+            flutter build web --release --dart-define=WORK_ACCESS_HASH=$WORK_ACCESS_HASH
+          else
+            flutter build web --release
+          fi
+
+      - name: Deploy to Vercel
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          working-directory: build/web
+          vercel-args: '--prod'

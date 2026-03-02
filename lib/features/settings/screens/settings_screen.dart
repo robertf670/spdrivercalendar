@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:spdrivercalendar/core/config/platform_utils.dart';
 import 'package:spdrivercalendar/core/constants/app_constants.dart';
 import 'package:spdrivercalendar/core/services/storage_service.dart';
 import 'package:spdrivercalendar/google_calendar_service.dart';
@@ -11,7 +12,6 @@ import 'package:spdrivercalendar/theme/app_theme.dart';
 import 'package:spdrivercalendar/calendar_test_helper.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:spdrivercalendar/services/backup_service.dart';
-import 'dart:io'; // For File type in auto-backup list
 import 'package:intl/intl.dart'; // For DateFormat
 import 'package:spdrivercalendar/features/settings/widgets/color_customization_widget.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -487,8 +487,9 @@ class SettingsScreenState extends State<SettingsScreen> {
                     children: [
                       _buildBackupButton(),
                       _buildRestoreButton(),
-                      _buildAutoBackupToggle(),
-                      _buildRestoreFromAutoBackupButton(),
+                      // Auto-backup is mobile-only (Web uses save-on-change)
+                      if (!PlatformUtils.isWeb) _buildAutoBackupToggle(),
+                      if (!PlatformUtils.isWeb) _buildRestoreFromAutoBackupButton(),
                     ],
                   ),
                   
@@ -1591,7 +1592,7 @@ class SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _showAutoBackupSelectionDialog() async {
     _showLoadingDialog("Loading auto-backups...");
-    List<File> autoBackups = await BackupService.listAutoBackups();
+    List<BackupEntry> autoBackups = await BackupService.listAutoBackups();
     if (!mounted) return;
     Navigator.of(context, rootNavigator: true).pop(); // Close loading dialog
 
@@ -1602,7 +1603,7 @@ class SettingsScreenState extends State<SettingsScreen> {
       return;
     }
 
-    showDialog<File>(
+    showDialog<BackupEntry>(
       context: context,
       builder: (BuildContext dialogContext) {
         return AlertDialog(
@@ -1613,17 +1614,16 @@ class SettingsScreenState extends State<SettingsScreen> {
               shrinkWrap: true,
               itemCount: autoBackups.length,
               itemBuilder: (BuildContext context, int index) {
-                final backupFile = autoBackups[index];
-                // Use the file's last modified timestamp for display
-                final DateTime lastModified = backupFile.statSync().modified.toLocal();
-                // Format for better readability (e.g., "Wed, Jul 10, 2024  3:45 PM")
-                final String formattedDateTime = DateFormat('EEE, MMM d, yyyy  h:mm a').format(lastModified);
+                final backupEntry = autoBackups[index];
+                final String formattedDateTime =
+                    DateFormat('EEE, MMM d, yyyy  h:mm a').format(backupEntry.modified);
 
                 return ListTile(
-                  title: Text('Backup - $formattedDateTime'), // Updated title
-                  subtitle: Text('Size: ${(backupFile.lengthSync() / 1024).toStringAsFixed(2)} KB'), // Added "Size:" and improved clarity
+                  title: Text('Backup - $formattedDateTime'),
+                  subtitle: Text(
+                      'Size: ${(backupEntry.size / 1024).toStringAsFixed(2)} KB'),
                   onTap: () {
-                    Navigator.of(dialogContext).pop(backupFile);
+                    Navigator.of(dialogContext).pop(backupEntry);
                   },
                 );
               },
@@ -1639,9 +1639,9 @@ class SettingsScreenState extends State<SettingsScreen> {
           ],
         );
       },
-    ).then((selectedBackupFile) {
-      if (selectedBackupFile != null) {
-        _confirmRestoreFromAutoBackup(selectedBackupFile.path);
+    ).then((selectedBackup) {
+      if (selectedBackup != null) {
+        _confirmRestoreFromAutoBackup(selectedBackup.path);
       }
     });
   }

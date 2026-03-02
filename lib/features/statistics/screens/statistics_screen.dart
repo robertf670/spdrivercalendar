@@ -936,6 +936,7 @@ class StatisticsScreenState extends State<StatisticsScreen>
         controller: _frequencyScrollController,
         padding: EdgeInsets.all(sizes['padding']!),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // --- Shifts Section ---
             _buildExpandableSection(
@@ -1034,19 +1035,44 @@ class StatisticsScreenState extends State<StatisticsScreen>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: zoneOrder.where((z) => topPerZone.containsKey(z)).map((zone) {
                         final busData = topPerZone[zone]!;
+                        final zoneColors = {
+                          'Zone 1': AppTheme.primaryColor,
+                          'Zone 3': AppTheme.secondaryColor,
+                          'Zone 4': const Color(0xFF7B1FA2),
+                          'Uni/Euro': const Color(0xFFE65100),
+                        };
+                        final zoneColor = zoneColors[zone] ?? AppTheme.primaryColor;
                         return Padding(
                           padding: EdgeInsets.only(bottom: sizes['cardSpacing']! * 0.8),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                zone,
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: (sizes['fontSize'] ?? 14) + 1,
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: zoneColor.withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                    color: zoneColor.withValues(alpha: 0.3),
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.location_on, size: 16, color: zoneColor),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      zone,
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: (sizes['fontSize'] ?? 14),
+                                        color: zoneColor,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                              const SizedBox(height: 4),
+                              SizedBox(height: sizes['sectionSpacing'] ?? 6),
                               FrequencyChart(
                                 frequencyData: busData,
                                 emptyDataMessage: 'No bus data',

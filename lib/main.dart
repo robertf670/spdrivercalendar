@@ -9,7 +9,11 @@ import 'package:spdrivercalendar/features/calendar/services/roster_service.dart'
 import 'package:spdrivercalendar/features/welcome/screens/welcome_screen.dart';
 import 'package:spdrivercalendar/features/google/screens/google_login_screen.dart';
 import 'package:spdrivercalendar/features/calendar/screens/calendar_screen.dart';
+import 'package:spdrivercalendar/features/access/screens/access_screen.dart';
 import 'package:spdrivercalendar/features/whatsnew/screens/whats_new_screen.dart';
+import 'package:spdrivercalendar/core/config/platform_utils.dart';
+import 'package:spdrivercalendar/firebase_options.dart';
+import 'package:spdrivercalendar/core/services/web_update_notifier.dart';
 import 'package:spdrivercalendar/theme/app_theme.dart';
 import 'package:spdrivercalendar/google_calendar_service.dart';
 import 'package:spdrivercalendar/services/rest_days_service.dart';
@@ -61,9 +65,13 @@ Future<void> main() async {
   // Initialize cache service first
   final cacheService = CacheService();
   
-  // Initialize Firebase first
-  await Firebase.initializeApp();
-  
+  // Initialize Firebase (Web needs explicit options; Android uses google-services.json)
+  if (PlatformUtils.isWeb) {
+    await Firebase.initializeApp(options: DefaultFirebaseOptions.web);
+  } else {
+    await Firebase.initializeApp();
+  }
+
   // Initialize Firebase Analytics
   analytics = FirebaseAnalytics.instance;
   observer = FirebaseAnalyticsObserver(analytics: analytics);
@@ -112,6 +120,8 @@ class MyApp extends StatefulWidget {
   MyAppState createState() => MyAppState();
 }
 
+final _navigatorKey = GlobalKey<NavigatorState>();
+
 class MyAppState extends State<MyApp> with WidgetsBindingObserver {
   late ValueNotifier<bool> _isDarkModeNotifier;
   final _rebuildKey = GlobalKey();
@@ -121,6 +131,9 @@ class MyAppState extends State<MyApp> with WidgetsBindingObserver {
     super.initState();
     _isDarkModeNotifier = ValueNotifier(widget.isDarkModeInitial);
     WidgetsBinding.instance.addObserver(this);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      initWebUpdateNotifier(_navigatorKey);
+    });
   }
 
   @override
@@ -134,17 +147,13 @@ class MyAppState extends State<MyApp> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) async {
     super.didChangeAppLifecycleState(state);
     if (state == AppLifecycleState.paused) {
-
-      final prefs = await SharedPreferences.getInstance();
-      final bool autoBackupEnabled = prefs.getBool(AppConstants.autoBackupEnabledKey) ?? true;
-
-      if (autoBackupEnabled) {
-
-        bool success = await BackupService.createAutoBackup();
-        if (success) {
-
-        } else {
-
+      // Auto-backup only on mobile (Web uses save-on-change, no file system)
+      if (!PlatformUtils.isWeb) {
+        final prefs = await SharedPreferences.getInstance();
+        final bool autoBackupEnabled =
+            prefs.getBool(AppConstants.autoBackupEnabledKey) ?? true;
+        if (autoBackupEnabled) {
+          await BackupService.createAutoBackup();
         }
       }
     } else if (state == AppLifecycleState.resumed) {
@@ -162,6 +171,7 @@ class MyAppState extends State<MyApp> with WidgetsBindingObserver {
         return RebuildText(
           key: _rebuildKey,
           child: MaterialApp(
+            navigatorKey: _navigatorKey,
             title: AppConstants.appName,
             theme: AppTheme.lightTheme(),
             darkTheme: AppTheme.darkTheme(),
@@ -169,6 +179,11 @@ class MyAppState extends State<MyApp> with WidgetsBindingObserver {
             navigatorObservers: [observer],
             initialRoute: AppConstants.splashRoute,
             routes: {
+              AppConstants.accessRoute: (context) => AccessScreen(
+                onAccessGranted: () {
+                  Navigator.pushReplacementNamed(context, AppConstants.splashRoute);
+                },
+              ),
               AppConstants.splashRoute: (context) => SplashScreen(
                 isDarkModeNotifier: _isDarkModeNotifier,
                 onInitializationComplete: (String initialRoute) {
@@ -237,6 +252,16 @@ class SplashScreenState extends State<SplashScreen> {
 
   Future<void> _checkAppState() async {
     await Future.delayed(Duration.zero);
+
+    // Web-only: require Work Access Code before any other flow
+    if (PlatformUtils.isWeb) {
+      final hasAccess =
+          await StorageService.getBool(AppConstants.workAccessGrantedKey, defaultValue: false);
+      if (!hasAccess && mounted) {
+        Navigator.of(context).pushReplacementNamed(AppConstants.accessRoute);
+        return;
+      }
+    }
 
     final shouldShowWhatsNew = await _checkVersionUpdate();
 

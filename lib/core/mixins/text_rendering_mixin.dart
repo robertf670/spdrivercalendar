@@ -1,18 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'dart:io' show Platform;
+import 'package:spdrivercalendar/core/config/platform_utils.dart';
 
 mixin TextRenderingMixin<T extends StatefulWidget> on State<T> {
   @override
   void initState() {
     super.initState();
-    if (Platform.isAndroid) {
+    if (PlatformUtils.isAndroid) {
       _configureTextRendering();
     }
   }
 
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed && Platform.isAndroid) {
+    if (state == AppLifecycleState.resumed && PlatformUtils.isAndroid) {
       _configureTextRendering();
     }
   }
