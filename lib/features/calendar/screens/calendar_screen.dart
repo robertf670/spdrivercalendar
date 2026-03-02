@@ -426,9 +426,9 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (BuildContext context) {
+      builder: (BuildContext dialogContext) {
         return StatefulBuilder(
-          builder: (context, setState) {
+          builder: (context, setDialogState) {
             return AlertDialog(
               title: const Text('Choose rest days:'),
               content: SingleChildScrollView(
@@ -445,7 +445,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                         );
                       }),
                       onChanged: (value) {
-                        setState(() {
+                        setDialogState(() {
                           _startWeek = value!;
                         });
                       },
@@ -458,7 +458,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
                     ElevatedButton(
-                      onPressed: () => Navigator.of(context).pop(),
+                      onPressed: () => Navigator.of(dialogContext).pop(),
                       child: const Text('Cancel'),
                     ),
                     ElevatedButton(
@@ -466,11 +466,11 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                         // Automatically set the start date to the Sunday of the current week
                         _startDate = RosterService.getSundayOfCurrentWeek();
                         
-                        final navigator = Navigator.of(context);
+                        final navigator = Navigator.of(dialogContext);
                         await _saveSettings();
                         navigator.pop();
                         
-                        // Force a rebuild to show the updated calendar
+                        // Force CalendarScreen to rebuild so calendar cells reflect new rest days
                         if (mounted) {
                           setState(() {});
                         }

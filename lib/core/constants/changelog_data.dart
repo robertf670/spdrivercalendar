@@ -1,4 +1,14 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '3.0.1': [
+    {
+      'title': 'Rest Days Calendar Refresh',
+      'description': 'Fixed calendar cells not updating immediately when selecting rest days on first run. Cells now refresh as soon as you save.',
+    },
+    {
+      'title': 'PWA Favicon',
+      'description': 'Web version now uses the app icon as favicon instead of the default Flutter icon.',
+    },
+  ],
   '3.0.0': [
     {
       'title': 'PWA (Progressive Web App)',
