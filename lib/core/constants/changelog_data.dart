@@ -1,4 +1,38 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '3.0.3': [
+    {
+      'title': 'Shift Type Classification',
+      'description': 'Updated definitions for all duty types (start times).',
+    },
+    {
+      'title': 'Shift Statistics Improvements',
+      'description': 'Total Shifts now includes overtime. Pie chart and table use same data (no mismatch). Universal/Euro as separate category. Responsive pie chart layout.',
+    },
+    {
+      'title': 'Statistics Tabs Dark Mode',
+      'description': 'Fixed Work Time, Shift Summary, and Frequency tab text displaying as black in dark mode. Tabs now use theme-appropriate colours for readability.',
+    },
+    {
+      'title': 'Holiday Dialogs Dark Mode',
+      'description': 'Fixed holiday date pickers displaying black text on dark backgrounds. All text and UI elements now adapt correctly for dark mode.',
+    },
+    {
+      'title': 'PWA Home Screen Icon',
+      'description': 'Fixed PWA showing Flutter default icon when added to iOS home screen. Now uses the app icon.',
+    },
+    {
+      'title': 'Removed Test Board Viewer',
+      'description': 'Removed test JSON viewer from Settings → App section.',
+    },
+    {
+      'title': 'Swap Rest Day Label',
+      'description': 'Updated label from "Swap rest day" to "Swap Rest Day".',
+    },
+    {
+      'title': 'Spread Earnings Estimate',
+      'description': 'Renamed "Earnings Calculator" to "Spread Earnings Estimate" in Shift Summary.',
+    },
+  ],
   '3.0.2': [
     {
       'title': 'Workout Day Highlight',

@@ -56,7 +56,7 @@ class StatisticsScreenState extends State<StatisticsScreen>
   @override
   bool get wantKeepAlive => true;
   
-  String _timeRange = 'This Week';
+  String _timeRange = 'All Time';
   String _breakTimeRange = 'This Week';
   String _sickDaysTimeRange = 'This Month';
   String _holidayDaysTimeRange = DateTime.now().year.toString();
@@ -518,9 +518,9 @@ class StatisticsScreenState extends State<StatisticsScreen>
         // Add TabBar to the bottom of the AppBar
         bottom: TabBar(
           controller: _tabController!, // Use null assertion
-          indicatorColor: Theme.of(context).colorScheme.onPrimary, // Highlight selected tab indicator
-          labelColor: Theme.of(context).colorScheme.onPrimary, // Color for selected tab label
-          unselectedLabelColor: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.7), // Slightly dimmer for unselected
+          indicatorColor: Theme.of(context).colorScheme.primary,
+          labelColor: Theme.of(context).colorScheme.onSurface,
+          unselectedLabelColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
           // Update tabs
           tabs: const [
             Tab(text: 'Work Time'),
@@ -751,6 +751,7 @@ class StatisticsScreenState extends State<StatisticsScreen>
                                 'Night': stats['nightShifts'] ?? 0,
                                 'Spare': stats['spareShifts'] ?? 0,
                                 'Bogey': stats['bogeyShifts'] ?? 0,
+                                'Universal/Euro': stats['uniEuroShifts'] ?? 0,
                                 'Overtime': stats['overtimeShifts'] ?? 0,
                               },
                             ),
@@ -777,9 +778,9 @@ class StatisticsScreenState extends State<StatisticsScreen>
           
           SizedBox(height: sizes['cardSpacing']!),
           
-          // Earnings Calculator
+          // Spread Earnings Estimate
           _buildExpandableSection(
-            title: 'Earnings Calculator',
+            title: 'Spread Earnings Estimate',
             subtitle: 'Estimated earnings based on spread pay',
             icon: Icons.calculate,
             children: [
@@ -1160,14 +1161,15 @@ class StatisticsScreenState extends State<StatisticsScreen>
     return Map.fromEntries(sortedEntries);
   }
 
-  Future<Map<String, dynamic>> _calculateSummaryStatistics() async {
+  Future<Map<String, dynamic>> _calculateSummaryStatistics([String? timeRangeOverride]) async {
     final DateTime now = DateTime.now();
     DateTime startDate;
     DateTime endDate;
-    
+    final effectiveTimeRange = timeRangeOverride ?? _timeRange;
+
     // Determine date range based on selected time range
     // Statistics always use Sunday-Saturday weeks regardless of calendar display preference
-    switch (_timeRange) {
+    switch (effectiveTimeRange) {
       case 'This Week':
         // Start from Sunday of current week
         final firstDayOfWeek = now.subtract(Duration(days: now.weekday % 7));
@@ -1204,6 +1206,7 @@ class StatisticsScreenState extends State<StatisticsScreen>
     int nightShifts = 0;
     int spareShifts = 0;
     int bogeyShifts = 0;
+    int uniEuroShifts = 0;
     int bankHolidayShifts = 0;
     int restDaysWorked = 0;
     int overtimeShifts = 0; // Add overtime shifts counter
@@ -1234,22 +1237,31 @@ class StatisticsScreenState extends State<StatisticsScreen>
             restDaysWorked++;
           } else {
             totalShifts++;
-            final shiftCode = event.title;
-            if (shiftCode.startsWith('SP') || shiftCode == '22B/01') {
+            final rawTitle = event.title;
+            final shiftCode = rawTitle.startsWith('UNI:') ? rawTitle.substring(4) : rawTitle;
+            final startHour = event.startTime.hour;
+            final startMinute = event.startTime.minute;
+
+            // Priority order: Universal/Euro > Spare > Bogey > Night > Early > Late > Relief
+            if (shiftCode.startsWith('307') || shiftCode.startsWith('807')) {
+              uniEuroShifts++;
+            } else if (shiftCode.startsWith('SP') || shiftCode == '22B/01') {
               spareShifts++;
             } else if (shiftCode.endsWith('X')) {
               bogeyShifts++;
+            } else if (startHour >= 19) {
+              nightShifts++;
+            } else if (startHour >= 4 && startHour < 7) {
+              earlyShifts++;
+            } else if (startHour > 14 || (startHour == 14 && startMinute >= 30)) {
+              lateShifts++;
+            } else if (startHour >= 11 && startHour < 14) {
+              reliefShifts++;
+            } else if (startHour < 4) {
+              nightShifts++;
             } else {
-              final startHour = event.startTime.hour;
-              if (startHour >= 4 && startHour < 10) {
-                earlyShifts++;
-              } else if (startHour >= 10 && startHour < 14) {
-                reliefShifts++;
-              } else if (startHour >= 14 && startHour < 19) {
-                lateShifts++;
-              } else if (startHour >= 19 || startHour < 4) {
-                nightShifts++;
-              }
+              // 7:00-10:59 (mid-morning) - no specific rule, count as early for completeness
+              earlyShifts++;
             }
           }
         }
@@ -1268,6 +1280,7 @@ class StatisticsScreenState extends State<StatisticsScreen>
       'nightShifts': nightShifts,
       'spareShifts': spareShifts,
       'bogeyShifts': bogeyShifts,
+      'uniEuroShifts': uniEuroShifts,
       'bankHolidayShifts': bankHolidayShifts,
       'restDaysWorked': restDaysWorked,
       'overtimeShifts': overtimeShifts, // Add overtime shifts to returned data
@@ -3131,6 +3144,7 @@ class StatisticsScreenState extends State<StatisticsScreen>
         'Night': shiftTypeStats['nightShifts'] ?? 0,
         'Spare': shiftTypeStats['spareShifts'] ?? 0,
         'Bogey': shiftTypeStats['bogeyShifts'] ?? 0,
+        'Universal/Euro': shiftTypeStats['uniEuroShifts'] ?? 0,
         'Overtime': shiftTypeStats['overtimeShifts'] ?? 0,
       };
       

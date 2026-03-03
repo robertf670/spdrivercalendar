@@ -737,7 +737,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
             // Rest day swap - swap work day with rest day in same week
             if (_startDate != null)
               TextButton(
-                child: const Text('Swap rest day'),
+                child: const Text('Swap Rest Day'),
                 onPressed: () {
                   Navigator.of(context).pop();
                   _showRestDaySwapDialog();
@@ -8593,11 +8593,12 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                 child: const Icon(Icons.wb_sunny, color: Colors.orange, size: 20),
               ),
               const SizedBox(width: 12),
-              const Expanded(
+              Expanded(
                 child: Text(
                   'Select Duration',
                   style: TextStyle(
                     fontSize: 16,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
               ),
@@ -8631,13 +8632,15 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                         Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: Colors.orange.shade100,
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? Colors.orange.shade900.withValues(alpha: 0.5)
+                                : Colors.orange.shade100,
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: const Icon(Icons.calendar_view_week, color: Colors.orange),
                         ),
                         const SizedBox(width: 12),
-                        const Expanded(
+                        Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -8646,14 +8649,15 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                                 style: TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.bold,
+                                  color: Theme.of(context).colorScheme.onSurface,
                                 ),
                               ),
-                              SizedBox(height: 4),
+                              const SizedBox(height: 4),
                               Text(
                                 'Sunday to Saturday (7 days)',
                                 style: TextStyle(
                                   fontSize: 12,
-                                  color: Colors.grey,
+                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                                 ),
                               ),
                             ],
@@ -8690,13 +8694,15 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                         Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: Colors.orange.shade100,
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? Colors.orange.shade900.withValues(alpha: 0.5)
+                                : Colors.orange.shade100,
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: const Icon(Icons.calendar_view_month, color: Colors.orange),
                         ),
                         const SizedBox(width: 12),
-                        const Expanded(
+                        Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -8705,14 +8711,15 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                                 style: TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.bold,
+                                  color: Theme.of(context).colorScheme.onSurface,
                                 ),
                               ),
-                              SizedBox(height: 4),
+                              const SizedBox(height: 4),
                               Text(
                                 'Sunday to Saturday (14 days)',
                                 style: TextStyle(
                                   fontSize: 12,
-                                  color: Colors.grey,
+                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                                 ),
                               ),
                             ],
@@ -9276,18 +9283,21 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                       Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: Colors.green.shade50,
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.green.shade900.withValues(alpha: 0.4)
+                              : Colors.green.shade50,
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: const Icon(Icons.event, color: Colors.green),
+                        child: Icon(Icons.event, color: Colors.green.shade400),
                       ),
                       const SizedBox(width: 12),
-                      const Expanded(
+                      Expanded(
                         child: Text(
                           'Select Holiday Dates',
                           style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
+                            color: Theme.of(context).colorScheme.onSurface,
                           ),
                         ),
                       ),
@@ -9315,9 +9325,10 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                       ),
                       Text(
                         DateFormat('MMMM yyyy').format(currentMonth),
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w500,
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                       ),
                       IconButton(
@@ -9361,18 +9372,28 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                     child: Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: Colors.green.shade50,
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.green.shade900.withValues(alpha: 0.4)
+                            : Colors.green.shade50,
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Row(
                         children: [
-                          Icon(Icons.info_outline, color: Colors.green.shade700, size: 20),
+                          Icon(
+                            Icons.info_outline,
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? Colors.green.shade300
+                                : Colors.green.shade700,
+                            size: 20,
+                          ),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
                               '${selectedDates.length} day${selectedDates.length == 1 ? '' : 's'} selected',
                               style: TextStyle(
-                                color: Colors.green.shade700,
+                                color: Theme.of(context).brightness == Brightness.dark
+                                    ? Colors.green.shade300
+                                    : Colors.green.shade700,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
@@ -9500,9 +9521,10 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                     child: Center(
                       child: Text(
                         day,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 12,
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                       ),
                     ),
@@ -9533,6 +9555,12 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
             final maxDate = DateTime.now().add(const Duration(days: 365));
             final isWithinRange = !date.isBefore(minDate) && !date.isAfter(maxDate);
             
+            final isDark = Theme.of(context).brightness == Brightness.dark;
+            final defaultTextColor = Theme.of(context).colorScheme.onSurface;
+            final mutedTextColor = isDark
+                ? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5)
+                : Colors.grey.shade600;
+
             return GestureDetector(
               onTap: isWithinRange && isCurrentMonth
                   ? () => onDateTapped(date)
@@ -9542,7 +9570,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                   color: isSelected
                       ? Colors.green
                       : isToday
-                          ? Colors.green.shade100
+                          ? (isDark ? Colors.green.shade900.withValues(alpha: 0.5) : Colors.green.shade100)
                           : Colors.transparent,
                   shape: BoxShape.circle,
                   border: isToday && !isSelected
@@ -9556,10 +9584,10 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                       color: isSelected
                           ? Colors.white
                           : !isCurrentMonth
-                              ? Colors.grey.shade300
+                              ? mutedTextColor
                               : !isWithinRange
-                                  ? Colors.grey.shade400
-                                  : Colors.black87,
+                                  ? mutedTextColor
+                                  : defaultTextColor,
                       fontWeight: isSelected || isToday
                           ? FontWeight.bold
                           : FontWeight.normal,
@@ -9600,18 +9628,21 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                       Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: Colors.purple.shade50,
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.purple.shade900.withValues(alpha: 0.4)
+                              : Colors.purple.shade50,
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: const Icon(Icons.money_off, color: Colors.purple),
+                        child: Icon(Icons.money_off, color: Colors.purple.shade400),
                       ),
                       const SizedBox(width: 12),
-                      const Expanded(
+                      Expanded(
                         child: Text(
                           'Select Unpaid Leave Dates',
                           style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
+                            color: Theme.of(context).colorScheme.onSurface,
                           ),
                         ),
                       ),
@@ -9639,9 +9670,10 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                       ),
                       Text(
                         DateFormat('MMMM yyyy').format(currentMonth),
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w500,
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                       ),
                       IconButton(
@@ -9685,18 +9717,28 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                     child: Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: Colors.purple.shade50,
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.purple.shade900.withValues(alpha: 0.4)
+                            : Colors.purple.shade50,
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Row(
                         children: [
-                          Icon(Icons.info_outline, color: Colors.purple.shade700, size: 20),
+                          Icon(
+                            Icons.info_outline,
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? Colors.purple.shade300
+                                : Colors.purple.shade700,
+                            size: 20,
+                          ),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
                               '${selectedDates.length} day${selectedDates.length == 1 ? '' : 's'} selected',
                               style: TextStyle(
-                                color: Colors.purple.shade700,
+                                color: Theme.of(context).brightness == Brightness.dark
+                                    ? Colors.purple.shade300
+                                    : Colors.purple.shade700,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
@@ -9819,12 +9861,13 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                         child: Icon(Icons.event_available, color: dayInLieuColor),
                       ),
                       const SizedBox(width: 12),
-                      const Expanded(
+                      Expanded(
                         child: Text(
                           'Select Day In Lieu Dates',
                           style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
+                            color: Theme.of(context).colorScheme.onSurface,
                           ),
                         ),
                       ),
@@ -9928,9 +9971,10 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                       ),
                       Text(
                         DateFormat('MMMM yyyy').format(currentMonth),
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w500,
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                       ),
                       IconButton(

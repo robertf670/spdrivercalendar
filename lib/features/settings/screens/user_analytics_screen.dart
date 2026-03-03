@@ -39,7 +39,14 @@ class UserAnalyticsScreenState extends State<UserAnalyticsScreen> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          _analyticsStats = {'activeToday': 0, 'activeThisWeek': 0};
+          _analyticsStats = {
+            'activeTodayWeb': 0,
+            'activeThisWeekWeb': 0,
+            'activeTodayMobile': 0,
+            'activeThisWeekMobile': 0,
+            'activeTodayTotal': 0,
+            'activeThisWeekTotal': 0,
+          };
           _isLoading = false;
         });
       }
@@ -69,84 +76,24 @@ class UserAnalyticsScreenState extends State<UserAnalyticsScreen> {
           ),
         ),
         child: SafeArea(
-          child: Padding(
+          child: SingleChildScrollView(
             padding: const EdgeInsets.all(16.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Header
-                Card(
-                  elevation: 2,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.analytics,
-                              color: theme.colorScheme.primary,
-                              size: 28,
-                            ),
-                            const SizedBox(width: 12),
-                            Text(
-                              'User Analytics',
-                              style: theme.textTheme.headlineSmall?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Track app usage and user engagement anonymously',
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 24),
-                // Status card
-                _buildStatusCard(),
-                const SizedBox(height: 16),
-                
                 // Quick stats with real data
                 _buildQuickStatsCard(),
                 const SizedBox(height: 16),
                 
                 // Actions
-                Expanded(
-                  child: Column(
-                    children: [
+                Column(
+                  children: [
                       _buildActionCard(
                         title: 'View Full Analytics Dashboard',
                         subtitle: 'Open Firebase Console for detailed insights',
                         icon: Icons.dashboard,
                         color: Colors.blue,
                         onTap: _openFirebaseConsole,
-                      ),
-                      const SizedBox(height: 12),
-                      _buildActionCard(
-                        title: 'Privacy Information',
-                        subtitle: 'How user data is collected and protected',
-                        icon: Icons.privacy_tip,
-                        color: Colors.orange,
-                        onTap: _showPrivacyInfo,
-                      ),
-                      const SizedBox(height: 12),
-                      _buildActionCard(
-                        title: 'Test Analytics Event',
-                        subtitle: 'Send a test event to verify analytics',
-                        icon: Icons.bug_report,
-                        color: Colors.purple,
-                        onTap: _sendTestEvent,
                       ),
                       const SizedBox(height: 12),
                       _buildActionCard(
@@ -166,60 +113,9 @@ class UserAnalyticsScreenState extends State<UserAnalyticsScreen> {
                       ),
                     ],
                   ),
-                ),
               ],
             ),
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatusCard() {
-    final theme = Theme.of(context);
-    
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.primary.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(
-                Icons.check_circle,
-                color: theme.colorScheme.primary,
-                size: 24,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Analytics Active',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  Text(
-                    'User analytics are being collected anonymously',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
         ),
       ),
     );
@@ -260,22 +156,72 @@ class UserAnalyticsScreenState extends State<UserAnalyticsScreen> {
               children: [
                 Expanded(
                   child: _buildStatItem(
-                    'Active Today',
+                    'Web Today',
                     _isLoading 
                         ? '...' 
-                        : '${_analyticsStats?['activeToday'] ?? 0}',
-                    Icons.today,
+                        : '${_analyticsStats?['activeTodayWeb'] ?? 0}',
+                    Icons.public,
+                    Colors.teal,
+                  ),
+                ),
+                Expanded(
+                  child: _buildStatItem(
+                    'Web This Week',
+                    _isLoading 
+                        ? '...' 
+                        : '${_analyticsStats?['activeThisWeekWeb'] ?? 0}',
+                    Icons.language,
+                    Colors.indigo,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildStatItem(
+                    'Mobile Today',
+                    _isLoading 
+                        ? '...' 
+                        : '${_analyticsStats?['activeTodayMobile'] ?? 0}',
+                    Icons.smartphone,
                     Colors.blue,
                   ),
                 ),
                 Expanded(
                   child: _buildStatItem(
-                    'This Week',
+                    'Mobile This Week',
                     _isLoading 
                         ? '...' 
-                        : '${_analyticsStats?['activeThisWeek'] ?? 0}',
-                    Icons.calendar_view_week,
+                        : '${_analyticsStats?['activeThisWeekMobile'] ?? 0}',
+                    Icons.phone_android,
                     Colors.green,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildStatItem(
+                    'Total Today',
+                    _isLoading 
+                        ? '...' 
+                        : '${_analyticsStats?['activeTodayTotal'] ?? 0}',
+                    Icons.people,
+                    Colors.deepPurple,
+                  ),
+                ),
+                Expanded(
+                  child: _buildStatItem(
+                    'Total This Week',
+                    _isLoading 
+                        ? '...' 
+                        : '${_analyticsStats?['activeThisWeekTotal'] ?? 0}',
+                    Icons.groups,
+                    Colors.purple,
                   ),
                 ),
               ],
@@ -481,93 +427,6 @@ class UserAnalyticsScreenState extends State<UserAnalyticsScreen> {
       }
     } catch (e) {
       _showErrorDialog('Error', 'Failed to open Firebase Console: $e');
-    }
-  }
-
-  void _showPrivacyInfo() {
-    final theme = Theme.of(context);
-    
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Row(
-          children: [
-            Icon(Icons.privacy_tip, color: Colors.orange),
-            const SizedBox(width: 8),
-            const Text('Privacy Information'),
-          ],
-        ),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Firebase Analytics Privacy:',
-                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              Text('• No personal information is collected', style: theme.textTheme.bodyMedium),
-              Text('• Anonymous user IDs are generated automatically', style: theme.textTheme.bodyMedium),
-              Text('• Users can opt out of analytics', style: theme.textTheme.bodyMedium),
-              Text('• Data is aggregated and anonymized', style: theme.textTheme.bodyMedium),
-              Text('• GDPR compliant', style: theme.textTheme.bodyMedium),
-              const SizedBox(height: 16),
-              Text(
-                'Data Collected:',
-                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              Text('• App launches and sessions', style: theme.textTheme.bodyMedium),
-              Text('• Screen views and navigation patterns', style: theme.textTheme.bodyMedium),
-              Text('• Device type and OS version', style: theme.textTheme.bodyMedium),
-              Text('• Geographic region (country level)', style: theme.textTheme.bodyMedium),
-              Text('• App crashes (for debugging)', style: theme.textTheme.bodyMedium),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _sendTestEvent() async {
-    final theme = Theme.of(context);
-    
-    try {
-      await analytics.logEvent(
-        name: 'admin_test_event',
-        parameters: {
-          'test_parameter': 'analytics_working',
-          'timestamp': DateTime.now().millisecondsSinceEpoch,
-          'admin_user': 'true',
-        },
-      );
-      
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                Icon(Icons.check_circle, color: theme.colorScheme.onPrimary),
-                const SizedBox(width: 8),
-                const Text('Test event sent successfully!'),
-              ],
-            ),
-            backgroundColor: theme.colorScheme.primary,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        _showErrorDialog('Error', 'Failed to send test event: $e');
-      }
     }
   }
 

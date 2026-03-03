@@ -212,20 +212,22 @@ class EventSearchService {
     return filtered;
   }
   
-  // Helper methods to determine shift type
+  // Helper methods to determine shift type (matches statistics screen logic)
+  // Early: 4:00-6:59 | Relief: 11:00-13:59 | Late: 14:30+ | Night: 19:00+ or <4:00
   static bool _isEarlyShift(TimeOfDay time) {
     final hour = time.hour;
-    return hour >= 4 && hour < 10;
+    return hour >= 4 && hour < 7;
   }
   
   static bool _isReliefShift(TimeOfDay time) {
     final hour = time.hour;
-    return hour >= 10 && hour < 14;
+    return hour >= 11 && hour < 14;
   }
   
   static bool _isLateShift(TimeOfDay time) {
     final hour = time.hour;
-    return hour >= 14 && hour < 19;
+    final minute = time.minute;
+    return hour > 14 || (hour == 14 && minute >= 30);
   }
   
   static bool _isNightShift(TimeOfDay time) {
