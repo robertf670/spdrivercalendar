@@ -58,6 +58,8 @@ class _EventCardState extends State<EventCard> {
   String? dutyRouteInfo; // For duty route information (PZ1/PZ4)
   String? _departTimeStr;
   String? _finishTimeStr;
+  String? _reportTimeStr;  // For 807/07: Report line above main
+  String? _signoffTimeStr; // For 807/06: Sign Off line below main
   bool isLoading = true;
   List<Map<String, String?>> _allDutyDetails = [];
   final Map<String, bool> _busTrackingLoading = {};
@@ -65,6 +67,9 @@ class _EventCardState extends State<EventCard> {
   // Explicit state tracking for bus assignments
   String? _firstHalfBus;
   String? _secondHalfBus;
+
+  /// Prevents repeated load/save of location data (fixes loop when clicking a duty)
+  String? _loadedLocationForEventId;
 
   @override
   void initState() {
@@ -184,7 +189,27 @@ class _EventCardState extends State<EventCard> {
       });
       return;
     }
-    
+
+    // If we've already loaded location data for this event, skip (prevents loop)
+    if (_loadedLocationForEventId == widget.event.id) {
+      return;
+    }
+    _loadedLocationForEventId = widget.event.id;
+
+    // If event already has location data, use it and skip CSV load/save
+    if (widget.event.startLocation != null || widget.event.finishLocation != null ||
+        widget.event.startBreakLocation != null || widget.event.finishBreakLocation != null) {
+      if (mounted) {
+        setState(() {
+          startLocation = widget.event.startLocation;
+          finishLocation = widget.event.finishLocation;
+          startBreakLocation = widget.event.startBreakLocation;
+          finishBreakLocation = widget.event.finishBreakLocation;
+        });
+      }
+      return;
+    }
+
     try {
       // Extract the shift code
       String shiftCode;
@@ -271,7 +296,6 @@ class _EventCardState extends State<EventCard> {
       final filename = RosterService.getShiftFilename(zoneNumber, dayOfWeekForFilename, widget.event.startDate);
       
       // Load the CSV file
-      debugPrint('Loading location data for shift: $shiftCode from file: $filename');
       final file = await rootBundle.loadString('assets/$filename');
       final lines = file.split('\n');
       
@@ -285,7 +309,6 @@ class _EventCardState extends State<EventCard> {
         final shift = parts[0];
         if (shift == shiftCode) {
           shiftFound = true;
-          debugPrint('Found shift $shiftCode in CSV');
           // Found the matching shift, get report/finish locations and times
           final reportLocation = parts.length > 4 ? parts[4].trim() : '';
           final finishLoc = parts.length > 11 ? parts[11].trim() : '';
@@ -339,13 +362,6 @@ class _EventCardState extends State<EventCard> {
           // Save location data directly to Event (same as routes)
           if (mappedStartLocation != null || mappedFinishLocation != null || 
               mappedStartBreakLocation != null || mappedFinishBreakLocation != null) {
-            debugPrint('Saving location data for ${widget.event.title}:');
-            debugPrint('  startLocation: $mappedStartLocation');
-            debugPrint('  finishLocation: $mappedFinishLocation');
-            debugPrint('  startBreakLocation: $mappedStartBreakLocation');
-            debugPrint('  finishBreakLocation: $mappedFinishBreakLocation');
-            debugPrint('  dutyStartTime: $departFormatted');
-            
             try {
               final updatedEvent = widget.event.copyWith(
                 startLocation: mappedStartLocation,
@@ -356,14 +372,11 @@ class _EventCardState extends State<EventCard> {
               );
               
               await EventService.updateEvent(widget.event, updatedEvent);
-              debugPrint('Successfully saved location data');
               // Don't call widget.onEdit here - it causes the event card to reopen
               // The location data is saved and will be available on next load
             } catch (e) {
-              debugPrint('Error saving location data: $e');
+              // Ignore save errors
             }
-          } else {
-            debugPrint('No location data found for $shiftCode');
           }
           
           return;
@@ -371,7 +384,7 @@ class _EventCardState extends State<EventCard> {
       }
       
       if (!shiftFound) {
-        debugPrint('Shift $shiftCode not found in CSV file $filename');
+        // Shift not in CSV - leave locations unset
       }
       
       // If no match found
@@ -450,6 +463,8 @@ class _EventCardState extends State<EventCard> {
       String? finishLoc;
       String? breakStartLoc;
       String? breakFinishLoc;
+      String? signoffTimeStr;  // For 807/06
+      String? reportTimeStr;   // For 807/07
       
       // Try 7DAYs file first
       final file7Days = await rootBundle.loadString('assets/UNI_7DAYs.csv');
@@ -531,6 +546,18 @@ class _EventCardState extends State<EventCard> {
                 workTimeStr = '${timeParts[0]}h ${timeParts[1]}m';
               }
             }
+          }
+          
+          // Special display for 807/06 and 807/07 (UNI 7DAYs only)
+          if (shift == '807/06') {
+            final signoffRaw = parts.length > 12 ? parts[12].trim() : '';
+            signoffTimeStr = signoffRaw.isNotEmpty && signoffRaw.toLowerCase() != 'nan'
+                ? _formatTimeWithoutSeconds(signoffRaw) : null;
+          } else if (shift == '807/07') {
+            final departTime = parts.length > 3 ? parts[3].trim() : '';
+            reportTimeStr = _formatTimeWithoutSeconds(reportTime);
+            startTime = _formatTimeWithoutSeconds(departTime);
+            reportLocation = 'PK Gate St';
           }
           
           break;
@@ -644,6 +671,8 @@ class _EventCardState extends State<EventCard> {
           finishBreakLocation = mappedFinishBreakLocation;
           workTime = workTimeStr;
           routeInfo = null;
+          _signoffTimeStr = signoffTimeStr;
+          _reportTimeStr = reportTimeStr;
           
           // Set display times
           if (startTime != null && endTime != null) {
@@ -662,13 +691,6 @@ class _EventCardState extends State<EventCard> {
         // Save even if only some location fields are available
         if (mappedStartLocation != null || mappedFinishLocation != null || 
             mappedStartBreakLocation != null || mappedFinishBreakLocation != null) {
-          // Debug: Print what we're trying to save
-          debugPrint('Saving location data for ${widget.event.title}:');
-          debugPrint('  startLocation: $mappedStartLocation');
-          debugPrint('  finishLocation: $mappedFinishLocation');
-          debugPrint('  startBreakLocation: $mappedStartBreakLocation');
-          debugPrint('  finishBreakLocation: $mappedFinishBreakLocation');
-          
           // Use a small delay to ensure setState completes
           await Future.delayed(const Duration(milliseconds: 100));
           
@@ -681,18 +703,11 @@ class _EventCardState extends State<EventCard> {
               finishBreakLocation: mappedFinishBreakLocation,
             );
             
-            // Debug: Print the event data before saving
-            debugPrint('Event before save: startLocation=${widget.event.startLocation}, finishLocation=${widget.event.finishLocation}');
-            debugPrint('Event after copyWith: startLocation=${updatedEvent.startLocation}, finishLocation=${updatedEvent.finishLocation}');
-            
             // Save the event with location data
             await EventService.updateEvent(widget.event, updatedEvent);
-            
-            debugPrint('Successfully saved location data');
             // Don't call widget.onEdit here - it causes the event card to reopen
             // The location data is saved and will be available on next load
           } catch (e) {
-            debugPrint('Error updating event with location data: $e');
             // If update fails, try addEvent as fallback
             try {
               final updatedEvent = widget.event.copyWith(
@@ -702,24 +717,15 @@ class _EventCardState extends State<EventCard> {
                 finishBreakLocation: mappedFinishBreakLocation,
               );
               await EventService.addEvent(updatedEvent);
-              debugPrint('Successfully added event with location data');
-              // Don't call widget.onEdit here - it causes the event card to reopen
             } catch (addError) {
-              debugPrint('Failed to save location data: $addError');
+              // Ignore save errors
             }
           }
-        } else {
-          debugPrint('No location data to save for ${widget.event.title}');
-          debugPrint('  reportLocation: $reportLocation');
-          debugPrint('  finishLoc: $finishLoc');
-          debugPrint('  breakStartLoc: $breakStartLoc');
-          debugPrint('  breakFinishLoc: $breakFinishLoc');
         }
       }
       
     } catch (e) {
-      // Failed to load Bus Check shift data, ignore
-      debugPrint('Error loading location data for $shiftCode: $e');
+      // Failed to load UNI shift data, ignore
     }
   }
 
@@ -2003,32 +2009,7 @@ class _EventCardState extends State<EventCard> {
               // MODIFIED: Depart - Finish time with locations (PZ) or Start-End time (others)
               // Don't show this row for overtime shifts, and only show for work shifts
               if (!widget.event.title.contains('(OT)') && widget.event.isWorkShift) ...[
-                Row(
-                  children: [
-                    Icon(
-                      Icons.route,
-                      size: 16,
-                      color: Theme.of(context).brightness == Brightness.dark
-                          ? Colors.white
-                          : Colors.black,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: RichText(
-                        overflow: TextOverflow.ellipsis,
-                        text: TextSpan(
-                          style: TextStyle(
-                            color: Theme.of(context).brightness == Brightness.dark
-                                ? Colors.white
-                                : Colors.black,
-                            fontSize: 14,
-                          ),
-                          children: _buildTimeDisplay(),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+                _buildRouteTimeRow(),
                 const SizedBox(height: 3.0), // Reduced gap - route/location and breaks are related
               ],
               // MODIFIED: Break times row (if available AND NOT BusCheck AND is work shift AND NOT training shift AND NOT spare shift)
@@ -6068,6 +6049,86 @@ class _EventCardState extends State<EventCard> {
         ],
       ),
     );
+  }
+
+  /// Builds the route/time row. For 807/06 adds Sign Off line below; for 807/07 adds Report line above.
+  Widget _buildRouteTimeRow() {
+    final baseTitle = widget.event.title
+        .replaceAll(RegExp(r'[AB]? \(OT\)$'), '')
+        .trim();
+    final is807_06 = baseTitle == '807/06';
+    final is807_07 = baseTitle == '807/07';
+
+    final textStyle = TextStyle(
+      color: Theme.of(context).brightness == Brightness.dark
+          ? Colors.white
+          : Colors.black,
+      fontSize: 14,
+    );
+    final mainRow = Row(
+      children: [
+        Icon(
+          Icons.route,
+          size: 16,
+          color: Theme.of(context).brightness == Brightness.dark
+              ? Colors.white
+              : Colors.black,
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: RichText(
+            overflow: TextOverflow.ellipsis,
+            text: TextSpan(
+              style: textStyle,
+              children: _buildTimeDisplay(),
+            ),
+          ),
+        ),
+      ],
+    );
+
+    final iconColor = Theme.of(context).brightness == Brightness.dark
+        ? Colors.white
+        : Colors.black;
+
+    if (is807_07 && _reportTimeStr != null) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.schedule, size: 16, color: iconColor),
+              const SizedBox(width: 8),
+              Text(
+                'Report: $_reportTimeStr',
+                style: textStyle.copyWith(fontWeight: FontWeight.w500),
+              ),
+            ],
+          ),
+          const SizedBox(height: 2),
+          mainRow,
+        ],
+      );
+    } else if (is807_06 && _signoffTimeStr != null) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          mainRow,
+          const SizedBox(height: 2),
+          Row(
+            children: [
+              Icon(Icons.schedule, size: 16, color: iconColor),
+              const SizedBox(width: 8),
+              Text(
+                'Sign Off: $_signoffTimeStr',
+                style: textStyle.copyWith(fontWeight: FontWeight.w500),
+              ),
+            ],
+          ),
+        ],
+      );
+    }
+    return mainRow;
   }
 
   // Method to build the appropriate time display based on shift type

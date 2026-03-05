@@ -6,6 +6,7 @@ import 'package:spdrivercalendar/core/services/storage_service.dart';
 import 'package:spdrivercalendar/features/calendar/services/roster_service.dart';
 import 'package:spdrivercalendar/features/calendar/services/event_service.dart';
 import 'package:spdrivercalendar/features/calendar/services/holiday_service.dart';
+import 'package:spdrivercalendar/features/calendar/services/workout_highlight_service.dart';
 import 'package:googleapis/calendar/v3.dart' as calendar;
 import 'package:spdrivercalendar/services/bus_tracking_service.dart';
 import 'package:spdrivercalendar/features/calendar/widgets/event_card.dart';
@@ -286,15 +287,33 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
       if (needsUpdate) {
         setState(() {});
         if (_highlightWorkoutDays) {
-          _loadWorkoutDatesForMonth(_focusedDay);
+          _loadWorkoutDates();
         } else {
           _workoutDates = {};
         }
+      } else if (_highlightWorkoutDays) {
+        // Reload workout dates when returning (e.g. after Settings → Refresh Workout Highlights)
+        _loadWorkoutDates();
       }
     }
   }
 
-  /// Load workout dates for the visible month (async); used when highlight workout is enabled.
+  /// Load workout dates - prefers cached full-scan data (from Settings → Refresh Workout Highlights),
+  /// falls back to month-only loading for the focused month when no cache exists.
+  Future<void> _loadWorkoutDates() async {
+    if (!_highlightWorkoutDays) return;
+
+    final cached = await WorkoutHighlightService.loadWorkoutDatesCache();
+    if (cached != null && mounted) {
+      setState(() => _workoutDates = cached);
+      return;
+    }
+
+    setState(() => _workoutDates = null); // Mark as loading
+    await _loadWorkoutDatesForMonth(_focusedDay);
+  }
+
+  /// Load workout dates for the visible month only (fallback when no cache).
   Future<void> _loadWorkoutDatesForMonth(DateTime month) async {
     if (!_highlightWorkoutDays) return;
     
@@ -1118,11 +1137,6 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                       'Uni/Euro',
                       'Bus Check',
                     ]);
-                    
-                    // Add Jamestown Road only for Mon-Fri
-                    if (dayOfWeek != 'Saturday' && dayOfWeek != 'Sunday') {
-                      zones.add('Jamestown Road');
-                    }
                     
                     // Add Training only for Mon-Sat (not Sunday)
                     if (dayOfWeek != 'Sunday') {
@@ -1991,7 +2005,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
     }
 
     if (existingSwap != null) {
-      final swap = existingSwap!;
+      final swap = existingSwap;
       final remove = await showDialog<bool>(
         context: context,
         builder: (ctx) => AlertDialog(
@@ -10290,9 +10304,9 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
     try {
       await EventService.preloadMonth(focusedDay);
 
-      // Load workout dates for highlight if enabled
+      // Load workout dates for highlight if enabled (uses cache if available)
       if (_highlightWorkoutDays) {
-        _loadWorkoutDatesForMonth(focusedDay);
+        _loadWorkoutDates();
       } else if (mounted) {
         _workoutDates = {};
       }

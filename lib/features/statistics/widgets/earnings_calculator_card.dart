@@ -172,9 +172,11 @@ class _EarningsCalculatorCardState extends State<EarningsCalculatorCard> {
                 ),
               ),
             ] else ...[
-              const Text(
+              Text(
                 'Unable to calculate spread pay. Please select a year level.',
-                style: TextStyle(color: Colors.grey),
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                ),
               ),
             ],
             const SizedBox(height: 8),

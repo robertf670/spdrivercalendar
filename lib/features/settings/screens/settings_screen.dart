@@ -16,6 +16,7 @@ import 'package:intl/intl.dart'; // For DateFormat
 import 'package:spdrivercalendar/features/settings/widgets/color_customization_widget.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:spdrivercalendar/features/calendar/services/event_service.dart';
+import 'package:spdrivercalendar/features/calendar/services/workout_highlight_service.dart';
 import 'package:spdrivercalendar/services/pay_scale_service.dart';
 import '../../../config/app_config.dart';
 import 'package:spdrivercalendar/services/days_in_lieu_service.dart';
@@ -414,6 +415,7 @@ class SettingsScreenState extends State<SettingsScreen> {
                       _buildOvernightDutiesToggle(),
                       _buildDutyCodesToggle(),
                       _buildHighlightWorkoutDaysToggle(),
+                      _buildRefreshWorkoutHighlightsButton(),
                       _buildAnimatedSelectedDayToggle(),
                     ],
                   ),
@@ -2016,6 +2018,77 @@ class SettingsScreenState extends State<SettingsScreen> {
         onChanged: _toggleHighlightWorkoutDays,
       ),
     );
+  }
+
+  Widget _buildRefreshWorkoutHighlightsButton() {
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 4.0),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppTheme.borderRadius),
+      ),
+      child: ListTile(
+        leading: Icon(
+          Icons.refresh,
+          color: _highlightWorkoutDays ? AppTheme.primaryColor : Theme.of(context).disabledColor,
+        ),
+        title: const Text('Refresh Workout Highlights'),
+        subtitle: Text(
+          _highlightWorkoutDays
+              ? 'Scan all duties across all months and highlight workout days'
+              : 'Enable Highlight Workout Days above to use this',
+        ),
+        trailing: const Icon(Icons.chevron_right),
+        enabled: _highlightWorkoutDays,
+        onTap: _highlightWorkoutDays ? _refreshWorkoutHighlights : null,
+      ),
+    );
+  }
+
+  Future<void> _refreshWorkoutHighlights() async {
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const AlertDialog(
+        title: Text('Scanning Duties'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 16),
+            Text('Checking all duties for workout days...'),
+          ],
+        ),
+      ),
+    );
+
+    try {
+      final workoutDates =
+          await WorkoutHighlightService.computeAndCacheAllWorkoutDates();
+
+      if (!context.mounted) return;
+      navigator.pop();
+
+      scaffoldMessenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            'Found ${workoutDates.length} workout day${workoutDates.length == 1 ? '' : 's'}. Calendar highlights updated.',
+          ),
+          backgroundColor: AppTheme.primaryColor,
+        ),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      navigator.pop();
+      scaffoldMessenger.showSnackBar(
+        SnackBar(
+          content: Text('Error scanning duties: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   Widget _buildAnimatedSelectedDayToggle() {

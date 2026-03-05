@@ -142,6 +142,18 @@ class StatisticsScreenState extends State<StatisticsScreen>
   bool _currentBlockLimitExceeded = false;
   bool _previousBlockLimitExceeded = false;
   bool _sundayStatsLoading = true; // Loading indicator flag
+
+  // 5-week cycle total hours (max 190h 4m)
+  Duration _cycleTotalHours = Duration.zero;
+  DateTime? _cycleStartDate;
+  DateTime? _cycleEndDate;
+  bool _cycleLimitExceeded = false;
+  Duration _previousCycleTotalHours = Duration.zero;
+  DateTime? _previousCycleStartDate;
+  DateTime? _previousCycleEndDate;
+  bool _previousCycleLimitExceeded = false;
+  String _selectedCyclePeriod = 'current'; // 'current' or 'previous'
+  bool _cycleStatsLoading = true;
   
   // Tab Controller - Make nullable
   TabController? _tabController;
@@ -165,6 +177,7 @@ class StatisticsScreenState extends State<StatisticsScreen>
   final Map<String, bool> _expandedSections = {
     'Work Time Statistics': false,
     'Spread Statistics': false,
+    '5-Week Cycle Total': false,
     'Rostered Sunday Pair Hours': false,
     'Shift Type Summary': false,
     'Break Statistics': false,
@@ -190,6 +203,7 @@ class StatisticsScreenState extends State<StatisticsScreen>
     setState(() {
       _expandedSections['Work Time Statistics'] = prefs.getBool('stats_expanded_work_time') ?? false;
       _expandedSections['Spread Statistics'] = prefs.getBool('stats_expanded_spread') ?? false;
+      _expandedSections['5-Week Cycle Total'] = prefs.getBool('stats_expanded_cycle_total') ?? false;
       _expandedSections['Rostered Sunday Pair Hours'] = prefs.getBool('stats_expanded_sunday_pair') ?? false;
       // Migrate Shift Type Distribution to Shift Type Summary if it was expanded
       final shiftDistributionExpanded = prefs.getBool('stats_expanded_shift_distribution') ?? false;
@@ -221,6 +235,9 @@ class StatisticsScreenState extends State<StatisticsScreen>
         break;
       case 'Spread Statistics':
         key = 'stats_expanded_spread';
+        break;
+      case '5-Week Cycle Total':
+        key = 'stats_expanded_cycle_total';
         break;
       case 'Rostered Sunday Pair Hours':
         key = 'stats_expanded_sunday_pair';
@@ -262,6 +279,8 @@ class StatisticsScreenState extends State<StatisticsScreen>
       _workTimeStatsFuture = _calculateWorkTimeStatistics();
       _spreadStatsFuture = _calculateSpreadStatistics();
       _summaryStatsFuture = _calculateSummaryStatistics();
+      _calculateSundayPairStatistics();
+      _calculateCycleTotalHours();
     }
   }
 
@@ -300,6 +319,7 @@ class StatisticsScreenState extends State<StatisticsScreen>
          _holidayDaysStatsFuture = _calculateHolidayDaysStatistics();
          _monthlyTrendFuture = _calculateMonthlyTrends();
          _calculateSundayPairStatistics();
+         _calculateCycleTotalHours();
        });
     }
   }
@@ -515,12 +535,12 @@ class StatisticsScreenState extends State<StatisticsScreen>
             onPressed: _exportStatistics,
           ),
         ],
-        // Add TabBar to the bottom of the AppBar
+        // Add TabBar to the bottom of the AppBar - use colours that work on AppBar background
         bottom: TabBar(
           controller: _tabController!, // Use null assertion
-          indicatorColor: Theme.of(context).colorScheme.primary,
-          labelColor: Theme.of(context).colorScheme.onSurface,
-          unselectedLabelColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+          indicatorColor: Theme.of(context).appBarTheme.foregroundColor ?? Theme.of(context).colorScheme.onPrimary,
+          labelColor: Theme.of(context).appBarTheme.foregroundColor ?? Theme.of(context).colorScheme.onPrimary,
+          unselectedLabelColor: (Theme.of(context).appBarTheme.foregroundColor ?? Theme.of(context).colorScheme.onPrimary).withValues(alpha: 0.8),
           // Update tabs
           tabs: const [
             Tab(text: 'Work Time'),
@@ -594,6 +614,70 @@ class StatisticsScreenState extends State<StatisticsScreen>
                 : SpreadStatisticsCard(
                     spreadStatsFuture: _spreadStatsFuture!,
                   ),
+            ],
+          ),
+          SizedBox(height: sizes['cardSpacing']!),
+          _buildExpandableSection(
+            title: '5-Week Cycle Total',
+            subtitle: '5-week block starts from long weekend Sunday (Sun–Mon rest). Limit: 190h 4m.',
+            icon: Icons.date_range,
+            children: [
+              const SizedBox(height: 8),
+              if (_cycleStatsLoading)
+                const Center(child: Padding(
+                  padding: EdgeInsets.symmetric(vertical: 16.0),
+                  child: CircularProgressIndicator(),
+                ))
+              else ...[
+                DropdownButtonFormField<String>(
+                  value: _selectedCyclePeriod,
+                  decoration: InputDecoration(
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  items: const [
+                    DropdownMenuItem(value: 'current', child: Text('Current 5-week period')),
+                    DropdownMenuItem(value: 'previous', child: Text('Previous 5-week period')),
+                  ],
+                  onChanged: (value) {
+                    if (value != null) {
+                      setState(() => _selectedCyclePeriod = value);
+                    }
+                  },
+                ),
+                const SizedBox(height: 12),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(
+                    _selectedCyclePeriod == 'current'
+                        ? (_cycleStartDate != null && _cycleEndDate != null
+                            ? '${DateFormat('EEE d MMM yyyy').format(_cycleStartDate!)} – ${DateFormat('EEE d MMM yyyy').format(_cycleEndDate!)}'
+                            : 'Current 5-week cycle')
+                        : (_previousCycleStartDate != null && _previousCycleEndDate != null
+                            ? '${DateFormat('EEE d MMM yyyy').format(_previousCycleStartDate!)} – ${DateFormat('EEE d MMM yyyy').format(_previousCycleEndDate!)}'
+                            : 'Previous 5-week cycle'),
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  trailing: Text(
+                    formatDuration(_selectedCyclePeriod == 'current' ? _cycleTotalHours : _previousCycleTotalHours),
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: (_selectedCyclePeriod == 'current' ? _cycleLimitExceeded : _previousCycleLimitExceeded)
+                          ? Theme.of(context).colorScheme.error
+                          : null,
+                    ),
+                  ),
+                  leading: (_selectedCyclePeriod == 'current' ? _cycleLimitExceeded : _previousCycleLimitExceeded)
+                      ? Icon(Icons.warning_amber_rounded, color: Theme.of(context).colorScheme.error)
+                      : Icon(Icons.check_circle_outline, color: Theme.of(context).colorScheme.primary),
+                  subtitle: Text(
+                    'Limit: 190h 4m',
+                    style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7)),
+                  ),
+                ),
+              ],
             ],
           ),
           SizedBox(height: sizes['cardSpacing']!),
@@ -2320,6 +2404,88 @@ class StatisticsScreenState extends State<StatisticsScreen>
     } catch (e) {
 
       if (mounted) setState(() => _sundayStatsLoading = false);
+    }
+  }
+
+  static const Duration _cycleMaxDuration = Duration(hours: 190, minutes: 4);
+
+  /// 5-week cycle starts on the Sunday of the roster week where both Sunday and Monday are rest days (Week 3: RRLLLLL).
+  Future<void> _calculateCycleTotalHours() async {
+    if (_startDate == null) {
+      if (mounted) setState(() {
+        _cycleStatsLoading = false;
+        _cycleTotalHours = Duration.zero;
+        _cycleStartDate = null;
+        _cycleEndDate = null;
+        _cycleLimitExceeded = false;
+        _previousCycleTotalHours = Duration.zero;
+        _previousCycleStartDate = null;
+        _previousCycleEndDate = null;
+        _previousCycleLimitExceeded = false;
+      });
+      return;
+    }
+
+    if (mounted) setState(() => _cycleStatsLoading = true);
+
+    const rosterCycleDays = 35;
+    const restSunMonWeekIndex = 3; // Week 3 = RRLLLLL (Rest Sun, Rest Mon)
+
+    try {
+      final now = DateTime.now();
+      final normalizedNow = DateTime.utc(now.year, now.month, now.day);
+      final normalizedStartDate = DateTime.utc(_startDate!.year, _startDate!.month, _startDate!.day);
+
+      // Reference: Sunday that starts roster week 0
+      final referenceBlockStart = normalizedStartDate.subtract(Duration(days: _startWeek * 7));
+      // Cycle starts on Sunday of "rest Sun-Mon" week (week 3)
+      final firstCycleStartDate = referenceBlockStart.add(Duration(days: restSunMonWeekIndex * 7));
+
+      final daysSinceFirstCycle = normalizedNow.difference(firstCycleStartDate).inDays;
+      final cycleShift = (daysSinceFirstCycle / rosterCycleDays).floor();
+      final currentCycleStartDate = firstCycleStartDate.add(Duration(days: cycleShift * rosterCycleDays));
+      final currentCycleEndDate = currentCycleStartDate.add(const Duration(days: 34));
+      final previousCycleStartDate = currentCycleStartDate.subtract(const Duration(days: rosterCycleDays));
+      final previousCycleEndDate = previousCycleStartDate.add(const Duration(days: 34));
+
+      Duration currentTotal = Duration.zero;
+      Duration previousTotal = Duration.zero;
+
+      for (var i = 0; i < rosterCycleDays; i++) {
+        final currentDayDate = currentCycleStartDate.add(Duration(days: i));
+        final isCurrentRestDay = await _isRestDay(currentDayDate);
+        if (!isCurrentRestDay) {
+          final currentShifts = await _getWorkHoursForDate(currentDayDate);
+          for (final shift in currentShifts) {
+            currentTotal += shift['duration'] as Duration;
+          }
+        }
+
+        final previousDayDate = previousCycleStartDate.add(Duration(days: i));
+        final isPreviousRestDay = await _isRestDay(previousDayDate);
+        if (!isPreviousRestDay) {
+          final previousShifts = await _getWorkHoursForDate(previousDayDate);
+          for (final shift in previousShifts) {
+            previousTotal += shift['duration'] as Duration;
+          }
+        }
+      }
+
+      if (mounted) {
+        setState(() {
+          _cycleTotalHours = currentTotal;
+          _cycleStartDate = currentCycleStartDate;
+          _cycleEndDate = currentCycleEndDate;
+          _cycleLimitExceeded = currentTotal > _cycleMaxDuration;
+          _previousCycleTotalHours = previousTotal;
+          _previousCycleStartDate = previousCycleStartDate;
+          _previousCycleEndDate = previousCycleEndDate;
+          _previousCycleLimitExceeded = previousTotal > _cycleMaxDuration;
+          _cycleStatsLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _cycleStatsLoading = false);
     }
   }
 

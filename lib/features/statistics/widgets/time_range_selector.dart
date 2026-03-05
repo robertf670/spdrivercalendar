@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:spdrivercalendar/theme/app_theme.dart';
 
 class TimeRangeSelector extends StatelessWidget {
   final String currentRange;
@@ -15,10 +14,10 @@ class TimeRangeSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Determine text color based on theme brightness
-    final textColor = Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black87;
-    final iconColor = Theme.of(context).brightness == Brightness.dark ? Colors.white70 : AppTheme.primaryColor;
-    final dropdownBackgroundColor = Theme.of(context).brightness == Brightness.dark ? Colors.grey[800] : Colors.white;
+    final colorScheme = Theme.of(context).colorScheme;
+    final textColor = colorScheme.onSurface;
+    final iconColor = colorScheme.primary;
+    final dropdownBackgroundColor = colorScheme.surfaceContainerHighest;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),

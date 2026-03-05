@@ -1,4 +1,26 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '3.0.4': [
+    {
+      'title': '5-Week Cycle Total',
+      'description': 'New statistic in Work Time tab. Tracks total hours per 5-week block (max 190h 4m). Block starts from long weekend Sunday. Dropdown to view current or previous period. Excludes rest days and overtime.',
+    },
+    {
+      'title': 'Refresh Workout Highlights',
+      'description': 'New button in Settings → Appearance to scan all duties across all months and highlight workout days. Only available when Highlight Workout Days is enabled.',
+    },
+    {
+      'title': '807/06 and 807/07 Duty Display',
+      'description': 'Updated report times, finish times and locations for duties 807/06 and 807/07.',
+    },
+    {
+      'title': 'Shift Statistics Tabs Light Mode',
+      'description': 'Fixed Work Time, Shift Summary, and Frequency tabs using black text on light mode. Tabs now use theme-appropriate colours.',
+    },
+    {
+      'title': 'Jamestown Road Duties',
+      'description': 'Removed ability to add new Jamestown Road duties.',
+    },
+  ],
   '3.0.3': [
     {
       'title': 'Shift Type Classification',
