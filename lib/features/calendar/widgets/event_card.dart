@@ -196,9 +196,13 @@ class _EventCardState extends State<EventCard> {
     }
     _loadedLocationForEventId = widget.event.id;
 
-    // If event already has location data, use it and skip CSV load/save
-    if (widget.event.startLocation != null || widget.event.finishLocation != null ||
-        widget.event.startBreakLocation != null || widget.event.finishBreakLocation != null) {
+    // If event already has location data, use it but still load times from CSV
+    // (times are not persisted on Event - only locations are)
+    final hadLocationData = widget.event.startLocation != null ||
+        widget.event.finishLocation != null ||
+        widget.event.startBreakLocation != null ||
+        widget.event.finishBreakLocation != null;
+    if (hadLocationData) {
       if (mounted) {
         setState(() {
           startLocation = widget.event.startLocation;
@@ -207,7 +211,7 @@ class _EventCardState extends State<EventCard> {
           finishBreakLocation = widget.event.finishBreakLocation;
         });
       }
-      return;
+      // Don't return - fall through to CSV load to get _departTimeStr and _finishTimeStr
     }
 
     try {
@@ -349,19 +353,22 @@ class _EventCardState extends State<EventCard> {
           
           if (mounted) {
             setState(() {
-              startLocation = mappedStartLocation;
-              finishLocation = mappedFinishLocation;
-              startBreakLocation = breakStart;
-              finishBreakLocation = breakEnd;
+              if (!hadLocationData) {
+                startLocation = mappedStartLocation;
+                finishLocation = mappedFinishLocation;
+                startBreakLocation = breakStart;
+                finishBreakLocation = breakEnd;
+              }
               workTime = work.isNotEmpty ? work : null;
               _departTimeStr = departFormatted;
               _finishTimeStr = finishFormatted;
             });
           }
           
-          // Save location data directly to Event (same as routes)
-          if (mappedStartLocation != null || mappedFinishLocation != null || 
-              mappedStartBreakLocation != null || mappedFinishBreakLocation != null) {
+          // Save location data directly to Event (same as routes) - skip if we already had it
+          if (!hadLocationData &&
+              (mappedStartLocation != null || mappedFinishLocation != null || 
+              mappedStartBreakLocation != null || mappedFinishBreakLocation != null)) {
             try {
               final updatedEvent = widget.event.copyWith(
                 startLocation: mappedStartLocation,
@@ -383,12 +390,8 @@ class _EventCardState extends State<EventCard> {
         }
       }
       
-      if (!shiftFound) {
-        // Shift not in CSV - leave locations unset
-      }
-      
-      // If no match found
-      if (mounted) {
+      // If no match found - only clear when we didn't have location data from event
+      if (!shiftFound && !hadLocationData && mounted) {
         setState(() {
           startLocation = null;
           finishLocation = null;
@@ -399,8 +402,8 @@ class _EventCardState extends State<EventCard> {
         });
       }
     } catch (e) {
-
-      if (mounted) {
+      // On error, only clear when we didn't have location data from event
+      if (mounted && !hadLocationData) {
         setState(() {
           startLocation = null;
           finishLocation = null;

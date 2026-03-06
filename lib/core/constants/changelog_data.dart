@@ -1,4 +1,10 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '3.0.5': [
+    {
+      'title': 'Depart/Finish Times on duties',
+      'description': 'Fixed route row missing depart and finish times on duty event cards when location data was cached. Times now load correctly from CSV.',
+    },
+  ],
   '3.0.4': [
     {
       'title': '5-Week Cycle Total',
