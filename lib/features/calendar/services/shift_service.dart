@@ -478,6 +478,8 @@ class ShiftService {
       return 'Uni/Euro Shift';
     } else if (shiftCode.contains('PZ1')) {
       return 'Zone 1 Shift';
+    } else if (shiftCode.contains('PZ2')) {
+      return 'Zone 2 Shift';
     } else if (shiftCode.contains('PZ3')) {
       return 'Zone 3 Shift';
     } else if (shiftCode.contains('PZ4')) {

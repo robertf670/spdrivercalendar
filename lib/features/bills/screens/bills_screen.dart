@@ -80,6 +80,21 @@ class BillsScreenState extends State<BillsScreen> {
       _errorMessage = null;
     });
 
+    // Zone 2 (Route 13) - no bill yet, show coming soon instead of loading
+    if (_selectedZone == 'Zone 2') {
+      setState(() {
+        _isLoading = false;
+        _errorMessage = null;
+        _headers = [];
+        _rows = [];
+        _shiftColumnHeader = '';
+        _shiftColumnData = [];
+        _scrollableHeaders = [];
+        _scrollableRows = [];
+      });
+      return;
+    }
+
     try {
       List<String> lines;
 
@@ -534,7 +549,7 @@ class BillsScreenState extends State<BillsScreen> {
                             padding: EdgeInsets.only(right: 16.0),
                             child: Icon(Icons.arrow_drop_down_circle, color: AppTheme.primaryColor),
                           ),
-                          items: ['Zone 1', 'Zone 3', 'Zone 4', 'Uni/Euro'].map((String value) {
+                          items: ['Zone 1', 'Zone 2', 'Zone 3', 'Zone 4', 'Uni/Euro'].map((String value) {
                             return DropdownMenuItem<String>(
                               value: value,
                               child: Padding(
@@ -651,7 +666,7 @@ class BillsScreenState extends State<BillsScreen> {
     if (_headers.isEmpty || _rows.isEmpty) {
       return Center(
         child: Text(
-          'No data available',
+          _selectedZone == 'Zone 2' ? 'Coming soon' : 'No data available',
           style: TextStyle(
             color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
             fontSize: 16,

@@ -97,19 +97,16 @@ class TimingPointsScreenState extends State<TimingPointsScreen> {
       ));
     }
 
-    // Sort routes by route number, with 23 and 24 at the bottom
+    // Sort routes by route number, with 13, 23 and 24 at the bottom
     routes.sort((a, b) {
-      // Put routes 23 and 24 at the bottom
-      if (a.routeNumber == '23' || a.routeNumber == '24') {
-        if (b.routeNumber == '23' || b.routeNumber == '24') {
-          return a.routeNumber.compareTo(b.routeNumber);
-        }
-        return 1; // a comes after b
+      const bottomRoutes = ['13', '23', '24'];
+      final aAtBottom = bottomRoutes.contains(a.routeNumber);
+      final bAtBottom = bottomRoutes.contains(b.routeNumber);
+      if (aAtBottom && bAtBottom) {
+        return a.routeNumber.compareTo(b.routeNumber);
       }
-      if (b.routeNumber == '23' || b.routeNumber == '24') {
-        return -1; // a comes before b
-      }
-      // Normal sorting for other routes
+      if (aAtBottom) return 1; // a comes after b
+      if (bAtBottom) return -1; // a comes before b
       return a.routeNumber.compareTo(b.routeNumber);
     });
     return routes;

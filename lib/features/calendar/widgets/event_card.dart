@@ -2576,7 +2576,7 @@ class _EventCardState extends State<EventCard> {
                 DropdownButton<String>(
                   value: selectedZone,
                   isExpanded: true,
-                  items: ['Zone 1', 'Zone 3', 'Zone 4', 'Uni/Euro'].map((zone) {
+                  items: ['Zone 1', 'Zone 2', 'Zone 3', 'Zone 4', 'Uni/Euro'].map((zone) {
                     return DropdownMenuItem(
                       value: zone,
                       child: Text(zone),
@@ -4106,9 +4106,9 @@ class _EventCardState extends State<EventCard> {
   Widget _buildTitleWithRoute() {
     final baseTitle = _formatDisplayTitleWithoutRoute(widget.event.title);
     
-   // For PZ1, PZ4, and Universal/Euro duties, show route on a separate line
-    if ((widget.event.title.startsWith('PZ1/') || widget.event.title.startsWith('PZ4/') || 
-         RegExp(r'^\d+/').hasMatch(widget.event.title)) &&
+   // For PZ1, PZ2, PZ4, and Universal/Euro duties, show route on a separate line
+    if ((widget.event.title.startsWith('PZ1/') || widget.event.title.startsWith('PZ2/') ||
+         widget.event.title.startsWith('PZ4/') || RegExp(r'^\d+/').hasMatch(widget.event.title)) &&
         dutyRouteInfo != null && dutyRouteInfo!.isNotEmpty) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,

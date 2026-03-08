@@ -1,4 +1,26 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '3.0.6': [
+    {
+      'title': '22B/01 Sunday Duty Updated',
+      'description': 'Sunday 22B/01 duty now 5h 30m work.',
+    },
+    {
+      'title': 'Route 13 Training',
+      'description': 'New training duty. 9am–3pm at garage. Available Mon–Fri only.',
+    },
+    {
+      'title': 'Zone 2 (Route 13) Placeholder',
+      'description': 'Zone 2 added as placeholder for future Route 13 duties. Appears in Add Shift, Bills, Timing Points, and Settings. Shows "Coming soon" where no data exists yet.',
+    },
+    {
+      'title': 'Route 13 Timing Points',
+      'description': 'Route 13 added to Timing Points screen. Destinations: Mountjoy Square and Grange Castle.',
+    },
+    {
+      'title': 'Toilet Codes',
+      'description': 'New Toilet Codes screen (menu) with codes for Adamstown, Charlestown, Grange Castle, Hansfield, Hazelhatch, Heuston, Maynooth, Earl Place, Damastown.',
+    },
+  ],
   '3.0.5': [
     {
       'title': 'Depart/Finish Times on duties',

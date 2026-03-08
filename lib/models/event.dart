@@ -644,12 +644,14 @@ class Event {
     // Include spare duties and 22B/01
     final isSpareOrSpecial = title.startsWith('SP') || title == '22B/01';
     
-    // Check if it's a Zone 1, 3, or 4 duty
+    // Check if it's a Zone 1, 2, 3, or 4 duty
     final isZoneDuty = title.startsWith('PZ1') || 
+                      title.startsWith('PZ2') || 
                       title.startsWith('PZ3') || 
                       title.startsWith('PZ4') ||
                       // Handle case when PZ is not in the title
                       title.startsWith('1/') || 
+                      title.startsWith('2/') || 
                       title.startsWith('3/') || 
                       title.startsWith('4/');
     

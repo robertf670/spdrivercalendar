@@ -34,6 +34,12 @@ service cloud.firestore {
       allow write: if true; // For anonymous user activity tracking
     }
     
+    // Toilet Codes - all users can read, admin can write (app-level control)
+    match /toilet_codes/{document} {
+      allow read: if true;
+      allow write: if true;
+    }
+    
     // Deny all other collections by default
     match /{document=**} {
       allow read, write: if false;

@@ -813,6 +813,7 @@ class SettingsScreenState extends State<SettingsScreen> {
                       ),
                       items: const [
                         DropdownMenuItem(value: 'Zone 1', child: Text('Zone 1')),
+                        DropdownMenuItem(value: 'Zone 2', child: Text('Zone 2')),
                         DropdownMenuItem(value: 'Zone 3', child: Text('Zone 3')),
                         DropdownMenuItem(value: 'Zone 4', child: Text('Zone 4')),
                       ],
