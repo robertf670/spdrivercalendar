@@ -1084,7 +1084,7 @@ class StatisticsScreenState extends State<StatisticsScreen>
             // --- Top Bus per Zone ---
             _buildExpandableSection(
               title: 'Top Bus per Zone',
-              subtitle: 'Most driven buses in Zone 1, Zone 3, Zone 4, Uni/Euro',
+              subtitle: 'Most driven buses in Zone 1, Zone 2, Zone 3, Zone 4, Uni/Euro',
               icon: Icons.location_on,
               children: [
                 const SizedBox(height: 8),
@@ -1106,7 +1106,7 @@ class StatisticsScreenState extends State<StatisticsScreen>
                       return Padding(
                         padding: EdgeInsets.symmetric(vertical: sizes['padding']! * 2),
                         child: Text(
-                          'No zone data available. Add bus assignments to PZ1, PZ3, PZ4, or Uni/Euro duties.',
+                          'No zone data available. Add bus assignments to PZ1, PZ2, PZ3, PZ4, or Uni/Euro duties.',
                           style: TextStyle(
                             color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                             fontSize: (sizes['fontSize'] ?? 14) - 1,
@@ -1115,13 +1115,14 @@ class StatisticsScreenState extends State<StatisticsScreen>
                         ),
                       );
                     }
-                    final zoneOrder = ['Zone 1', 'Zone 3', 'Zone 4', 'Uni/Euro'];
+                    final zoneOrder = ['Zone 1', 'Zone 2', 'Zone 3', 'Zone 4', 'Uni/Euro'];
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: zoneOrder.where((z) => topPerZone.containsKey(z)).map((zone) {
                         final busData = topPerZone[zone]!;
                         final zoneColors = {
                           'Zone 1': AppTheme.primaryColor,
+                          'Zone 2': const Color(0xFF00897B),
                           'Zone 3': AppTheme.secondaryColor,
                           'Zone 4': const Color(0xFF7B1FA2),
                           'Uni/Euro': const Color(0xFFE65100),
@@ -1381,15 +1382,15 @@ class StatisticsScreenState extends State<StatisticsScreen>
       return Duration.zero;
     }
 
-    // For spare duties (fixed 7h 38m) and 22B/01 (fixed 8h 30m)
+    // For spare duties (fixed 7h 38m) and 22B/01 (fixed 5h 30m)
     if (event.title.startsWith('SP')) {
 
       return const Duration(hours: 7, minutes: 38);
     }
     
-    // For 22B/01 Sunday duty (same work time as spare duties: 7h 38m, excluding break)
+    // For 22B/01 Sunday duty (fixed 5h 30m work time)
     if (event.title == '22B/01') {
-      return const Duration(hours: 7, minutes: 38);
+      return const Duration(hours: 5, minutes: 30);
     }
 
     // For all other duties, rely on _loadWorkTimeFromCSV
@@ -2216,6 +2217,7 @@ class StatisticsScreenState extends State<StatisticsScreen>
   String? _getZoneFromDutyCode(String dutyCode) {
     final code = dutyCode.startsWith('UNI:') ? dutyCode.substring(4) : dutyCode;
     if (code.startsWith('PZ1') || code.contains('PZ1/')) return 'Zone 1';
+    if (code.startsWith('PZ2') || code.contains('PZ2/')) return 'Zone 2';
     if (code.startsWith('PZ3') || code.contains('PZ3/')) return 'Zone 3';
     if (code.startsWith('PZ4') || code.contains('PZ4/')) return 'Zone 4';
     if (code.startsWith('UNI') || RegExp(r'^\d{2,3}/').hasMatch(code)) return 'Uni/Euro';
@@ -2287,6 +2289,7 @@ class StatisticsScreenState extends State<StatisticsScreen>
   Map<String, Map<String, int>> _getTopBusesPerZone() {
     final zoneBusCounts = <String, Map<String, int>>{
       'Zone 1': {},
+      'Zone 2': {},
       'Zone 3': {},
       'Zone 4': {},
       'Uni/Euro': {},

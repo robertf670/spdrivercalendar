@@ -184,8 +184,8 @@ class RosterService {
     // Determine the correct PZ filename suffix based on the zone number
     String pzFileSuffix = 'PZ$zoneNumber';
     
-    // Basic validation - check if zoneNumber is one of the known zones (1, 3, 4)
-    if (!['1', '3', '4'].contains(zoneNumber)) {
+    // Basic validation - check if zoneNumber is one of the known zones (1, 2, 3, 4)
+    if (!['1', '2', '3', '4'].contains(zoneNumber)) {
 
         // Keep using the potentially incorrect suffix, assuming the file might exist unexpectedly
         // or allow the file load to fail naturally later.

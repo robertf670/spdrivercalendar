@@ -12,6 +12,8 @@ class RouteService {
       // Handle different shift types
       if (shiftCode.startsWith('PZ1/')) {
         return await _getPZ1RouteInfo(shiftCode, eventDate);
+      } else if (shiftCode.startsWith('PZ2/')) {
+        return await _getPZ2RouteInfo(shiftCode, eventDate);
       } else if (shiftCode.startsWith('PZ4/')) {
         return await _getPZ4RouteInfo(shiftCode, eventDate);
       } else if (RegExp(r'^\d+/').hasMatch(shiftCode)) {
@@ -118,6 +120,73 @@ class RouteService {
       }
 
       // Cache the results
+      _routeCache[fileName] = parsedRoutes;
+      return parsedRoutes[shiftCode];
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /// Extract route info for PZ2 duties (Route 13) from location codes
+  /// Uses same format as PZ1 until Route 13 location format is known
+  static Future<RouteInfo?> _getPZ2RouteInfo(String shiftCode, DateTime eventDate) async {
+    try {
+      final fileName = _getRouteFilename('2', eventDate);
+
+      if (_routeCache.containsKey(fileName)) {
+        return _routeCache[fileName]![shiftCode];
+      }
+
+      final csvData = await rootBundle.loadString('assets/$fileName');
+      final lines = csvData.split('\n');
+      final Map<String, RouteInfo> parsedRoutes = {};
+
+      for (int i = 1; i < lines.length; i++) {
+        final line = lines[i].trim();
+        if (line.isEmpty) continue;
+
+        final parts = line.split(',');
+        if (parts.length >= 12) {
+          final currentShiftCode = parts[0].trim();
+          final startLocation = parts.length > 4 ? parts[4].trim() : '';
+          final startBreak = parts.length > 5 ? parts[5].trim() : '';
+          final breakLocation = parts.length > 6 ? parts[6].trim() : '';
+          final afterBreakLocation = parts.length > 9 ? parts[9].trim() : '';
+          final finishLocation = parts.length > 11 ? parts[11].trim() : '';
+
+          final firstRoute = _extractRouteFromLocation(breakLocation) ??
+              _extractRouteFromLocation(startLocation);
+          final secondRoute = _extractRouteFromLocation(afterBreakLocation) ??
+              _extractRouteFromLocation(finishLocation);
+
+          final isWorkout = startBreak.toLowerCase() == 'nan';
+
+          RouteInfo? routeInfo;
+          if (isWorkout) {
+            final singleRoute = secondRoute ?? firstRoute;
+            if (singleRoute != null) {
+              routeInfo = RouteInfo(
+                firstRoute: singleRoute,
+                secondRoute: null,
+                isWorkout: true,
+              );
+            }
+          } else {
+            if (firstRoute != null || secondRoute != null) {
+              routeInfo = RouteInfo(
+                firstRoute: firstRoute,
+                secondRoute: secondRoute,
+                isWorkout: false,
+              );
+            }
+          }
+
+          if (routeInfo != null) {
+            parsedRoutes[currentShiftCode] = routeInfo;
+          }
+        }
+      }
+
       _routeCache[fileName] = parsedRoutes;
       return parsedRoutes[shiftCode];
     } catch (e) {

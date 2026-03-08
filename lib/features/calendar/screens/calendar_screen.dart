@@ -35,6 +35,7 @@ import 'package:spdrivercalendar/features/feedback/screens/feedback_screen.dart'
 import 'package:spdrivercalendar/features/bills/screens/bills_screen.dart'; // Import the Bills screen
 import 'package:spdrivercalendar/features/payscale/screens/payscale_screen.dart'; // Import the Payscale screen
 import 'package:spdrivercalendar/features/timing_points/screens/timing_points_screen.dart'; // Import the Timing Points screen
+import 'package:spdrivercalendar/features/toilet_codes/screens/toilet_codes_screen.dart'; // Import the Toilet Codes screen
 import 'package:spdrivercalendar/features/calendar/screens/week_view_screen.dart'; // Import the Week View screen
 import 'package:spdrivercalendar/features/calendar/screens/year_view_screen.dart'; // Import the Year View screen
 import 'package:spdrivercalendar/features/search/screens/search_screen.dart'; // Import the Search screen
@@ -1038,6 +1039,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                   final lines = csv.split('\n');
                   shiftNumbers = [];
                   final seenShifts = <String>{};
+                  final isWeekend = dayOfWeek == 'Saturday' || dayOfWeek == 'Sunday';
                   
                   // Skip header line and collect all shift codes
                   for (int i = 1; i < lines.length; i++) {
@@ -1048,6 +1050,10 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                       final shift = parts[0].trim();
                       // Exclude EA Type Training shifts (overtime-only)
                       if (shift.contains('EA Type Training')) {
+                        continue;
+                      }
+                      // Route 13 Training is M-F only
+                      if (shift == 'Route 13 Training' && isWeekend) {
                         continue;
                       }
                       if (shift.isNotEmpty && !seenShifts.contains(shift)) {
@@ -1122,6 +1128,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                     final dayOfWeek = RosterService.getDayOfWeek(shiftDate);
                     List<String> zones = [
                       'Zone 1',
+                      'Zone 2',
                       'Zone 3',
                       'Zone 4',
                     ];
@@ -1189,7 +1196,9 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                         ),
                       )
                     : shiftNumbers.isEmpty
-                      ? const Text('No shifts available for selected zone and date')
+                      ? Text(selectedZone == 'Zone 2'
+                          ? 'Coming soon'
+                          : 'No shifts available for selected zone and date')
                       : DropdownButton<String>(
                           value: selectedShiftNumber.isEmpty ? shiftNumbers[0] : selectedShiftNumber,
                           isExpanded: true,
@@ -1302,7 +1311,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                     final dayOfWeek = RosterService.getDayOfWeek(shiftDate);
                     final isWeekend = dayOfWeek == 'Saturday' || dayOfWeek == 'Sunday';
                     final shouldShowRepeatCheckbox = isShiftMarkedIn && 
-                        (selectedZone == 'Zone 1' || selectedZone == 'Zone 3' || selectedZone == 'Zone 4') &&
+                        (selectedZone == 'Zone 1' || selectedZone == 'Zone 2' || selectedZone == 'Zone 3' || selectedZone == 'Zone 4') &&
                         selectedZone == markedInZone &&
                         !isWeekend;
                     if (shouldShowRepeatCheckbox) {
@@ -1427,10 +1436,10 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                       Map<String, dynamic>? shiftTimes;
                       
                       if (selectedZone == '22B/01') {
-                        // Fixed times for 22B/01: 04:30 start, 8h 38m duration (same as spare duties)
+                        // Fixed times for 22B/01: 04:30 start, 5h 30m work duration
                         shiftTimes = {
                           'startTime': const TimeOfDay(hour: 4, minute: 30),
-                          'endTime': const TimeOfDay(hour: 13, minute: 8), // 04:30 + 8h 38m = 13:08
+                          'endTime': const TimeOfDay(hour: 10, minute: 0), // 04:30 + 5h 30m = 10:00
                         };
                       } else if (selectedZone == 'Spare') {
                         // Parse the time directly from the dropdown value (e.g., "04:00")
@@ -1579,7 +1588,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                       
                       // If repeat duty this week is checked for marked-in zone users, create events for selected days
                       if (repeatDutyThisWeek && isShiftMarkedIn && 
-                          (selectedZone == 'Zone 1' || selectedZone == 'Zone 3' || selectedZone == 'Zone 4') &&
+                          (selectedZone == 'Zone 1' || selectedZone == 'Zone 2' || selectedZone == 'Zone 3' || selectedZone == 'Zone 4') &&
                           selectedZone == markedInZone) {
                         // Get the start of the week (Sunday)
                         final weekday = shiftDate.weekday; // 1=Monday, 7=Sunday
@@ -1614,7 +1623,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                           
                           // Get shift times for this day (may differ for different days)
                           Map<String, dynamic>? targetShiftTimes;
-                          if (selectedZone == 'Zone 1' || selectedZone == 'Zone 3' || selectedZone == 'Zone 4') {
+                          if (selectedZone == 'Zone 1' || selectedZone == 'Zone 2' || selectedZone == 'Zone 3' || selectedZone == 'Zone 4') {
                             targetShiftTimes = await _getShiftTimes(selectedZone, selectedShiftNumber, targetDate);
                           }
                           
@@ -1839,6 +1848,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                     isExpanded: true,
                     items: [
                       'Zone 1',
+                      'Zone 2',
                       'Zone 3',
                       'Zone 4',
                       'Uni/Euro',
@@ -5748,6 +5758,10 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                 child: Text('Timing Points'),
               ),
               PopupMenuItem(
+                value: 'toilet_codes',
+                child: Text('Toilet Codes'),
+              ),
+              PopupMenuItem(
                 value: 'statistics',
                 child: Text('Statistics'),
               ),
@@ -5779,6 +5793,8 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                 _showBillsPage();
               } else if (value == 'timing_points') {
                 _showTimingPointsPage();
+              } else if (value == 'toilet_codes') {
+                _showToiletCodesPage();
               } else if (value == 'settings') {
                 _showSettingsPage();
               } else if (value == 'add_holidays') {
@@ -10185,6 +10201,13 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
   }
   // --- END NEW TIMING POINTS FUNCTION ---
 
+  void _showToiletCodesPage() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const ToiletCodesScreen()),
+    );
+  }
+
   void _showSearchScreen() async {
     final DateTime? selectedDate = await Navigator.of(context).push<DateTime>(
       MaterialPageRoute(
@@ -10559,6 +10582,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                     isExpanded: true,
                     items: [
                       'Zone 1',
+                      'Zone 2',
                       'Zone 3',
                       'Zone 4',
                       'Uni/Euro',

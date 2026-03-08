@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'admin_panel_screen.dart';
 import 'user_analytics_screen.dart';
 import 'poll_management_screen.dart';
+import 'package:spdrivercalendar/features/toilet_codes/screens/toilet_codes_management_screen.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -121,6 +122,14 @@ class AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         color: Colors.green,
                         onTap: () => _navigateToAnalytics(context),
                       ),
+                      _buildAdminCard(
+                        context,
+                        title: 'Toilet Codes',
+                        subtitle: 'Manage toilet codes',
+                        icon: Icons.wc,
+                        color: Colors.brown,
+                        onTap: () => _navigateToToiletCodes(context),
+                      ),
                     ],
                   ),
                 ),
@@ -213,6 +222,15 @@ class AdminDashboardScreenState extends State<AdminDashboardScreen> {
       context,
       MaterialPageRoute(
         builder: (context) => const PollManagementScreen(),
+      ),
+    );
+  }
+
+  void _navigateToToiletCodes(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const ToiletCodesManagementScreen(),
       ),
     );
   }
