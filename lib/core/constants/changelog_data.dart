@@ -1,4 +1,10 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '3.1.2': [
+    {
+      'title': 'Duty 435 M-F Finish Break Location',
+      'description': 'Corrected finish break location for duty 435 Mon–Fri from ConHill to BStone.',
+    },
+  ],
   '3.1.1': [
     {
       'title': 'Route 13 Training Saturday',
