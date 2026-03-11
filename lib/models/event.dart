@@ -634,6 +634,8 @@ class Event {
                          title.startsWith('BusCheck') ||
                          title == 'CPC' ||
                          title == '22B/01' ||
+                         title == 'Union' ||
+                         title == 'Mentor' ||
                          RegExp(r'^\d+/').hasMatch(title);
   
   // Check if this duty is eligible for overtime tracking

@@ -1,5 +1,7 @@
 shift,starttime,endtime,startlocation,endlocation
 CPC,07:45,15:45,Training School,Training School
+Union,09:00,15:00,Union,Union
+Mentor,09:00,15:00,Mentor,Mentor
 EA Type Training 1HR,09:00,10:00,Training School,Training School
 EA Type Training 2HR,09:00,11:00,Training School,Training School
 Route 13 Training,09:00,15:00,Garage,Garage

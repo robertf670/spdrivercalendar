@@ -1,4 +1,22 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '3.1.1': [
+    {
+      'title': 'Route 13 Training Saturday',
+      'description': 'Route 13 Training now available on Saturdays.',
+    },
+    {
+      'title': 'Workout Highlight Efficiency',
+      'description': 'Improved efficiency when Highlight Workout Days is enabled. Calendar is more responsive.',
+    },
+    {
+      'title': 'Union Duty',
+      'description': 'New Union zone in Add Shift.',
+    },
+    {
+      'title': 'Mentor Duty',
+      'description': 'New Mentor zone in Add Shift. Mon–Sun.',
+    },
+  ],
   '3.1.0': [
     {
       'title': '22B/01 Sunday Duty Updated',

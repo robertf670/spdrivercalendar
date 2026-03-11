@@ -3,6 +3,8 @@ const Map<String, String> locationMappings = {
   'GARAGE': 'Garage',
   'Garage': 'Garage',  // Added for training duties
   'Training School': 'Training School',  // Added for training duties
+  'Union': 'Union',  // Union duty location
+  'Mentor': 'Mentor',  // Mentor duty location
   'GAR': 'Garage',  // Added for Jamestown Road duties
   'PHIBPO': 'Garage',
   'PHIBPI': 'Garage',

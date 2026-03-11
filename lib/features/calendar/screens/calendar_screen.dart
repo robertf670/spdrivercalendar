@@ -109,6 +109,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
   bool _animatedSelectedDay = true; // Default to true (ON) - animated border
   bool _highlightWorkoutDays = false; // Default to false (OFF)
   Set<DateTime>? _workoutDates; // Cached workout dates for visible month (null = loading)
+  final Map<String, Set<DateTime>> _workoutDatesMonthCache = {}; // Per-month cache when no global cache
 
   // Holiday section expanded state (year -> expanded)
   final Map<int, bool> _holidayYearExpanded = {};
@@ -301,6 +302,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
 
   /// Load workout dates - prefers cached full-scan data (from Settings → Refresh Workout Highlights),
   /// falls back to month-only loading for the focused month when no cache exists.
+  /// Uses per-month cache to avoid re-scanning when navigating back to previously viewed months.
   Future<void> _loadWorkoutDates() async {
     if (!_highlightWorkoutDays) return;
 
@@ -310,11 +312,18 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
       return;
     }
 
+    final monthKey = '${_focusedDay.year}-${_focusedDay.month}';
+    if (_workoutDatesMonthCache.containsKey(monthKey) && mounted) {
+      setState(() => _workoutDates = _workoutDatesMonthCache[monthKey]);
+      return;
+    }
+
     setState(() => _workoutDates = null); // Mark as loading
     await _loadWorkoutDatesForMonth(_focusedDay);
   }
 
   /// Load workout dates for the visible month only (fallback when no cache).
+  /// Results are cached per-month to avoid re-scanning when navigating back.
   Future<void> _loadWorkoutDatesForMonth(DateTime month) async {
     if (!_highlightWorkoutDays) return;
     
@@ -347,6 +356,8 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
     }
     
     if (mounted) {
+      final monthKey = '${month.year}-${month.month}';
+      _workoutDatesMonthCache[monthKey] = workoutSet;
       setState(() => _workoutDates = workoutSet);
     }
   }
@@ -867,8 +878,8 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
           builder: (context, setState) {
           // Function to load shift numbers for selected zone
           void loadShiftNumbers() async {
-            // Skip loading for 22B/01 as it's a fixed duty
-            if (selectedZone == '22B/01') {
+            // Skip loading for 22B/01, Union, and Mentor as they are fixed duties
+            if (selectedZone == '22B/01' || selectedZone == 'Union' || selectedZone == 'Mentor') {
               setState(() {
                 shiftNumbers = [];
                 selectedShiftNumber = '';
@@ -1039,7 +1050,6 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                   final lines = csv.split('\n');
                   shiftNumbers = [];
                   final seenShifts = <String>{};
-                  final isWeekend = dayOfWeek == 'Saturday' || dayOfWeek == 'Sunday';
                   
                   // Skip header line and collect all shift codes
                   for (int i = 1; i < lines.length; i++) {
@@ -1052,8 +1062,8 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                       if (shift.contains('EA Type Training')) {
                         continue;
                       }
-                      // Route 13 Training is M-F only
-                      if (shift == 'Route 13 Training' && isWeekend) {
+                      // Route 13 Training is M-Sat only (not Sundays)
+                      if (shift == 'Route 13 Training' && dayOfWeek == 'Sunday') {
                         continue;
                       }
                       if (shift.isNotEmpty && !seenShifts.contains(shift)) {
@@ -1150,6 +1160,9 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                       zones.add('Training');
                     }
                     
+                    zones.add('Union');
+                    zones.add('Mentor');
+                    
                     return zones;
                   }().map((zone) {
                     return DropdownMenuItem(
@@ -1170,8 +1183,8 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                 
                 const SizedBox(height: 16),
                 const Text('Shift:', style: TextStyle(fontWeight: FontWeight.bold)),
-                // Handle 22B/01 special case - no shift selection needed
-                selectedZone == '22B/01'
+                // Handle 22B/01, Union, and Mentor special cases - no shift selection needed
+                selectedZone == '22B/01' || selectedZone == 'Union' || selectedZone == 'Mentor'
                   ? Container(
                       width: double.infinity,
                       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
@@ -1180,9 +1193,13 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                         borderRadius: BorderRadius.circular(4),
                         color: Colors.grey.withValues(alpha: 0.1),
                       ),
-                      child: const Text(
-                        'Fixed Duty - No shift selection required',
-                        style: TextStyle(
+                      child: Text(
+                        selectedZone == 'Union'
+                            ? 'Union Duties'
+                            : selectedZone == 'Mentor'
+                                ? 'Mentor Duties'
+                                : 'Fixed Duty - No shift selection required',
+                        style: const TextStyle(
                           color: Colors.grey,
                           fontStyle: FontStyle.italic,
                         ),
@@ -1406,14 +1423,18 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                 child: const Text('Cancel'),
               ),
               TextButton(
-                onPressed: isLoading || (selectedZone != '22B/01' && (shiftNumbers.isEmpty || selectedShiftNumber.isEmpty))
-                  ? null  // Disable button if loading or no shifts available (except for 22B/01)
+                onPressed: isLoading || (selectedZone != '22B/01' && selectedZone != 'Union' && selectedZone != 'Mentor' && (shiftNumbers.isEmpty || selectedShiftNumber.isEmpty))
+                  ? null  // Disable button if loading or no shifts available (except for 22B/01, Union, and Mentor)
                   : () async {
                       // Create title based on zone and shift
                       String title = '';
                       // For 22B/01 Sunday duty
                       if (selectedZone == '22B/01') {
                         title = '22B/01';
+                      } else if (selectedZone == 'Union') {
+                        title = 'Union';
+                      } else if (selectedZone == 'Mentor') {
+                        title = 'Mentor';
                       } else if (selectedZone == 'Spare') {
                         // Convert the time (like "06:00") to SP code (like "SP0600")
                         final timeStr = selectedShiftNumber; // The time is now directly stored
@@ -1440,6 +1461,12 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                         shiftTimes = {
                           'startTime': const TimeOfDay(hour: 4, minute: 30),
                           'endTime': const TimeOfDay(hour: 10, minute: 0), // 04:30 + 5h 30m = 10:00
+                        };
+                      } else if (selectedZone == 'Union' || selectedZone == 'Mentor') {
+                        // Fixed times for Union and Mentor: 9am–3pm
+                        shiftTimes = {
+                          'startTime': const TimeOfDay(hour: 9, minute: 0),
+                          'endTime': const TimeOfDay(hour: 15, minute: 0),
                         };
                       } else if (selectedZone == 'Spare') {
                         // Parse the time directly from the dropdown value (e.g., "04:00")
@@ -6035,11 +6062,11 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
       }
     }
     
-    // Second, check for spare shifts - always show their title (ignore assigned duties)
+    // Second, check for spare shifts, Union, and Mentor - always show their title
     for (final event in events) {
       if (event.isWorkShift && 
-          (event.title.startsWith('SP') || event.title == '22B/01')) {
-        return event.title; // Show spare shift title (e.g., "SP1000")
+          (event.title.startsWith('SP') || event.title == '22B/01' || event.title == 'Union' || event.title == 'Mentor')) {
+        return event.title;
       }
     }
     
@@ -6050,6 +6077,8 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
       if (event.isWorkShift && 
           !event.title.startsWith('SP') && 
           event.title != '22B/01' &&
+          event.title != 'Union' &&
+          event.title != 'Mentor' &&
           !event.title.contains('(OT)')) {
         // Check if this event has assigned duties (for spare shifts that were converted)
         final dutyCodes = event.getCurrentDutyCodes();
@@ -6094,9 +6123,10 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
     final dayInLieuColor = ColorCustomizationService.getColorForShift('DAY_IN_LIEU');
     
     // Check if this day has a workout (when highlight is enabled and data is loaded)
+    // Use O(1) Set.contains instead of O(n) any() to avoid lag with large workout date caches
     final hasWorkoutOnDay = _highlightWorkoutDays && 
         _workoutDates != null && 
-        _workoutDates!.any((d) => d.year == date.year && d.month == date.month && d.day == date.day);
+        _workoutDates!.contains(DateTime(date.year, date.month, date.day));
     final workoutColor = ColorCustomizationService.getColorForShift('WORKOUT');
     
     // Check if any events have notes or if there's a day note
@@ -6611,7 +6641,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                   final String shiftType = event.isWorkForOthers ? 'WFO' : getShiftForDate(event.startDate);
                   final eventDate = DateTime(event.startDate.year, event.startDate.month, event.startDate.day);
                   final isWorkoutDay = _workoutDates != null &&
-                      _workoutDates!.any((d) => d.year == eventDate.year && d.month == eventDate.month && d.day == eventDate.day);
+                      _workoutDates!.contains(DateTime(eventDate.year, eventDate.month, eventDate.day));
                   return EventCard(
                     event: event,
                     shiftType: shiftType,

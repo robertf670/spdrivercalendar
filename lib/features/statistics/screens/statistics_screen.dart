@@ -1393,6 +1393,11 @@ class StatisticsScreenState extends State<StatisticsScreen>
       return const Duration(hours: 5, minutes: 30);
     }
 
+    // For Union and Mentor duties (fixed 9am–3pm, 6 hours)
+    if (event.title == 'Union' || event.title == 'Mentor') {
+      return const Duration(hours: 6, minutes: 0);
+    }
+
     // For all other duties, rely on _loadWorkTimeFromCSV
     final dayOfWeek = await _getDayOfWeek(event.startDate);
 
@@ -2071,8 +2076,8 @@ class StatisticsScreenState extends State<StatisticsScreen>
       return Duration.zero;
     }
 
-    // For spare duties and 22B/01 - no spread pay (they're typically shorter shifts)
-    if (event.title.startsWith('SP') || event.title == '22B/01') {
+    // For spare duties, 22B/01, Union, and Mentor - no spread pay (they're typically shorter shifts)
+    if (event.title.startsWith('SP') || event.title == '22B/01' || event.title == 'Union' || event.title == 'Mentor') {
       return Duration.zero;
     }
 
