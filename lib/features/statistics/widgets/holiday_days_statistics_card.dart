@@ -38,9 +38,16 @@ class HolidayDaysStatisticsCard extends StatelessWidget {
                   size: 24,
                 ),
                 const SizedBox(width: 8),
-                const Text(
-                  'Booked Holiday Days',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                Expanded(
+                  child: Text(
+                    'Booked Holiday Days',
+                    style: TextStyle(
+                      fontSize: MediaQuery.of(context).size.width < 360 ? 16 : 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
               ],
             ),
@@ -151,7 +158,7 @@ class HolidayDaysStatisticsCard extends StatelessWidget {
           ),
         if (other > 0)
           _buildHolidayStatRow(
-            'Other Holidays', 
+            'Holidays', 
             '$other${total > 0 ? ' ($otherPercent%)' : ''}', 
             Colors.green,
           ),
@@ -243,7 +250,7 @@ class HolidayDaysStatisticsCard extends StatelessWidget {
                     if (dayInLieu > 0)
                       _buildLegendItem('Day In Lieu', ColorCustomizationService.getColorForShift('DAY_IN_LIEU')),
                     if (other > 0)
-                      _buildLegendItem('Other', Colors.green),
+                      _buildLegendItem('Holiday', Colors.green),
                   ],
                 ),
               ],
@@ -257,27 +264,37 @@ class HolidayDaysStatisticsCard extends StatelessWidget {
     return Padding(
       padding: EdgeInsets.symmetric(vertical: isTotal ? 2.0 : 4.0),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: isTotal ? 16 : 15,
-              fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: isTotal ? 16 : 15,
+                fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
+              ),
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 4.0),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(12.0),
-            ),
-            child: Text(
-              value,
-              style: TextStyle(
-                color: color,
-                fontWeight: FontWeight.bold,
-                fontSize: isTotal ? 15 : 14,
+          const SizedBox(width: 8),
+          Flexible(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 4.0),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(12.0),
+              ),
+              child: Text(
+                value,
+                style: TextStyle(
+                  color: color,
+                  fontWeight: FontWeight.bold,
+                  fontSize: isTotal ? 15 : 14,
+                ),
+                textAlign: TextAlign.end,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
           ),

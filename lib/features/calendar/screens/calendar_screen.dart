@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:intl/intl.dart';
@@ -508,23 +510,47 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
         return StatefulBuilder(
           builder: (context, setDialogState) {
             return AlertDialog(
-              title: const Text('Choose rest days:'),
+              title: Text(
+                'Choose rest days:',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+              ),
               content: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const Text('Choose this weeks rest days'),
-                    DropdownButton<int>(
+                    Text(
+                      'Choose this week\'s rest days',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<int>(
+                      isExpanded: true,
                       value: _startWeek,
+                      decoration: InputDecoration(
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                      ),
                       items: List.generate(5, (index) {
                         return DropdownMenuItem<int>(
                           value: index,
-                          child: Text('Rest: ${RosterService.getRestDaysForWeek(index)}'),
+                          child: Text(
+                            'Rest: ${RosterService.getRestDaysForWeek(index)}',
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         );
                       }),
                       onChanged: (value) {
+                        if (value == null) return;
                         setDialogState(() {
-                          _startWeek = value!;
+                          _startWeek = value;
                         });
                       },
                     ),
@@ -532,23 +558,21 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                 ),
               ),
               actions: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                _dialogFooterActions(
+                  dialogContext,
                   children: [
-                    ElevatedButton(
+                    TextButton(
                       onPressed: () => Navigator.of(dialogContext).pop(),
                       child: const Text('Cancel'),
                     ),
-                    ElevatedButton(
+                    FilledButton(
                       onPressed: () async {
-                        // Automatically set the start date to the Sunday of the current week
                         _startDate = RosterService.getSundayOfCurrentWeek();
-                        
+
                         final navigator = Navigator.of(dialogContext);
                         await _saveSettings();
                         navigator.pop();
-                        
-                        // Force CalendarScreen to rebuild so calendar cells reflect new rest days
+
                         if (mounted) {
                           setState(() {});
                         }
@@ -659,7 +683,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
               break;
             case 'other':
             default:
-              holidayTitle = 'Other Holiday';
+              holidayTitle = 'Holiday';
           }
           
           final holidayEvent = Event(
@@ -698,41 +722,43 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
       builder: (context) {
         return AlertDialog(
           title: const Text('Add Event'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Add disclaimer about duty information FIRST
-              Container(
-                padding: const EdgeInsets.all(10.0),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-                  borderRadius: BorderRadius.circular(6.0),
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(
-                      Icons.info_outline,
-                      color: Theme.of(context).colorScheme.primary,
-                      size: 18,
-                    ),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Text(
-                        'The duty information in this app is taken from the bills provided in the depot. There may be mistakes at times.',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                          fontSize: 12,
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Add disclaimer about duty information FIRST
+                Container(
+                  padding: const EdgeInsets.all(10.0),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                    borderRadius: BorderRadius.circular(6.0),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(
+                        Icons.info_outline,
+                        color: Theme.of(context).colorScheme.primary,
+                        size: 18,
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          'The duty information in this app is taken from the bills provided in the depot. There may be mistakes at times.',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            fontSize: 12,
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(height: 16),
-              const Text('What type of event would you like to add?'),
-            ],
+                const SizedBox(height: 16),
+                const Text('What type of event would you like to add?'),
+              ],
+            ),
           ),
           actions: [
             TextButton(
@@ -810,10 +836,12 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
       final markedInStatus = await StorageService.getString(AppConstants.markedInStatusKey) ?? '';
       isMFMarkedIn = markedInEnabled && markedInStatus == 'M-F';
       
-      // Check if marked-in on Shift status
-      if (markedInEnabled && markedInStatus == 'Shift') {
-        isShiftMarkedIn = true;
+      // Load zone for Shift or M-F (M-F needs it for 12-week roster checkbox)
+      if (markedInEnabled && (markedInStatus == 'Shift' || markedInStatus == 'M-F')) {
         markedInZone = await StorageService.getString(AppConstants.markedInZoneKey) ?? 'Zone 1';
+        if (markedInStatus == 'Shift') {
+          isShiftMarkedIn = true;
+        }
       }
     } catch (e) {
       // If we can't check, default to false
@@ -829,7 +857,8 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
     showDialog(
       context: context,
       builder: (dialogContext) {
-        String selectedZone = 'Zone 1';
+        // Pre-select zone from Settings when marked in (Shift or M-F)
+        String selectedZone = markedInZone.isNotEmpty ? markedInZone : 'Zone 1';
         String selectedShiftNumber = '';
         List<String> shiftNumbers = [];
         bool isLoading = true;
@@ -853,6 +882,12 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
           5: false, // Friday
           6: false, // Saturday
         };
+        // For Zone 1 M-F 12-week roster auto-fill
+        bool fillNext12Weeks = false;
+        // For Zone 1 Shift 15-week roster auto-fill
+        bool fillNext15Weeks = false;
+        // For Zone 3 Shift 10-week roster auto-fill
+        bool fillNext10Weeks = false;
         // For marked-in zone repeat feature
         bool repeatDutyThisWeek = false;
         Map<int, bool> selectedDays = {
@@ -1105,6 +1140,16 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                 }
               }
               
+              // Load Zone 1 rosters when Zone 1 is selected (for 12-week M-F and 15-week Shift fill)
+              if (selectedZone == 'Zone 1') {
+                await RosterService.loadZone1MFRoster();
+                await RosterService.loadZone1ShiftRoster();
+              }
+              // Load Zone 3 Shift roster when Zone 3 is selected (for 10-week fill)
+              if (selectedZone == 'Zone 3') {
+                await RosterService.loadZone3ShiftRoster();
+              }
+              
               // If no selected shift number yet but shifts are available, select the first one
               if (selectedShiftNumber.isEmpty && shiftNumbers.isNotEmpty) {
                 selectedShiftNumber = shiftNumbers[0];
@@ -1123,13 +1168,25 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
             loadShiftNumbers();
           }
                   
+          final screenH = MediaQuery.sizeOf(context).height;
           return AlertDialog(
-            title: Text('Add Work Shift for ${DateFormat('EEE, MMM d').format(shiftDate)}'),
-            content: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+            // Title is inside scrollable content so large text + form fit within the viewport.
+            title: null,
+            content: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: double.maxFinite,
+                maxHeight: screenH * 0.72,
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                Text(
+                  'Add Work Shift for ${DateFormat('EEE, MMM d').format(shiftDate)}',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                const SizedBox(height: 16),
                 const Text('Zone:', style: TextStyle(fontWeight: FontWeight.bold)),
                 DropdownButton<String>(
                   value: selectedZone,
@@ -1322,14 +1379,16 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                     return const SizedBox.shrink();
                   },
                 ),
-                // Show checkbox for marked-in Shift users when zone matches (not on weekends)
+                // Show checkbox for marked-in Shift or M-F users when zone matches (not on weekends)
                 Builder(
                   builder: (context) {
                     final dayOfWeek = RosterService.getDayOfWeek(shiftDate);
                     final isWeekend = dayOfWeek == 'Saturday' || dayOfWeek == 'Sunday';
-                    final shouldShowRepeatCheckbox = isShiftMarkedIn && 
+                    // Shift: require zone match. M-F: show for any Zone 1-4 duty (zone is pre-selected from Settings)
+                    final zoneMatch = isShiftMarkedIn ? (selectedZone == markedInZone) : true;
+                    final shouldShowRepeatCheckbox = (isShiftMarkedIn || isMFMarkedIn) &&
                         (selectedZone == 'Zone 1' || selectedZone == 'Zone 2' || selectedZone == 'Zone 3' || selectedZone == 'Zone 4') &&
-                        selectedZone == markedInZone &&
+                        zoneMatch &&
                         !isWeekend;
                     if (shouldShowRepeatCheckbox) {
                       return Column(
@@ -1414,8 +1473,119 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                     return const SizedBox.shrink();
                   },
                 ),
+                // Show checkbox for Zone 1 M-F 12-week roster auto-fill
+                Builder(
+                  builder: (context) {
+                    final dayOfWeek = RosterService.getDayOfWeek(shiftDate);
+                    final isWeekend = dayOfWeek == 'Saturday' || dayOfWeek == 'Sunday';
+                    final dutyInRoster = RosterService.isZone1MFDutyInRoster(selectedShiftNumber);
+                    final shouldShowRosterCheckbox = isMFMarkedIn &&
+                        selectedZone == 'Zone 1' &&
+                        !isWeekend &&
+                        dutyInRoster;
+                    if (shouldShowRosterCheckbox) {
+                      return Column(
+                        children: [
+                          const SizedBox(height: 16),
+                          Row(
+                            children: [
+                              Checkbox(
+                                value: fillNext12Weeks,
+                                onChanged: (value) {
+                                  setState(() {
+                                    fillNext12Weeks = value ?? false;
+                                  });
+                                },
+                              ),
+                              const Expanded(
+                                child: Text(
+                                  'Auto-fill the next 12 weeks from my roster?',
+                                  style: TextStyle(fontSize: 14),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      );
+                    }
+                    return const SizedBox.shrink();
+                  },
+                ),
+                // Show checkbox for Zone 1 Shift 15-week roster auto-fill
+                Builder(
+                  builder: (context) {
+                    final dayIndex = shiftDate.weekday % 7; // 0=Sun, 1=Mon, ..., 6=Sat
+                    final shiftWeekIndex = RosterService.getZone1ShiftWeekIndex(dayIndex, selectedShiftNumber);
+                    final shouldShowShiftRosterCheckbox = isShiftMarkedIn &&
+                        selectedZone == 'Zone 1' &&
+                        shiftWeekIndex != null;
+                    if (shouldShowShiftRosterCheckbox) {
+                      return Column(
+                        children: [
+                          const SizedBox(height: 16),
+                          Row(
+                            children: [
+                              Checkbox(
+                                value: fillNext15Weeks,
+                                onChanged: (value) {
+                                  setState(() {
+                                    fillNext15Weeks = value ?? false;
+                                  });
+                                },
+                              ),
+                              const Expanded(
+                                child: Text(
+                                  'Auto-fill the next 15 weeks from my roster?',
+                                  style: TextStyle(fontSize: 14),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      );
+                    }
+                    return const SizedBox.shrink();
+                  },
+                ),
+                // Show checkbox for Zone 3 Shift 10-week roster auto-fill
+                Builder(
+                  builder: (context) {
+                    final dayIndex = shiftDate.weekday % 7;
+                    final zone3WeekIndex = RosterService.getZone3ShiftWeekIndex(dayIndex, selectedShiftNumber);
+                    final shouldShowZone3RosterCheckbox = isShiftMarkedIn &&
+                        selectedZone == 'Zone 3' &&
+                        zone3WeekIndex != null;
+                    if (shouldShowZone3RosterCheckbox) {
+                      return Column(
+                        children: [
+                          const SizedBox(height: 16),
+                          Row(
+                            children: [
+                              Checkbox(
+                                value: fillNext10Weeks,
+                                onChanged: (value) {
+                                  setState(() {
+                                    fillNext10Weeks = value ?? false;
+                                  });
+                                },
+                              ),
+                              const Expanded(
+                                child: Text(
+                                  'Auto-fill the next 10 weeks from my roster?',
+                                  style: TextStyle(fontSize: 14),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      );
+                    }
+                    return const SizedBox.shrink();
+                  },
+                ),
                 ],
               ),
+            ),
             ),
             actions: [
               TextButton(
@@ -1613,8 +1783,8 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                         }
                       }
                       
-                      // If repeat duty this week is checked for marked-in zone users, create events for selected days
-                      if (repeatDutyThisWeek && isShiftMarkedIn && 
+                      // If repeat duty this week is checked for marked-in zone users (Shift or M-F), create events for selected days
+                      if (repeatDutyThisWeek && (isShiftMarkedIn || isMFMarkedIn) &&
                           (selectedZone == 'Zone 1' || selectedZone == 'Zone 2' || selectedZone == 'Zone 3' || selectedZone == 'Zone 4') &&
                           selectedZone == markedInZone) {
                         // Get the start of the week (Sunday)
@@ -1678,6 +1848,156 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                           // Sync to Google if enabled
                           if (!mounted) return;
                           _checkAndSyncToGoogleCalendar(repeatEvent, context);
+                        }
+                      }
+                      
+                      // Zone 1 M-F 12-week roster auto-fill (skip filled days)
+                      if (fillNext12Weeks && isMFMarkedIn && selectedZone == 'Zone 1') {
+                        await RosterService.loadZone1MFRoster();
+                        final weekIndex = RosterService.getZone1MFWeekIndex(selectedShiftNumber);
+                        if (weekIndex != null) {
+                          final anchorMonday = RosterService.getMondayOfWeek(shiftDate);
+                          
+                          for (int w = 0; w < 12; w++) {
+                            final weekStart = anchorMonday.add(Duration(days: w * 7));
+                            
+                            for (int d = 0; d < 5; d++) {
+                              final targetDate = weekStart.add(Duration(days: d));
+                              
+                              if (targetDate.year == shiftDate.year &&
+                                  targetDate.month == shiftDate.month &&
+                                  targetDate.day == shiftDate.day) {
+                                continue;
+                              }
+                              
+                              final existingEvents = EventService.getEventsForDay(targetDate);
+                              final hasWorkShift = existingEvents.any((e) => !e.isHoliday);
+                              if (hasWorkShift) continue;
+                              
+                              final bankHoliday = ShiftService.getBankHoliday(targetDate, ShiftService.bankHolidays);
+                              if (bankHoliday != null) continue;
+                              
+                              final dutyIndex = (weekIndex + w) % 12;
+                              final dutyCode = RosterService.getZone1MFDutyForWeekIndex(dutyIndex);
+                              if (dutyCode == null) continue;
+                              
+                              final targetShiftTimes = await _getShiftTimes(selectedZone, dutyCode, targetDate);
+                              if (targetShiftTimes == null) continue;
+                              
+                              final rosterEvent = Event(
+                                id: '${dutyCode}_${targetDate.millisecondsSinceEpoch}',
+                                title: dutyCode,
+                                startDate: targetDate,
+                                startTime: targetShiftTimes['startTime']!,
+                                endDate: targetShiftTimes['isNextDay'] == true
+                                    ? targetDate.add(const Duration(days: 1))
+                                    : targetDate,
+                                endTime: targetShiftTimes['endTime']!,
+                                breakStartTime: targetShiftTimes['breakStartTime'] as TimeOfDay?,
+                                breakEndTime: targetShiftTimes['breakEndTime'] as TimeOfDay?,
+                                workTime: targetShiftTimes['workTime'] as Duration?,
+                                routes: targetShiftTimes['routes'] as List<String>?,
+                              );
+                              
+                              await EventService.addEvent(rosterEvent);
+                              if (!mounted) return;
+                              _checkAndSyncToGoogleCalendar(rosterEvent, context);
+                            }
+                          }
+                        }
+                      }
+                      
+                      // Zone 1 Shift 15-week roster auto-fill (skip rest days, filled days, bank holidays, Saturday service)
+                      if (fillNext15Weeks && isShiftMarkedIn && selectedZone == 'Zone 1') {
+                        await RosterService.loadZone1ShiftRoster();
+                        final dayIndex = shiftDate.weekday % 7; // 0=Sun, 1=Mon, ..., 6=Sat
+                        final weekIndex = RosterService.getZone1ShiftWeekIndex(dayIndex, selectedShiftNumber);
+                        if (weekIndex != null) {
+                          final weekStartSunday = RosterService.getSundayOfWeek(shiftDate);
+                          for (int w = 0; w < 15; w++) {
+                            for (int d = 0; d < 7; d++) {
+                              final targetDate = weekStartSunday.add(Duration(days: w * 7 + d));
+                              if (targetDate.year == shiftDate.year &&
+                                  targetDate.month == shiftDate.month &&
+                                  targetDate.day == shiftDate.day) {
+                                continue;
+                              }
+                              final duty = RosterService.getZone1ShiftDayDuty((weekIndex + w) % 86, d);
+                              if (duty == null || duty == 'R') continue;
+                              final existingEvents = EventService.getEventsForDay(targetDate);
+                              final hasWorkShift = existingEvents.any((e) => !e.isHoliday);
+                              if (hasWorkShift) continue;
+                              final bankHoliday = ShiftService.getBankHoliday(targetDate, ShiftService.bankHolidays);
+                              if (bankHoliday != null) continue;
+                              if (RosterService.isSaturdayService(targetDate)) continue;
+                              final targetShiftTimes = await _getShiftTimes(selectedZone, duty, targetDate);
+                              if (targetShiftTimes == null) continue;
+                              final rosterEvent = Event(
+                                id: '${duty}_${targetDate.millisecondsSinceEpoch}',
+                                title: duty,
+                                startDate: targetDate,
+                                startTime: targetShiftTimes['startTime']!,
+                                endDate: targetShiftTimes['isNextDay'] == true
+                                    ? targetDate.add(const Duration(days: 1))
+                                    : targetDate,
+                                endTime: targetShiftTimes['endTime']!,
+                                breakStartTime: targetShiftTimes['breakStartTime'] as TimeOfDay?,
+                                breakEndTime: targetShiftTimes['breakEndTime'] as TimeOfDay?,
+                                workTime: targetShiftTimes['workTime'] as Duration?,
+                                routes: targetShiftTimes['routes'] as List<String>?,
+                              );
+                              await EventService.addEvent(rosterEvent);
+                              if (!mounted) return;
+                              _checkAndSyncToGoogleCalendar(rosterEvent, context);
+                            }
+                          }
+                        }
+                      }
+                      
+                      // Zone 3 Shift 10-week roster auto-fill (skip rest days, filled days, bank holidays, Saturday service)
+                      if (fillNext10Weeks && isShiftMarkedIn && selectedZone == 'Zone 3') {
+                        await RosterService.loadZone3ShiftRoster();
+                        final dayIndex = shiftDate.weekday % 7;
+                        final weekIndex = RosterService.getZone3ShiftWeekIndex(dayIndex, selectedShiftNumber);
+                        if (weekIndex != null) {
+                          final weekStartSunday = RosterService.getSundayOfWeek(shiftDate);
+                          for (int w = 0; w < 10; w++) {
+                            for (int d = 0; d < 7; d++) {
+                              final targetDate = weekStartSunday.add(Duration(days: w * 7 + d));
+                              if (targetDate.year == shiftDate.year &&
+                                  targetDate.month == shiftDate.month &&
+                                  targetDate.day == shiftDate.day) {
+                                continue;
+                              }
+                              final duty = RosterService.getZone3ShiftDayDuty((weekIndex + w) % 10, d);
+                              if (duty == null || duty == 'R') continue;
+                              final existingEvents = EventService.getEventsForDay(targetDate);
+                              final hasWorkShift = existingEvents.any((e) => !e.isHoliday);
+                              if (hasWorkShift) continue;
+                              final bankHoliday = ShiftService.getBankHoliday(targetDate, ShiftService.bankHolidays);
+                              if (bankHoliday != null) continue;
+                              if (RosterService.isSaturdayService(targetDate)) continue;
+                              final targetShiftTimes = await _getShiftTimes(selectedZone, duty, targetDate);
+                              if (targetShiftTimes == null) continue;
+                              final rosterEvent = Event(
+                                id: '${duty}_${targetDate.millisecondsSinceEpoch}',
+                                title: duty,
+                                startDate: targetDate,
+                                startTime: targetShiftTimes['startTime']!,
+                                endDate: targetShiftTimes['isNextDay'] == true
+                                    ? targetDate.add(const Duration(days: 1))
+                                    : targetDate,
+                                endTime: targetShiftTimes['endTime']!,
+                                breakStartTime: targetShiftTimes['breakStartTime'] as TimeOfDay?,
+                                breakEndTime: targetShiftTimes['breakEndTime'] as TimeOfDay?,
+                                workTime: targetShiftTimes['workTime'] as Duration?,
+                                routes: targetShiftTimes['routes'] as List<String>?,
+                              );
+                              await EventService.addEvent(rosterEvent);
+                              if (!mounted) return;
+                              _checkAndSyncToGoogleCalendar(rosterEvent, context);
+                            }
+                          }
                         }
                       }
                       
@@ -2924,8 +3244,10 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                       
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 8),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
+                        child: Wrap(
+                          alignment: WrapAlignment.center,
+                          spacing: 8,
+                          runSpacing: 8,
                           children: [
                             TextButton.icon(
                               onPressed: () {
@@ -2941,8 +3263,10 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                     },
                   ),
                   // First row - Notes and Break Status
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                  Wrap(
+                    alignment: WrapAlignment.center,
+                    spacing: 8,
+                    runSpacing: 8,
                     children: [
                       TextButton(
                         onPressed: () {
@@ -2953,36 +3277,34 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                         },
                         child: const Text('Notes'),
                       ),
-                      // Add Break Status button for eligible duties
-                      if (event.isEligibleForOvertimeTracking) ...[
-                        const SizedBox(width: 8),
+                      if (event.isEligibleForOvertimeTracking)
                         TextButton(
                           onPressed: () {
-                            // Close the current dialog first
                             Navigator.of(context).pop();
-                            // Show break status dialog
                             _showBreakStatusDialog(event);
                           },
                           child: const Text('Break & Finish'),
                         ),
-                      ],
                     ],
                   ),
                   // Second row - Sick Day Status (if work shift)
                   if (event.isWorkShift)
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        TextButton(
-                          onPressed: () {
-                            // Close the current dialog first
-                            Navigator.of(context).pop();
-                            // Show sick day status dialog
-                            _showSickDayStatusDialog(event);
-                          },
-                          child: const Text('Sick Day Status'),
-                        ),
-                      ],
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Wrap(
+                        alignment: WrapAlignment.center,
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          TextButton(
+                            onPressed: () {
+                              Navigator.of(context).pop();
+                              _showSickDayStatusDialog(event);
+                            },
+                            child: const Text('Sick Day Status'),
+                          ),
+                        ],
+                      ),
                     ),
                 ],
               ),
@@ -3005,16 +3327,19 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Icon(Icons.directions_bus, size: 20, color: AppTheme.primaryColor),
                           const SizedBox(width: 8),
-                          Text(
-                            'Bus Assignment',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                              color: Theme.of(context).textTheme.bodyLarge?.color,
+                          Expanded(
+                            child: Text(
+                              'Bus Assignment',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                                color: Theme.of(context).textTheme.bodyLarge?.color,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                         ],
@@ -3678,11 +4003,13 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                               ),
                               child: SizedBox(
                                 width: double.infinity,
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
+                                child: Wrap(
+                                  alignment: WrapAlignment.center,
+                                  spacing: 8,
+                                  runSpacing: 4,
+                                  crossAxisAlignment: WrapCrossAlignment.center,
                                   children: [
                                     const Icon(Icons.directions_bus, size: 18),
-                                    const SizedBox(width: 8),
                                     Text(event.firstHalfBus == null ? 'Add Bus' : 'Change Bus'),
                                   ],
                                 ),
@@ -3810,11 +4137,13 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                                       ),
                                       child: SizedBox(
                                         width: double.infinity,
-                                        child: Row(
-                                          mainAxisAlignment: MainAxisAlignment.center,
+                                        child: Wrap(
+                                          alignment: WrapAlignment.center,
+                                          spacing: 8,
+                                          runSpacing: 4,
+                                          crossAxisAlignment: WrapCrossAlignment.center,
                                           children: [
                                             const Icon(Icons.directions_bus, size: 18),
-                                            const SizedBox(width: 8),
                                             const Text('Add 1st Half Bus'),
                                           ],
                                         ),
@@ -3940,11 +4269,13 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                                       ),
                                       child: SizedBox(
                                         width: double.infinity,
-                                        child: Row(
-                                          mainAxisAlignment: MainAxisAlignment.center,
+                                        child: Wrap(
+                                          alignment: WrapAlignment.center,
+                                          spacing: 8,
+                                          runSpacing: 4,
+                                          crossAxisAlignment: WrapCrossAlignment.center,
                                           children: [
                                             const Icon(Icons.directions_bus, size: 18),
-                                            const SizedBox(width: 8),
                                             const Text('Add 2nd Half Bus'),
                                           ],
                                         ),
@@ -3966,8 +4297,10 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
               const Divider(height: 1, thickness: 1),
               const SizedBox(height: 8), 
               // Cancel and Delete buttons at the bottom
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              Wrap(
+                alignment: WrapAlignment.center,
+                spacing: 8,
+                runSpacing: 8,
                 children: [
                   // Delete button (only for non-spare duty events)
                   // Real spare duties start with "SP" and use their own dialog with delete button
@@ -4672,329 +5005,330 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.access_time, color: AppTheme.primaryColor),
-            SizedBox(width: 8),
-            Text('Break & Finish Status'),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (event.hasLateBreak) ...[
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade100,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Current Status:', 
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Icon(
-                          event.tookFullBreak 
-                              ? Icons.free_breakfast
-                              : Icons.monetization_on,
-                          size: 16,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          event.tookFullBreak 
-                              ? 'Full Break Taken'
-                              : 'Overtime (${event.overtimeDuration} mins)', 
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-              const Divider(height: 1),
-              const SizedBox(height: 16),
-            ],
-            if (event.hasLateFinish) ...[
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade100,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Current Late Finish Status:', 
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        const Icon(
-                          Icons.schedule,
-                          size: 16,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Late Finish: ${event.lateFinishDuration} mins',
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-              const Divider(height: 1),
-              const SizedBox(height: 16),
-            ],
-            const Text(
-              'Select an option:',
-              style: TextStyle(
-                fontSize: 14,
+            const Icon(Icons.access_time, color: AppTheme.primaryColor),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Break & Finish Status',
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
           ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (event.hasLateBreak) ...[
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.35),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Current Status:', 
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(
+                            event.tookFullBreak 
+                                ? Icons.free_breakfast
+                                : Icons.monetization_on,
+                            size: 16,
+                            color: Theme.of(context).colorScheme.onSurface,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              event.tookFullBreak 
+                                  ? 'Full Break Taken'
+                                  : 'Overtime (${event.overtimeDuration} mins)', 
+                              style: Theme.of(context).textTheme.bodyMedium,
+                              maxLines: 4,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Divider(height: 1),
+                const SizedBox(height: 16),
+              ],
+              if (event.hasLateFinish) ...[
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.35),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Current Late Finish Status:', 
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(
+                            Icons.schedule,
+                            size: 16,
+                            color: Theme.of(context).colorScheme.onSurface,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Late Finish: ${event.lateFinishDuration} mins',
+                              style: Theme.of(context).textTheme.bodyMedium,
+                              maxLines: 4,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Divider(height: 1),
+                const SizedBox(height: 16),
+              ],
+              Text(
+                'Select an option:',
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+            ],
+          ),
         ),
         actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-            },
-            child: const Text('Cancel'),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Wrap(
+                  alignment: WrapAlignment.center,
+                  spacing: 4,
+                  runSpacing: 8,
+                  children: [
+                    TextButton(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                      },
+                      child: const Text('Cancel'),
+                    ),
+                    if (event.hasLateBreak)
+                      TextButton(
+                        onPressed: () async {
+                          final oldEvent = Event(
+                            id: event.id,
+                            title: event.title,
+                            startDate: event.startDate,
+                            startTime: event.startTime,
+                            endDate: event.endDate,
+                            endTime: event.endTime,
+                            workTime: event.workTime,
+                            breakStartTime: event.breakStartTime,
+                            breakEndTime: event.breakEndTime,
+                            assignedDuties: event.assignedDuties,
+                            firstHalfBus: event.firstHalfBus,
+                            secondHalfBus: event.secondHalfBus,
+                            busAssignments: event.busAssignments,
+                            notes: event.notes,
+                            hasLateBreak: event.hasLateBreak,
+                            tookFullBreak: event.tookFullBreak,
+                            overtimeDuration: event.overtimeDuration,
+                            hasLateFinish: event.hasLateFinish,
+                            lateFinishDuration: event.lateFinishDuration,
+                          );
+                          event.hasLateBreak = false;
+                          event.tookFullBreak = false;
+                          event.overtimeDuration = null;
+                          await EventService.updateEvent(oldEvent, event);
+                          if (!mounted) return;
+                          Navigator.of(context).pop();
+                          setState(() {});
+                          if (!mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Break status removed'),
+                              duration: Duration(seconds: 2),
+                            ),
+                          );
+                          _editEvent(Event(
+                            id: 'refresh_trigger',
+                            title: '',
+                            startDate: DateTime.now(),
+                            startTime: const TimeOfDay(hour: 0, minute: 0),
+                            endDate: DateTime.now(),
+                            endTime: const TimeOfDay(hour: 0, minute: 0),
+                            busAssignments: {},
+                          ));
+                        },
+                        style: TextButton.styleFrom(
+                          foregroundColor: Colors.red,
+                        ),
+                        child: const Text('Remove'),
+                      ),
+                    if (!event.hasLateBreak)
+                      TextButton(
+                        onPressed: () async {
+                          final oldEvent = Event(
+                            id: event.id,
+                            title: event.title,
+                            startDate: event.startDate,
+                            startTime: event.startTime,
+                            endDate: event.endDate,
+                            endTime: event.endTime,
+                            workTime: event.workTime,
+                            breakStartTime: event.breakStartTime,
+                            breakEndTime: event.breakEndTime,
+                            assignedDuties: event.assignedDuties,
+                            firstHalfBus: event.firstHalfBus,
+                            secondHalfBus: event.secondHalfBus,
+                            notes: event.notes,
+                            hasLateBreak: event.hasLateBreak,
+                            tookFullBreak: event.tookFullBreak,
+                            overtimeDuration: event.overtimeDuration,
+                            hasLateFinish: event.hasLateFinish,
+                            lateFinishDuration: event.lateFinishDuration,
+                          );
+                          event.hasLateBreak = true;
+                          event.tookFullBreak = true;
+                          event.overtimeDuration = null;
+                          await EventService.updateEvent(oldEvent, event);
+                          if (!mounted) return;
+                          Navigator.of(context).pop();
+                          setState(() {});
+                          if (!mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Full Break status saved'),
+                              duration: Duration(seconds: 2),
+                            ),
+                          );
+                          _editEvent(Event(
+                            id: 'refresh_trigger',
+                            title: '',
+                            startDate: DateTime.now(),
+                            startTime: const TimeOfDay(hour: 0, minute: 0),
+                            endDate: DateTime.now(),
+                            endTime: const TimeOfDay(hour: 0, minute: 0),
+                            busAssignments: {},
+                          ));
+                        },
+                        child: const Text('Full Break'),
+                      ),
+                    if (!event.hasLateBreak)
+                      TextButton(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                          _showOvertimeSelectionDialog(event);
+                        },
+                        child: const Text('Overtime'),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                const Divider(height: 1),
+                const SizedBox(height: 8),
+                Wrap(
+                  alignment: WrapAlignment.center,
+                  spacing: 4,
+                  runSpacing: 8,
+                  children: [
+                    if (event.hasLateFinish)
+                      TextButton(
+                        onPressed: () async {
+                          final oldEvent = Event(
+                            id: event.id,
+                            title: event.title,
+                            startDate: event.startDate,
+                            startTime: event.startTime,
+                            endDate: event.endDate,
+                            endTime: event.endTime,
+                            workTime: event.workTime,
+                            breakStartTime: event.breakStartTime,
+                            breakEndTime: event.breakEndTime,
+                            assignedDuties: event.assignedDuties,
+                            firstHalfBus: event.firstHalfBus,
+                            secondHalfBus: event.secondHalfBus,
+                            busAssignments: event.busAssignments,
+                            notes: event.notes,
+                            hasLateBreak: event.hasLateBreak,
+                            tookFullBreak: event.tookFullBreak,
+                            overtimeDuration: event.overtimeDuration,
+                            hasLateFinish: event.hasLateFinish,
+                            lateFinishDuration: event.lateFinishDuration,
+                          );
+                          event.hasLateFinish = false;
+                          event.lateFinishDuration = null;
+                          await EventService.updateEvent(oldEvent, event);
+                          if (!mounted) return;
+                          Navigator.of(context).pop();
+                          setState(() {});
+                          if (!mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Late finish status removed'),
+                              duration: Duration(seconds: 2),
+                            ),
+                          );
+                          _editEvent(Event(
+                            id: 'refresh_trigger',
+                            title: '',
+                            startDate: DateTime.now(),
+                            startTime: const TimeOfDay(hour: 0, minute: 0),
+                            endDate: DateTime.now(),
+                            endTime: const TimeOfDay(hour: 0, minute: 0),
+                            busAssignments: {},
+                          ));
+                        },
+                        style: TextButton.styleFrom(
+                          foregroundColor: Colors.red,
+                        ),
+                        child: const Text('Remove Late Finish'),
+                      ),
+                    if (!event.hasLateFinish)
+                      TextButton(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                          _showLateFinishSelectionDialog(event);
+                        },
+                        child: const Text('Late Finish'),
+                      ),
+                  ],
+                ),
+              ],
+            ),
           ),
-          // Add Remove button if break status exists
-          if (event.hasLateBreak)
-            TextButton(
-              onPressed: () async {
-                // Save the old event for update
-                final oldEvent = Event(
-                  id: event.id,
-                  title: event.title,
-                  startDate: event.startDate,
-                  startTime: event.startTime,
-                  endDate: event.endDate,
-                  endTime: event.endTime,
-                  workTime: event.workTime,
-                  breakStartTime: event.breakStartTime,
-                  breakEndTime: event.breakEndTime,
-                  assignedDuties: event.assignedDuties,
-                  firstHalfBus: event.firstHalfBus,
-                  secondHalfBus: event.secondHalfBus,
-                  busAssignments: event.busAssignments,
-                  notes: event.notes,
-                  hasLateBreak: event.hasLateBreak,
-                  tookFullBreak: event.tookFullBreak,
-                  overtimeDuration: event.overtimeDuration,
-                  hasLateFinish: event.hasLateFinish,
-                  lateFinishDuration: event.lateFinishDuration,
-                );
-                
-                // Reset break status
-                event.hasLateBreak = false;
-                event.tookFullBreak = false;
-                event.overtimeDuration = null;
-                
-                // Save the updated event
-                await EventService.updateEvent(oldEvent, event);
-                
-                // Close the dialog
-                if (!mounted) return;
-                Navigator.of(context).pop();
-                
-                // Update the UI
-                setState(() {});
-                
-                // Show confirmation
-                if (!mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Break status removed'),
-                    duration: Duration(seconds: 2),
-                  ),
-                );
-                
-                // Force refresh of the event cards
-                _editEvent(Event(
-                  id: 'refresh_trigger',
-                  title: '',
-                  startDate: DateTime.now(),
-                  startTime: const TimeOfDay(hour: 0, minute: 0),
-                  endDate: DateTime.now(),
-                  endTime: const TimeOfDay(hour: 0, minute: 0),
-                  busAssignments: {},
-                ));
-              },
-              style: TextButton.styleFrom(
-                foregroundColor: Colors.red,
-              ),
-              child: const Text('Remove'),
-            ),
-          // Only show Full Break button if no break status is set
-          if (!event.hasLateBreak)
-            TextButton(
-              onPressed: () async {
-                // Save the old event for update
-                final oldEvent = Event(
-                  id: event.id,
-                  title: event.title,
-                  startDate: event.startDate,
-                  startTime: event.startTime,
-                  endDate: event.endDate,
-                  endTime: event.endTime,
-                  workTime: event.workTime,
-                  breakStartTime: event.breakStartTime,
-                  breakEndTime: event.breakEndTime,
-                  assignedDuties: event.assignedDuties,
-                  firstHalfBus: event.firstHalfBus,
-                  secondHalfBus: event.secondHalfBus,
-                  notes: event.notes,
-                  hasLateBreak: event.hasLateBreak,
-                  tookFullBreak: event.tookFullBreak,
-                  overtimeDuration: event.overtimeDuration,
-                  hasLateFinish: event.hasLateFinish,
-                  lateFinishDuration: event.lateFinishDuration,
-                );
-              
-                // Update event with Full Break option
-                event.hasLateBreak = true;
-                event.tookFullBreak = true;
-                event.overtimeDuration = null;
-                
-                // Save the updated event
-                await EventService.updateEvent(oldEvent, event);
-                
-                // Close the dialog
-                if (!mounted) return;
-                Navigator.of(context).pop();
-                
-                // Update the UI
-                setState(() {});
-                
-                // Show confirmation
-                if (!mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Full Break status saved'),
-                    duration: Duration(seconds: 2),
-                  ),
-                );
-                
-                // Force refresh of the event cards
-                _editEvent(Event(
-                  id: 'refresh_trigger',
-                  title: '',
-                  startDate: DateTime.now(),
-                  startTime: const TimeOfDay(hour: 0, minute: 0),
-                  endDate: DateTime.now(),
-                  endTime: const TimeOfDay(hour: 0, minute: 0),
-                  busAssignments: {},
-                ));
-              },
-              child: const Text('Full Break'),
-            ),
-          // Only show Overtime button if no break status is set
-          if (!event.hasLateBreak)
-            TextButton(
-              onPressed: () {
-                // Close current dialog and show overtime selection dialog
-                Navigator.of(context).pop();
-                _showOvertimeSelectionDialog(event);
-              },
-              child: const Text('Overtime'),
-            ),
-          const SizedBox(height: 8),
-          const Divider(height: 1),
-          const SizedBox(height: 8),
-          // Late Finish buttons
-          if (event.hasLateFinish)
-            TextButton(
-              onPressed: () async {
-                // Save the old event for update
-                final oldEvent = Event(
-                  id: event.id,
-                  title: event.title,
-                  startDate: event.startDate,
-                  startTime: event.startTime,
-                  endDate: event.endDate,
-                  endTime: event.endTime,
-                  workTime: event.workTime,
-                  breakStartTime: event.breakStartTime,
-                  breakEndTime: event.breakEndTime,
-                  assignedDuties: event.assignedDuties,
-                  firstHalfBus: event.firstHalfBus,
-                  secondHalfBus: event.secondHalfBus,
-                  busAssignments: event.busAssignments,
-                  notes: event.notes,
-                  hasLateBreak: event.hasLateBreak,
-                  tookFullBreak: event.tookFullBreak,
-                  overtimeDuration: event.overtimeDuration,
-                  hasLateFinish: event.hasLateFinish,
-                  lateFinishDuration: event.lateFinishDuration,
-                );
-                
-                // Reset late finish status
-                event.hasLateFinish = false;
-                event.lateFinishDuration = null;
-                
-                // Save the updated event
-                await EventService.updateEvent(oldEvent, event);
-                
-                // Close the dialog
-                if (!mounted) return;
-                Navigator.of(context).pop();
-                
-                // Update the UI
-                setState(() {});
-                
-                // Show confirmation
-                if (!mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Late finish status removed'),
-                    duration: Duration(seconds: 2),
-                  ),
-                );
-                
-                // Force refresh of the event cards
-                _editEvent(Event(
-                  id: 'refresh_trigger',
-                  title: '',
-                  startDate: DateTime.now(),
-                  startTime: const TimeOfDay(hour: 0, minute: 0),
-                  endDate: DateTime.now(),
-                  endTime: const TimeOfDay(hour: 0, minute: 0),
-                  busAssignments: {},
-                ));
-              },
-              style: TextButton.styleFrom(
-                foregroundColor: Colors.red,
-              ),
-              child: const Text('Remove Late Finish'),
-            ),
-          // Only show Late Finish button if not already set
-          if (!event.hasLateFinish)
-            TextButton(
-              onPressed: () {
-                // Close current dialog and show late finish selection dialog
-                Navigator.of(context).pop();
-                _showLateFinishSelectionDialog(event);
-              },
-              child: const Text('Late Finish'),
-            ),
         ],
       ),
     );
@@ -5008,27 +5342,33 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
-          title: const Row(
+          title: Row(
             children: [
-              Icon(Icons.monetization_on, color: Colors.orange),
-              SizedBox(width: 8),
-              Text('Select Overtime'),
+              const Icon(Icons.monetization_on, color: Colors.orange),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Select Overtime',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
             ],
           ),
-          content: Column(
+          content: SingleChildScrollView(
+            child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
+              Text(
                 'Select overtime duration:',
-                style: TextStyle(
-                  fontSize: 14,
-                ),
+                style: Theme.of(context).textTheme.bodyMedium,
               ),
               const SizedBox(height: 16),
               // Dropdown for overtime duration
               DropdownButtonFormField<int>(
                 value: selectedDuration,
+                isExpanded: true,
                 decoration: const InputDecoration(
                   labelText: 'Duration',
                   border: OutlineInputBorder(),
@@ -5112,6 +5452,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                 ),
               ),
             ],
+          ),
           ),
           actions: [
             TextButton(
@@ -5198,11 +5539,17 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
-          title: const Row(
+          title: Row(
             children: [
-              Icon(Icons.schedule, color: Colors.orange),
-              SizedBox(width: 8),
-              Text('Select Late Finish'),
+              const Icon(Icons.schedule, color: Colors.orange),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Select Late Finish',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
             ],
           ),
           content: SingleChildScrollView(
@@ -5220,6 +5567,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                 // Dropdown for late finish duration
                 DropdownButtonFormField<int?>(
                   value: useCustom ? null : selectedDuration,
+                  isExpanded: true,
                   decoration: const InputDecoration(
                     labelText: 'Duration (Select)',
                     border: OutlineInputBorder(),
@@ -5390,125 +5738,157 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.medical_services, color: Colors.orange),
-            SizedBox(width: 8),
-            Text('Sick Day Status'),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (event.sickDayType != null) ...[
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.orange.shade50,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Current Status:', 
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.medical_services,
-                          size: 16,
-                          color: Colors.orange.shade700,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          _getSickDayTypeLabel(event.sickDayType!),
-                          style: TextStyle(
-                            color: Colors.orange.shade900,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+            const Icon(Icons.medical_services, color: Colors.orange),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Sick Day Status',
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
-              const SizedBox(height: 16),
-              const Divider(height: 1),
-              const SizedBox(height: 16),
-            ],
-            const Text(
-              'Select sick day type:',
-              style: TextStyle(fontSize: 14),
             ),
           ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (event.sickDayType != null) ...[
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.35),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Current Status:',
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(
+                            Icons.medical_services,
+                            size: 16,
+                            color: Theme.of(context).colorScheme.tertiary,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              _getSickDayTypeLabel(event.sickDayType!),
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Divider(height: 1),
+                const SizedBox(height: 16),
+              ],
+              Text(
+                'Select sick day type:',
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+            ],
+          ),
         ),
         actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-            },
-            child: const Text('Cancel'),
-          ),
-          // Clear button if sick day status exists
-          if (event.sickDayType != null)
-            TextButton(
-              onPressed: () async {
-                // Save the old event for update
-                final oldEvent = Event(
-                  id: event.id,
-                  title: event.title,
-                  startDate: event.startDate,
-                  startTime: event.startTime,
-                  endDate: event.endDate,
-                  endTime: event.endTime,
-                  workTime: event.workTime,
-                  breakStartTime: event.breakStartTime,
-                  breakEndTime: event.breakEndTime,
-                  assignedDuties: event.assignedDuties,
-                  firstHalfBus: event.firstHalfBus,
-                  secondHalfBus: event.secondHalfBus,
-                  busAssignments: event.busAssignments,
-                  notes: event.notes,
-                  hasLateBreak: event.hasLateBreak,
-                  tookFullBreak: event.tookFullBreak,
-                  overtimeDuration: event.overtimeDuration,
-                  sickDayType: event.sickDayType,
-                );
-                
-                // Clear sick day status
-                event.sickDayType = null;
-                
-                // Save the updated event
-                await EventService.updateEvent(oldEvent, event);
-                
-                // Close the dialog
-                Navigator.of(context).pop();
-                
-                // Update the UI
-                setState(() {});
-                
-                // Show confirmation
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Sick day status cleared'),
-                    duration: Duration(seconds: 2),
-                  ),
-                );
-              },
-              style: TextButton.styleFrom(
-                foregroundColor: Colors.red,
-              ),
-              child: const Text('Clear'),
-            ),
-          TextButton(
-            onPressed: () async {
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Wrap(
+                  alignment: WrapAlignment.center,
+                  spacing: 4,
+                  runSpacing: 8,
+                  children: [
+                    TextButton(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                      },
+                      child: const Text('Cancel'),
+                    ),
+                    if (event.sickDayType != null)
+                      TextButton(
+                        onPressed: () async {
+                          // Save the old event for update
+                          final oldEvent = Event(
+                            id: event.id,
+                            title: event.title,
+                            startDate: event.startDate,
+                            startTime: event.startTime,
+                            endDate: event.endDate,
+                            endTime: event.endTime,
+                            workTime: event.workTime,
+                            breakStartTime: event.breakStartTime,
+                            breakEndTime: event.breakEndTime,
+                            assignedDuties: event.assignedDuties,
+                            firstHalfBus: event.firstHalfBus,
+                            secondHalfBus: event.secondHalfBus,
+                            busAssignments: event.busAssignments,
+                            notes: event.notes,
+                            hasLateBreak: event.hasLateBreak,
+                            tookFullBreak: event.tookFullBreak,
+                            overtimeDuration: event.overtimeDuration,
+                            sickDayType: event.sickDayType,
+                          );
+
+                          // Clear sick day status
+                          event.sickDayType = null;
+
+                          // Save the updated event
+                          await EventService.updateEvent(oldEvent, event);
+
+                          // Close the dialog
+                          Navigator.of(context).pop();
+
+                          // Update the UI
+                          setState(() {});
+
+                          // Show confirmation
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Sick day status cleared'),
+                              duration: Duration(seconds: 2),
+                            ),
+                          );
+                        },
+                        style: TextButton.styleFrom(
+                          foregroundColor: Colors.red,
+                        ),
+                        child: const Text('Clear'),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                const Divider(height: 1),
+                const SizedBox(height: 8),
+                Wrap(
+                  alignment: WrapAlignment.center,
+                  spacing: 4,
+                  runSpacing: 8,
+                  children: [
+                    TextButton(
+                      onPressed: () async {
               // Save the old event for update
               final oldEvent = Event(
                 id: event.id,
@@ -5717,6 +6097,11 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
             },
             child: const Text('Force Majeure'),
           ),
+                  ],
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -5756,11 +6141,22 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
     // Reload marked in settings immediately when build is called
     // This ensures settings are fresh when navigating back to the screen
     _loadMarkedInSettings();
+
+    final textScaler = MediaQuery.textScalerOf(context);
+    final textScaleFactor = textScaler.scale(1.0);
+    // Full title + action icons overflow when accessibility text is large; shorten title.
+    final bool useShortAppBarTitle =
+        textScaleFactor > 1.12 || MediaQuery.sizeOf(context).width < 400;
+    final double? appBarToolbarHeight =
+        textScaleFactor > 1.2 ? kToolbarHeight + 10.0 : null;
     
     return Scaffold(
       appBar: AppBar(
+        toolbarHeight: appBarToolbarHeight,
         title: Text(
-          MediaQuery.of(context).size.width < 400 ? 'Calendar' : 'Spare Driver Calendar',
+          useShortAppBarTitle ? 'Calendar' : 'Spare Driver Calendar',
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
         ),
         actions: [
           IconButton(
@@ -5881,8 +6277,10 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                               padding: const EdgeInsets.symmetric(horizontal: 16.0),
                               child: _buildEventsList(),
                             ),
-                          // Dynamic bottom padding that adapts to device navigation bar height
-                          SizedBox(height: MediaQuery.of(context).padding.bottom + 24),
+                          // Edge-to-edge: padding.bottom is often 0; viewPadding includes gesture bar.
+                          SizedBox(
+                            height: MediaQuery.viewPaddingOf(context).bottom + 24,
+                          ),
                         ],
                       ),
                     ),
@@ -5905,13 +6303,25 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
   }
 
   Widget _buildCalendar() {
+    // table_calendar defaults (daysOfWeekHeight: 16, rowHeight: 52) do not grow with
+    // system text scaling — weekday labels and cells clip when zoom / large text is on.
+    final textScaler = MediaQuery.textScalerOf(context);
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final scaledDaysOfWeekHeight = textScaler.scale(22.0) + 16.0;
+    // Allow date + up to two lines of duty text at the current text scale.
+    final scaledRowHeight = math.max(
+      textScaler.scale(52.0) + textScaler.scale(10.0),
+      textScaler.scale(_getResponsiveDateFontSize(screenWidth)) +
+          textScaler.scale(_getResponsiveDutyFontSize(screenWidth)) * 2 +
+          textScaler.scale(14.0),
+    );
+
     return Column(
       children: [
         // Add custom header with clickable month/year title
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               IconButton(
                 icon: const Icon(Icons.chevron_left),
@@ -5921,27 +6331,31 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                   });
                 },
               ),
-              GestureDetector(
-                onTap: () {
-                  _showYearView(_focusedDay.year);
-                },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey.shade300),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        DateFormat('  MMMM yyyy').format(_focusedDay),
-                        style: const TextStyle(
-                          fontSize: 18,
-                        ),
+              Expanded(
+                child: GestureDetector(
+                  onTap: () {
+                    _showYearView(_focusedDay.year);
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+                    decoration: BoxDecoration(
+                      border: Border.all(
+                        color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.5),
                       ),
-                      const SizedBox(width: 8),
-                    ],
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Center(
+                      child: Text(
+                        DateFormat('  MMMM yyyy').format(_focusedDay),
+                        style: TextStyle(
+                          fontSize: 18,
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -5964,6 +6378,8 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
           lastDay: DateTime.utc(2030, 12, 31),
           focusedDay: _focusedDay,
           calendarFormat: CalendarFormat.month,
+          daysOfWeekHeight: scaledDaysOfWeekHeight,
+          rowHeight: scaledRowHeight,
           headerVisible: false, // Hide default header since we're using our custom one above
           // Enable horizontal swipe gestures for month navigation
           // Vertical scrolling still works for page content
@@ -5997,10 +6413,24 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
           },
           onPageChanged: _onPageChanged,
           eventLoader: getEventsForDay,
-          calendarStyle: const CalendarStyle(
+          daysOfWeekStyle: DaysOfWeekStyle(
+            weekdayStyle: TextStyle(
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
+            weekendStyle: TextStyle(
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
+          ),
+          calendarStyle: CalendarStyle(
             outsideDaysVisible: true,
             markersMaxCount: 0,
             markersAnchor: 1.0,
+            defaultTextStyle: TextStyle(
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
+            weekendTextStyle: TextStyle(
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
           ),
           calendarBuilders: CalendarBuilders(
             defaultBuilder: (context, date, _) {
@@ -6309,8 +6739,9 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                         height: 1.0, // Reduce line height
                         color: Colors.white, // White text for filled circle
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.clip,
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     );
                   },
                 ),
@@ -6417,26 +6848,23 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                 '${date.day}',
                 style: TextStyle(
                   fontSize: _getResponsiveDateFontSize(screenWidth),
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
               // Show display text if not empty AND (not holiday OR it's a rest day)
               // This allows rest day "R" to show even when holidays are present
               if (displayText.isNotEmpty && (!isHoliday || shift == 'R')) ...[
-                Builder(
-                  builder: (context) {
-                    // Use black text for all cells for consistency and readability
-                    return Text(
-                      displayText,
-                      style: TextStyle(
-                        fontSize: _getResponsiveDutyFontSize(screenWidth),
-                        fontWeight: FontWeight.bold,
-                        height: 1.0, // Reduce line height
-                        color: Colors.black,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.clip,
-                    );
-                  },
+                Text(
+                  displayText,
+                  style: TextStyle(
+                    fontSize: _getResponsiveDutyFontSize(screenWidth),
+                    fontWeight: FontWeight.bold,
+                    height: 1.0, // Reduce line height
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
               if (isDayInLieu)
@@ -6445,7 +6873,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                   style: TextStyle(
                     fontSize: _getResponsiveDutyFontSize(screenWidth),
                     fontWeight: FontWeight.bold,
-                    color: Colors.black,
+                    color: Theme.of(context).colorScheme.onSurface,
                     height: 1.0, // Reduce line height
                   ),
                   maxLines: 1,
@@ -6458,7 +6886,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                   style: TextStyle(
                     fontSize: _getResponsiveDutyFontSize(screenWidth),
                     fontWeight: FontWeight.bold,
-                    color: Colors.black,
+                    color: Theme.of(context).colorScheme.onSurface,
                     height: 1.0, // Reduce line height
                   ),
                   maxLines: 1,
@@ -6605,19 +7033,23 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
         Padding(
           padding: const EdgeInsets.only(top: 16.0),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Text(
-                'Events (${events.length})',
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18,
+              Expanded(
+                child: Text(
+                  'Events (${events.length})',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
               IconButton(
                 icon: const Icon(Icons.add_circle),
                 color: Colors.blue,
                 onPressed: _showAddEventDialog,
+                constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
               ),
             ],
           ),
@@ -6686,11 +7118,33 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
         builder: (context) => SettingsScreen(
           resetRestDaysCallback: _resetRestDays,
           isDarkModeNotifier: widget.isDarkModeNotifier,
+          onCalendarDataChanged: _refreshCalendarAfterDataChange,
         ),
       ),
-    ).then((_) {
+    ).then((result) {
       // Reload marked in settings when returning from settings page
       _loadMarkedInSettings();
+      // If Settings cleared future events, refresh calendar and show feedback
+      if (result is int && result >= 0) {
+        _refreshCalendarAfterDataChange();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Removed $result future event(s).')),
+          );
+        }
+      }
+    });
+  }
+
+  void _refreshCalendarAfterDataChange() {
+    if (!mounted) return;
+    // Defer to next frame so refresh runs after Settings UI settles
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      EventService.refreshMonthCache(_focusedDay).then((_) {
+        if (!mounted) return;
+        setState(() {});
+      });
     });
   }
 
@@ -7031,7 +7485,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                         if (dayInLieuCount > 0)
                           _buildTypeBadge('Day In Lieu', dayInLieuCount, ColorCustomizationService.getColorForShift('DAY_IN_LIEU'), sizes),
                         if (otherCount > 0)
-                          _buildTypeBadge('Other', otherCount, Colors.grey, sizes),
+                          _buildTypeBadge('Holiday', otherCount, Colors.grey, sizes),
                       ],
                     ),
                   ),
@@ -7176,7 +7630,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                   isSummer ? 'Summer Holiday' :
                   isUnpaidLeave ? 'Unpaid Leave' :
                   isDayInLieu ? 'Day In Lieu' :
-                  'Other Holiday',
+                  'Holiday',
                   style: TextStyle(
                     fontWeight: FontWeight.w600,
                     fontSize: sizes['itemTitleFontSize']!,
@@ -7288,17 +7742,19 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
   }
 
   Future<Map<String, int>> _getHolidayBalances() async {
-    final annualLeaveBalance = await AnnualLeaveService.getBalance();
-    final annualLeaveRemaining = await AnnualLeaveService.getRemainingDays();
-    final annualLeaveUsed = await AnnualLeaveService.getUsedDays();
+    // Annual leave: effective "Today" vs remaining vs future booked
+    final annualLeaveStoredBalance = await AnnualLeaveService.getEffectiveBalance();
+    final annualLeaveRemainingFutureOnly =
+        await AnnualLeaveService.getRemainingDaysFutureBookingsOnly();
+    final annualLeaveFutureBooked = await AnnualLeaveService.getFutureBookedAnnualLeaveDays();
     final daysInLieuBalance = await DaysInLieuService.getBalance();
     final daysInLieuRemaining = await DaysInLieuService.getRemainingDays();
     final daysInLieuUsed = await DaysInLieuService.getUsedDays();
     
     return {
-      'annualLeaveToday': annualLeaveBalance,
-      'annualLeaveRemaining': annualLeaveRemaining,
-      'annualLeaveBooked': annualLeaveUsed,
+      'annualLeaveToday': annualLeaveStoredBalance,
+      'annualLeaveRemaining': annualLeaveRemainingFutureOnly,
+      'annualLeaveBooked': annualLeaveFutureBooked,
       'daysInLieuToday': daysInLieuBalance,
       'daysInLieuRemaining': daysInLieuRemaining,
       'daysInLieuBooked': daysInLieuUsed,
@@ -7346,23 +7802,15 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
 
   void _showBookedHolidaysDialog(BuildContext context, String holidayType) async {
     final holidays = await HolidayService.getHolidays();
-    final today = DateTime.now();
-    final todayNormalized = DateTime(today.year, today.month, today.day);
-    
+
     List<Holiday> bookedHolidays = [];
     
     if (holidayType == 'annualLeave') {
-      // For Annual Leave: Show winter, summer, and other holidays that start today or in the future
+      // All winter/summer/other bookings (past and future) — counts toward allowance
       bookedHolidays = holidays.where((holiday) {
-        if (holiday.type != 'winter' && holiday.type != 'summer' && holiday.type != 'other') {
-          return false;
-        }
-        final startDateNormalized = DateTime(
-          holiday.startDate.year,
-          holiday.startDate.month,
-          holiday.startDate.day,
-        );
-        return !startDateNormalized.isBefore(todayNormalized);
+        return holiday.type == 'winter' ||
+            holiday.type == 'summer' ||
+            holiday.type == 'other';
       }).toList();
       
       // Sort by start date
@@ -7501,7 +7949,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                                 holidayColor = ColorCustomizationService.getColorForShift('DAY_IN_LIEU');
                                 holidayIcon = Icons.event_available;
                               } else {
-                                holidayTypeLabel = 'Other Holiday';
+                                holidayTypeLabel = 'Holiday';
                                 holidayColor = Colors.grey;
                                 holidayIcon = Icons.event;
                               }
@@ -7973,7 +8421,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                               const Icon(Icons.event, size: 22),
                               const SizedBox(width: 12),
                               Text(
-                                'Other Holiday',
+                                'Holiday',
                                 style: TextStyle(
                                   fontSize: 14,
                                   color: Theme.of(context).textTheme.bodyMedium?.color,
@@ -8133,6 +8581,9 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
               future: _getHolidayCountsForYears(currentYear, 'winter'),
               builder: (context, snapshot) {
                 final holidayCounts = snapshot.data ?? {};
+                final textScale = MediaQuery.textScalerOf(context).scale(1.0);
+                final yearGridAspectRatio =
+                    (1.2 / textScale.clamp(1.0, 3.0)).clamp(0.38, 1.2);
                 
                 return AlertDialog(
                   shape: RoundedRectangleBorder(
@@ -8163,20 +8614,25 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                     ],
                   ),
                   contentPadding: const EdgeInsets.all(16),
-                  content: SizedBox(
-                    width: double.maxFinite,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
+                  content: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxHeight: MediaQuery.sizeOf(context).height * 0.55,
+                    ),
+                    child: SingleChildScrollView(
+                      child: SizedBox(
+                        width: double.maxFinite,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
                         // Year selection grid
                         GridView.builder(
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(),
-                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                             crossAxisCount: 3,
                             crossAxisSpacing: 12,
                             mainAxisSpacing: 12,
-                            childAspectRatio: 1.2,
+                            childAspectRatio: yearGridAspectRatio,
                           ),
                           itemCount: 5, // Current year + 4 future years
                           itemBuilder: (context, index) {
@@ -8300,7 +8756,9 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                             ],
                           ),
                         ),
-                      ],
+                          ],
+                        ),
+                      ),
                     ),
                   ),
                   actions: [
@@ -8664,7 +9122,8 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
               ),
             ],
           ),
-          content: Column(
+          content: SingleChildScrollView(
+            child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Material(
@@ -8791,6 +9250,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                 ),
               ),
             ],
+            ),
           ),
           actions: [
             TextButton(
@@ -8817,6 +9277,9 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
               future: _getHolidayCountsForYears(currentYear, 'summer'),
               builder: (context, snapshot) {
                 final holidayCounts = snapshot.data ?? {};
+                final textScale = MediaQuery.textScalerOf(context).scale(1.0);
+                final yearGridAspectRatio =
+                    (1.2 / textScale.clamp(1.0, 3.0)).clamp(0.38, 1.2);
                 
                 return AlertDialog(
                   shape: RoundedRectangleBorder(
@@ -8847,20 +9310,25 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                     ],
                   ),
                   contentPadding: const EdgeInsets.all(16),
-                  content: SizedBox(
-                    width: double.maxFinite,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
+                  content: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxHeight: MediaQuery.sizeOf(context).height * 0.55,
+                    ),
+                    child: SingleChildScrollView(
+                      child: SizedBox(
+                        width: double.maxFinite,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
                         // Year selection grid
                         GridView.builder(
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(),
-                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                             crossAxisCount: 3,
                             crossAxisSpacing: 12,
                             mainAxisSpacing: 12,
-                            childAspectRatio: 1.2,
+                            childAspectRatio: yearGridAspectRatio,
                           ),
                           itemCount: 5, // Current year + 4 future years
                           itemBuilder: (context, index) {
@@ -8984,7 +9452,9 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                             ],
                           ),
                         ),
-                      ],
+                          ],
+                        ),
+                      ),
                     ),
                   ),
                   actions: [
@@ -9464,18 +9934,15 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                   ),
                 ],
                 const Divider(height: 0),
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      TextButton(
-                        onPressed: () => Navigator.of(context).pop(),
-                        child: const Text('Cancel'),
-                      ),
-                      const SizedBox(width: 8),
-                      ElevatedButton(
-                        onPressed: selectedDates.isEmpty ? null : () async {
+                _dialogFooterActions(
+                  context,
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: const Text('Cancel'),
+                    ),
+                    ElevatedButton(
+                      onPressed: selectedDates.isEmpty ? null : () async {
                           // Create a separate holiday for each selected date
                           final sortedDates = selectedDates.toList()..sort();
                           int successCount = 0;
@@ -9516,19 +9983,49 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                             ),
                           );
                         },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green,
-                          foregroundColor: Colors.white,
-                          disabledBackgroundColor: Colors.grey.shade300,
-                        ),
-                        child: Text(selectedDates.length == 1 ? 'Add Holiday' : 'Add Holidays'),
-                      ),
-                    ],
-                  ),
+                      style: _dialogAccentElevatedStyle(context, AppTheme.successColor),
+                      child: Text(selectedDates.length == 1 ? 'Add Holiday' : 'Add Holidays'),
+                    ),
+                  ],
                 ),
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+  
+  /// Strong fill + label contrast for accent [ElevatedButton]s in dialogs.
+  ///
+  /// Material 3 applies a [surfaceTint] on [ElevatedButton]; on custom greens/purples that
+  /// reads as a pale grey fill in dark mode with poor text contrast. Disabling the tint and
+  /// using [ColorScheme] disabled colors avoids light-on-light disabled states.
+  ButtonStyle _dialogAccentElevatedStyle(BuildContext context, Color backgroundColor) {
+    final cs = Theme.of(context).colorScheme;
+    return ElevatedButton.styleFrom(
+      backgroundColor: backgroundColor,
+      foregroundColor: Colors.white,
+      disabledBackgroundColor: cs.surfaceContainerHighest,
+      disabledForegroundColor: cs.onSurface.withValues(alpha: 0.38),
+      surfaceTintColor: Colors.transparent,
+      shadowColor: Colors.black26,
+      elevation: 2,
+    );
+  }
+
+  /// Footer actions laid out with [Wrap] so long labels at large text scale do not overflow.
+  Widget _dialogFooterActions(BuildContext context, {required List<Widget> children}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: SizedBox(
+        width: double.infinity,
+        child: Wrap(
+          alignment: WrapAlignment.end,
+          spacing: 8,
+          runSpacing: 8,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: children,
         ),
       ),
     );
@@ -9571,21 +10068,39 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
     }
     
     final allDates = [...previousMonthDates, ...dates, ...nextMonthDates];
+    final textScaler = MediaQuery.textScalerOf(context);
+    final textScale = textScaler.scale(1.0);
+    // Long names wrap in narrow columns at max font — use short labels when scaled up.
+    final weekdayLabels = textScale > 1.1
+        ? <String>['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
+        : <String>['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    final weekdayStyle = Theme.of(context).textTheme.labelSmall?.copyWith(
+          fontWeight: FontWeight.bold,
+          color: Theme.of(context).colorScheme.onSurface,
+        ) ??
+        TextStyle(
+          fontWeight: FontWeight.bold,
+          fontSize: 12,
+          color: Theme.of(context).colorScheme.onSurface,
+        );
+    // Taller cells when text is large so day numbers are not clipped.
+    final double cellAspectRatio = textScale > 1.2
+        ? 0.62
+        : (textScale > 1.05 ? 0.78 : 0.92);
     
     return Column(
       children: [
         // Weekday headers
         Row(
-          children: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+          children: weekdayLabels
               .map((day) => Expanded(
                     child: Center(
                       child: Text(
                         day,
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12,
-                          color: Theme.of(context).colorScheme.onSurface,
-                        ),
+                        style: weekdayStyle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
                       ),
                     ),
                   ))
@@ -9596,10 +10111,11 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
         GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 7,
             mainAxisSpacing: 4,
             crossAxisSpacing: 4,
+            childAspectRatio: cellAspectRatio,
           ),
           itemCount: allDates.length,
           itemBuilder: (context, index) {
@@ -9809,18 +10325,15 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                   ),
                 ],
                 const Divider(height: 0),
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      TextButton(
-                        onPressed: () => Navigator.of(context).pop(),
-                        child: const Text('Cancel'),
-                      ),
-                      const SizedBox(width: 8),
-                      ElevatedButton(
-                        onPressed: selectedDates.isEmpty ? null : () async {
+                _dialogFooterActions(
+                  context,
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: const Text('Cancel'),
+                    ),
+                    ElevatedButton(
+                      onPressed: selectedDates.isEmpty ? null : () async {
                           // Create a separate holiday for each selected date
                           final sortedDates = selectedDates.toList()..sort();
                           int successCount = 0;
@@ -9865,15 +10378,10 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                             ),
                           );
                         },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.purple,
-                          foregroundColor: Colors.white,
-                          disabledBackgroundColor: Colors.grey.shade300,
-                        ),
-                        child: Text(selectedDates.length == 1 ? 'Add Unpaid Leave' : 'Add Unpaid Leave Days'),
-                      ),
-                    ],
-                  ),
+                      style: _dialogAccentElevatedStyle(context, const Color(0xFF8E24AA)),
+                      child: Text(selectedDates.length == 1 ? 'Add Unpaid Leave' : 'Add Unpaid Leave Days'),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -10100,18 +10608,15 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                   ),
                 ],
                 const Divider(height: 0),
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      TextButton(
-                        onPressed: () => Navigator.of(context).pop(),
-                        child: const Text('Cancel'),
-                      ),
-                      const SizedBox(width: 8),
-                      ElevatedButton(
-                        onPressed: selectedDates.isEmpty ? null : () async {
+                _dialogFooterActions(
+                  context,
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: const Text('Cancel'),
+                    ),
+                    ElevatedButton(
+                      onPressed: selectedDates.isEmpty ? null : () async {
                           // Create a separate holiday for each selected date
                           final sortedDates = selectedDates.toList()..sort();
                           int successCount = 0;
@@ -10161,15 +10666,10 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                             ),
                           );
                         },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: dayInLieuColor,
-                          foregroundColor: Colors.white,
-                          disabledBackgroundColor: Colors.grey.shade300,
-                        ),
-                        child: Text(selectedDates.length == 1 ? 'Add Day In Lieu' : 'Add Days In Lieu'),
-                      ),
-                    ],
-                  ),
+                      style: _dialogAccentElevatedStyle(context, dayInLieuColor),
+                      child: Text(selectedDates.length == 1 ? 'Add Day In Lieu' : 'Add Days In Lieu'),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -10568,7 +11068,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                         }
                       }
                       
-                      // For regular work shifts, include ALL duties (including workouts)
+                  // For regular work shifts, include ALL duties (including workouts)
                       if (!seenShifts.contains(shift) && shift != "shift") {
                         seenShifts.add(shift);
                         shiftNumbers.add(shift);
@@ -10577,6 +11077,10 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                   }
                 } catch (e) {
                   shiftNumbers = [];
+                }
+                // Preload Zone 1 M-F roster for 12-week checkbox visibility
+                if (selectedZone == 'Zone 1') {
+                  await RosterService.loadZone1MFRoster();
                 }
               }
               
@@ -10592,7 +11096,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
             });
             }
           }
-
+          
           // Load shift numbers initially
           if (isLoading) {
             loadShiftNumbers();

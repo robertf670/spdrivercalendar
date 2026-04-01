@@ -568,8 +568,14 @@ class YearViewScreenState extends State<YearViewScreen> {
                         final gridPadding = isSmallScreen ? 6.0 : (isLargeScreen ? 12.0 : 8.0);
                         final gridSpacing = isSmallScreen ? 6.0 : (isLargeScreen ? 12.0 : 8.0);
                         
-                        // Responsive aspect ratio (smaller screens need taller cells)
-                        final aspectRatio = isSmallScreen ? 0.92 : (isLargeScreen ? 0.98 : 0.95);
+                        // Responsive aspect ratio (smaller screens need taller cells).
+                        // Divide by text scale so month tiles stay tall enough at max font size.
+                        final textScale =
+                            MediaQuery.textScalerOf(context).scale(1.0).clamp(1.0, 3.0);
+                        final baseAspect =
+                            isSmallScreen ? 0.92 : (isLargeScreen ? 0.98 : 0.95);
+                        final aspectRatio =
+                            (baseAspect / textScale).clamp(0.42, 1.05);
                         
                         return SingleChildScrollView(
                           padding: EdgeInsets.all(gridPadding),

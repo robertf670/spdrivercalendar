@@ -280,10 +280,16 @@ class LiveUpdatesPreferencesScreenState extends State<LiveUpdatesPreferencesScre
               ),
               const SizedBox(height: 16),
               Expanded(
-                child: GridView.builder(
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                child: Builder(
+                  builder: (context) {
+                    final textScale = MediaQuery.textScalerOf(context)
+                        .scale(1.0)
+                        .clamp(1.0, 3.0);
+                    final routeGridAspect = (2.0 / textScale).clamp(0.65, 2.5);
+                    return GridView.builder(
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 4,
-                    childAspectRatio: 2,
+                    childAspectRatio: routeGridAspect,
                     crossAxisSpacing: 8,
                     mainAxisSpacing: 8,
                   ),
@@ -325,6 +331,8 @@ class LiveUpdatesPreferencesScreenState extends State<LiveUpdatesPreferencesScre
                           ),
                         ),
                       ),
+                    );
+                  },
                     );
                   },
                 ),

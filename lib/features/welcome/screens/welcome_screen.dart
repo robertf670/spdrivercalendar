@@ -71,8 +71,33 @@ class WelcomeScreenState extends State<WelcomeScreen> {
     super.dispose();
   }
   
+  Map<String, double> _welcomeResponsiveSizes(BuildContext context) {
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final textScale = MediaQuery.textScalerOf(context).scale(1.0);
+    final pad = screenWidth < 350 ? 16.0 : screenWidth < 400 ? 20.0 : 24.0;
+    final bottomPad = screenWidth < 350 ? 12.0 : 16.0;
+    double iconBase =
+        screenWidth < 350 ? 64.0 : screenWidth < 400 ? 80.0 : screenWidth < 600 ? 100.0 : 120.0;
+    if (textScale > 1.15) {
+      iconBase = iconBase / (textScale * 0.75);
+    }
+    final iconSize = iconBase.clamp(48.0, 120.0);
+    final gapLarge = (screenWidth < 350 ? 20.0 : 28.0) * (textScale > 1.25 ? 0.9 : 1.0);
+    final gapSmall = (screenWidth < 350 ? 12.0 : 16.0) * (textScale > 1.25 ? 0.9 : 1.0);
+    return {
+      'pad': pad,
+      'bottomPad': bottomPad,
+      'iconSize': iconSize,
+      'gapLarge': gapLarge,
+      'gapSmall': gapSmall,
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
+    final sizes = _welcomeResponsiveSizes(context);
+    final bottomPad = sizes['bottomPad']!;
+
     return Scaffold(
       body: SafeArea(
         child: Column(
@@ -87,40 +112,58 @@ class WelcomeScreenState extends State<WelcomeScreen> {
                 },
                 itemCount: _welcomePages.length,
                 itemBuilder: (context, index) {
-                  return _buildWelcomePage(
-                    _welcomePages[index]['title'],
-                    _welcomePages[index]['description'],
-                    _welcomePages[index]['icon'],
+                  return LayoutBuilder(
+                    builder: (context, constraints) {
+                      return SingleChildScrollView(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: sizes['pad']!,
+                          vertical: sizes['pad']!,
+                        ),
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                          child: _buildWelcomePage(
+                            _welcomePages[index]['title'],
+                            _welcomePages[index]['description'],
+                            _welcomePages[index]['icon'],
+                            sizes,
+                          ),
+                        ),
+                      );
+                    },
                   );
                 },
               ),
             ),
             Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              padding: EdgeInsets.fromLTRB(bottomPad, 8, bottomPad, bottomPad),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Page indicator
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: List.generate(_welcomePages.length, (index) {
-                      return Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 4.0),
-                        width: 8.0,
-                        height: 8.0,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: _currentPage == index
-                              ? AppTheme.primaryColor
-                              : Colors.grey.shade300,
-                        ),
-                      );
-                    }),
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: List.generate(_welcomePages.length, (index) {
+                        return Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 4.0),
+                          width: 8.0,
+                          height: 8.0,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: _currentPage == index
+                                ? AppTheme.primaryColor
+                                : Colors.grey.shade400,
+                          ),
+                        );
+                      }),
+                    ),
                   ),
-                  
-                  // Navigation buttons
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
+                  SizedBox(height: MediaQuery.sizeOf(context).width < 380 ? 10 : 14),
+                  Wrap(
+                    alignment: WrapAlignment.end,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 8,
+                    runSpacing: 8,
                     children: [
                       if (_currentPage > 0)
                         TextButton(
@@ -132,7 +175,6 @@ class WelcomeScreenState extends State<WelcomeScreen> {
                           },
                           child: const Text('Back'),
                         ),
-                      const SizedBox(width: 8),
                       ElevatedButton(
                         onPressed: _currentPage < _welcomePages.length - 1
                             ? () {
@@ -142,6 +184,9 @@ class WelcomeScreenState extends State<WelcomeScreen> {
                                 );
                               }
                             : widget.onGetStarted,
+                        style: ElevatedButton.styleFrom(
+                          surfaceTintColor: Colors.transparent,
+                        ),
                         child: Text(
                           _currentPage < _welcomePages.length - 1
                               ? 'Next'
@@ -158,37 +203,52 @@ class WelcomeScreenState extends State<WelcomeScreen> {
       ),
     );
   }
-  
-  Widget _buildWelcomePage(String title, String description, IconData icon) {
-    return Padding(
-      padding: const EdgeInsets.all(32.0),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            icon,
-            size: 120,
-            color: AppTheme.primaryColor,
-          ),
-          const SizedBox(height: 32),
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            description,
-            style: const TextStyle(
-              fontSize: 16,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
+
+  Widget _buildWelcomePage(
+    String title,
+    String description,
+    IconData icon,
+    Map<String, double> sizes,
+  ) {
+    final theme = Theme.of(context);
+    final titleStyle = theme.textTheme.titleLarge?.copyWith(
+          fontWeight: FontWeight.bold,
+          color: theme.colorScheme.onSurface,
+        ) ??
+        TextStyle(
+          fontWeight: FontWeight.bold,
+          fontSize: MediaQuery.sizeOf(context).width < 350 ? 18 : 22,
+          color: theme.colorScheme.onSurface,
+        );
+    final bodyStyle = theme.textTheme.bodyLarge?.copyWith(
+          color: theme.colorScheme.onSurface.withValues(alpha: 0.9),
+        ) ??
+        TextStyle(
+          fontSize: MediaQuery.sizeOf(context).width < 350 ? 14 : 16,
+          color: theme.colorScheme.onSurface.withValues(alpha: 0.9),
+        );
+
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(
+          icon,
+          size: sizes['iconSize']!,
+          color: AppTheme.primaryColor,
+        ),
+        SizedBox(height: sizes['gapLarge']!),
+        Text(
+          title,
+          style: titleStyle,
+          textAlign: TextAlign.center,
+        ),
+        SizedBox(height: sizes['gapSmall']!),
+        Text(
+          description,
+          style: bodyStyle,
+          textAlign: TextAlign.center,
+        ),
+      ],
     );
   }
 }

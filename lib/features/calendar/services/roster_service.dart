@@ -250,4 +250,170 @@ class RosterService {
       return null;
     }
   }
+
+  // --- Zone 1 M-F 12-week roster (fixed duties) ---
+  static List<String>? _zone1MFWeeklyDuties;
+  static Map<String, int>? _zone1MFDutyToWeekIndex;
+
+  /// Load Zone 1 M-F 12-week roster from assets. Returns true if loaded successfully.
+  static Future<bool> loadZone1MFRoster() async {
+    try {
+      final jsonString = await rootBundle.loadString('assets/zone1_mf_12week_roster.json');
+      final Map<String, dynamic> data = json.decode(jsonString);
+      final List<dynamic> weeks = data['weeks'] as List<dynamic>;
+      _zone1MFWeeklyDuties = weeks
+          .map((w) => (w as Map<String, dynamic>)['dutyCode'] as String)
+          .toList();
+      final Map<String, dynamic> dutyToWeek = data['dutyToWeekIndex'] as Map<String, dynamic>;
+      _zone1MFDutyToWeekIndex = dutyToWeek.map((k, v) => MapEntry(k, v as int));
+      return true;
+    } catch (e) {
+      _zone1MFWeeklyDuties = null;
+      _zone1MFDutyToWeekIndex = null;
+      return false;
+    }
+  }
+
+  /// Check if a duty code is in the Zone 1 M-F 12-week roster.
+  static bool isZone1MFDutyInRoster(String dutyCode) {
+    if (_zone1MFDutyToWeekIndex == null) return false;
+    return _zone1MFDutyToWeekIndex!.containsKey(dutyCode);
+  }
+
+  /// Get the 0-based week index (0-11) for a duty code in the Zone 1 M-F roster. Returns null if not in roster.
+  static int? getZone1MFWeekIndex(String dutyCode) {
+    return _zone1MFDutyToWeekIndex?[dutyCode];
+  }
+
+  /// Get the duty code for a given week index (0-11) in the Zone 1 M-F roster.
+  static String? getZone1MFDutyForWeekIndex(int weekIndex) {
+    if (_zone1MFWeeklyDuties == null || weekIndex < 0 || weekIndex >= _zone1MFWeeklyDuties!.length) {
+      return null;
+    }
+    return _zone1MFWeeklyDuties![weekIndex];
+  }
+
+  /// Get the Monday of the week containing the given date (week starts Sunday).
+  static DateTime getMondayOfWeek(DateTime date) {
+    final weekday = date.weekday; // 1=Mon, 7=Sun
+    final daysToMonday = weekday == 7 ? 6 : weekday - 1; // Sun -> 6 days back
+    return DateTime(date.year, date.month, date.day - daysToMonday);
+  }
+
+  /// Get the Sunday of the week containing the given date (week starts Sunday).
+  static DateTime getSundayOfWeek(DateTime date) {
+    final weekday = date.weekday; // 1=Mon, 7=Sun
+    final daysToSunday = weekday == 7 ? 0 : weekday; // Sun=0, Mon=1, ..., Sat=6
+    return DateTime(date.year, date.month, date.day - daysToSunday);
+  }
+
+  // --- Zone 1 Shift 86-week roster (variable rest days per week) ---
+  static List<List<String>>? _zone1ShiftWeeks;
+  static Map<String, int>? _zone1ShiftLookup; // key: "dayIndex_dutyCode" -> weekIndex (0-based)
+
+  /// Load Zone 1 Shift 86-week roster from assets. Returns true if loaded successfully.
+  static Future<bool> loadZone1ShiftRoster() async {
+    try {
+      final jsonString = await rootBundle.loadString('assets/zone1_shift_86week_roster.json');
+      final Map<String, dynamic> data = json.decode(jsonString);
+      final List<dynamic> weeks = data['weeks'] as List<dynamic>;
+      _zone1ShiftWeeks = weeks
+          .map((w) => (w as Map<String, dynamic>)['days'] as List<dynamic>)
+          .map((d) => d.map((e) => e.toString()).toList())
+          .toList();
+      _zone1ShiftLookup = {};
+      for (int wi = 0; wi < _zone1ShiftWeeks!.length; wi++) {
+        final days = _zone1ShiftWeeks![wi];
+        for (int di = 0; di < days.length; di++) {
+          final duty = days[di];
+          if (duty != 'R') {
+            final key = '${di}_$duty';
+            if (!_zone1ShiftLookup!.containsKey(key)) {
+              _zone1ShiftLookup![key] = wi;
+            }
+          }
+        }
+      }
+      return true;
+    } catch (e) {
+      _zone1ShiftWeeks = null;
+      _zone1ShiftLookup = null;
+      return false;
+    }
+  }
+
+  /// Get 0-based roster week index for (dayIndex, dutyCode). Returns null if no match.
+  /// dayIndex: 0=Sunday, 1=Monday, ..., 6=Saturday.
+  static int? getZone1ShiftWeekIndex(int dayIndex, String dutyCode) {
+    return _zone1ShiftLookup?['${dayIndex}_$dutyCode'];
+  }
+
+  /// Get duty for a day: "R" or "PZ1/XX". Returns null if invalid.
+  static String? getZone1ShiftDayDuty(int weekIndex, int dayIndex) {
+    if (_zone1ShiftWeeks == null ||
+        weekIndex < 0 ||
+        weekIndex >= _zone1ShiftWeeks!.length ||
+        dayIndex < 0 ||
+        dayIndex >= 7) {
+      return null;
+    }
+    return _zone1ShiftWeeks![weekIndex][dayIndex];
+  }
+
+  /// Check if (dayIndex, dutyCode) exists in the Zone 1 Shift roster.
+  static bool isZone1ShiftDutyInRosterForDay(int dayIndex, String dutyCode) {
+    return getZone1ShiftWeekIndex(dayIndex, dutyCode) != null;
+  }
+
+  // --- Zone 3 Shift 10-week roster (L58/59, variable rest days per week) ---
+  static List<List<String>>? _zone3ShiftWeeks;
+  static Map<String, int>? _zone3ShiftLookup; // key: "dayIndex_dutyCode" -> weekIndex (0-based)
+
+  /// Load Zone 3 Shift 10-week roster from assets. Returns true if loaded successfully.
+  static Future<bool> loadZone3ShiftRoster() async {
+    try {
+      final jsonString = await rootBundle.loadString('assets/zone3_shift_10week_roster.json');
+      final Map<String, dynamic> data = json.decode(jsonString);
+      final List<dynamic> weeks = data['weeks'] as List<dynamic>;
+      _zone3ShiftWeeks = weeks
+          .map((w) => (w as Map<String, dynamic>)['days'] as List<dynamic>)
+          .map((d) => d.map((e) => e.toString()).toList())
+          .toList();
+      _zone3ShiftLookup = {};
+      for (int wi = 0; wi < _zone3ShiftWeeks!.length; wi++) {
+        final days = _zone3ShiftWeeks![wi];
+        for (int di = 0; di < days.length; di++) {
+          final duty = days[di];
+          if (duty != 'R') {
+            final key = '${di}_$duty';
+            if (!_zone3ShiftLookup!.containsKey(key)) {
+              _zone3ShiftLookup![key] = wi;
+            }
+          }
+        }
+      }
+      return true;
+    } catch (e) {
+      _zone3ShiftWeeks = null;
+      _zone3ShiftLookup = null;
+      return false;
+    }
+  }
+
+  /// Get 0-based roster week index for (dayIndex, dutyCode). Returns null if no match.
+  static int? getZone3ShiftWeekIndex(int dayIndex, String dutyCode) {
+    return _zone3ShiftLookup?['${dayIndex}_$dutyCode'];
+  }
+
+  /// Get duty for a day: "R" or "PZ3/XX". Returns null if invalid.
+  static String? getZone3ShiftDayDuty(int weekIndex, int dayIndex) {
+    if (_zone3ShiftWeeks == null ||
+        weekIndex < 0 ||
+        weekIndex >= _zone3ShiftWeeks!.length ||
+        dayIndex < 0 ||
+        dayIndex >= 7) {
+      return null;
+    }
+    return _zone3ShiftWeeks![weekIndex][dayIndex];
+  }
 }

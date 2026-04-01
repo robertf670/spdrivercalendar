@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 class AppConstants {
   static const String appName = 'Spare Driver Shift Calendar';
-  static const String appVersion = '3.1.3';
+  static const String appVersion = '3.2.0';
   
   // Storage Keys
   static const String eventsStorageKey = 'events';
@@ -51,6 +51,10 @@ class AppConstants {
   // Annual Leave
   static const String annualLeaveBalanceKey = 'annualLeaveBalance';
   static const String hasSetAnnualLeaveKey = 'hasSetAnnualLeave';
+  /// Days of annual leave that have "passed" since [annualLeaveLastProcessedDateKey] (forward-only; not all history).
+  static const String annualLeaveAutoConsumedKey = 'annualLeaveAutoConsumed';
+  /// Last calendar date (yyyy-MM-dd local) fully processed for auto consumption; no backfill before first run.
+  static const String annualLeaveLastProcessedDateKey = 'annualLeaveLastProcessedDate';
 
   // Admin Panel
   static const String adminRememberDeviceKey = 'adminRememberDevice';

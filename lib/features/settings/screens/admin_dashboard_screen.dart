@@ -20,7 +20,10 @@ class AdminDashboardScreenState extends State<AdminDashboardScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+    final textScale =
+        MediaQuery.textScalerOf(context).scale(1.0).clamp(1.0, 3.0);
+    final adminGridAspect = (1.1 / textScale).clamp(0.45, 1.2);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Admin Dashboard'),
@@ -96,7 +99,7 @@ class AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     crossAxisCount: 2,
                     crossAxisSpacing: 12,
                     mainAxisSpacing: 12,
-                    childAspectRatio: 1.1,
+                    childAspectRatio: adminGridAspect,
                     children: [
                       _buildAdminCard(
                         context,

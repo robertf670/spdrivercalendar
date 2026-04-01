@@ -203,14 +203,14 @@ class MyAppState extends State<MyApp> with WidgetsBindingObserver {
               AppConstants.welcomeRoute: (context) => WelcomeScreen(
                 onGetStarted: () async {
                   await StorageService.saveBool(AppConstants.hasSeenWelcomeKey, true);
+                  // Marks initial onboarding as done (legacy key name; no longer requires Google sign-in).
+                  await StorageService.saveBool(AppConstants.hasCompletedGoogleLoginKey, true);
                   if (!context.mounted) return;
                   final isFromSettings = ModalRoute.of(context)?.settings.arguments as bool? ?? false;
                   if (isFromSettings) {
-                    if (!context.mounted) return;
                     Navigator.pop(context);
                   } else {
-                    if (!context.mounted) return;
-                    Navigator.pushReplacementNamed(context, AppConstants.googleLoginRoute);
+                    Navigator.pushReplacementNamed(context, AppConstants.homeRoute);
                   }
                 },
               ),
@@ -296,16 +296,8 @@ class SplashScreenState extends State<SplashScreen> {
 
   Future<void> _checkOnboardingStatus() async {
     final hasSeenWelcome = await StorageService.getBool(AppConstants.hasSeenWelcomeKey, defaultValue: false);
-    final hasCompletedGoogleLogin = await StorageService.getBool(AppConstants.hasCompletedGoogleLoginKey, defaultValue: false);
-
-    String nextRoute;
-    if (hasSeenWelcome && hasCompletedGoogleLogin) {
-      nextRoute = AppConstants.homeRoute;
-    } else if (hasSeenWelcome) {
-      nextRoute = AppConstants.googleLoginRoute;
-    } else {
-      nextRoute = AppConstants.welcomeRoute;
-    }
+    final nextRoute =
+        hasSeenWelcome ? AppConstants.homeRoute : AppConstants.welcomeRoute;
 
     if (mounted) {
       widget.onInitializationComplete(nextRoute);

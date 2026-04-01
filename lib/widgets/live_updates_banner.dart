@@ -38,10 +38,9 @@ class LiveUpdatesBannerState extends State<LiveUpdatesBanner> {
                 Expanded(
                   child: Text(
                     'Error loading updates',
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.onErrorContainer,
-                      fontSize: 12,
-                    ),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(context).colorScheme.onErrorContainer,
+                        ),
                   ),
                 ),
               ],
@@ -231,12 +230,17 @@ class LiveUpdatesBannerDisplayState extends State<LiveUpdatesBannerDisplay> {
     );
   }
 
-  // Responsive sizing helper method for banners
+  // Responsive sizing helper method for banners (includes large text scale).
   Map<String, double> _getBannerSizes(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final textScale = MediaQuery.textScalerOf(context).scale(1.0);
+    final heightBoost = textScale > 1.12
+        ? ((textScale - 1.0) * 48.0).clamp(0.0, 140.0)
+        : 0.0;
+
+    Map<String, double> base;
     if (screenWidth < 350) {
-      return {
+      base = {
         'horizontalPadding': 10.0,
         'verticalPadding': 8.0,
         'minHeight': 65.0,
@@ -248,7 +252,7 @@ class LiveUpdatesBannerDisplayState extends State<LiveUpdatesBannerDisplay> {
         'spacing': 10.0,
       };
     } else if (screenWidth < 400) {
-      return {
+      base = {
         'horizontalPadding': 12.0,
         'verticalPadding': 9.0,
         'minHeight': 68.0,
@@ -260,7 +264,7 @@ class LiveUpdatesBannerDisplayState extends State<LiveUpdatesBannerDisplay> {
         'spacing': 11.0,
       };
     } else if (screenWidth < 600) {
-      return {
+      base = {
         'horizontalPadding': 16.0,
         'verticalPadding': 10.0,
         'minHeight': 70.0,
@@ -272,7 +276,7 @@ class LiveUpdatesBannerDisplayState extends State<LiveUpdatesBannerDisplay> {
         'spacing': 12.0,
       };
     } else {
-      return {
+      base = {
         'horizontalPadding': 18.0,
         'verticalPadding': 11.0,
         'minHeight': 72.0,
@@ -284,6 +288,9 @@ class LiveUpdatesBannerDisplayState extends State<LiveUpdatesBannerDisplay> {
         'spacing': 12.0,
       };
     }
+    base['minHeight'] = base['minHeight']! + heightBoost;
+    base['maxHeight'] = base['maxHeight']! + heightBoost * 1.35;
+    return base;
   }
 
   Widget _buildSingleBanner(LiveUpdate update, bool isDark) {
@@ -379,7 +386,7 @@ class LiveUpdatesBannerDisplayState extends State<LiveUpdatesBannerDisplay> {
                                 fontWeight: FontWeight.w600,
                                 color: Theme.of(context).colorScheme.onSurface,
                               ),
-                              maxLines: 1,
+                              maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
@@ -443,6 +450,8 @@ class LiveUpdatesBannerDisplayState extends State<LiveUpdatesBannerDisplay> {
                             color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                             fontStyle: FontStyle.italic,
                           ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ),

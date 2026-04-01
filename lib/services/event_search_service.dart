@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:spdrivercalendar/models/event.dart';
 import 'package:spdrivercalendar/features/calendar/services/event_service.dart';
+import 'package:spdrivercalendar/features/calendar/services/shift_service.dart';
 
 class EventSearchService {
   // Search events by query string
@@ -16,6 +17,7 @@ class EventSearchService {
     String? sickDayType,
     bool? holidaysOnly,
     bool? sickDaysOnly,
+    bool? workoutOnly,
   }) async {
     List<Event> allEvents = await EventService.getAllEvents();
     
@@ -208,8 +210,34 @@ class EventSearchService {
         return event.sickDayType != null;
       }).toList();
     }
-    
+
+    // Workout duties only (matches Highlight Workout Days / roster break column)
+    if (workoutOnly == true) {
+      final out = <Event>[];
+      for (final event in filtered) {
+        if (!_isCandidateWorkEventForWorkoutScan(event)) continue;
+        final bt = await ShiftService.getBreakTime(event);
+        if (bt != null && bt.toLowerCase() == 'workout') {
+          out.add(event);
+        }
+      }
+      filtered = out;
+    }
+
     return filtered;
+  }
+
+  /// Same title gate as [WorkoutHighlightService] so search matches calendar highlights.
+  static bool _isCandidateWorkEventForWorkoutScan(Event event) {
+    if (event.isHoliday || event.sickDayType != null) return false;
+    final dutyCode = event.title.replaceAll('Shift: ', '').trim();
+    if (!event.title.startsWith('Shift:') &&
+        !event.title.startsWith('SP') &&
+        !RegExp(r'^\d{1,3}/\d{1,2}').hasMatch(dutyCode) &&
+        !event.title.toUpperCase().contains('PZ')) {
+      return false;
+    }
+    return true;
   }
   
   // Helper methods to determine shift type (matches statistics screen logic)

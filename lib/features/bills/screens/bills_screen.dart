@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:spdrivercalendar/theme/app_theme.dart';
@@ -676,10 +678,14 @@ class BillsScreenState extends State<BillsScreen> {
     }
 
     final sizes = _getResponsiveSizes(context);
-    final fixedColumnWidth = sizes['fixedColumnWidth']!;
-    final dataColumnWidth = sizes['dataColumnWidth']!;
-    final headerHeight = sizes['headerHeight']!;
-    final rowHeight = sizes['rowHeight']!;
+    final textScale = MediaQuery.textScalerOf(context).scale(1.0);
+    final t = textScale.clamp(1.0, 3.2);
+    // Scale widths/heights with accessibility text size (previous caps left rows too short).
+    final fixedColumnWidth = math.max(72.0, sizes['fixedColumnWidth']! * math.min(2.4, 0.8 + 0.55 * t));
+    final dataColumnWidth = sizes['dataColumnWidth']! * math.min(2.2, 0.65 + 0.45 * t);
+    final headerHeight = sizes['headerHeight']! * math.min(4.0, 0.45 + 0.7 * t);
+    final rowHeight = sizes['rowHeight']! * math.min(5.0, 0.5 + 0.72 * t);
+    final cellMaxLines = t >= 1.35 ? 5 : 3;
 
     return Card(
       elevation: 2,
@@ -777,7 +783,7 @@ class BillsScreenState extends State<BillsScreen> {
                                   color: Theme.of(context).colorScheme.onSurface,
                                 ),
                                 textAlign: TextAlign.center,
-                                maxLines: 4,  // Increased from 3 to 4 lines
+                                maxLines: t >= 1.35 ? 6 : 4,
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ),
@@ -871,7 +877,7 @@ class BillsScreenState extends State<BillsScreen> {
                                           fontSize: sizes['cellFontSize']!,
                                         ),
                                         textAlign: TextAlign.center,
-                                        maxLines: 2,  // Allow 2 lines instead of 1
+                                        maxLines: cellMaxLines,
                                         overflow: TextOverflow.ellipsis,
                                       ),
                                     ),

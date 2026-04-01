@@ -85,13 +85,18 @@ class _DaysInLieuSetupDialogState extends State<DaysInLieuSetupDialog> {
   Widget build(BuildContext context) {
     final dayInLieuColor = ColorCustomizationService.getColorForShift('DAY_IN_LIEU');
 
+    final maxDialogHeight = MediaQuery.sizeOf(context).height * 0.9;
+
     return Dialog(
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxHeight: maxDialogHeight),
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -185,6 +190,8 @@ class _DaysInLieuSetupDialogState extends State<DaysInLieuSetupDialog> {
               ],
             ),
           ],
+            ),
+          ),
         ),
       ),
     );

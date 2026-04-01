@@ -52,7 +52,7 @@ class StatisticsScreen extends StatefulWidget {
 }
 
 class StatisticsScreenState extends State<StatisticsScreen> 
-    with AutomaticKeepAliveClientMixin, SingleTickerProviderStateMixin {
+    with AutomaticKeepAliveClientMixin, SingleTickerProviderStateMixin, WidgetsBindingObserver {
   @override
   bool get wantKeepAlive => true;
   
@@ -192,6 +192,7 @@ class StatisticsScreenState extends State<StatisticsScreen>
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     // Ensure TabController length is 3
     _tabController = TabController(length: 3, vsync: this);
     _loadExpandedSections();
@@ -293,7 +294,17 @@ class StatisticsScreenState extends State<StatisticsScreen>
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (state == AppLifecycleState.resumed) {
+      _loadAnnualLeaveBalance();
+      _loadDaysInLieuBalance();
+    }
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     // Dispose TabController
     _tabController?.dispose();
     _workTimeScrollController.dispose();
@@ -338,14 +349,15 @@ class StatisticsScreenState extends State<StatisticsScreen>
   }
 
   Future<void> _loadAnnualLeaveBalance() async {
-    final balance = await AnnualLeaveService.getBalance();
-    final remaining = await AnnualLeaveService.getRemainingDays();
-    final used = await AnnualLeaveService.getUsedDays();
+    final balance = await AnnualLeaveService.getEffectiveBalance();
+    final remainingFutureOnly =
+        await AnnualLeaveService.getRemainingDaysFutureBookingsOnly();
+    final futureBooked = await AnnualLeaveService.getFutureBookedAnnualLeaveDays();
     if (mounted) {
       setState(() {
         _annualLeaveBalance = balance;
-        _annualLeaveRemaining = remaining;
-        _annualLeaveUsed = used;
+        _annualLeaveRemaining = remainingFutureOnly;
+        _annualLeaveUsed = futureBooked;
       });
     }
   }
@@ -538,6 +550,8 @@ class StatisticsScreenState extends State<StatisticsScreen>
         // Add TabBar to the bottom of the AppBar - use colours that work on AppBar background
         bottom: TabBar(
           controller: _tabController!, // Use null assertion
+          isScrollable: true,
+          tabAlignment: TabAlignment.start,
           indicatorColor: Theme.of(context).appBarTheme.foregroundColor ?? Theme.of(context).colorScheme.onPrimary,
           labelColor: Theme.of(context).appBarTheme.foregroundColor ?? Theme.of(context).colorScheme.onPrimary,
           unselectedLabelColor: (Theme.of(context).appBarTheme.foregroundColor ?? Theme.of(context).colorScheme.onPrimary).withValues(alpha: 0.8),
@@ -630,6 +644,7 @@ class StatisticsScreenState extends State<StatisticsScreen>
                 ))
               else ...[
                 DropdownButtonFormField<String>(
+                  isExpanded: true,
                   value: _selectedCyclePeriod,
                   decoration: InputDecoration(
                     contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -638,8 +653,14 @@ class StatisticsScreenState extends State<StatisticsScreen>
                     ),
                   ),
                   items: const [
-                    DropdownMenuItem(value: 'current', child: Text('Current 5-week period')),
-                    DropdownMenuItem(value: 'previous', child: Text('Previous 5-week period')),
+                    DropdownMenuItem(
+                      value: 'current',
+                      child: Text('Current 5-week period', overflow: TextOverflow.ellipsis),
+                    ),
+                    DropdownMenuItem(
+                      value: 'previous',
+                      child: Text('Previous 5-week period', overflow: TextOverflow.ellipsis),
+                    ),
                   ],
                   onChanged: (value) {
                     if (value != null) {
@@ -648,33 +669,58 @@ class StatisticsScreenState extends State<StatisticsScreen>
                   },
                 ),
                 const SizedBox(height: 12),
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(
-                    _selectedCyclePeriod == 'current'
-                        ? (_cycleStartDate != null && _cycleEndDate != null
-                            ? '${DateFormat('EEE d MMM yyyy').format(_cycleStartDate!)} – ${DateFormat('EEE d MMM yyyy').format(_cycleEndDate!)}'
-                            : 'Current 5-week cycle')
-                        : (_previousCycleStartDate != null && _previousCycleEndDate != null
-                            ? '${DateFormat('EEE d MMM yyyy').format(_previousCycleStartDate!)} – ${DateFormat('EEE d MMM yyyy').format(_previousCycleEndDate!)}'
-                            : 'Previous 5-week cycle'),
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  trailing: Text(
-                    formatDuration(_selectedCyclePeriod == 'current' ? _cycleTotalHours : _previousCycleTotalHours),
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: (_selectedCyclePeriod == 'current' ? _cycleLimitExceeded : _previousCycleLimitExceeded)
-                          ? Theme.of(context).colorScheme.error
-                          : null,
-                    ),
-                  ),
-                  leading: (_selectedCyclePeriod == 'current' ? _cycleLimitExceeded : _previousCycleLimitExceeded)
-                      ? Icon(Icons.warning_amber_rounded, color: Theme.of(context).colorScheme.error)
-                      : Icon(Icons.check_circle_outline, color: Theme.of(context).colorScheme.primary),
-                  subtitle: Text(
-                    'Limit: 190h 4m',
-                    style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7)),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 4.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.only(top: 2.0, right: 8.0),
+                            child: (_selectedCyclePeriod == 'current' ? _cycleLimitExceeded : _previousCycleLimitExceeded)
+                                ? Icon(Icons.warning_amber_rounded, color: Theme.of(context).colorScheme.error)
+                                : Icon(Icons.check_circle_outline, color: Theme.of(context).colorScheme.primary),
+                          ),
+                          Expanded(
+                            child: Text(
+                              _selectedCyclePeriod == 'current'
+                                  ? (_cycleStartDate != null && _cycleEndDate != null
+                                      ? '${DateFormat('EEE d MMM yyyy').format(_cycleStartDate!)} – ${DateFormat('EEE d MMM yyyy').format(_cycleEndDate!)}'
+                                      : 'Current 5-week cycle')
+                                  : (_previousCycleStartDate != null && _previousCycleEndDate != null
+                                      ? '${DateFormat('EEE d MMM yyyy').format(_previousCycleStartDate!)} – ${DateFormat('EEE d MMM yyyy').format(_previousCycleEndDate!)}'
+                                      : 'Previous 5-week cycle'),
+                              style: const TextStyle(fontWeight: FontWeight.bold),
+                              softWrap: true,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Flexible(
+                            child: Text(
+                              formatDuration(_selectedCyclePeriod == 'current' ? _cycleTotalHours : _previousCycleTotalHours),
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: (_selectedCyclePeriod == 'current' ? _cycleLimitExceeded : _previousCycleLimitExceeded)
+                                    ? Theme.of(context).colorScheme.error
+                                    : null,
+                              ),
+                              textAlign: TextAlign.end,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.only(left: 32.0, top: 6.0),
+                        child: Text(
+                          'Limit: 190h 4m',
+                          style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7)),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -3042,7 +3088,8 @@ class StatisticsScreenState extends State<StatisticsScreen>
   Widget _buildHolidayBalanceCard() {
     final primaryColor = Theme.of(context).colorScheme.primary;
     final dayInLieuColor = ColorCustomizationService.getColorForShift('DAY_IN_LIEU');
-    final hasZeroAnnualLeave = _annualLeaveRemaining == 0;
+    final hasZeroStoredAnnualLeave = _annualLeaveBalance == 0;
+    final hasZeroFutureRemaining = _annualLeaveRemaining == 0;
     final hasZeroDaysInLieu = _daysInLieuRemaining == 0;
 
     return Card(
@@ -3084,7 +3131,7 @@ class StatisticsScreenState extends State<StatisticsScreen>
                               '$_annualLeaveBalance',
                               style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                                 fontWeight: FontWeight.bold,
-                                color: primaryColor,
+                                color: hasZeroStoredAnnualLeave ? Colors.orange : primaryColor,
                               ),
                             ),
                           ],
@@ -3108,7 +3155,7 @@ class StatisticsScreenState extends State<StatisticsScreen>
                               '$_annualLeaveRemaining',
                               style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                                 fontWeight: FontWeight.bold,
-                                color: hasZeroAnnualLeave ? Colors.orange : primaryColor,
+                                color: hasZeroFutureRemaining ? Colors.orange : primaryColor,
                               ),
                             ),
                           ],
@@ -3140,7 +3187,7 @@ class StatisticsScreenState extends State<StatisticsScreen>
                       ),
                     ],
                   ),
-                  if (hasZeroAnnualLeave)
+                  if (hasZeroFutureRemaining)
                     Padding(
                       padding: const EdgeInsets.only(top: 12.0),
                       child: Row(

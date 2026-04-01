@@ -29,6 +29,7 @@ class SearchScreenState extends State<SearchScreen> {
   String? _selectedSickDayType;
   bool _holidaysOnly = false;
   bool _sickDaysOnly = false;
+  bool _workoutOnly = false;
   
   final List<String> _shiftTypes = [
     'SP',
@@ -78,6 +79,7 @@ class SearchScreenState extends State<SearchScreen> {
         sickDayType: _selectedSickDayType,
         holidaysOnly: _holidaysOnly ? true : null,
         sickDaysOnly: _sickDaysOnly ? true : null,
+        workoutOnly: _workoutOnly ? true : null,
       );
       
       if (mounted) {
@@ -105,6 +107,7 @@ class SearchScreenState extends State<SearchScreen> {
       _selectedSickDayType = null;
       _holidaysOnly = false;
       _sickDaysOnly = false;
+      _workoutOnly = false;
     });
     _performSearch();
   }
@@ -164,6 +167,8 @@ class SearchScreenState extends State<SearchScreen> {
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final isSmallScreen = screenWidth < 600;
+    final textScale = MediaQuery.textScalerOf(context).scale(1.0);
+    final useStackedFilters = screenWidth < 720 || textScale > 1.12;
     final padding = isSmallScreen ? 12.0 : 16.0;
     
     return Scaffold(
@@ -533,8 +538,8 @@ class SearchScreenState extends State<SearchScreen> {
                   ),
                   SizedBox(height: isSmallScreen ? 8 : 12),
                     
-                // Responsive filter layout
-                if (isSmallScreen) ...[
+                // Responsive filter layout (stack when narrow or large text)
+                if (useStackedFilters) ...[
                   // Date range button
                   SizedBox(
                     width: double.infinity,
@@ -553,33 +558,7 @@ class SearchScreenState extends State<SearchScreen> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  // Shift type dropdown
-                  DropdownButtonFormField<String>(
-                    value: _selectedShiftType,
-                    decoration: InputDecoration(
-                      labelText: 'Shift Type',
-                      prefixIcon: const Icon(Icons.access_time, size: 18),
-                      border: const OutlineInputBorder(),
-                      isDense: true,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                    ),
-                    items: [
-                      const DropdownMenuItem<String>(
-                        value: null,
-                        child: Text('All Types', style: TextStyle(fontSize: 12)),
-                      ),
-                      ..._shiftTypes.map((type) => DropdownMenuItem<String>(
-                            value: type,
-                            child: Text(type, style: const TextStyle(fontSize: 12)),
-                          )),
-                    ],
-                    onChanged: (value) {
-                      setState(() {
-                        _selectedShiftType = value;
-                      });
-                      _performSearch();
-                    },
-                  ),
+                  _buildShiftTypeFilter(context, compact: true),
                   const SizedBox(height: 8),
                   // Checkboxes in a row
                   Wrap(
@@ -626,11 +605,22 @@ class SearchScreenState extends State<SearchScreen> {
                           _performSearch();
                         },
                       ),
+                      FilterChip(
+                        label: const Text('Workout', style: TextStyle(fontSize: 11)),
+                        selected: _workoutOnly,
+                        onSelected: (value) {
+                          setState(() {
+                            _workoutOnly = value;
+                          });
+                          _performSearch();
+                        },
+                      ),
                     ],
                   ),
                 ] else ...[
-                  // Desktop/tablet layout - filters in rows
+                  // Wide layout - filters in rows
                   Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // Date range
                       Expanded(
@@ -648,34 +638,8 @@ class SearchScreenState extends State<SearchScreen> {
                         ),
                       ),
                       const SizedBox(width: 12),
-                      // Shift type
                       Expanded(
-                        child: DropdownButtonFormField<String>(
-                          value: _selectedShiftType,
-                          decoration: const InputDecoration(
-                            labelText: 'Shift Type',
-                            prefixIcon: Icon(Icons.access_time),
-                            border: OutlineInputBorder(),
-                            filled: true,
-                            fillColor: Colors.transparent,
-                          ),
-                          items: [
-                            DropdownMenuItem<String>(
-                              value: null,
-                              child: Text('All Types'),
-                            ),
-                            ..._shiftTypes.map((type) => DropdownMenuItem<String>(
-                                  value: type,
-                                  child: Text(type),
-                                )),
-                          ],
-                          onChanged: (value) {
-                            setState(() {
-                              _selectedShiftType = value;
-                            });
-                            _performSearch();
-                          },
-                        ),
+                        child: _buildShiftTypeFilter(context, compact: false),
                       ),
                     ],
                   ),
@@ -721,6 +685,16 @@ class SearchScreenState extends State<SearchScreen> {
                         onSelected: (value) {
                           setState(() {
                             _sickDaysOnly = value;
+                          });
+                          _performSearch();
+                        },
+                      ),
+                      FilterChip(
+                        label: const Text('Workout'),
+                        selected: _workoutOnly,
+                        onSelected: (value) {
+                          setState(() {
+                            _workoutOnly = value;
                           });
                           _performSearch();
                         },
@@ -1015,7 +989,65 @@ class SearchScreenState extends State<SearchScreen> {
       ),
     );
   }
-  
+
+  /// Separate label above the field — [InputDecoration.labelText] overlaps the border at large text scale.
+  Widget _buildShiftTypeFilter(BuildContext context, {required bool compact}) {
+    final theme = Theme.of(context);
+    final textScale = MediaQuery.textScalerOf(context).scale(1.0);
+    final labelGap = (8.0 + (textScale > 1.12 ? (textScale - 1.0) * 10.0 : 0.0)).clamp(8.0, 22.0);
+    final itemFontSize = compact ? 12.0 : 14.0;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          'Shift Type',
+          style: theme.textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.9),
+              ) ??
+              TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: compact ? 13 : 14,
+                color: theme.colorScheme.onSurface,
+              ),
+        ),
+        SizedBox(height: labelGap),
+        DropdownButtonFormField<String>(
+          value: _selectedShiftType,
+          decoration: InputDecoration(
+            prefixIcon: Icon(Icons.access_time, size: compact ? 18 : 22),
+            border: const OutlineInputBorder(),
+            filled: true,
+            fillColor: Colors.transparent,
+            isDense: false,
+            contentPadding: EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: compact ? 14 : 16,
+            ),
+          ),
+          items: [
+            DropdownMenuItem<String>(
+              value: null,
+              child: Text('All Types', style: TextStyle(fontSize: itemFontSize)),
+            ),
+            ..._shiftTypes.map((type) => DropdownMenuItem<String>(
+                  value: type,
+                  child: Text(type, style: TextStyle(fontSize: itemFontSize)),
+                )),
+          ],
+          onChanged: (value) {
+            setState(() {
+              _selectedShiftType = value;
+            });
+            _performSearch();
+          },
+        ),
+      ],
+    );
+  }
+
   String _formatTime(TimeOfDay time) {
     final hour = time.hour.toString().padLeft(2, '0');
     final minute = time.minute.toString().padLeft(2, '0');

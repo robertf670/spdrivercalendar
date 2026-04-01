@@ -40,6 +40,10 @@ class _CalendarWidgetState extends State<CalendarWidget> {
 
   @override
   Widget build(BuildContext context) {
+    final textScaler = MediaQuery.textScalerOf(context);
+    final scaledDaysOfWeekHeight = textScaler.scale(16.0) + 12.0;
+    final scaledRowHeight = textScaler.scale(52.0);
+
     return Column(
       children: [
         TableCalendar(
@@ -47,6 +51,8 @@ class _CalendarWidgetState extends State<CalendarWidget> {
           lastDay: DateTime.utc(2030, 12, 31),
           focusedDay: _focusedDay,
           calendarFormat: CalendarFormat.month,
+          daysOfWeekHeight: scaledDaysOfWeekHeight,
+          rowHeight: scaledRowHeight,
           eventLoader: _getEventsForDay,
           selectedDayPredicate: (day) {
             return isSameDay(_selectedDay, day);

@@ -525,12 +525,19 @@ class AllNotesScreenState extends State<AllNotesScreen> {
                   // Month grid
                   Padding(
                     padding: const EdgeInsets.all(16),
-                    child: GridView.builder(
+                    child: Builder(
+                      builder: (context) {
+                        final textScale = MediaQuery.textScalerOf(context)
+                            .scale(1.0)
+                            .clamp(1.0, 3.0);
+                        final monthGridAspect =
+                            (1.5 / textScale).clamp(0.45, 1.8);
+                        return GridView.builder(
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: 6,
-                        childAspectRatio: 1.5,
+                        childAspectRatio: monthGridAspect,
                         mainAxisSpacing: 8,
                         crossAxisSpacing: 8,
                       ),
@@ -582,6 +589,8 @@ class AllNotesScreenState extends State<AllNotesScreen> {
                               ),
                             ),
                           ),
+                        );
+                      },
                         );
                       },
                     ),

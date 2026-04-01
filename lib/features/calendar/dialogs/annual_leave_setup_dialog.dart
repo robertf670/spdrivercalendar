@@ -23,6 +23,7 @@ class _AnnualLeaveSetupDialogState extends State<AnnualLeaveSetupDialog> {
     final text = _controller.text.trim();
     if (text.isEmpty) {
       // User entered nothing, set to 0
+      await AnnualLeaveService.resetAnnualLeaveConsumptionTracking();
       await AnnualLeaveService.setBalance(0);
       await AnnualLeaveService.markAsSet();
       if (mounted) {
@@ -50,6 +51,7 @@ class _AnnualLeaveSetupDialogState extends State<AnnualLeaveSetupDialog> {
     });
 
     try {
+      await AnnualLeaveService.resetAnnualLeaveConsumptionTracking();
       await AnnualLeaveService.setBalance(value);
       await AnnualLeaveService.markAsSet();
       
@@ -84,13 +86,18 @@ class _AnnualLeaveSetupDialogState extends State<AnnualLeaveSetupDialog> {
   Widget build(BuildContext context) {
     final primaryColor = Theme.of(context).colorScheme.primary;
 
+    final maxDialogHeight = MediaQuery.sizeOf(context).height * 0.9;
+
     return Dialog(
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxHeight: maxDialogHeight),
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -161,12 +168,16 @@ class _AnnualLeaveSetupDialogState extends State<AnnualLeaveSetupDialog> {
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 TextButton(
-                  onPressed: _isLoading ? null : () {
-                    // Set to 0 if user cancels without entering
-                    AnnualLeaveService.setBalance(0);
-                    AnnualLeaveService.markAsSet();
-                    Navigator.of(context).pop();
-                  },
+                  onPressed: _isLoading
+                      ? null
+                      : () async {
+                          await AnnualLeaveService.resetAnnualLeaveConsumptionTracking();
+                          await AnnualLeaveService.setBalance(0);
+                          await AnnualLeaveService.markAsSet();
+                          if (context.mounted) {
+                            Navigator.of(context).pop();
+                          }
+                        },
                   child: const Text('Skip (Set to 0)'),
                 ),
                 const SizedBox(width: 8),
@@ -190,6 +201,8 @@ class _AnnualLeaveSetupDialogState extends State<AnnualLeaveSetupDialog> {
               ],
             ),
           ],
+            ),
+          ),
         ),
       ),
     );

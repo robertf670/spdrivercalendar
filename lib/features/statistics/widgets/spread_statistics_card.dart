@@ -161,19 +161,23 @@ class SpreadStatisticsCard extends StatelessWidget {
             ),
           ),
           SizedBox(width: spacing),
-          Expanded(
+          Flexible(
+            flex: 3,
             child: Text(
               title,
               style: TextStyle(
                 fontSize: titleFontSize,
                 fontWeight: FontWeight.w500,
               ),
-              maxLines: 1,
+              maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
           ),
+          const SizedBox(width: 4),
           // Right side: Time badge with optional pay estimate below
-          Column(
+          Flexible(
+            flex: 2,
+            child: Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -197,6 +201,9 @@ class SpreadStatisticsCard extends StatelessWidget {
                         fontWeight: FontWeight.bold,
                         fontSize: timeFontSize,
                       ),
+                      textAlign: TextAlign.end,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
                     // Pay estimate as subtle text below time (if available and > 0)
                     if (payAmount != null && payAmount > 0) ...[
@@ -214,6 +221,7 @@ class SpreadStatisticsCard extends StatelessWidget {
                 ),
               ),
             ],
+          ),
           ),
         ],
       ),

@@ -1228,6 +1228,48 @@ class EventService {
     }
   }
 
+  /// Removes all events from 2 days ahead of today onwards.
+  /// Cancels scheduled notifications for work shifts before deleting.
+  static Future<int> clearFutureEvents() async {
+    final now = DateTime.now();
+    final cutoff = DateTime(now.year, now.month, now.day).add(const Duration(days: 2));
+    final allEvents = await getAllEvents();
+    int removed = 0;
+    for (final event in allEvents) {
+      final eventDate = DateTime(
+        event.startDate.year,
+        event.startDate.month,
+        event.startDate.day,
+      );
+      if (eventDate.isAfter(cutoff) || eventDate.isAtSameMomentAs(cutoff)) {
+        await deleteEvent(event);
+        removed++;
+      }
+    }
+    return removed;
+  }
+
+  /// Clears all events from storage and in-memory cache.
+  /// Debug use only. Cancels scheduled notifications for work shifts before clearing.
+  static Future<void> clearAllEvents() async {
+    try {
+      final allEvents = await getAllEvents();
+      for (final event in allEvents) {
+        if (event.isWorkShift) {
+          await _cancelWorkShiftNotification(event);
+        }
+      }
+      _events.clear();
+      _monthlyCache.clear();
+      _populatedMonths.clear();
+      _lastLoadedMonth = null;
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(AppConstants.eventsStorageKey, '{}');
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   // --- Notification Helper Methods ---
 
   static Future<void> _scheduleWorkShiftNotification(Event event) async {

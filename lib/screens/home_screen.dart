@@ -17,38 +17,48 @@ class HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         title: const Text('Spare Driver Calendar'),
       ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            ElevatedButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const ShiftCreationScreen()),
-                );
-              },
-              child: const Text('Create New Shift'),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: constraints.maxHeight),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: <Widget>[
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => const ShiftCreationScreen()),
+                      );
+                    },
+                    child: const Text('Create New Shift'),
+                  ),
+                  const SizedBox(height: 20),
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => const ShiftListScreen()),
+                      );
+                    },
+                    child: const Text('View All Shifts'),
+                  ),
+                  const SizedBox(height: 20),
+                  ElevatedButton(
+                    onPressed: () async {
+                      await CalendarTestHelper.addTestEvent(context);
+                    },
+                    child: const Text('Add Test Event to Calendar'),
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const ShiftListScreen()),
-                );
-              },
-              child: const Text('View All Shifts'),
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () async {
-                await CalendarTestHelper.addTestEvent(context);
-              },
-              child: const Text('Add Test Event to Calendar'),
-            ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }

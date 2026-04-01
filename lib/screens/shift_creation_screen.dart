@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:spdrivercalendar/models/work_shift.dart';
 import 'package:spdrivercalendar/services/shift_service.dart';
 import 'package:uuid/uuid.dart';
@@ -11,6 +12,8 @@ class ShiftCreationScreen extends StatefulWidget {
 }
 
 class ShiftCreationScreenState extends State<ShiftCreationScreen> {
+  static final DateFormat _dateTimeDisplay = DateFormat('EEE d MMM yyyy, HH:mm');
+
   final _formKey = GlobalKey<FormState>();
   
   final TextEditingController _titleController = TextEditingController();
@@ -51,7 +54,11 @@ class ShiftCreationScreenState extends State<ShiftCreationScreen> {
               // Start time picker
               ListTile(
                 title: const Text('Start Time'),
-                subtitle: Text(_startTime.toString()),
+                subtitle: Text(
+                  _dateTimeDisplay.format(_startTime),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
                 trailing: const Icon(Icons.edit),
                 onTap: () async {
                   final date = await showDatePicker(
@@ -91,7 +98,11 @@ class ShiftCreationScreenState extends State<ShiftCreationScreen> {
               // End time picker
               ListTile(
                 title: const Text('End Time'),
-                subtitle: Text(_endTime.toString()),
+                subtitle: Text(
+                  _dateTimeDisplay.format(_endTime),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
                 trailing: const Icon(Icons.edit),
                 onTap: () async {
                   final date = await showDatePicker(

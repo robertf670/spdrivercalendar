@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:spdrivercalendar/core/config/platform_utils.dart';
 import 'package:spdrivercalendar/core/constants/app_constants.dart';
@@ -30,18 +31,20 @@ const String kNotificationOffsetHoursKey = 'notificationOffsetHours';
 class SettingsScreen extends StatefulWidget {
   final VoidCallback resetRestDaysCallback;
   final ValueNotifier<bool> isDarkModeNotifier;
+  final VoidCallback? onCalendarDataChanged;
 
   const SettingsScreen({
     super.key,
     required this.resetRestDaysCallback,
     required this.isDarkModeNotifier,
+    this.onCalendarDataChanged,
   });
 
   @override
   SettingsScreenState createState() => SettingsScreenState();
 }
 
-class SettingsScreenState extends State<SettingsScreen> {
+class SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObserver {
   late bool _isDarkMode;
   bool _isGoogleSignedIn = false;
   String _googleAccount = '';
@@ -84,10 +87,14 @@ class SettingsScreenState extends State<SettingsScreen> {
   // Expandable sections state
   final Map<String, bool> _expandedSections = {
     'Appearance': true,
-    'App': true,
+    'Appearance::Calendar display': false,
+    'App': false,
+    'App::Work preferences': false,
     'Holidays & Leave': false,
     'Google Calendar': false,
+    'Google Calendar::Sync options': false,
     'Backup & Restore': false,
+    'Backup & Restore::Auto-backup': false,
     'Notifications': false,
     'Admin': false,
   };
@@ -95,6 +102,7 @@ class SettingsScreenState extends State<SettingsScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _isDarkMode = widget.isDarkModeNotifier.value;
     _loadSettings();
     _checkGoogleSignIn();
@@ -109,10 +117,14 @@ class SettingsScreenState extends State<SettingsScreen> {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
       _expandedSections['Appearance'] = prefs.getBool('settings_expanded_appearance') ?? true;
-      _expandedSections['App'] = prefs.getBool('settings_expanded_app') ?? true;
+      _expandedSections['Appearance::Calendar display'] = prefs.getBool('settings_expanded_appearance_calendar') ?? false;
+      _expandedSections['App'] = prefs.getBool('settings_expanded_app') ?? false;
+      _expandedSections['App::Work preferences'] = prefs.getBool('settings_expanded_app_work') ?? false;
       _expandedSections['Holidays & Leave'] = prefs.getBool('settings_expanded_holidays') ?? false;
       _expandedSections['Google Calendar'] = prefs.getBool('settings_expanded_google') ?? false;
+      _expandedSections['Google Calendar::Sync options'] = prefs.getBool('settings_expanded_google_sync') ?? false;
       _expandedSections['Backup & Restore'] = prefs.getBool('settings_expanded_backup') ?? false;
+      _expandedSections['Backup & Restore::Auto-backup'] = prefs.getBool('settings_expanded_backup_auto') ?? false;
       _expandedSections['Notifications'] = prefs.getBool('settings_expanded_notifications') ?? false;
       _expandedSections['Admin'] = prefs.getBool('settings_expanded_admin') ?? false;
     });
@@ -142,6 +154,18 @@ class SettingsScreenState extends State<SettingsScreen> {
         break;
       case 'Admin':
         key = 'settings_expanded_admin';
+        break;
+      case 'Appearance::Calendar display':
+        key = 'settings_expanded_appearance_calendar';
+        break;
+      case 'App::Work preferences':
+        key = 'settings_expanded_app_work';
+        break;
+      case 'Google Calendar::Sync options':
+        key = 'settings_expanded_google_sync';
+        break;
+      case 'Backup & Restore::Auto-backup':
+        key = 'settings_expanded_backup_auto';
         break;
       default:
         return;
@@ -217,7 +241,7 @@ class SettingsScreenState extends State<SettingsScreen> {
     }
     
     // Save zone if Shift is selected
-    if (_markedInStatus == 'Shift') {
+    if (_markedInStatus == 'Shift' || _markedInStatus == 'M-F') {
       await StorageService.saveString(AppConstants.markedInZoneKey, _markedInZone);
     }
   }
@@ -235,14 +259,15 @@ class SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _loadAnnualLeaveBalance() async {
-    final balance = await AnnualLeaveService.getBalance();
-    final used = await AnnualLeaveService.getUsedDays();
-    final remaining = await AnnualLeaveService.getRemainingDays();
-    
+    final balance = await AnnualLeaveService.getEffectiveBalance();
+    final remainingFutureOnly =
+        await AnnualLeaveService.getRemainingDaysFutureBookingsOnly();
+    final futureBooked = await AnnualLeaveService.getFutureBookedAnnualLeaveDays();
+
     setState(() {
       _annualLeaveBalance = balance;
-      _annualLeaveUsed = used;
-      _annualLeaveRemaining = remaining;
+      _annualLeaveRemaining = remainingFutureOnly;
+      _annualLeaveUsed = futureBooked;
     });
   }
 
@@ -357,7 +382,17 @@ class SettingsScreenState extends State<SettingsScreen> {
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (state == AppLifecycleState.resumed) {
+      _loadAnnualLeaveBalance();
+      _loadDaysInLieuBalance();
+    }
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _scrollController.dispose();
     super.dispose();
   }
@@ -412,11 +447,18 @@ class SettingsScreenState extends State<SettingsScreen> {
                       ColorCustomizationWidget(
                         onColorsChanged: _onColorsChanged,
                       ),
-                      _buildOvernightDutiesToggle(),
-                      _buildDutyCodesToggle(),
-                      _buildHighlightWorkoutDaysToggle(),
-                      _buildRefreshWorkoutHighlightsButton(),
-                      _buildAnimatedSelectedDayToggle(),
+                      _buildNestedExpandableSection(
+                        title: 'Calendar Display',
+                        sectionKey: 'Appearance::Calendar display',
+                        icon: Icons.calendar_view_month,
+                        children: [
+                          _buildOvernightDutiesToggle(),
+                          _buildDutyCodesToggle(),
+                          _buildHighlightWorkoutDaysToggle(),
+                          _buildRefreshWorkoutHighlightsButton(),
+                          _buildAnimatedSelectedDayToggle(),
+                        ],
+                      ),
                     ],
                   ),
                   
@@ -426,12 +468,19 @@ class SettingsScreenState extends State<SettingsScreen> {
                     title: 'App',
                     icon: Icons.apps,
                     children: [
-                      _buildMarkedInSettings(),
-                      _buildPayRateDropdown(),
+                      _buildNestedExpandableSection(
+                        title: 'Work Preferences',
+                        sectionKey: 'App::Work preferences',
+                        icon: Icons.work_outline,
+                        children: [
+                          _buildMarkedInSettings(),
+                          _buildPayRateDropdown(),
+                          _buildResetRestDaysButton(),
+                        ],
+                      ),
                       _buildFeedbackButton(),
                       _buildLiveUpdatesPreferencesButton(),
                       _buildVersionHistoryButton(),
-                      _buildResetRestDaysButton(),
                     ],
                   ),
                   
@@ -483,10 +532,17 @@ class SettingsScreenState extends State<SettingsScreen> {
                           ),
                         ),
                       ),
-                      _buildGoogleAccountSection(),
-                      _buildGoogleSyncOption(),
-                      _buildManualSyncOption(),
                       _buildGoogleCalendarHelpButton(),
+                      _buildNestedExpandableSection(
+                        title: 'Sync Options',
+                        sectionKey: 'Google Calendar::Sync options',
+                        icon: Icons.sync,
+                        children: [
+                          _buildGoogleAccountSection(),
+                          _buildGoogleSyncOption(),
+                          _buildManualSyncOption(),
+                        ],
+                      ),
                     ],
                   ),
                   
@@ -498,9 +554,18 @@ class SettingsScreenState extends State<SettingsScreen> {
                     children: [
                       _buildBackupButton(),
                       _buildRestoreButton(),
+                      _buildClearFutureEventsButton(),
                       // Auto-backup is mobile-only (Web uses save-on-change)
-                      if (!PlatformUtils.isWeb) _buildAutoBackupToggle(),
-                      if (!PlatformUtils.isWeb) _buildRestoreFromAutoBackupButton(),
+                      if (!PlatformUtils.isWeb)
+                        _buildNestedExpandableSection(
+                          title: 'Auto-Backup',
+                          sectionKey: 'Backup & Restore::Auto-backup',
+                          icon: Icons.cloud_sync,
+                          children: [
+                            _buildAutoBackupToggle(),
+                            _buildRestoreFromAutoBackupButton(),
+                          ],
+                        ),
                     ],
                   ),
                   
@@ -513,6 +578,17 @@ class SettingsScreenState extends State<SettingsScreen> {
                       _buildAdminPanelButton(),
                     ],
                   ),
+                  // Debug only - not included in release builds
+                  if (kDebugMode) ...[
+                    const SizedBox(height: 8),
+                    _buildExpandableSection(
+                      title: 'Debug',
+                      icon: Icons.bug_report,
+                      children: [
+                        _buildClearCalendarButton(),
+                      ],
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -588,7 +664,63 @@ class SettingsScreenState extends State<SettingsScreen> {
       ),
     );
   }
-  
+
+  /// Nested expandable sub-section (used inside a parent section).
+  /// [title] is the displayed label; [sectionKey] is the internal key for state persistence (defaults to title).
+  Widget _buildNestedExpandableSection({
+    required String title,
+    String? sectionKey,
+    required List<Widget> children,
+    IconData? icon,
+  }) {
+    final key = sectionKey ?? title;
+    final isExpanded = _expandedSections[key] ?? false;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isSmallScreen = screenWidth < 600;
+
+    return Padding(
+      padding: EdgeInsets.only(
+        top: 8,
+        left: isSmallScreen ? 4.0 : 8.0,
+        right: isSmallScreen ? 4.0 : 8.0,
+        bottom: 4,
+      ),
+      child: Theme(
+        data: Theme.of(context).copyWith(
+          dividerColor: Colors.transparent,
+        ),
+        child: ExpansionTile(
+          tilePadding: EdgeInsets.symmetric(
+            horizontal: isSmallScreen ? 12.0 : 16.0,
+            vertical: 4.0,
+          ),
+          leading: icon != null
+              ? Icon(icon, color: AppTheme.primaryColor.withValues(alpha: 0.8), size: 20)
+              : null,
+          title: Text(
+            title,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              color: AppTheme.primaryColor.withValues(alpha: 0.9),
+              fontSize: isSmallScreen ? 15 : 16,
+            ),
+          ),
+          initiallyExpanded: isExpanded,
+          onExpansionChanged: (expanded) {
+            setState(() {
+              _expandedSections[key] = expanded;
+            });
+            _saveExpandedSection(key, expanded);
+          },
+          childrenPadding: EdgeInsets.only(
+            left: isSmallScreen ? 8.0 : 16.0,
+            right: isSmallScreen ? 8.0 : 16.0,
+            bottom: 8,
+          ),
+          children: children,
+        ),
+      ),
+    );
+  }
 
   Widget _buildDarkModeSwitch() {
     return Card(
@@ -799,7 +931,8 @@ class SettingsScreenState extends State<SettingsScreen> {
                       }
                     },
                   ),
-                  if (_markedInStatus == 'Shift') ...[
+                  // Zone selection for Shift and M-F (Zone 1 M-F enables 12-week roster fill)
+                  if (_markedInStatus == 'Shift' || _markedInStatus == 'M-F') ...[
                     const SizedBox(height: 16),
                     const Text('Zone:', style: TextStyle(fontWeight: FontWeight.bold)),
                     const SizedBox(height: 8),
@@ -866,32 +999,68 @@ class SettingsScreenState extends State<SettingsScreen> {
   }
 
   Widget _buildPayRateDropdown() {
+    final theme = Theme.of(context);
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 4.0),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppTheme.borderRadius),
       ),
-      child: ListTile(
-        leading: const Icon(Icons.attach_money),
-        title: const Text('Spread Pay Rate'),
-        subtitle: const Text('Select your pay rate for spread calculations'),
-        trailing: DropdownButton<String>(
-          value: _spreadPayRate,
-          onChanged: (String? newValue) async {
-            if (newValue != null && newValue != _spreadPayRate) {
-              setState(() {
-                _spreadPayRate = newValue;
-              });
-              await StorageService.saveString(AppConstants.spreadPayRateKey, newValue);
-            }
-          },
-          items: PayScaleService.getYearLevelOptions()
-              .map<DropdownMenuItem<String>>((String value) {
-            return DropdownMenuItem<String>(
-              value: value,
-              child: Text(PayScaleService.getYearLevelDisplayName(value)),
-            );
-          }).toList(),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.attach_money, color: theme.colorScheme.primary),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Spread Pay Rate',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Select your pay rate for spread calculations',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.75),
+              ),
+            ),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<String>(
+              isExpanded: true,
+              value: _spreadPayRate,
+              decoration: InputDecoration(
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              ),
+              onChanged: (String? newValue) async {
+                if (newValue != null && newValue != _spreadPayRate) {
+                  setState(() {
+                    _spreadPayRate = newValue;
+                  });
+                  await StorageService.saveString(
+                      AppConstants.spreadPayRateKey, newValue);
+                }
+              },
+              items: PayScaleService.getYearLevelOptions()
+                  .map<DropdownMenuItem<String>>((String value) {
+                return DropdownMenuItem<String>(
+                  value: value,
+                  child: Text(PayScaleService.getYearLevelDisplayName(value)),
+                );
+              }).toList(),
+            ),
+          ],
         ),
       ),
     );
@@ -1018,6 +1187,7 @@ class SettingsScreenState extends State<SettingsScreen> {
     required int remaining,
     required int used,
     String usedLabel = 'Booked',
+    String middleStatLabel = 'Remaining',
     required VoidCallback onDecrement,
     required VoidCallback onIncrement,
     String? warningText,
@@ -1056,13 +1226,13 @@ class SettingsScreenState extends State<SettingsScreen> {
               child: _buildStatBox(
                 label: 'Today',
                 value: balance.toString(),
-                valueColor: iconColor,
+                valueColor: balance == 0 ? Colors.orange : iconColor,
               ),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: _buildStatBox(
-                label: 'Remaining',
+                label: middleStatLabel,
                 value: remaining.toString(),
                 valueColor: remaining == 0 ? Colors.orange : null,
               ),
@@ -1602,6 +1772,56 @@ class SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  Widget _buildClearFutureEventsButton() {
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 4.0),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppTheme.borderRadius),
+      ),
+      child: ListTile(
+        leading: Icon(Icons.event_busy, color: Theme.of(context).iconTheme.color),
+        title: const Text('Clear Future Events'),
+        subtitle: const Text('Remove all events from 2 days ahead onwards'),
+        onTap: _showClearFutureEventsConfirmation,
+      ),
+    );
+  }
+
+  Future<void> _showClearFutureEventsConfirmation() async {
+    final cutoff = DateTime.now().add(const Duration(days: 2));
+    final cutoffStr = DateFormat('EEE, MMM d').format(cutoff);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Clear Future Events?'),
+        content: Text(
+          'This will permanently delete all events from $cutoffStr onwards. Past and upcoming events (today and tomorrow) will be kept. This cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
+            child: const Text('Clear Future'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true && mounted) {
+      _showLoadingDialog('Removing future events...');
+      final removed = await EventService.clearFutureEvents();
+      if (!mounted) return;
+      Navigator.of(context, rootNavigator: true).pop(); // Close loading dialog
+      if (mounted) {
+        // Pop Settings with result; Calendar's .then will refresh and show SnackBar
+        Navigator.of(context).pop(removed);
+      }
+    }
+  }
+
   Future<void> _showAutoBackupSelectionDialog() async {
     _showLoadingDialog("Loading auto-backups...");
     List<BackupEntry> autoBackups = await BackupService.listAutoBackups();
@@ -1837,6 +2057,53 @@ class SettingsScreenState extends State<SettingsScreen> {
         onTap: _checkAdminAccess,
       ),
     );
+  }
+
+  /// Debug only (kDebugMode). Clears all calendar events. Remove before release.
+  Widget _buildClearCalendarButton() {
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 4.0),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppTheme.borderRadius),
+      ),
+      child: ListTile(
+        leading: Icon(Icons.delete_forever, color: Colors.orange.shade700),
+        title: const Text('Clear Calendar'),
+        subtitle: const Text('Remove all events (debug only)'),
+        onTap: _showClearCalendarConfirmation,
+      ),
+    );
+  }
+
+  Future<void> _showClearCalendarConfirmation() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Clear Calendar?'),
+        content: const Text(
+          'This will permanently delete ALL events from your calendar. This cannot be undone.\n\nOnly use for debugging. Remove this option before release.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Clear All'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true && mounted) {
+      await EventService.clearAllEvents();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Calendar cleared. Restart app to refresh.')),
+        );
+      }
+    }
   }
 
   Future<void> _checkAdminAccess() async {

@@ -1,0 +1,21 @@
+{
+  "description": "10-week Zone 3 L58/59 Shift roster. Rest days (R) rotate by week. Fill in 10-week blocks. Day order: Sun-Sat.",
+  "zone": "3",
+  "scheduleType": "Shift",
+  "cycleLengthWeeks": 10,
+  "fillBlockWeeks": 10,
+  "dayNames": ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
+  "weeks": [
+    {"weekNumber": 1, "days": ["R", "R", "PZ3/08", "PZ3/08", "PZ3/08", "PZ3/08", "PZ3/07"]},
+    {"weekNumber": 2, "days": ["R", "PZ3/02", "PZ3/02", "PZ3/02", "R", "PZ3/02", "PZ3/03"]},
+    {"weekNumber": 3, "days": ["PZ3/03", "PZ3/08", "R", "PZ3/06", "PZ3/06", "PZ3/06", "R"]},
+    {"weekNumber": 4, "days": ["R", "PZ3/01", "PZ3/01", "PZ3/01", "PZ3/01", "R", "PZ3/02"]},
+    {"weekNumber": 5, "days": ["PZ3/01", "PZ3/06", "PZ3/06", "R", "PZ3/02", "PZ3/01", "R"]},
+    {"weekNumber": 6, "days": ["R", "R", "PZ3/10", "PZ3/10", "PZ3/10", "PZ3/10", "PZ3/10"]},
+    {"weekNumber": 7, "days": ["R", "PZ3/04", "PZ3/04", "PZ3/04", "R", "PZ3/04", "PZ3/04"]},
+    {"weekNumber": 8, "days": ["PZ3/04", "PZ3/10", "R", "PZ3/07", "PZ3/07", "PZ3/07", "R"]},
+    {"weekNumber": 9, "days": ["R", "PZ3/03", "PZ3/03", "PZ3/03", "PZ3/03", "R", "PZ3/01"]},
+    {"weekNumber": 10, "days": ["PZ3/02", "PZ3/07", "PZ3/07", "R", "PZ3/04", "PZ3/03", "R"]}
+  ],
+  "note": "Zone 3 L58/59 Shift roster. R = rest (no event). Skip bank holidays and Saturday service when filling."
+}

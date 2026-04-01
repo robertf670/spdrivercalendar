@@ -42,6 +42,112 @@ class ShiftDetailsCard extends StatelessWidget {
     // Calculate responsive badge sizes
     final screenWidth = MediaQuery.of(context).size.width;
     final badgeSizes = _getBadgeSizes(screenWidth);
+    final textScaleFactor = MediaQuery.textScalerOf(context).scale(1.0);
+    // One row with icon + title + bank holiday + notes squishes when text scale is large.
+    final bool useStackedLayout = textScaleFactor > 1.12 || screenWidth < 380;
+    
+    Widget notesButton() => InkWell(
+          onTap: onShowDayNotes,
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: const EdgeInsets.all(4.0),
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Icon(
+                  hasDayNote ? Icons.notes : Icons.notes_outlined,
+                  size: 18,
+                  color: hasDayNote
+                      ? (Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white.withValues(alpha: 0.9)
+                          : Colors.black.withValues(alpha: 0.8))
+                      : (shiftInfo?.color ?? Colors.blue).withValues(alpha: 0.6),
+                ),
+                if (hasDayNote)
+                  Positioned(
+                    right: 0,
+                    top: 0,
+                    child: Container(
+                      width: 6,
+                      height: 6,
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.white
+                            : Colors.black.withValues(alpha: 0.7),
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        );
+
+    Widget shiftIconBlock() => Container(
+          padding: const EdgeInsets.all(6),
+          decoration: BoxDecoration(
+            color: shiftInfo?.color.withValues(alpha: 0.2) ?? Colors.blue.withValues(alpha: 0.2),
+            borderRadius: BorderRadius.circular(AppTheme.borderRadius / 2),
+          ),
+          child: Icon(Icons.work, color: shiftInfo?.color, size: 20),
+        );
+
+    Widget titleBlock() => Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              shiftDisplayName,
+              style: Theme.of(context).textTheme.titleMedium,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+            ),
+            if (isSaturdayService) ...[
+              SizedBox(height: badgeSizes['spacing']! * 0.5),
+              Container(
+                padding: EdgeInsets.symmetric(
+                  horizontal: badgeSizes['paddingH']!,
+                  vertical: badgeSizes['paddingV']!,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.orange.shade600,
+                  borderRadius: BorderRadius.circular(badgeSizes['radius']!),
+                ),
+                child: Text(
+                  'SAT Service',
+                  style: TextStyle(
+                    fontSize: badgeSizes['fontSize']!,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ],
+          ],
+        );
+
+    Widget bankHolidayRow() => Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: AppTheme.errorColor.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(AppTheme.borderRadius / 2),
+              ),
+              child: const Icon(Icons.celebration, color: AppTheme.errorColor, size: 20),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                bankHoliday!.name,
+                style: Theme.of(context).textTheme.bodyMedium,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        );
     
     return Card(
       elevation: 2,
@@ -61,132 +167,51 @@ class ShiftDetailsCard extends StatelessWidget {
             end: Alignment.centerRight,
           ),
         ),
-        padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 16.0), // Reduced vertical padding
-        child: Row(
-          children: [
-            // Left section - Shift icon and info
-            Expanded(
-              flex: 3,
-              child: Row(
+        padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 16.0),
+        child: useStackedLayout
+            ? Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(6), // Smaller padding
-                    decoration: BoxDecoration(
-                      color: shiftInfo?.color.withValues(alpha: 0.2) ?? Colors.blue.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(AppTheme.borderRadius / 2),
-                    ),
-                    child: Icon(Icons.work, color: shiftInfo?.color, size: 20), // Smaller icon
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      shiftIconBlock(),
+                      const SizedBox(width: 12),
+                      Expanded(child: titleBlock()),
+                      notesButton(),
+                    ],
                   ),
-                  const SizedBox(width: 12),
+                  if (isBankHoliday) ...[
+                    const SizedBox(height: 10),
+                    bankHolidayRow(),
+                  ],
+                ],
+              )
+            : Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                   Expanded(
-                    child: Column(
+                    flex: 3,
+                    child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min, // Important to keep card compact
                       children: [
-                        Row(
-                          children: [
-                            Flexible(
-                              child: Text(
-                                shiftDisplayName,
-                                style: Theme.of(context).textTheme.titleMedium,
-                              ),
-                            ),
-                            if (isSaturdayService) ...[
-                              SizedBox(width: badgeSizes['spacing']!),
-                              Container(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: badgeSizes['paddingH']!,
-                                  vertical: badgeSizes['paddingV']!,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.orange.shade600,
-                                  borderRadius: BorderRadius.circular(badgeSizes['radius']!),
-                                ),
-                                child: Text(
-                                  'SAT Service',
-                                  style: TextStyle(
-                                    fontSize: badgeSizes['fontSize']!,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
+                        shiftIconBlock(),
+                        const SizedBox(width: 12),
+                        Expanded(child: titleBlock()),
                       ],
                     ),
                   ),
+                  if (isBankHoliday)
+                    Expanded(
+                      flex: 2,
+                      child: bankHolidayRow(),
+                    ),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 8.0),
+                    child: notesButton(),
+                  ),
                 ],
               ),
-            ),
-            
-            // Bank holiday indicator (if present)
-            if (isBankHoliday)
-              Expanded(
-                flex: 2,
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(6), // Smaller padding
-                      decoration: BoxDecoration(
-                        color: AppTheme.errorColor.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(AppTheme.borderRadius / 2),
-                      ),
-                      child: const Icon(Icons.celebration, color: AppTheme.errorColor, size: 20), // Smaller icon
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        bankHoliday!.name,
-                        style: Theme.of(context).textTheme.bodyMedium,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            // Notes icon - same as event cards
-            Padding(
-              padding: const EdgeInsets.only(left: 8.0),
-              child: InkWell(
-                onTap: onShowDayNotes,
-                borderRadius: BorderRadius.circular(12),
-                child: Padding(
-                  padding: const EdgeInsets.all(4.0),
-                  child: Stack(
-                    children: [
-                      Icon(
-                        hasDayNote ? Icons.notes : Icons.notes_outlined,
-                        size: 18,
-                        color: hasDayNote
-                            ? (Theme.of(context).brightness == Brightness.dark
-                                ? Colors.white.withValues(alpha: 0.9)
-                                : Colors.black.withValues(alpha: 0.8))
-                            : (shiftInfo?.color ?? Colors.blue).withValues(alpha: 0.6),
-                      ),
-                      if (hasDayNote)
-                        Positioned(
-                          right: 0,
-                          top: 0,
-                          child: Container(
-                            width: 6,
-                            height: 6,
-                            decoration: BoxDecoration(
-                              color: Theme.of(context).brightness == Brightness.dark
-                                  ? Colors.white
-                                  : Colors.black.withValues(alpha: 0.7),
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

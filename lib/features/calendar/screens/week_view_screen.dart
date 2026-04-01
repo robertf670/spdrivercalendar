@@ -351,7 +351,7 @@ class WeekViewScreenState extends State<WeekViewScreen> {
                           color: _isToday(day) ? AppTheme.primaryColor : null,
                         ),
                         textAlign: TextAlign.center,
-                        maxLines: 1,
+                        maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
@@ -426,67 +426,70 @@ class WeekViewScreenState extends State<WeekViewScreen> {
                         ],
                       ),
                     )
-                  : Column(
-                      mainAxisSize: MainAxisSize.min,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        // Show different message based on whether it's a rostered rest day or work day without duties
-                        Expanded(
-                          child: Center(
-                            child: Padding(
-                              padding: EdgeInsets.only(
-                                top: sizes['dutyCardMargin']!,
-                                bottom: sizes['dutyCardMargin']!,
-                                left: sizes['blueBoxMargin']!,
-                                right: sizes['blueBoxMargin']!,
-                              ),
-                              child: Container(
-                                padding: EdgeInsets.symmetric(
-                                  vertical: sizes['dutyCardPadding']!,
-                                  horizontal: sizes['dutyCardPadding']! * 0.5,
+                  : LayoutBuilder(
+                      builder: (context, constraints) {
+                        return SingleChildScrollView(
+                          physics: const ClampingScrollPhysics(),
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(
+                              minHeight: constraints.maxHeight,
+                            ),
+                            child: Center(
+                              child: Padding(
+                                padding: EdgeInsets.only(
+                                  top: sizes['dutyCardMargin']!,
+                                  bottom: sizes['dutyCardMargin']!,
+                                  left: sizes['blueBoxMargin']!,
+                                  right: sizes['blueBoxMargin']!,
                                 ),
-                                decoration: BoxDecoration(
-                                  color: isRosteredRestDay && restDayColor != null
-                                      ? restDayColor.withValues(alpha: 0.2)
-                                      : Theme.of(context).colorScheme.surfaceContainerLow,
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: isRosteredRestDay && restDayColor != null
-                                      ? Border.all(color: restDayColor.withValues(alpha: 0.4), width: 1.5)
-                                      : null,
-                                ),
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(
-                                      isRosteredRestDay ? Icons.free_breakfast : Icons.info_outline,
-                                      size: sizes['moreText']! * 3,
-                                      color: isRosteredRestDay && restDayColor != null
-                                          ? restDayColor
-                                          : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
-                                    ),
-                                    SizedBox(height: sizes['dutyCardMargin']!),
-                                    Text(
-                                      isRosteredRestDay ? 'Rest Day' : 'No duties loaded',
-                                      style: TextStyle(
-                                        fontSize: sizes['moreText']!,
-                                        fontWeight: isRosteredRestDay ? FontWeight.w600 : FontWeight.normal,
+                                child: Container(
+                                  padding: EdgeInsets.symmetric(
+                                    vertical: sizes['dutyCardPadding']!,
+                                    horizontal: sizes['dutyCardPadding']! * 0.5,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: isRosteredRestDay && restDayColor != null
+                                        ? restDayColor.withValues(alpha: 0.2)
+                                        : Theme.of(context).colorScheme.surfaceContainerLow,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: isRosteredRestDay && restDayColor != null
+                                        ? Border.all(color: restDayColor.withValues(alpha: 0.4), width: 1.5)
+                                        : null,
+                                  ),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        isRosteredRestDay ? Icons.free_breakfast : Icons.info_outline,
+                                        size: sizes['moreText']! * 3,
                                         color: isRosteredRestDay && restDayColor != null
                                             ? restDayColor
-                                            : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-                                        fontStyle: isRosteredRestDay ? FontStyle.normal : FontStyle.italic,
+                                            : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
                                       ),
-                                      textAlign: TextAlign.center,
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ],
+                                      SizedBox(height: sizes['dutyCardMargin']!),
+                                      Text(
+                                        isRosteredRestDay ? 'Rest Day' : 'No duties loaded',
+                                        style: TextStyle(
+                                          fontSize: sizes['moreText']!,
+                                          fontWeight: isRosteredRestDay ? FontWeight.w600 : FontWeight.normal,
+                                          color: isRosteredRestDay && restDayColor != null
+                                              ? restDayColor
+                                              : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                                          fontStyle: isRosteredRestDay ? FontStyle.normal : FontStyle.italic,
+                                        ),
+                                        textAlign: TextAlign.center,
+                                        maxLines: 4,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
                             ),
                           ),
-                        ),
-                      ],
+                        );
+                      },
                     ),
             ),
           ),

@@ -139,6 +139,7 @@ class ContactsPageState extends State<ContactsPage> {
         left: 4,
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
             padding: EdgeInsets.all(isSmallScreen ? 6 : 8),
@@ -149,12 +150,16 @@ class ContactsPageState extends State<ContactsPage> {
             child: Icon(icon, color: color, size: isSmallScreen ? 18 : 20),
           ),
           SizedBox(width: isSmallScreen ? 10 : 12),
-          Text(
-            title,
-            style: TextStyle(
-              fontSize: isSmallScreen ? 16 : 18,
-              fontWeight: FontWeight.bold,
-              color: color,
+          Expanded(
+            child: Text(
+              title,
+              style: TextStyle(
+                fontSize: isSmallScreen ? 16 : 18,
+                fontWeight: FontWeight.bold,
+                color: color,
+              ),
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],

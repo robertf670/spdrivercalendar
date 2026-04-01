@@ -1,4 +1,46 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '3.2.0': [
+    {
+      'title': 'Duty Roster Auto-Fill',
+      'description': 'Auto-fill from roster when adding a duty: M-F Zone 1 (12 weeks), Shift Zone 1 (15 weeks from the 86-week roster), Shift Zone 3 L58/59 (10 weeks).',
+    },
+    {
+      'title': 'Clear Future Events',
+      'description': 'New button in Settings → Backup & Restore to remove all events from 2 days ahead onwards.',
+    },
+    {
+      'title': 'Search: Workout Filter',
+      'description': 'Filters panel includes a Workout option to show only shifts that are workout duties.',
+    },
+    {
+      'title': 'Settings Tidy-Up',
+      'description': 'Settings reorganized with collapsible sub-sections: Calendar display, Work preferences, Sync options, and Auto-backup. Cleaner layout with less clutter.',
+    },
+    {
+      'title': 'Holiday Naming and Cards',
+      'description': '"Other Holiday" is now "Holiday". Event cards below the calendar match holiday cell colours; softer in dark mode.',
+    },
+    {
+      'title': 'Annual Leave Balances',
+      'description': 'Today decreases as leave days pass (forward-only). Booked is future leave only. Balances refresh when you resume the app; first-run save resets tracking. If Today looks wrong after upgrading, set your balance in Settings → Holidays & Leave.',
+    },
+    {
+      'title': 'Welcome, Rest Day, and Google',
+      'description': 'Welcome carousel and rest day setup work better with large text. Google Calendar is no longer prompted right after welcome; connect from Settings when permitted (test users only).',
+    },
+    {
+      'title': 'Large Text: Statistics and Search',
+      'description': 'Statistics reflows on small screens or scaled text (5-week cycle, spread, earnings, holiday/sick cards, shift summary range, break stats, self-certified tracking, frequency chart). Search filters stack so labels are not cut off.',
+    },
+    {
+      'title': 'Large Text: Tables and Grids',
+      'description': 'Bills, pay scales, year view, holiday year pickers, toilet codes, admin dashboard, live updates routes, and notes month picker scale safely.',
+    },
+    {
+      'title': 'Large Text: Calendar and Shift Dialogs',
+      'description': 'Report/sign-off lines and duty 807 scale better; week view fixes for empty or rest days; month title and add event/work shift dialogs scroll; contacts headers wrap. Holiday add-dialog buttons readable in dark mode. Overtime and late finish dialogs scroll; Break & Finish uses theme surfaces and wrapped actions; Sick Day Status scrolls with theme-aware panels and wrapped buttons.',
+    },
+  ],
   '3.1.3': [
     {
       'title': 'PZ3/01 and PZ3/02 Saturday Report Times',

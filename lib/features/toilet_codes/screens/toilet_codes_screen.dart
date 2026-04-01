@@ -106,12 +106,15 @@ class ToiletCodesScreen extends StatelessWidget {
           }
 
           if (useGrid) {
+            final textScale =
+                MediaQuery.textScalerOf(context).scale(1.0).clamp(1.0, 3.0);
+            final gridAspectRatio = (2.8 / textScale).clamp(0.85, 3.5);
             return Padding(
               padding: EdgeInsets.all(padding),
               child: GridView.builder(
                 gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 2,
-                  childAspectRatio: 2.8,
+                  childAspectRatio: gridAspectRatio,
                   crossAxisSpacing: 12,
                   mainAxisSpacing: 8,
                 ),

@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -283,6 +285,11 @@ class PayscaleScreenState extends State<PayscaleScreen> {
     }
 
     final sizes = _getResponsiveSizes(context);
+    final textScale = MediaQuery.textScalerOf(context).scale(1.0);
+    final scaledHeaderHeight =
+        sizes['headerHeight']! * math.min(1.65, math.max(1.0, textScale));
+    final scaledFixedWidth =
+        math.max(100.0, sizes['fixedColumnWidth']! * math.min(1.5, math.max(1.0, textScale)));
 
     List<String> allHeaders = _payscaleData![0].keys.toList();
     String fixedColumnKey = 'type';
@@ -380,8 +387,8 @@ class PayscaleScreenState extends State<PayscaleScreen> {
               ),
               clipBehavior: Clip.antiAlias,
               child: HorizontalSplitTable(
-                fixedColumnWidth: sizes['fixedColumnWidth']!,
-                headerHeight: sizes['headerHeight']!,
+                fixedColumnWidth: scaledFixedWidth,
+                headerHeight: scaledHeaderHeight,
                 headerBackgroundColor: headerBackgroundColor,
                 dataColumnWidth: sizes['dataColumnWidth']!,
                 cellPadding: sizes['cellPadding']!,
@@ -559,6 +566,7 @@ class HorizontalSplitTableState extends State<HorizontalSplitTable> {
                 child: Text(
                   widget.fixedColumnHeader,
                   style: widget.headerTextStyle,
+                  maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
@@ -588,6 +596,8 @@ class HorizontalSplitTableState extends State<HorizontalSplitTable> {
                             widget.dataColumnHeaders[index],
                             style: widget.headerTextStyle,
                             textAlign: TextAlign.right,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         );
                       }),

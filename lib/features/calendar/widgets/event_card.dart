@@ -1484,7 +1484,23 @@ class _EventCardState extends State<EventCard> {
           holidayIcon = Icons.wb_sunny;
           break;
         case 'other':
-          holidayColor = Colors.green;
+          // Use same teal as calendar holiday cells (AppTheme.holidayColor)
+          final tealColor = AppTheme.holidayColor;
+          holidayColor = MaterialColor(
+            tealColor.toARGB32(),
+            <int, Color>{
+              50: tealColor.withValues(alpha: 0.1),
+              100: tealColor.withValues(alpha: 0.2),
+              200: tealColor.withValues(alpha: 0.3),
+              300: tealColor.withValues(alpha: 0.4),
+              400: tealColor.withValues(alpha: 0.5),
+              500: tealColor,
+              600: tealColor,
+              700: tealColor,
+              800: tealColor,
+              900: tealColor,
+            },
+          );
           holidayIcon = Icons.event;
           break;
         case 'unpaid_leave':
@@ -1516,20 +1532,29 @@ class _EventCardState extends State<EventCard> {
           holidayIcon = Icons.event;
       }
 
+      // Use theme-aware colors: light mode = light tint + dark text; dark mode = muted tint to match calendar cells
+      final isDark = Theme.of(context).brightness == Brightness.dark;
+      final cardBgColor = isDark
+          ? (holidayColor.shade500).withValues(alpha: 0.15)
+          : holidayColor[100];
+      final textColor = isDark
+          ? Theme.of(context).colorScheme.onSurface
+          : holidayColor[700];
+
       return Card(
         elevation: 2,
         margin: const EdgeInsets.symmetric(vertical: 8.0),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppTheme.borderRadius),
         ),
-        color: holidayColor[50],
+        color: cardBgColor,
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Row(
             children: [
               Icon(
                 holidayIcon,
-                color: holidayColor,
+                color: isDark ? holidayColor.shade300 : holidayColor,
                 size: 24,
               ),
               const SizedBox(width: 12),
@@ -1539,7 +1564,7 @@ class _EventCardState extends State<EventCard> {
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: holidayColor[700],
+                    color: textColor,
                   ),
                 ),
               ),
@@ -1646,6 +1671,11 @@ class _EventCardState extends State<EventCard> {
         cardColor = sickDayColor.withValues(alpha: 0.08);
       }
     }
+
+    // Inline "Work:" next to the title only when there is room; large text scale squishes the row.
+    final double textScaleFactor = MediaQuery.textScalerOf(context).scale(1.0);
+    final bool showWorkTimeInline = MediaQuery.sizeOf(context).width >= 380 &&
+        textScaleFactor <= 1.15;
     
     return Card(
       elevation: 2,
@@ -1683,7 +1713,7 @@ class _EventCardState extends State<EventCard> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       // On larger screens, show work time inline
-                      if (workTime != null && !widget.event.title.contains('(OT)') && MediaQuery.of(context).size.width >= 380) ...[
+                      if (workTime != null && !widget.event.title.contains('(OT)') && showWorkTimeInline) ...[
                         Text(
                           'Work: $workTime',
                           style: TextStyle(
@@ -1808,7 +1838,7 @@ class _EventCardState extends State<EventCard> {
                 ],
               ),
               // On small screens, show work time on separate line below title
-              if (workTime != null && !widget.event.title.contains('(OT)') && MediaQuery.of(context).size.width < 380) ...[
+              if (workTime != null && !widget.event.title.contains('(OT)') && !showWorkTimeInline) ...[
                 const SizedBox(height: 4.0),
                 Text(
                   'Work: $workTime',
@@ -1856,7 +1886,10 @@ class _EventCardState extends State<EventCard> {
               // NEW: Report - Sign Off line (for PZ shifts and UNI overtime shifts)
               // Skip for EA Training (no times/locations)
               if (!_isEATraining && (widget.event.title.startsWith('PZ') || widget.event.title.startsWith('811/') || (widget.event.title.contains('(OT)') && RegExp(r'^\d{2,3}/').hasMatch(widget.event.title.replaceAll(RegExp(r'[AB]? \(OT\)$'), '')))))
-                Padding(
+                MediaQuery.withClampedTextScaling(
+                  minScaleFactor: 0.85,
+                  maxScaleFactor: 1.2,
+                  child: Padding(
                   padding: const EdgeInsets.only(bottom: 2.0), // Reduced space - time info goes together
                   // Add Row for Icon
                   child: Row(
@@ -1870,15 +1903,14 @@ class _EventCardState extends State<EventCard> {
                       ),
                       const SizedBox(width: 8),
                       // Use RichText for styling consistency
-                      Expanded( // Ensure RichText expands
-                        child: RichText(
-                          overflow: TextOverflow.ellipsis, // Prevent overflow
-                          text: TextSpan(
+                      Expanded(
+                        child: Text.rich(
+                          TextSpan(
                             // Default style (slightly de-emphasized)
-                            style: TextStyle( // Removed const and hardcoded black color
-                              color: Theme.of(context).textTheme.bodyMedium?.color, // Use theme color
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500, // Medium weight for time info labels
+                            style: TextStyle(
+                              color: Theme.of(context).textTheme.bodyMedium?.color,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
                             ),
                             children: <TextSpan>[
                               TextSpan(
@@ -1964,10 +1996,14 @@ class _EventCardState extends State<EventCard> {
                               ],
                             ],
                           ),
+                          maxLines: 8,
+                          softWrap: true,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],
                   ),
+                ),
                 ),
               
               // Add work time display for overtime shifts
@@ -4105,6 +4141,8 @@ class _EventCardState extends State<EventCard> {
   // Build title with separate styling for route information
   Widget _buildTitleWithRoute() {
     final baseTitle = _formatDisplayTitleWithoutRoute(widget.event.title);
+    final int titleMaxLines =
+        MediaQuery.textScalerOf(context).scale(1.0) > 1.15 ? 4 : 2;
     
    // For PZ1, PZ2, PZ4, and Universal/Euro duties, show route on a separate line
     if ((widget.event.title.startsWith('PZ1/') || widget.event.title.startsWith('PZ2/') ||
@@ -4119,6 +4157,7 @@ class _EventCardState extends State<EventCard> {
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
               fontWeight: FontWeight.bold,
             ),
+            maxLines: titleMaxLines,
             overflow: TextOverflow.ellipsis,
           ),
           // Route on second line
@@ -4131,6 +4170,7 @@ class _EventCardState extends State<EventCard> {
                   ? Colors.white.withValues(alpha: 0.8)
                   : Colors.black.withValues(alpha: 0.7),
             ),
+            maxLines: 2,
             overflow: TextOverflow.ellipsis,
           ),
           // Add sick day status badge if applicable
@@ -4167,6 +4207,7 @@ class _EventCardState extends State<EventCard> {
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
               fontWeight: FontWeight.bold,
             ),
+            maxLines: titleMaxLines,
             overflow: TextOverflow.ellipsis,
           ),
           // Add sick day status badge if applicable
@@ -6062,12 +6103,18 @@ class _EventCardState extends State<EventCard> {
     final is807_06 = baseTitle == '807/06';
     final is807_07 = baseTitle == '807/07';
 
-    final textStyle = TextStyle(
-      color: Theme.of(context).brightness == Brightness.dark
-          ? Colors.white
-          : Colors.black,
-      fontSize: 14,
-    );
+    final textStyle = Theme.of(context).textTheme.bodySmall?.copyWith(
+          color: Theme.of(context).brightness == Brightness.dark
+              ? Colors.white
+              : Colors.black,
+          fontSize: 13,
+        ) ??
+        TextStyle(
+          color: Theme.of(context).brightness == Brightness.dark
+              ? Colors.white
+              : Colors.black,
+          fontSize: 13,
+        );
     final mainRow = Row(
       children: [
         Icon(
@@ -6095,25 +6142,36 @@ class _EventCardState extends State<EventCard> {
         : Colors.black;
 
     if (is807_07 && _reportTimeStr != null) {
-      return Column(
+      return MediaQuery.withClampedTextScaling(
+        minScaleFactor: 0.85,
+        maxScaleFactor: 1.2,
+        child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
               Icon(Icons.schedule, size: 16, color: iconColor),
               const SizedBox(width: 8),
-              Text(
-                'Report: $_reportTimeStr',
-                style: textStyle.copyWith(fontWeight: FontWeight.w500),
+              Expanded(
+                child: Text(
+                  'Report: $_reportTimeStr',
+                  style: textStyle.copyWith(fontWeight: FontWeight.w500),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
             ],
           ),
           const SizedBox(height: 2),
           mainRow,
         ],
+      ),
       );
     } else if (is807_06 && _signoffTimeStr != null) {
-      return Column(
+      return MediaQuery.withClampedTextScaling(
+        minScaleFactor: 0.85,
+        maxScaleFactor: 1.2,
+        child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           mainRow,
@@ -6122,13 +6180,18 @@ class _EventCardState extends State<EventCard> {
             children: [
               Icon(Icons.schedule, size: 16, color: iconColor),
               const SizedBox(width: 8),
-              Text(
-                'Sign Off: $_signoffTimeStr',
-                style: textStyle.copyWith(fontWeight: FontWeight.w500),
+              Expanded(
+                child: Text(
+                  'Sign Off: $_signoffTimeStr',
+                  style: textStyle.copyWith(fontWeight: FontWeight.w500),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
             ],
           ),
         ],
+      ),
       );
     }
     return mainRow;

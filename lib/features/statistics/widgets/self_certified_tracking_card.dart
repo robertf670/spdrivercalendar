@@ -68,6 +68,7 @@ class SelfCertifiedTrackingCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Icon(
                       Icons.verified_user,
@@ -75,11 +76,15 @@ class SelfCertifiedTrackingCard extends StatelessWidget {
                       size: 24,
                     ),
                     const SizedBox(width: 8),
-                    Text(
-                      'Self-Certified Sick Days Tracking',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
+                    Expanded(
+                      child: Text(
+                        'Self-Certified Sick Days Tracking',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],
@@ -123,27 +128,42 @@ class SelfCertifiedTrackingCard extends StatelessWidget {
                 
                 // Year Total
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Year Total',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
+                    Expanded(
+                      flex: 2,
+                      child: Text(
+                        'Year Total',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
-                      decoration: BoxDecoration(
-                        color: (yearUsed >= yearLimit ? warningColor : primaryColor).withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(12.0),
-                      ),
-                      child: Text(
-                        '$yearUsed/$yearLimit',
-                        style: TextStyle(
-                          color: yearUsed >= yearLimit ? warningColor : primaryColor,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 15,
+                    const SizedBox(width: 8),
+                    Expanded(
+                      flex: 3,
+                      child: Align(
+                        alignment: Alignment.centerRight,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
+                          decoration: BoxDecoration(
+                            color: (yearUsed >= yearLimit ? warningColor : primaryColor).withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(12.0),
+                          ),
+                          child: Text(
+                            '$yearUsed/$yearLimit',
+                            style: TextStyle(
+                              color: yearUsed >= yearLimit ? warningColor : primaryColor,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                            ),
+                            textAlign: TextAlign.end,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
                       ),
                     ),
@@ -206,27 +226,42 @@ class SelfCertifiedTrackingCard extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
+            Expanded(
+              flex: 2,
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 4.0),
-              decoration: BoxDecoration(
-                color: (isAtLimit ? warningColor : primaryColor).withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(12.0),
-              ),
-              child: Text(
-                '$used/$limit',
-                style: TextStyle(
-                  color: isAtLimit ? warningColor : primaryColor,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
+            const SizedBox(width: 8),
+            Expanded(
+              flex: 3,
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 4.0),
+                  decoration: BoxDecoration(
+                    color: (isAtLimit ? warningColor : primaryColor).withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(12.0),
+                  ),
+                  child: Text(
+                    '$used/$limit',
+                    style: TextStyle(
+                      color: isAtLimit ? warningColor : primaryColor,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                    textAlign: TextAlign.end,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
               ),
             ),

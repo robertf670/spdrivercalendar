@@ -20,110 +20,133 @@ class GoogleLoginScreenState extends State<GoogleLoginScreen> {
   bool _isLoading = false;
   String _errorMessage = '';
   
+  Map<String, double> _loginResponsiveSizes(BuildContext context) {
+    final w = MediaQuery.sizeOf(context).width;
+    final textScale = MediaQuery.textScalerOf(context).scale(1.0);
+    final pad = w < 350 ? 16.0 : w < 400 ? 20.0 : 28.0;
+    double iconBase = w < 350 ? 72.0 : w < 450 ? 96.0 : 120.0;
+    if (textScale > 1.15) {
+      iconBase = iconBase / (textScale * 0.8);
+    }
+    final iconSize = iconBase.clamp(56.0, 120.0);
+    final gap = (w < 350 ? 16.0 : 20.0) * (textScale > 1.25 ? 0.85 : 1.0);
+    return {'pad': pad, 'iconSize': iconSize, 'gap': gap};
+  }
+
   @override
   Widget build(BuildContext context) {
+    final sizes = _loginResponsiveSizes(context);
+    final theme = Theme.of(context);
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Connect to Google Calendar'),
+        title: Text(
+          'Connect to Google Calendar',
+          style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+        ),
         elevation: 0,
         automaticallyImplyLeading: false,
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          child: Container(
-            constraints: BoxConstraints(
-              minHeight: MediaQuery.of(context).size.height - 
-                        MediaQuery.of(context).padding.top - 
-                        kToolbarHeight,
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(32.0),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(
-                    Icons.calendar_month,
-                    size: 120,
-                    color: AppTheme.primaryColor,
-                  ),
-                  const SizedBox(height: 24),
-                  const Text(
-                    'Sync with Google Calendar',
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'Connect your account to sync your shifts between this app and Google Calendar.',
-                    style: TextStyle(fontSize: 16),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 24),
-                  // Add disclaimer about Google Calendar access
-                  Container(
-                    padding: const EdgeInsets.all(12.0),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-                      borderRadius: BorderRadius.circular(8.0),
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Icon(
-                          Icons.info_outline,
-                          color: Theme.of(context).colorScheme.primary,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'Google Calendar access requires test user approval. Please use the feedback section to request access with your email address.',
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Theme.of(context).colorScheme.onSurface,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  if (_errorMessage.isNotEmpty)
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.red.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(AppTheme.borderRadius),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: Padding(
+                  padding: EdgeInsets.all(sizes['pad']!),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.calendar_month,
+                        size: sizes['iconSize']!,
+                        color: AppTheme.primaryColor,
                       ),
-                      child: Text(
-                        _errorMessage,
-                        style: const TextStyle(color: Colors.red),
+                      SizedBox(height: sizes['gap']!),
+                      Text(
+                        'Sync with Google Calendar',
+                        style: theme.textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ) ??
+                            const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
                         textAlign: TextAlign.center,
                       ),
-                    ),
-                  const SizedBox(height: 24),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: _isLoading ? null : _handleSignIn,
-                      icon: const Icon(Icons.login),
-                      label: Text(_isLoading ? 'Connecting...' : 'Connect with Google'),
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
+                      SizedBox(height: sizes['gap']! * 0.75),
+                      Text(
+                        'Connect your account to sync your shifts between this app and Google Calendar.',
+                        style: theme.textTheme.bodyLarge?.copyWith(
+                          color: theme.colorScheme.onSurface.withValues(alpha: 0.9),
+                        ),
+                        textAlign: TextAlign.center,
                       ),
-                    ),
+                      SizedBox(height: sizes['gap']!),
+                      Container(
+                        padding: const EdgeInsets.all(12.0),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                          borderRadius: BorderRadius.circular(8.0),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Icon(
+                              Icons.info_outline,
+                              color: theme.colorScheme.primary,
+                              size: 22,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Google Calendar access requires test user approval. Please use the feedback section to request access with your email address.',
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: theme.colorScheme.onSurface,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      if (_errorMessage.isNotEmpty)
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.red.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(AppTheme.borderRadius),
+                          ),
+                          child: Text(
+                            _errorMessage,
+                            style: const TextStyle(color: Colors.red),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      SizedBox(height: sizes['gap']!),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: _isLoading ? null : _handleSignIn,
+                          icon: const Icon(Icons.login),
+                          label: Text(_isLoading ? 'Connecting...' : 'Connect with Google'),
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            surfaceTintColor: Colors.transparent,
+                          ),
+                        ),
+                      ),
+                      SizedBox(height: sizes['gap']! * 0.75),
+                      TextButton(
+                        onPressed: _isLoading ? null : _handleSkip,
+                        child: const Text('Skip for now'),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 16),
-                  TextButton(
-                    onPressed: _isLoading ? null : _handleSkip,
-                    child: const Text('Skip for now'),
-                  ),
-                ],
+                ),
               ),
-            ),
-          ),
+            );
+          },
         ),
       ),
     );
