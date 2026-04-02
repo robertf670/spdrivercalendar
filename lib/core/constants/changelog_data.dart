@@ -1,4 +1,10 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '3.2.1': [
+    {
+      'title': 'Shift Zone 1 Roster Auto-Fill',
+      'description': 'Temporarily removed the option to auto-fill the next 15 weeks from the Shift Zone 1 roster when adding a duty.',
+    },
+  ],
   '3.2.0': [
     {
       'title': 'Duty Roster Auto-Fill',

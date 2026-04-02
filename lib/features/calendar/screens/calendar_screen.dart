@@ -1516,7 +1516,9 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                   builder: (context) {
                     final dayIndex = shiftDate.weekday % 7; // 0=Sun, 1=Mon, ..., 6=Sat
                     final shiftWeekIndex = RosterService.getZone1ShiftWeekIndex(dayIndex, selectedShiftNumber);
-                    final shouldShowShiftRosterCheckbox = isShiftMarkedIn &&
+                    final shouldShowShiftRosterCheckbox =
+                        AppConstants.enableZone1ShiftDutyRosterAutoFill &&
+                        isShiftMarkedIn &&
                         selectedZone == 'Zone 1' &&
                         shiftWeekIndex != null;
                     if (shouldShowShiftRosterCheckbox) {
@@ -1908,7 +1910,10 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                       }
                       
                       // Zone 1 Shift 15-week roster auto-fill (skip rest days, filled days, bank holidays, Saturday service)
-                      if (fillNext15Weeks && isShiftMarkedIn && selectedZone == 'Zone 1') {
+                      if (AppConstants.enableZone1ShiftDutyRosterAutoFill &&
+                          fillNext15Weeks &&
+                          isShiftMarkedIn &&
+                          selectedZone == 'Zone 1') {
                         await RosterService.loadZone1ShiftRoster();
                         final dayIndex = shiftDate.weekday % 7; // 0=Sun, 1=Mon, ..., 6=Sat
                         final weekIndex = RosterService.getZone1ShiftWeekIndex(dayIndex, selectedShiftNumber);
