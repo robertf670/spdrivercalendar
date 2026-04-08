@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import 'package:flutter/foundation.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:spdrivercalendar/features/settings/screens/settings_screen.dart';
+import 'package:spdrivercalendar/services/note_attachment_service.dart';
 
 class EventService {
   // In-memory events cache with month-based loading - FIXED: Use string-based date keys
@@ -1079,6 +1080,8 @@ class EventService {
     }
     // --- End Cancel Notification ---
 
+    await NoteAttachmentService.deleteAllForEvent(event.id);
+
     final normalizedStartDate = DateTime(
       event.startDate.year, event.startDate.month, event.startDate.day
     );
@@ -1437,9 +1440,9 @@ class EventService {
         allEvents.addAll(eventsData.map((eventData) => Event.fromMap(eventData)));
       }
       
-      // Filter for events with notes and sort by date
+      // Filter for events with text notes and/or attached images; sort by date
       return allEvents
-        .where((event) => event.notes != null && event.notes!.trim().isNotEmpty)
+        .where((event) => event.hasNoteContent)
         .toList()
         ..sort((a, b) => b.startDate.compareTo(a.startDate));
     } catch (e) {

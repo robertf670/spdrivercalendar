@@ -3,6 +3,7 @@ import 'package:intl/intl.dart'; // For date formatting
 import 'package:spdrivercalendar/models/event.dart'; // Assuming Event model path
 import 'package:spdrivercalendar/features/calendar/services/event_service.dart'; // Assuming EventService path
 import 'package:spdrivercalendar/services/day_note_service.dart';
+import 'package:spdrivercalendar/services/note_attachment_service.dart';
 import 'package:spdrivercalendar/theme/app_theme.dart'; // For consistent styling
 import 'package:spdrivercalendar/features/notes/screens/edit_note_screen.dart'; // Import the edit screen
 import 'package:collection/collection.dart'; // Import for groupBy
@@ -97,7 +98,7 @@ class AllNotesScreenState extends State<AllNotesScreen> {
       // Add event notes
       final uniqueEventsWithNotes = <String, Event>{};
       for (var event in eventsWithNotes) {
-        if (event.id.isNotEmpty && event.notes != null && event.notes!.trim().isNotEmpty) {
+        if (event.id.isNotEmpty && event.hasNoteContent) {
           uniqueEventsWithNotes[event.id] = event;
         }
       }
@@ -105,7 +106,7 @@ class AllNotesScreenState extends State<AllNotesScreen> {
         items.add(_NoteListItem(
           date: event.startDate,
           title: event.title,
-          note: event.notes!,
+          note: event.notes?.trim().isNotEmpty == true ? event.notes! : (event.hasNoteImages ? '(photos)' : ''),
           isDayNote: false,
           event: event,
         ));
@@ -172,7 +173,8 @@ class AllNotesScreenState extends State<AllNotesScreen> {
 
   // --- Delete Event Note Logic ---
   Future<void> _deleteEventNote(Event eventToDelete) async {
-    final updatedEvent = eventToDelete.copyWith(notes: '');
+    await NoteAttachmentService.deleteAllForEvent(eventToDelete.id);
+    final updatedEvent = eventToDelete.copyWith(notes: null, noteImagePaths: []);
     try {
       await EventService.updateEvent(eventToDelete, updatedEvent);
       if (mounted) {

@@ -14,6 +14,8 @@ class RouteService {
         return await _getPZ1RouteInfo(shiftCode, eventDate);
       } else if (shiftCode.startsWith('PZ2/')) {
         return await _getPZ2RouteInfo(shiftCode, eventDate);
+      } else if (shiftCode.startsWith('PZ3/')) {
+        return await _getPZ3RouteInfo(shiftCode, eventDate);
       } else if (shiftCode.startsWith('PZ4/')) {
         return await _getPZ4RouteInfo(shiftCode, eventDate);
       } else if (RegExp(r'^\d+/').hasMatch(shiftCode)) {
@@ -192,6 +194,14 @@ class RouteService {
     } catch (e) {
       return null;
     }
+  }
+
+  /// Shift Zone 3 (PZ3/XX): show **L58/L59** on the card (same idea as the combined 23/24 label).
+  static Future<RouteInfo?> _getPZ3RouteInfo(String shiftCode, DateTime eventDate) async {
+    return RouteInfo(
+      isWorkout: false,
+      fixedDisplayLabel: 'L58/L59',
+    );
   }
 
   /// Extract route info for PZ4 duties from location codes with route numbers in parentheses
@@ -430,14 +440,23 @@ class RouteInfo {
   final String? secondRoute;
   final bool isWorkout;
 
+  /// When set, [formatForDisplay] returns this only (e.g. PZ3 → `L58/L59`, analogous to 23/24).
+  final String? fixedDisplayLabel;
+
   RouteInfo({
     this.firstRoute,
     this.secondRoute,
     required this.isWorkout,
+    this.fixedDisplayLabel,
   });
 
   /// Format route information for display
   String formatForDisplay() {
+    final fixed = fixedDisplayLabel?.trim();
+    if (fixed != null && fixed.isNotEmpty) {
+      return fixed;
+    }
+
     if (isWorkout) {
       // Single route format for WORKOUT duties
       final route = _formatRouteDisplay(firstRoute);
@@ -465,13 +484,8 @@ class RouteInfo {
       if ((first == '23' || first == '24') && (second == '23' || second == '24')) {
         return '23/24';
       }
-      
-      // If both routes are the same, show just one (e.g., "C • C" -> "C")
-      if (first == second && first.isNotEmpty) {
-        return first;
-      }
-      
-      // Show both routes with bullet separator
+
+      // Show both halves with bullet separator (including when both are the same, e.g. "39A • 39A")
       return '$first • $second';
     }
   }
@@ -494,6 +508,6 @@ class RouteInfo {
 
   @override
   String toString() {
-    return 'RouteInfo(first: $firstRoute, second: $secondRoute, isWorkout: $isWorkout)';
+    return 'RouteInfo(first: $firstRoute, second: $secondRoute, isWorkout: $isWorkout, fixed: $fixedDisplayLabel)';
   }
 }

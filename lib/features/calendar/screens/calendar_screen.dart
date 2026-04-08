@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:intl/intl.dart';
@@ -31,6 +32,7 @@ import 'package:spdrivercalendar/services/rest_day_swap_service.dart';
 import 'package:spdrivercalendar/features/contacts/contacts_page.dart'; // Add this line
 import 'package:spdrivercalendar/core/services/cache_service.dart'; // Added import
 import 'package:spdrivercalendar/features/notes/screens/all_notes_screen.dart'; // Import the new screen
+import 'package:spdrivercalendar/features/notes/widgets/duty_notes_editor.dart';
 // Add import for feedback screen (will be created later)
 // ignore: unused_import
 import 'package:spdrivercalendar/features/feedback/screens/feedback_screen.dart';
@@ -3233,85 +3235,68 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
               const SizedBox(height: 8),
               const Text('What would you like to do with this event?'),
               const SizedBox(height: 8),
-              // Action buttons
-              Column(
-                children: [
-                  // View Board button (if board exists for this shift)
-                  FutureBuilder<UniversalBoard?>(
-                    future: UniversalBoardService.getBoardByShift(event.title),
-                    builder: (context, snapshot) {
-                      final board = snapshot.data;
-                      final hasBoard = board != null && board.sections.isNotEmpty;
-                      
-                      if (!hasBoard) {
-                        return const SizedBox.shrink();
-                      }
-                      
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        child: Wrap(
-                          alignment: WrapAlignment.center,
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            TextButton.icon(
-                              onPressed: () {
-                                Navigator.of(context).pop();
-                                _showBoard(board);
-                              },
-                              icon: const Icon(Icons.description, size: 18),
-                              label: const Text('View Board'),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
-                  // First row - Notes and Break Status
-                  Wrap(
-                    alignment: WrapAlignment.center,
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      TextButton(
-                        onPressed: () {
-                          // Close the current dialog first
-                          Navigator.of(context).pop();
-                          // Show the notes dialog
-                          _showNotesDialog(event);
-                        },
-                        child: const Text('Notes'),
-                      ),
-                      if (event.isEligibleForOvertimeTracking)
-                        TextButton(
-                          onPressed: () {
-                            Navigator.of(context).pop();
-                            _showBreakStatusDialog(event);
-                          },
-                          child: const Text('Break & Finish'),
-                        ),
-                    ],
-                  ),
-                  // Second row - Sick Day Status (if work shift)
-                  if (event.isWorkShift)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 8),
-                      child: Wrap(
-                        alignment: WrapAlignment.center,
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [
-                          TextButton(
+              // Action buttons — one per line, full-width column so each is centered in the dialog
+              SizedBox(
+                width: double.infinity,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    // View Board button (if board exists for this shift)
+                    FutureBuilder<UniversalBoard?>(
+                      future: UniversalBoardService.getBoardByShift(event.title),
+                      builder: (context, snapshot) {
+                        final board = snapshot.data;
+                        final hasBoard = board != null && board.sections.isNotEmpty;
+
+                        if (!hasBoard) {
+                          return const SizedBox.shrink();
+                        }
+
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: TextButton.icon(
                             onPressed: () {
                               Navigator.of(context).pop();
-                              _showSickDayStatusDialog(event);
+                              _showBoard(board);
                             },
-                            child: const Text('Sick Day Status'),
+                            icon: const Icon(Icons.description, size: 18),
+                            label: const Text('View Board'),
                           ),
-                        ],
-                      ),
+                        );
+                      },
                     ),
-                ],
+                    TextButton(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          if (!mounted) return;
+                          _showNotesDialog(event);
+                        });
+                      },
+                      child: const Text('Notes'),
+                    ),
+                    if (event.isEligibleForOvertimeTracking) ...[
+                      const SizedBox(height: 8),
+                      TextButton(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                          _showBreakStatusDialog(event);
+                        },
+                        child: const Text('Break & Finish'),
+                      ),
+                    ],
+                    if (event.isWorkShift) ...[
+                      const SizedBox(height: 8),
+                      TextButton(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                          _showSickDayStatusDialog(event);
+                        },
+                        child: const Text('Sick Day Status'),
+                      ),
+                    ],
+                  ],
+                ),
               ),
               // Add a divider before the bus selection section
               if ((event.isWorkShift && !event.title.startsWith('BusCheck')) || _spareShiftHasFullDuties(event)) ...[
@@ -4816,113 +4801,17 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
   }
 
   void _showNotesDialog(Event event) {
-    // Controller for the notes text field
-    final notesController = TextEditingController(text: event.notes);
+    if (!mounted) return;
 
-    showDialog(
+    final scaffoldContext = context;
+    showDialog<void>(
       context: context,
-      builder: (context) => AlertDialog(
-        // 1. Add Icon to Title
-        title: const Row(
-          children: [
-            Icon(Icons.notes_rounded, color: AppTheme.primaryColor), 
-            SizedBox(width: 8),
-            Text('Notes'),
-          ],
-        ),
-        // 2. Adjust Content Padding
-        contentPadding: const EdgeInsets.fromLTRB(24.0, 20.0, 24.0, 0), 
-        content: StatefulBuilder( // Keep StatefulBuilder for controller management
-          builder: (BuildContext context, StateSetter setState) {
-            final screenWidth = MediaQuery.of(context).size.width;
-            final screenHeight = MediaQuery.of(context).size.height;
-            return SizedBox(
-              width: screenWidth * 0.9,  // Increased from 0.8 to 0.9 for wider dialog
-              height: screenHeight * 0.4, // Added height constraint for taller dialog
-              // 3. Add Padding around TextField
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8.0),
-                                  child: TextField(
-                    controller: notesController,
-                    maxLines: null,  // Must be null when expands is true
-                    minLines: null,  // Must be null when expands is true
-                    expands: true,   // Expand to fill available space
-                    textAlignVertical: TextAlignVertical.top, // Start text at top
-                  decoration: InputDecoration(
-                    hintText: 'Add notes here...',
-                    border: const OutlineInputBorder(),
-                    // Optional: Add a subtle fill color
-                    fillColor: Theme.of(context).brightness == Brightness.dark 
-                              ? Colors.grey.shade800 
-                              : Colors.grey.shade100,
-                    filled: true,
-                  ),
-                  onChanged: (text) {
-                    // No need to call setState here unless you need UI updates on text change
-                  },
-                ),
-              ),
-            );
-          },
-        ),
-        // 4. Adjust Actions Padding
-        actionsPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          // Style Clear button as TextButton and make it red
-          TextButton(
-            onPressed: () {
-              notesController.clear();
-            },
-            // Add style to set text color to red
-            style: TextButton.styleFrom(
-              foregroundColor: Colors.red, 
-            ),
-            child: const Text('Clear'),
-          ),
-          // Style Save button as ElevatedButton
-          ElevatedButton(
-            onPressed: () async {
-              // Get the updated notes
-              final updatedNotes = notesController.text.trim();
-              
-              if (updatedNotes != (event.notes ?? '')) {
-                final oldEvent = Event(
-                  id: event.id,
-                  title: event.title,
-                  startDate: event.startDate,
-                  startTime: event.startTime,
-                  endDate: event.endDate,
-                  endTime: event.endTime,
-                  workTime: event.workTime,
-                  breakStartTime: event.breakStartTime,
-                  breakEndTime: event.breakEndTime,
-                  assignedDuties: event.assignedDuties,
-                  firstHalfBus: event.firstHalfBus,
-                  secondHalfBus: event.secondHalfBus,
-                  busAssignments: event.busAssignments,
-                  isHoliday: event.isHoliday,
-                  holidayType: event.holidayType,
-                  notes: event.notes,
-                );
-
-                event.notes = updatedNotes.isEmpty ? null : updatedNotes;
-                
-                await EventService.updateEvent(oldEvent, event);
-                
-                if (!mounted) return;
-                setState(() {});
-              }
-              
-              if (!mounted) return;
-              Navigator.of(context).pop();
-            },
-            child: const Text('Save'),
-          ),
-        ],
+      builder: (dialogContext) => _EventDutyNotesDialog(
+        event: event,
+        scaffoldContext: scaffoldContext,
+        onPersisted: () {
+          if (mounted) setState(() {});
+        },
       ),
     );
   }
@@ -11513,6 +11402,153 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
       }
     }
     return false;
+  }
+}
+
+/// Duty notes modal: keeps [TextEditingController] in [State] so it is disposed
+/// after the dialog route removes its subtree (avoids "used after disposed" on pop).
+class _EventDutyNotesDialog extends StatefulWidget {
+  const _EventDutyNotesDialog({
+    required this.event,
+    required this.scaffoldContext,
+    required this.onPersisted,
+  });
+
+  final Event event;
+  final BuildContext scaffoldContext;
+  final VoidCallback onPersisted;
+
+  @override
+  State<_EventDutyNotesDialog> createState() => _EventDutyNotesDialogState();
+}
+
+class _EventDutyNotesDialogState extends State<_EventDutyNotesDialog> {
+  late final TextEditingController _notesController;
+  final GlobalKey<DutyNotesEditorState> _editorKey = GlobalKey<DutyNotesEditorState>();
+
+  @override
+  void initState() {
+    super.initState();
+    _notesController = TextEditingController(text: widget.event.notes);
+  }
+
+  @override
+  void dispose() {
+    _notesController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final dialogBg =
+        theme.dialogTheme.backgroundColor ?? theme.colorScheme.surfaceContainerHigh;
+    final viewSize = MediaQuery.sizeOf(context);
+    final screenWidth = viewSize.width;
+    final screenHeight = viewSize.height;
+    final horizontalPadding = screenWidth < 350 ? 12.0 : 16.0;
+    final verticalPadding = screenWidth < 350 ? 10.0 : 12.0;
+    final dialogWidth = math.min(screenWidth * 0.92, 560.0);
+    final dialogHeight = math.min(
+      screenHeight * 0.88,
+      screenHeight * (screenWidth < 350 ? 0.65 : 0.58),
+    );
+
+    return Dialog(
+      backgroundColor: dialogBg,
+      surfaceTintColor: Colors.transparent,
+      insetPadding: EdgeInsets.symmetric(
+        horizontal: screenWidth < 350 ? 16.0 : 24.0,
+        vertical: screenWidth < 350 ? 16.0 : 24.0,
+      ),
+      child: SizedBox(
+        width: dialogWidth,
+        height: dialogHeight,
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(
+            horizontalPadding,
+            verticalPadding,
+            horizontalPadding,
+            verticalPadding * 0.75,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.notes_rounded, color: AppTheme.primaryColor),
+                  SizedBox(width: screenWidth < 350 ? 6 : 8),
+                  Text('Notes', style: theme.textTheme.titleLarge),
+                ],
+              ),
+              SizedBox(height: screenWidth < 350 ? 10 : 12),
+              Expanded(
+                child: DutyNotesEditor(
+                  key: _editorKey,
+                  event: widget.event,
+                  textController: _notesController,
+                ),
+              ),
+              SizedBox(height: screenWidth < 350 ? 8 : 10),
+              Align(
+                alignment: Alignment.centerRight,
+                child: Wrap(
+                  alignment: WrapAlignment.end,
+                  spacing: 4,
+                  runSpacing: 6,
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: const Text('Cancel'),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        _notesController.clear();
+                        _editorKey.currentState?.clearImages();
+                      },
+                      style: TextButton.styleFrom(foregroundColor: Colors.red),
+                      child: const Text('Clear'),
+                    ),
+                    ElevatedButton(
+                      onPressed: () async {
+                        final text = _notesController.text.trim();
+                        List<String>? newPaths;
+                        try {
+                          newPaths = await _editorKey.currentState?.persistAttachments();
+                        } catch (e) {
+                          if (widget.scaffoldContext.mounted) {
+                            ScaffoldMessenger.of(widget.scaffoldContext).showSnackBar(
+                              SnackBar(content: Text('Could not save photos: $e')),
+                            );
+                          }
+                          return;
+                        }
+
+                        final ev = widget.event;
+                        final oldSnapshot = ev.copyWith();
+                        final sameText = text == (oldSnapshot.notes ?? '');
+                        final sameImg = const ListEquality<String>().equals(
+                          newPaths ?? <String>[],
+                          oldSnapshot.noteImagePaths ?? <String>[],
+                        );
+                        if (!sameText || !sameImg) {
+                          ev.notes = text.isEmpty ? null : text;
+                          ev.noteImagePaths = newPaths;
+                          await EventService.updateEvent(oldSnapshot, ev);
+                          widget.onPersisted();
+                        }
+                        if (context.mounted) Navigator.of(context).pop();
+                      },
+                      child: const Text('Save'),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 

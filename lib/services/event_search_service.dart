@@ -183,11 +183,9 @@ class EventSearchService {
       }).toList();
     }
     
-    // Has notes filter
+    // Has notes filter (text and/or images)
     if (hasNotes == true) {
-      filtered = filtered.where((event) {
-        return event.notes != null && event.notes!.trim().isNotEmpty;
-      }).toList();
+      filtered = filtered.where((event) => event.hasNoteContent).toList();
     }
     
     // Sick day filter

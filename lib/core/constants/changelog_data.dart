@@ -1,4 +1,26 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '3.2.2': [
+    {
+      'title': 'Duty Notes: Gallery Photos',
+      'description': 'Add up to three photos per duty note from the gallery; view and edit from the notes dialog or event card.',
+    },
+    {
+      'title': 'Edit Event Actions Layout',
+      'description': 'Notes, Break & Finish, and Sick Day Status are stacked on separate lines and centered in the Edit Event dialog.',
+    },
+    {
+      'title': 'Event Card Detail Lines',
+      'description': 'Report, route, break, and related rows use consistent typography and alignment.',
+    },
+    {
+      'title': 'Route Line: Matching Halves',
+      'description': 'When both halves use the same route (e.g. 39A and 39A), the card shows both with a separator instead of a single value.',
+    },
+    {
+      'title': 'Shift Zone 3 Route Label',
+      'description': 'PZ3 duties show L58/L59 on the event card route line.',
+    },
+  ],
   '3.2.1': [
     {
       'title': 'Shift Zone 1 Roster Auto-Fill',

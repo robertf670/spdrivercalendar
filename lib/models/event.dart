@@ -128,6 +128,8 @@ class Event {
   bool isHoliday;  // Whether this event represents a holiday
   String? holidayType;  // The type of holiday ('winter' or 'summer')
   String? notes; // Add notes field
+  /// Local-only note images: ordered JPEG filenames (`0.jpg`, `1.jpg`, …) under app storage for [id].
+  List<String>? noteImagePaths;
   // Add new fields for overtime tracking
   bool hasLateBreak;
   bool tookFullBreak; 
@@ -168,6 +170,7 @@ class Event {
     this.isHoliday = false,
     this.holidayType,
     this.notes,
+    this.noteImagePaths,
     this.hasLateBreak = false,
     this.tookFullBreak = false,
     this.overtimeDuration,
@@ -176,6 +179,12 @@ class Event {
     this.sickDayType,
     this.isWorkForOthers = false,
   });
+
+  bool get hasNoteImages => noteImagePaths != null && noteImagePaths!.isNotEmpty;
+
+  /// Text and/or images (for icons / search "has notes").
+  bool get hasNoteContent =>
+      (notes != null && notes!.trim().isNotEmpty) || hasNoteImages;
 
   // Helper method to check if using enhanced duties
   bool get hasEnhancedDuties => enhancedAssignedDuties != null && enhancedAssignedDuties!.isNotEmpty;
@@ -416,6 +425,7 @@ class Event {
     bool? isHoliday,
     String? holidayType,
     String? notes,
+    List<String>? noteImagePaths,
     bool? hasLateBreak,
     bool? tookFullBreak,
     int? overtimeDuration,
@@ -458,6 +468,7 @@ class Event {
       isHoliday: isHoliday ?? this.isHoliday,
       holidayType: holidayType ?? this.holidayType,
       notes: notes ?? this.notes,
+      noteImagePaths: noteImagePaths ?? this.noteImagePaths,
       hasLateBreak: hasLateBreak ?? this.hasLateBreak,
       tookFullBreak: tookFullBreak ?? this.tookFullBreak,
       overtimeDuration: overtimeDuration ?? this.overtimeDuration,
@@ -505,6 +516,9 @@ class Event {
       'isHoliday': isHoliday,
       'holidayType': holidayType,
       'notes': notes,
+      'noteImagePaths': (noteImagePaths != null && noteImagePaths!.isNotEmpty)
+          ? noteImagePaths
+          : null,
       'hasLateBreak': hasLateBreak,
       'tookFullBreak': tookFullBreak,
       'overtimeDuration': overtimeDuration,
@@ -585,6 +599,9 @@ class Event {
       isHoliday: map['isHoliday'] ?? false,
       holidayType: map['holidayType'],
       notes: map['notes'],
+      noteImagePaths: map['noteImagePaths'] != null
+          ? List<String>.from(map['noteImagePaths'])
+          : null,
       hasLateBreak: map['hasLateBreak'] ?? false,
       tookFullBreak: map['tookFullBreak'] ?? false,
       overtimeDuration: map['overtimeDuration'],

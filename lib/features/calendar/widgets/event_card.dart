@@ -55,7 +55,7 @@ class _EventCardState extends State<EventCard> {
   String? finishBreakLocation;
   String? workTime;
   String? routeInfo; // For Jamestown Road shifts only
-  String? dutyRouteInfo; // For duty route information (PZ1/PZ4)
+  String? dutyRouteInfo; // For duty route information (PZ1–PZ4, UNI, etc.)
   String? _departTimeStr;
   String? _finishTimeStr;
   String? _reportTimeStr;  // For 807/07: Report line above main
@@ -1580,18 +1580,18 @@ class _EventCardState extends State<EventCard> {
                       children: [
                         Icon(
                           // Use filled icon when notes exist, outlined when empty
-                          (widget.event.notes != null && widget.event.notes!.isNotEmpty)
+                          widget.event.hasNoteContent
                               ? Icons.notes
                               : Icons.notes_outlined,
                           size: 18,
-                          color: (widget.event.notes != null && widget.event.notes!.isNotEmpty)
+                          color: widget.event.hasNoteContent
                               ? (Theme.of(context).brightness == Brightness.dark
                                   ? Colors.white.withValues(alpha: 0.9)  // High contrast for dark mode
                                   : Colors.black.withValues(alpha: 0.8))  // High contrast for light mode
                               : holidayColor[400],     // Muted holiday color for no notes
                         ),
                         // Add small dot indicator for existing notes
-                        if (widget.event.notes != null && widget.event.notes!.isNotEmpty)
+                        if (widget.event.hasNoteContent)
                           Positioned(
                             right: 0,
                             top: 0,
@@ -1672,10 +1672,12 @@ class _EventCardState extends State<EventCard> {
       }
     }
 
-    // Inline "Work:" next to the title only when there is room; large text scale squishes the row.
+    // Inline "Work:" next to the title when there is room. Many phones are ~360 logical px wide;
+    // 380 was too strict vs emulators and caused a different two-line title layout on device.
     final double textScaleFactor = MediaQuery.textScalerOf(context).scale(1.0);
-    final bool showWorkTimeInline = MediaQuery.sizeOf(context).width >= 380 &&
-        textScaleFactor <= 1.15;
+    final double screenWidth = MediaQuery.sizeOf(context).width;
+    final bool showWorkTimeInline =
+        screenWidth >= 360 && textScaleFactor <= 1.25;
     
     return Card(
       elevation: 2,
@@ -1736,21 +1738,20 @@ class _EventCardState extends State<EventCard> {
                             child: Stack(
                               children: [
                                 Icon(
-                                  // Use filled icon when notes exist, outlined when empty
-                                  (widget.event.notes != null && widget.event.notes!.isNotEmpty)
+                                  widget.event.hasNoteContent
                                       ? Icons.notes
                                       : Icons.notes_outlined,
                                   size: 18,
-                                  color: (widget.event.notes != null && widget.event.notes!.isNotEmpty)
+                                  color: widget.event.hasNoteContent
                                       ? (Theme.of(context).brightness == Brightness.dark
-                                          ? Colors.white.withValues(alpha: 0.9)  // High contrast white for dark mode
-                                          : Colors.black.withValues(alpha: 0.8))  // High contrast dark for light mode
+                                          ? Colors.white.withValues(alpha: 0.9)
+                                          : Colors.black.withValues(alpha: 0.8))
                                       : (Theme.of(context).brightness == Brightness.dark
-                                          ? Colors.white54        // Muted color for no notes in dark mode
-                                          : Colors.black38),      // Muted color for no notes in light mode
+                                          ? Colors.white54
+                                          : Colors.black38),
                                 ),
                                 // Add small dot indicator for existing notes
-                                if (widget.event.notes != null && widget.event.notes!.isNotEmpty)
+                                if (widget.event.hasNoteContent)
                                   Positioned(
                                     right: 0,
                                     top: 0,
@@ -1857,6 +1858,7 @@ class _EventCardState extends State<EventCard> {
               // Skip time display for EA Training (turn up and go, no times)
               if (!widget.event.isWorkShift && !_isEATraining) ...[
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Icon(
                       Icons.access_time,
@@ -1886,13 +1888,10 @@ class _EventCardState extends State<EventCard> {
               // NEW: Report - Sign Off line (for PZ shifts and UNI overtime shifts)
               // Skip for EA Training (no times/locations)
               if (!_isEATraining && (widget.event.title.startsWith('PZ') || widget.event.title.startsWith('811/') || (widget.event.title.contains('(OT)') && RegExp(r'^\d{2,3}/').hasMatch(widget.event.title.replaceAll(RegExp(r'[AB]? \(OT\)$'), '')))))
-                MediaQuery.withClampedTextScaling(
-                  minScaleFactor: 0.85,
-                  maxScaleFactor: 1.2,
-                  child: Padding(
+                Padding(
                   padding: const EdgeInsets.only(bottom: 2.0), // Reduced space - time info goes together
-                  // Add Row for Icon
                   child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Icon(
                         Icons.schedule, // Use schedule icon
@@ -1902,108 +1901,73 @@ class _EventCardState extends State<EventCard> {
                             : Colors.black,
                       ),
                       const SizedBox(width: 8),
-                      // Use RichText for styling consistency
                       Expanded(
-                        child: Text.rich(
-                          TextSpan(
-                            // Default style (slightly de-emphasized)
-                            style: TextStyle(
-                              color: Theme.of(context).textTheme.bodyMedium?.color,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                            ),
+                        child: RichText(
+                          textScaler: MediaQuery.textScalerOf(context),
+                          strutStyle: _detailIconRowStrut,
+                          maxLines: 8,
+                          softWrap: true,
+                          overflow: TextOverflow.ellipsis,
+                          text: TextSpan(
+                            style: _detailIconRowTextStyle(context),
                             children: <TextSpan>[
                               TextSpan(
                                 text: widget.event.title.contains('(OT)') ? 'Start ' : 'Report ',
+                                // w500 matches location labels on the route row ([_buildTimeDisplay]); times stay w600.
+                                style: const TextStyle(fontWeight: FontWeight.w500),
                               ),
                               TextSpan(
                                 text: widget.event.formattedStartTime,
-                                style: TextStyle( // Removed const and hardcoded black color
-                                  color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.9), // Use theme color, slightly less emphasis
-                                  fontWeight: FontWeight.w600, // Important - actual time values
-                                ),
+                                style: const TextStyle(fontWeight: FontWeight.w600),
                               ),
                               // Add location for overtime shifts if available - with correct locations based on shift type
                               if (widget.event.title.contains('A (OT)') && startLocation != null && startLocation!.isNotEmpty) ...[
-                                // First half (A) overtime: show start location
                                 TextSpan(
                                   text: ' $startLocation',
-                                  style: TextStyle(
-                                    color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.9),
-                                    fontWeight: FontWeight.w500, // Medium weight for locations
-                                  ),
+                                  style: const TextStyle(fontWeight: FontWeight.w500),
                                 ),
                               ] else if (widget.event.title.contains('B (OT)') && finishBreakLocation != null && finishBreakLocation!.isNotEmpty) ...[
-                                // Second half (B) overtime: show finish break location as start location
                                 TextSpan(
                                   text: ' $finishBreakLocation',
-                                  style: TextStyle(
-                                    color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.9),
-                                    fontWeight: FontWeight.w500, // Medium weight for locations
-                                  ),
+                                  style: const TextStyle(fontWeight: FontWeight.w500),
                                 ),
                               ] else if (widget.event.title.contains('(OT)') && startLocation != null && startLocation!.isNotEmpty) ...[
-                                // Generic overtime: show start location
                                 TextSpan(
                                   text: ' $startLocation',
-                                  style: TextStyle(
-                                    color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.9),
-                                    fontWeight: FontWeight.w500, // Medium weight for locations
-                                  ),
+                                  style: const TextStyle(fontWeight: FontWeight.w500),
                                 ),
                               ],
-                              TextSpan(
-                                text: ' - ',
-                              ),
+                              const TextSpan(text: ' - '),
                               TextSpan(
                                 text: widget.event.formattedEndTime,
-                                style: TextStyle( // Removed const and hardcoded black color
-                                  color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.9), // Use theme color, slightly less emphasis
-                                  fontWeight: FontWeight.w600, // Important - actual time values
-                                ),
+                                style: const TextStyle(fontWeight: FontWeight.w600),
                               ),
                               TextSpan(
                                 text: widget.event.title.contains('(OT)') ? ' Finish' : ' Sign Off',
+                                style: const TextStyle(fontWeight: FontWeight.w500),
                               ),
-                              // Add appropriate finish location for overtime shifts based on half type
                               if (widget.event.title.contains('A (OT)') && startBreakLocation != null && startBreakLocation!.isNotEmpty) ...[
-                                // First half (A) overtime: show break start location as finish location
                                 TextSpan(
                                   text: ' $startBreakLocation',
-                                  style: TextStyle(
-                                    color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.9),
-                                    fontWeight: FontWeight.w500, // Medium weight for locations
-                                  ),
+                                  style: const TextStyle(fontWeight: FontWeight.w500),
                                 ),
                               ] else if (widget.event.title.contains('B (OT)') && finishLocation != null && finishLocation!.isNotEmpty) ...[
-                                // Second half (B) overtime: show finish location
                                 TextSpan(
                                   text: ' $finishLocation',
-                                  style: TextStyle(
-                                    color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.9),
-                                    fontWeight: FontWeight.w500, // Medium weight for locations
-                                  ),
+                                  style: const TextStyle(fontWeight: FontWeight.w500),
                                 ),
                               ] else if (widget.event.title.contains('(OT)') && finishLocation != null && finishLocation!.isNotEmpty) ...[
-                                // Generic overtime: show finish location
                                 TextSpan(
                                   text: ' $finishLocation',
-                                  style: TextStyle(
-                                    color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.9),
-                                    fontWeight: FontWeight.w500, // Medium weight for locations
-                                  ),
+                                  style: const TextStyle(fontWeight: FontWeight.w500),
                                 ),
                               ],
                             ],
                           ),
-                          maxLines: 8,
-                          softWrap: true,
-                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],
                   ),
-                ),
                 ),
               
               // Add work time display for overtime shifts
@@ -2011,6 +1975,7 @@ class _EventCardState extends State<EventCard> {
                 Padding(
                   padding: const EdgeInsets.only(top: 4.0, bottom: 6.0),
                   child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Icon(
                         Icons.access_time,
@@ -2026,7 +1991,7 @@ class _EventCardState extends State<EventCard> {
                           text: TextSpan(
                             style: TextStyle(
                               color: Theme.of(context).textTheme.bodyMedium?.color,
-                              fontSize: 14,
+                              fontSize: 13,
                             ),
                             children: <TextSpan>[
                               const TextSpan(text: 'Work Time: '),
@@ -2056,6 +2021,7 @@ class _EventCardState extends State<EventCard> {
                 Padding(
                   padding: const EdgeInsets.only(bottom: 2.0), // Match report line padding
                   child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Icon(
                       breakTime!.toLowerCase().contains('workout') ? Icons.directions_run : Icons.coffee,
@@ -2067,12 +2033,12 @@ class _EventCardState extends State<EventCard> {
                     const SizedBox(width: 8),
                     Expanded(
                       child: RichText(
+                        textScaler: MediaQuery.textScalerOf(context),
+                        strutStyle: _detailIconRowStrut,
                         overflow: TextOverflow.ellipsis,
                         text: TextSpan(
-                          style: TextStyle(
-                            color: Theme.of(context).textTheme.bodyMedium?.color,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500, // Match report/sign off line styling
+                          style: _detailIconRowTextStyle(context).copyWith(
+                            fontWeight: FontWeight.w500,
                           ),
                           text: () {
                             // Smart truncation based on screen width
@@ -2130,6 +2096,7 @@ class _EventCardState extends State<EventCard> {
               // JAMESTOWN ROAD: Route information (if available for Jamestown Road shifts only)
               if (routeInfo != null && widget.event.title.startsWith('811/')) ...[
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Icon(
                       Icons.route_outlined,
@@ -2165,6 +2132,7 @@ class _EventCardState extends State<EventCard> {
               ],
               // Date row
               Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Icon(
                     Icons.event,
@@ -2181,7 +2149,7 @@ class _EventCardState extends State<EventCard> {
                         color: Theme.of(context).brightness == Brightness.dark
                             ? Colors.white
                             : Colors.black,
-                        fontSize: 12,
+                        fontSize: 13,
                         fontWeight: FontWeight.w400, // Lighter weight for administrative info (date)
                       ),
                     ),
@@ -2194,6 +2162,7 @@ class _EventCardState extends State<EventCard> {
               // MODIFIED: Bus assignment row (Only show if NOT BusCheck AND bus data exists)
               if (!isBusCheckShift && (widget.event.firstHalfBus != null || widget.event.secondHalfBus != null)) ...[
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Icon(
                       Icons.directions_bus,
@@ -2216,9 +2185,11 @@ class _EventCardState extends State<EventCard> {
                             children: [
                               if (isWorkoutOrOvertime)
                                 Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Expanded(
                                       child: Row(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
                                           Text(
                                             'Assigned Bus: ${widget.event.firstHalfBus}',
@@ -2226,7 +2197,7 @@ class _EventCardState extends State<EventCard> {
                                               color: Theme.of(context).brightness == Brightness.dark
                                                   ? Colors.white
                                                   : Colors.black,
-                                              fontSize: 12,
+                                              fontSize: 13,
                                               fontWeight: FontWeight.w400,
                                             ),
                                           ),
@@ -2254,12 +2225,14 @@ class _EventCardState extends State<EventCard> {
                               else ...[
                                 // Compact single-line format for both buses
                                 Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Expanded(
                                       child: Wrap(
+                                        alignment: WrapAlignment.start,
                                         spacing: 4.0,
                                         runSpacing: 4.0,
-                                        crossAxisAlignment: WrapCrossAlignment.center,
+                                        crossAxisAlignment: WrapCrossAlignment.start,
                                         children: [
                                           // First Half Bus
                                           if (widget.event.firstHalfBus != null) ...[
@@ -2269,7 +2242,7 @@ class _EventCardState extends State<EventCard> {
                                                 color: Theme.of(context).brightness == Brightness.dark
                                                     ? Colors.white
                                                     : Colors.black,
-                                                fontSize: 12,
+                                                fontSize: 13,
                                                 fontWeight: FontWeight.w400,
                                               ),
                                             ),
@@ -2298,7 +2271,7 @@ class _EventCardState extends State<EventCard> {
                                                 color: Theme.of(context).brightness == Brightness.dark
                                                     ? Colors.white
                                                     : Colors.black,
-                                                fontSize: 12,
+                                                fontSize: 13,
                                                 fontWeight: FontWeight.w400,
                                               ),
                                             ),
@@ -2309,7 +2282,7 @@ class _EventCardState extends State<EventCard> {
                                                 color: Theme.of(context).brightness == Brightness.dark
                                                     ? Colors.white
                                                     : Colors.black,
-                                                fontSize: 12,
+                                                fontSize: 13,
                                                 fontWeight: FontWeight.w400,
                                               ),
                                             ),
@@ -2349,6 +2322,7 @@ class _EventCardState extends State<EventCard> {
               // Late Break Status Section
               if (widget.event.hasLateBreak) ...[
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Icon(
                       widget.event.tookFullBreak
@@ -2369,7 +2343,7 @@ class _EventCardState extends State<EventCard> {
                           color: Theme.of(context).brightness == Brightness.dark
                               ? Colors.white
                               : Colors.black,
-                          fontSize: 12,
+                          fontSize: 13,
                           fontWeight: FontWeight.w400, // Lighter weight for administrative info (late break status)
                         ),
                       ),
@@ -3520,10 +3494,11 @@ class _EventCardState extends State<EventCard> {
         actions: [
           TextButton(
             onPressed: () {
-              // Close the current dialog
               Navigator.of(context).pop();
-              // Call the onShowNotes callback from the parent
-              widget.onShowNotes(widget.event);
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (!mounted) return;
+                widget.onShowNotes(widget.event);
+              });
             },
             child: const Text('Notes'),
           ),
@@ -4146,7 +4121,8 @@ class _EventCardState extends State<EventCard> {
     
    // For PZ1, PZ2, PZ4, and Universal/Euro duties, show route on a separate line
     if ((widget.event.title.startsWith('PZ1/') || widget.event.title.startsWith('PZ2/') ||
-         widget.event.title.startsWith('PZ4/') || RegExp(r'^\d+/').hasMatch(widget.event.title)) &&
+         widget.event.title.startsWith('PZ3/') || widget.event.title.startsWith('PZ4/') ||
+         RegExp(r'^\d+/').hasMatch(widget.event.title)) &&
         dutyRouteInfo != null && dutyRouteInfo!.isNotEmpty) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -4160,6 +4136,7 @@ class _EventCardState extends State<EventCard> {
             maxLines: titleMaxLines,
             overflow: TextOverflow.ellipsis,
           ),
+          const SizedBox(height: 4),
           // Route on second line
           Text(
             dutyRouteInfo!,
@@ -6095,6 +6072,32 @@ class _EventCardState extends State<EventCard> {
     );
   }
 
+  /// Shared line box for icon+text [RichText] rows so Report / route / break share one size on screen.
+  static const StrutStyle _detailIconRowStrut = StrutStyle(
+    fontSize: 13,
+    height: 1.2,
+    leading: 0,
+    forceStrutHeight: true,
+  );
+
+  /// Base text for icon detail rows (Report, Garage, break, etc.). Uses the theme font but **fixed**
+  /// [fontSize] / [height] so we do not pick up [TextTheme.bodySmall] line metrics that made the
+  /// Report line look a point larger than the route row. Use with [RichText], not [Text.rich].
+  TextStyle _detailIconRowTextStyle(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final fg = isDark ? Colors.white : Colors.black;
+    final bs = theme.textTheme.bodySmall;
+    return TextStyle(
+      color: fg,
+      fontSize: 13,
+      fontWeight: FontWeight.w400,
+      height: 1.2,
+      fontFamily: bs?.fontFamily,
+      fontFamilyFallback: bs?.fontFamilyFallback,
+    );
+  }
+
   /// Builds the route/time row. For 807/06 adds Sign Off line below; for 807/07 adds Report line above.
   Widget _buildRouteTimeRow() {
     final baseTitle = widget.event.title
@@ -6103,19 +6106,9 @@ class _EventCardState extends State<EventCard> {
     final is807_06 = baseTitle == '807/06';
     final is807_07 = baseTitle == '807/07';
 
-    final textStyle = Theme.of(context).textTheme.bodySmall?.copyWith(
-          color: Theme.of(context).brightness == Brightness.dark
-              ? Colors.white
-              : Colors.black,
-          fontSize: 13,
-        ) ??
-        TextStyle(
-          color: Theme.of(context).brightness == Brightness.dark
-              ? Colors.white
-              : Colors.black,
-          fontSize: 13,
-        );
+    final textStyle = _detailIconRowTextStyle(context);
     final mainRow = Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Icon(
           Icons.route,
@@ -6127,6 +6120,8 @@ class _EventCardState extends State<EventCard> {
         const SizedBox(width: 8),
         Expanded(
           child: RichText(
+            textScaler: MediaQuery.textScalerOf(context),
+            strutStyle: _detailIconRowStrut,
             overflow: TextOverflow.ellipsis,
             text: TextSpan(
               style: textStyle,
@@ -6149,6 +6144,7 @@ class _EventCardState extends State<EventCard> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Icon(Icons.schedule, size: 16, color: iconColor),
               const SizedBox(width: 8),
@@ -6177,6 +6173,7 @@ class _EventCardState extends State<EventCard> {
           mainRow,
           const SizedBox(height: 2),
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Icon(Icons.schedule, size: 16, color: iconColor),
               const SizedBox(width: 8),
