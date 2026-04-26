@@ -8,6 +8,10 @@ final Map<String, List<Map<String, String>>> changelogData = {
       'title': 'Day details card: bank holiday',
       'description': 'Redundant matches duty chips; shift and bank holiday text align with the icons.',
     },
+    {
+      'title': 'Statistics',
+      'description': 'Fixed a crash on the work time / summary statistics with bank holiday shifts.',
+    },
   ],
   '3.2.3': [
     {

@@ -1954,14 +1954,16 @@ class SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObser
     navContext.pop();
 
     if (success) {
-      // Show success message and prompt for restart
+      await EventService.reloadFromStorage();
       if (mounted) {
          showDialog(
             context: context,
             barrierDismissible: false,
             builder: (context) => AlertDialog(
               title: const Text('Restore Complete'),
-              content: const Text('Data restored successfully. Please restart the app for changes to take full effect.'),
+              content: const Text(
+                'Data restored. Your calendar has been reloaded. Restart the app if anything still looks out of date.',
+              ),
               actions: [
                 TextButton(
                   child: const Text('OK'),

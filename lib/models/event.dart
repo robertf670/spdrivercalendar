@@ -480,7 +480,7 @@ class Event {
       lateFinishDuration: lateFinishDuration ?? this.lateFinishDuration,
       sickDayType: sickDayType ?? this.sickDayType,
       isWorkForOthers: isWorkForOthers ?? this.isWorkForOthers,
-      bankHolidayRedundant: bankHolidayRedundant ?? this.bankHolidayRedundant,
+      bankHolidayRedundant: (bankHolidayRedundant ?? this.bankHolidayRedundant) == true,
     );
   }
 
@@ -615,7 +615,8 @@ class Event {
       lateFinishDuration: map['lateFinishDuration'],
       sickDayType: map['sickDayType'],  // Nullable for backwards compatibility
       isWorkForOthers: map['isWorkForOthers'] ?? false,  // Default to false for backwards compatibility
-      bankHolidayRedundant: map['bankHolidayRedundant'] ?? false,
+      // Only JSON true is redundant; null/false/missing/wrong type → false (avoids null on bool in stats)
+      bankHolidayRedundant: map['bankHolidayRedundant'] == true,
     );
     
     // Auto-migrate legacy duties if needed

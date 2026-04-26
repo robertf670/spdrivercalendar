@@ -121,6 +121,13 @@ class BackupService {
           if (value is String) {
             await prefs.setString(key, value);
             restoredCount++;
+          } else if (value is Map) {
+            if (key == AppConstants.eventsStorageKey ||
+                key == AppConstants.dayNotesStorageKey ||
+                key == 'holidays') {
+              await prefs.setString(key, jsonEncode(value));
+              restoredCount++;
+            }
           } else if (value is int) {
             await prefs.setInt(key, value);
             restoredCount++;

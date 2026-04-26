@@ -200,6 +200,14 @@ class BackupService {
           if (value is String) {
             await prefs.setString(key, value);
             restoredCount++;
+          } else if (value is Map) {
+            // Some tools decode the inner "events" / holidays payload as a Map. Storage expects a string.
+            if (key == AppConstants.eventsStorageKey ||
+                key == AppConstants.dayNotesStorageKey ||
+                key == 'holidays') {
+              await prefs.setString(key, jsonEncode(value));
+              restoredCount++;
+            }
           } else if (value is int) {
             await prefs.setInt(key, value);
             restoredCount++;

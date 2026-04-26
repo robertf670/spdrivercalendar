@@ -156,13 +156,14 @@ class EventService {
             
             for (final eventData in eventsData) {
               try {
-                if (eventData['title'] != null && eventData['title'].toString().startsWith('SP')) {
-                  _logError('loadEventsForMonth', '📂 JSON DATA: ${eventData['title']} | busAssignments in JSON: ${eventData['busAssignments']} (${eventData['busAssignments'].runtimeType})');
+                if (eventData is! Map) continue;
+                final eventMap = Map<String, dynamic>.from(eventData);
+                if (eventMap['title'] != null && eventMap['title'].toString().startsWith('SP')) {
+                  _logError('loadEventsForMonth', '📂 JSON DATA: ${eventMap['title']} | busAssignments in JSON: ${eventMap['busAssignments']} (${eventMap['busAssignments']?.runtimeType})');
                 }
                 
-                // Validate event data before creating Event object
-                if (_validateEventData(eventData)) {
-                  final event = Event.fromMap(eventData);
+                if (_validateEventData(eventMap)) {
+                  final event = Event.fromMap(eventMap);
                   
                   if (event.title.startsWith('SP')) {
                     _logError('loadEventsForMonth', '📂 AFTER FROMMAP: ${event.title} | busAssignments: ${event.busAssignments} (${event.busAssignments.runtimeType})');
@@ -170,7 +171,7 @@ class EventService {
                   
                   monthEvents.add(event);
                 } else {
-                  _logError('loadEventsForMonth', 'Invalid event data: $eventData');
+                  _logError('loadEventsForMonth', 'Invalid event data: $eventMap');
                 }
               } catch (e) {
                 _logError('loadEventsForMonth', 'Error parsing event: $e');
@@ -1402,14 +1403,15 @@ class EventService {
         final List<dynamic> eventsData = entry.value;
         for (final eventData in eventsData) {
           try {
-            final event = Event.fromMap(eventData);
-            // Only add if we haven't seen this event ID before
+            if (eventData is! Map) continue;
+            final event = Event.fromMap(
+              Map<String, dynamic>.from(eventData),
+            );
             if (!seenIds.contains(event.id)) {
               seenIds.add(event.id);
               allEvents.add(event);
             }
           } catch (e) {
-            // Skip invalid events
             continue;
           }
         }
@@ -1439,7 +1441,14 @@ class EventService {
       
       for (final entry in decodedData.entries) {
         final List<dynamic> eventsData = entry.value;
-        allEvents.addAll(eventsData.map((eventData) => Event.fromMap(eventData)));
+        for (final eventData in eventsData) {
+          if (eventData is! Map) continue;
+          try {
+            allEvents.add(
+              Event.fromMap(Map<String, dynamic>.from(eventData)),
+            );
+          } catch (_) {}
+        }
       }
       
       // Filter for events with text notes and/or attached images; sort by date
@@ -1453,9 +1462,19 @@ class EventService {
     }
   }
 
+  /// After restoring from backup (or any prefs write) while the app is running.
+  static Future<void> reloadFromStorage() async {
+    _events = {};
+    _monthlyCache = {};
+    _populatedMonths.clear();
+    _lastLoadedMonth = null;
+    await initializeService();
+  }
+
   static Future<void> initializeService() async {
     _events = {}; // Clear existing in-memory events for a fresh load
     _monthlyCache = {}; // Clear monthly cache as well
+    _populatedMonths.clear();
     _lastLoadedMonth = null;
 
     final prefs = await SharedPreferences.getInstance();
@@ -1474,9 +1493,14 @@ class EventService {
         final eventsListDynamic = entry.value;
         if (eventsListDynamic is List) {
           for (var eventDataMap in eventsListDynamic) {
-            if (eventDataMap is Map<String, dynamic>) {
+            // jsonDecode often gives Map<dynamic, dynamic> for nested objects, not
+            // Map<String, dynamic>, so a strict is-check skipped every event: empty
+            // _events then a save overwrote storage with a near-empty set (data loss).
+            if (eventDataMap is Map) {
               try {
-                Event event = Event.fromMap(eventDataMap);
+                Event event = Event.fromMap(
+                  Map<String, dynamic>.from(eventDataMap),
+                );
 
                 // Add to _events based on actual event.startDate
                 final normalizedEventStartDate = DateTime(event.startDate.year, event.startDate.month, event.startDate.day);
