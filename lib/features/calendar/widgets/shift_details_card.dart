@@ -12,6 +12,8 @@ class ShiftDetailsCard extends StatelessWidget {
   final BankHoliday? bankHoliday;
   final bool hasDayNote;
   final VoidCallback onShowDayNotes;
+  /// True when this bank holiday is marked redundant (day off), with or without a work shift in the app.
+  final bool showBankHolidayRedundant;
 
   const ShiftDetailsCard({
     super.key,
@@ -21,6 +23,7 @@ class ShiftDetailsCard extends StatelessWidget {
     this.bankHoliday,
     required this.hasDayNote,
     required this.onShowDayNotes,
+    this.showBankHolidayRedundant = false,
   });
 
   @override
@@ -126,6 +129,37 @@ class ShiftDetailsCard extends StatelessWidget {
           ],
         );
 
+    Widget redundantChips() {
+      final b = badgeSizes;
+      return Padding(
+        padding: EdgeInsets.only(top: b['spacing']! * 0.5),
+        child: Wrap(
+          spacing: 6,
+          runSpacing: 4,
+          children: [
+            Container(
+              padding: EdgeInsets.symmetric(
+                horizontal: b['paddingH']! * 0.6,
+                vertical: b['paddingV']! * 0.4,
+              ),
+              decoration: BoxDecoration(
+                color: Colors.amber.shade800,
+                borderRadius: BorderRadius.circular(b['radius']! * 0.5),
+              ),
+              child: Text(
+                'Redundant (day off)',
+                style: TextStyle(
+                  fontSize: b['fontSize']!,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     Widget bankHolidayRow() => Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -184,6 +218,7 @@ class ShiftDetailsCard extends StatelessWidget {
                   if (isBankHoliday) ...[
                     const SizedBox(height: 10),
                     bankHolidayRow(),
+                    if (showBankHolidayRedundant) redundantChips(),
                   ],
                 ],
               )
@@ -204,7 +239,14 @@ class ShiftDetailsCard extends StatelessWidget {
                   if (isBankHoliday)
                     Expanded(
                       flex: 2,
-                      child: bankHolidayRow(),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          bankHolidayRow(),
+                          if (showBankHolidayRedundant) redundantChips(),
+                        ],
+                      ),
                     ),
                   Padding(
                     padding: const EdgeInsets.only(left: 8.0),

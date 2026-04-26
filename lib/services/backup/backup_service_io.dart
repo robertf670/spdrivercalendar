@@ -10,6 +10,7 @@ import 'package:spdrivercalendar/features/settings/screens/settings_screen.dart'
     show kNotificationsEnabledKey, kNotificationOffsetHoursKey;
 import 'package:spdrivercalendar/services/backup/backup_models.dart';
 import 'package:spdrivercalendar/services/color_customization_service.dart';
+import 'package:spdrivercalendar/services/bank_holiday_redundant_day_service.dart';
 import 'package:spdrivercalendar/services/day_note_service.dart';
 
 class BackupService {
@@ -31,6 +32,7 @@ class BackupService {
     AppConstants.hasSeenWelcomeKey,
     AppConstants.hasCompletedGoogleLoginKey,
     AppConstants.restDaySwapsKey,
+    AppConstants.bankHolidayRedundantDaysKey,
   ];
 
   static Future<bool> createBackup() async {
@@ -224,6 +226,7 @@ class BackupService {
 
     if (restoredCount > 0) {
       DayNoteService.invalidateCache();
+      BankHolidayRedundantDayService.invalidateCache();
       return true;
     }
     return false;

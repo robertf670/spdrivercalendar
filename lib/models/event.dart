@@ -141,6 +141,8 @@ class Event {
   String? sickDayType;
   // Work For Others flag - indicates this is a WFO shift (only on rest days)
   bool isWorkForOthers;
+  /// True when rostered to work on a bank holiday but made redundant (day off).
+  bool bankHolidayRedundant;
 
   Event({
     required this.id,
@@ -178,6 +180,7 @@ class Event {
     this.lateFinishDuration,
     this.sickDayType,
     this.isWorkForOthers = false,
+    this.bankHolidayRedundant = false,
   });
 
   bool get hasNoteImages => noteImagePaths != null && noteImagePaths!.isNotEmpty;
@@ -433,6 +436,7 @@ class Event {
     int? lateFinishDuration,
     String? sickDayType,
     bool? isWorkForOthers,
+    bool? bankHolidayRedundant,
     List<String>? routes,
     String? startLocation,
     String? finishLocation,
@@ -476,6 +480,7 @@ class Event {
       lateFinishDuration: lateFinishDuration ?? this.lateFinishDuration,
       sickDayType: sickDayType ?? this.sickDayType,
       isWorkForOthers: isWorkForOthers ?? this.isWorkForOthers,
+      bankHolidayRedundant: bankHolidayRedundant ?? this.bankHolidayRedundant,
     );
   }
 
@@ -526,6 +531,7 @@ class Event {
       'lateFinishDuration': lateFinishDuration,
       'sickDayType': sickDayType,
       'isWorkForOthers': isWorkForOthers,
+      'bankHolidayRedundant': bankHolidayRedundant,
     };
   }
 
@@ -609,6 +615,7 @@ class Event {
       lateFinishDuration: map['lateFinishDuration'],
       sickDayType: map['sickDayType'],  // Nullable for backwards compatibility
       isWorkForOthers: map['isWorkForOthers'] ?? false,  // Default to false for backwards compatibility
+      bankHolidayRedundant: map['bankHolidayRedundant'] ?? false,
     );
     
     // Auto-migrate legacy duties if needed

@@ -127,6 +127,7 @@ class DutyNotesEditorState extends State<DutyNotesEditor> {
                 bytes: _images[i],
                 size: thumb,
                 onRemove: () => _removeAt(i),
+                onView: () => _openDutyNotePhotoViewer(context, _images[i]),
               ),
             if (_images.length < NoteAttachmentService.maxImagesPerEvent)
               _AddPhotoTile(size: thumb, onTap: _addFromGallery),
@@ -137,29 +138,88 @@ class DutyNotesEditorState extends State<DutyNotesEditor> {
   }
 }
 
+/// Full screen + pinch zoom for a duty note photo.
+void _openDutyNotePhotoViewer(BuildContext context, Uint8List bytes) {
+  final w = MediaQuery.sizeOf(context).width;
+  final pad = w < 350 ? 8.0 : 12.0;
+  showDialog<void>(
+    context: context,
+    barrierColor: Colors.black87,
+    builder: (dialogContext) {
+      return Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: EdgeInsets.all(pad),
+        child: Material(
+          color: Colors.black,
+          clipBehavior: Clip.antiAlias,
+          borderRadius: BorderRadius.circular(4),
+          child: SafeArea(
+            child: Stack(
+              children: [
+                Center(
+                  child: InteractiveViewer(
+                    boundaryMargin: const EdgeInsets.all(64),
+                    minScale: 0.5,
+                    maxScale: 4.0,
+                    child: Image.memory(
+                      bytes,
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                ),
+                Positioned(
+                  top: 0,
+                  right: 0,
+                  child: IconButton(
+                    icon: const Icon(Icons.close, color: Colors.white, size: 28),
+                    tooltip: 'Close',
+                    onPressed: () => Navigator.of(dialogContext).pop(),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    },
+  );
+}
+
 class _AttachmentThumb extends StatelessWidget {
   const _AttachmentThumb({
     required this.bytes,
     required this.size,
     required this.onRemove,
+    required this.onView,
   });
 
   final Uint8List bytes;
   final double size;
   final VoidCallback onRemove;
+  final VoidCallback onView;
 
   @override
   Widget build(BuildContext context) {
     return Stack(
       clipBehavior: Clip.none,
       children: [
-        ClipRRect(
-          borderRadius: BorderRadius.circular(8),
-          child: Image.memory(
-            bytes,
-            width: size,
-            height: size,
-            fit: BoxFit.cover,
+        Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onView,
+            borderRadius: BorderRadius.circular(8),
+            child: Semantics(
+              label: 'View full size',
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.memory(
+                  bytes,
+                  width: size,
+                  height: size,
+                  fit: BoxFit.cover,
+                ),
+              ),
+            ),
           ),
         ),
         Positioned(

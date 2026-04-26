@@ -8,6 +8,7 @@ import 'package:flutter/foundation.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:spdrivercalendar/features/settings/screens/settings_screen.dart';
 import 'package:spdrivercalendar/services/note_attachment_service.dart';
+import 'package:spdrivercalendar/services/bank_holiday_redundant_day_service.dart';
 
 class EventService {
   // In-memory events cache with month-based loading - FIXED: Use string-based date keys
@@ -806,6 +807,7 @@ class EventService {
     // Schedule notification if needed
     if (eventWithId.isWorkShift) {
       await _scheduleWorkShiftNotification(eventWithId);
+      await BankHolidayRedundantDayService.onWorkShiftAddedToDate(normalizedStartDate);
     }
 
     await _saveEvents();

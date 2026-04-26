@@ -1705,137 +1705,164 @@ class _EventCardState extends State<EventCard> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Expanded(
                     child: _buildTitleWithRoute(),
                   ),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // On larger screens, show work time inline
-                      if (workTime != null && !widget.event.title.contains('(OT)') && showWorkTimeInline) ...[
-                        Text(
-                          'Work: $workTime',
-                          style: TextStyle(
-                            color: Theme.of(context).brightness == Brightness.dark
-                                ? Colors.white
-                                : Colors.black,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
+                  // Badges + notes wrap on narrow screens (avoids overflow when BH + Redundant + WFO, etc.)
+                  Flexible(
+                    fit: FlexFit.loose,
+                    child: Wrap(
+                      alignment: WrapAlignment.end,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: 4,
+                      runSpacing: 4,
+                      children: [
+                        // On larger screens, show work time inline
+                        if (workTime != null && !widget.event.title.contains('(OT)') && showWorkTimeInline) ...[
+                          Text(
+                            'Work: $workTime',
+                            style: TextStyle(
+                              color: Theme.of(context).brightness == Brightness.dark
+                                  ? Colors.white
+                                  : Colors.black,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
-                        ),
-                      ],
-                      // Always show notes icon with visual indicator for existing notes
-                      Padding(
-                        padding: const EdgeInsets.only(left: 8.0),
-                        child: InkWell(
-                          onTap: () => widget.onShowNotes(widget.event),
-                          borderRadius: BorderRadius.circular(12),
-                          child: Padding(
-                            padding: const EdgeInsets.all(4.0),
-                            child: Stack(
-                              children: [
-                                Icon(
-                                  widget.event.hasNoteContent
-                                      ? Icons.notes
-                                      : Icons.notes_outlined,
-                                  size: 18,
-                                  color: widget.event.hasNoteContent
-                                      ? (Theme.of(context).brightness == Brightness.dark
-                                          ? Colors.white.withValues(alpha: 0.9)
-                                          : Colors.black.withValues(alpha: 0.8))
-                                      : (Theme.of(context).brightness == Brightness.dark
-                                          ? Colors.white54
-                                          : Colors.black38),
-                                ),
-                                // Add small dot indicator for existing notes
-                                if (widget.event.hasNoteContent)
-                                  Positioned(
-                                    right: 0,
-                                    top: 0,
-                                    child: Container(
-                                      width: 6,
-                                      height: 6,
-                                      decoration: BoxDecoration(
-                                        color: Theme.of(context).brightness == Brightness.dark
-                                            ? Colors.white
-                                            : Colors.black.withValues(alpha: 0.7),
-                                        shape: BoxShape.circle,
+                        ],
+                        // Always show notes icon with visual indicator for existing notes
+                        Padding(
+                          padding: const EdgeInsets.only(left: 4.0),
+                          child: InkWell(
+                            onTap: () => widget.onShowNotes(widget.event),
+                            borderRadius: BorderRadius.circular(12),
+                            child: Padding(
+                              padding: const EdgeInsets.all(4.0),
+                              child: Stack(
+                                children: [
+                                  Icon(
+                                    widget.event.hasNoteContent
+                                        ? Icons.notes
+                                        : Icons.notes_outlined,
+                                    size: 18,
+                                    color: widget.event.hasNoteContent
+                                        ? (Theme.of(context).brightness == Brightness.dark
+                                            ? Colors.white.withValues(alpha: 0.9)
+                                            : Colors.black.withValues(alpha: 0.8))
+                                        : (Theme.of(context).brightness == Brightness.dark
+                                            ? Colors.white54
+                                            : Colors.black38),
+                                  ),
+                                  // Add small dot indicator for existing notes
+                                  if (widget.event.hasNoteContent)
+                                    Positioned(
+                                      right: 0,
+                                      top: 0,
+                                      child: Container(
+                                        width: 6,
+                                        height: 6,
+                                        decoration: BoxDecoration(
+                                          color: Theme.of(context).brightness == Brightness.dark
+                                              ? Colors.white
+                                              : Colors.black.withValues(alpha: 0.7),
+                                          shape: BoxShape.circle,
+                                        ),
                                       ),
                                     ),
-                                  ),
-                              ],
+                                ],
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                      // Rest day badge - compact on small screens
-                      if (widget.isRestDay && widget.event.isWorkShift && !widget.event.isWorkForOthers)
-                        Container(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: MediaQuery.of(context).size.width < 380 ? 6.0 : 8.0,
-                            vertical: 3.0,
-                          ),
-                          margin: const EdgeInsets.only(left: 4),
-                          decoration: BoxDecoration(
-                            color: widget.shiftInfoMap['R']?.color ?? Colors.blue,
-                            borderRadius: BorderRadius.circular(12.0),
-                          ),
-                          child: Text(
-                            MediaQuery.of(context).size.width < 380 ? 'Rest' : 'Rest Day',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 11.0,
-                              fontWeight: FontWeight.bold,
+                        // Rest day badge - compact on small screens
+                        if (widget.isRestDay && widget.event.isWorkShift && !widget.event.isWorkForOthers)
+                          Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: MediaQuery.of(context).size.width < 380 ? 6.0 : 8.0,
+                              vertical: 3.0,
+                            ),
+                            margin: const EdgeInsets.only(left: 2),
+                            decoration: BoxDecoration(
+                              color: widget.shiftInfoMap['R']?.color ?? Colors.blue,
+                              borderRadius: BorderRadius.circular(12.0),
+                            ),
+                            child: Text(
+                              MediaQuery.of(context).size.width < 380 ? 'Rest' : 'Rest Day',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 11.0,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
-                        ),
-                      // Work For Others badge - compact on small screens
-                      if (widget.event.isWorkForOthers)
-                        Container(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: MediaQuery.of(context).size.width < 380 ? 6.0 : 8.0,
-                            vertical: 3.0,
-                          ),
-                          margin: const EdgeInsets.only(left: 4),
-                          decoration: BoxDecoration(
-                            color: widget.shiftInfoMap['WFO']?.color ?? Colors.teal,
-                            borderRadius: BorderRadius.circular(12.0),
-                          ),
-                          child: Text(
-                            MediaQuery.of(context).size.width < 380 ? 'WFO' : 'Work For Others',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 11.0,
-                              fontWeight: FontWeight.bold,
+                        // Work For Others badge - compact on small screens
+                        if (widget.event.isWorkForOthers)
+                          Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: MediaQuery.of(context).size.width < 380 ? 6.0 : 8.0,
+                              vertical: 3.0,
+                            ),
+                            margin: const EdgeInsets.only(left: 2),
+                            decoration: BoxDecoration(
+                              color: widget.shiftInfoMap['WFO']?.color ?? Colors.teal,
+                              borderRadius: BorderRadius.circular(12.0),
+                            ),
+                            child: Text(
+                              MediaQuery.of(context).size.width < 380 ? 'WFO' : 'Work For Others',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 11.0,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
-                        ),
-                      // Bank holiday badge - compact on small screens
-                      if (widget.isBankHoliday && widget.event.isWorkShift)
-                        Container(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: MediaQuery.of(context).size.width < 380 ? 6.0 : 8.0,
-                            vertical: 3.0,
-                          ),
-                          margin: const EdgeInsets.only(left: 4),
-                          decoration: BoxDecoration(
-                            color: Colors.red,
-                            borderRadius: BorderRadius.circular(12.0),
-                          ),
-                          child: Text(
-                            MediaQuery.of(context).size.width < 380 ? 'Bank Hol' : 'Bank Holiday',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 11.0,
-                              fontWeight: FontWeight.bold,
+                        // Bank holiday + redundant
+                        if (widget.isBankHoliday && widget.event.isWorkShift) ...[
+                          Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: MediaQuery.of(context).size.width < 380 ? 6.0 : 8.0,
+                              vertical: 3.0,
+                            ),
+                            margin: const EdgeInsets.only(left: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.red,
+                              borderRadius: BorderRadius.circular(12.0),
+                            ),
+                            child: Text(
+                              MediaQuery.of(context).size.width < 380 ? 'Bank Hol' : 'Bank Holiday',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 11.0,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
-                        ),
+                          if (widget.event.bankHolidayRedundant)
+                            Container(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: MediaQuery.of(context).size.width < 380 ? 6.0 : 8.0,
+                                vertical: 3.0,
+                              ),
+                              margin: const EdgeInsets.only(left: 2),
+                              decoration: BoxDecoration(
+                                color: Colors.amber.shade800,
+                                borderRadius: BorderRadius.circular(12.0),
+                              ),
+                              child: Text(
+                                MediaQuery.of(context).size.width < 380 ? 'Redund.' : 'Redundant',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 11.0,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                        ],
                       ],
                     ),
+                  ),
                 ],
               ),
               // On small screens, show work time on separate line below title
@@ -4059,15 +4086,23 @@ class _EventCardState extends State<EventCard> {
     }
   }
 
-  // Show bus assignment dialog for full duties
-  Future<String?> _showBusAssignmentDialog(BuildContext context, String halfType, String? currentBus) async {
+  // Show bus assignment dialog for full duties, or [singleBusLabel] for workout/overtime (Add Bus / Change Bus).
+  Future<String?> _showBusAssignmentDialog(
+    BuildContext context,
+    String halfType,
+    String? currentBus, {
+    bool singleBusLabel = false,
+  }) async {
     final controller = TextEditingController(text: currentBus ?? '');
     final hasCurrentBus = currentBus != null && currentBus.isNotEmpty;
+    final String title = singleBusLabel
+        ? (hasCurrentBus ? 'Change Bus' : 'Add Bus')
+        : (hasCurrentBus ? 'Change $halfType Bus' : 'Add $halfType Bus');
     
     return showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(hasCurrentBus ? 'Change $halfType Bus' : 'Add $halfType Bus'),
+        title: Text(title),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -5483,6 +5518,254 @@ class _EventCardState extends State<EventCard> {
     });
   }
 
+  /// Spare shifts on a workout (no break) do not use 1st/2nd half buses — same as the main event card.
+  bool _isWorkoutBreakString(String? s) =>
+      s != null && s.toLowerCase().contains('workout');
+
+  /// Workout and overtime: single bus (like main edit dialog); other days: 1st/2nd half UI.
+  Widget _workoutAwareSpareFullDutyBusBlock(StateSetter dialogSetState) {
+    if (widget.event.title.contains('(OT)')) {
+      return _spareWorkoutFullDutySingleBusSection(dialogSetState);
+    }
+    final sync = breakTime;
+    if (sync != null) {
+      if (_isWorkoutBreakString(sync)) {
+        return _spareWorkoutFullDutySingleBusSection(dialogSetState);
+      }
+      return _spareFullDutyBusHalfSectionDialog(dialogSetState);
+    }
+    return FutureBuilder<String?>(
+      future: ShiftService.getBreakTime(widget.event),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const SizedBox.shrink();
+        }
+        if (_isWorkoutBreakString(snapshot.data)) {
+          return _spareWorkoutFullDutySingleBusSection(dialogSetState);
+        }
+        return _spareFullDutyBusHalfSectionDialog(dialogSetState);
+      },
+    );
+  }
+
+  /// One bus for spare + full duty on a workout day (no 1st/2nd half split). Matches calendar workout/overtime flow.
+  Widget _spareWorkoutFullDutySingleBusSection(StateSetter dialogSetState) {
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final isSmall = screenWidth < 350;
+    final pad = isSmall ? 6.0 : 8.0;
+    final iconS = isSmall ? 16.0 : 18.0;
+    final busTextSize = isSmall ? 14.0 : 16.0;
+    final labelSize = isSmall ? 11.0 : 12.0;
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Divider(),
+        SizedBox(height: isSmall ? 6 : 8),
+        Row(
+          children: [
+            Icon(Icons.directions_bus, size: 20, color: AppTheme.primaryColor),
+            SizedBox(width: isSmall ? 6 : 8),
+            Text(
+              'Bus',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+                color: Theme.of(context).textTheme.bodyLarge?.color,
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: isSmall ? 6 : 8),
+        if (_firstHalfBus != null && _firstHalfBus!.isNotEmpty)
+          Container(
+            padding: EdgeInsets.all(pad),
+            margin: const EdgeInsets.only(bottom: 8),
+            decoration: BoxDecoration(
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? Colors.green.shade900.withValues(alpha: 0.3)
+                  : Colors.green.shade50,
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.green.shade700
+                    : Colors.green.shade200,
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.check_circle, size: iconS, color: Colors.green),
+                SizedBox(width: isSmall ? 4 : 8),
+                Expanded(
+                  child: Text(
+                    _firstHalfBus!,
+                    style: TextStyle(
+                      fontSize: busTextSize,
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).textTheme.bodyLarge?.color,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    GestureDetector(
+                      onTap: _busTrackingLoading['tracking_$_firstHalfBus'] == true
+                          ? null
+                          : () => _trackBus(_firstHalfBus!),
+                      child: Padding(
+                        padding: EdgeInsets.all(isSmall ? 2 : 4),
+                        child: _busTrackingLoading['tracking_$_firstHalfBus'] == true
+                            ? SizedBox(
+                                width: iconS - 2,
+                                height: iconS - 2,
+                                child: const CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : Icon(Icons.location_on, size: iconS, color: Colors.blue),
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: () async {
+                        final result = await _showBusAssignmentDialog(
+                          context,
+                          '',
+                          _firstHalfBus,
+                          singleBusLabel: true,
+                        );
+                        if (result != null) {
+                          final oldEvent = Event(
+                            id: widget.event.id,
+                            title: widget.event.title,
+                            startDate: widget.event.startDate,
+                            startTime: widget.event.startTime,
+                            endDate: widget.event.endDate,
+                            endTime: widget.event.endTime,
+                            assignedDuties: widget.event.assignedDuties,
+                            busAssignments: widget.event.busAssignments,
+                            firstHalfBus: widget.event.firstHalfBus,
+                            secondHalfBus: widget.event.secondHalfBus,
+                            additionalBusesUsed: widget.event.additionalBusesUsed?.map((b) => b).toList(),
+                            firstHalfAdditionalBuses: widget.event.firstHalfAdditionalBuses?.map((b) => b).toList(),
+                            secondHalfAdditionalBuses: widget.event.secondHalfAdditionalBuses?.map((b) => b).toList(),
+                            additionalBusesByDuty: widget.event.additionalBusesByDuty?.map((k, v) => MapEntry(k, List<String>.from(v))),
+                          );
+                          widget.event.changeBusForSingleShift(result);
+                          await EventService.updateEvent(oldEvent, widget.event);
+                          if (widget.onBusAssignmentUpdate != null) {
+                            widget.onBusAssignmentUpdate!(widget.event);
+                          }
+                          if (mounted) {
+                            setState(() {
+                              _firstHalfBus = widget.event.firstHalfBus;
+                              _secondHalfBus = widget.event.secondHalfBus;
+                            });
+                            dialogSetState(() {});
+                          }
+                        }
+                      },
+                      child: Padding(
+                        padding: EdgeInsets.all(isSmall ? 2 : 4),
+                        child: Icon(Icons.swap_horiz, size: iconS, color: Colors.orange),
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: () async {
+                        final oldEvent = Event(
+                          id: widget.event.id,
+                          title: widget.event.title,
+                          startDate: widget.event.startDate,
+                          startTime: widget.event.startTime,
+                          endDate: widget.event.endDate,
+                          endTime: widget.event.endTime,
+                          assignedDuties: widget.event.assignedDuties,
+                          busAssignments: widget.event.busAssignments,
+                          firstHalfBus: widget.event.firstHalfBus,
+                          secondHalfBus: widget.event.secondHalfBus,
+                          additionalBusesUsed: widget.event.additionalBusesUsed?.map((b) => b).toList(),
+                          firstHalfAdditionalBuses: widget.event.firstHalfAdditionalBuses?.map((b) => b).toList(),
+                          secondHalfAdditionalBuses: widget.event.secondHalfAdditionalBuses?.map((b) => b).toList(),
+                          additionalBusesByDuty: widget.event.additionalBusesByDuty?.map((k, v) => MapEntry(k, List<String>.from(v))),
+                        );
+                        widget.event.removeBusForSingleShift();
+                        await EventService.updateEvent(oldEvent, widget.event);
+                        if (widget.onBusAssignmentUpdate != null) {
+                          widget.onBusAssignmentUpdate!(widget.event);
+                        }
+                        if (mounted) {
+                          setState(() {
+                            _firstHalfBus = null;
+                            _secondHalfBus = null;
+                          });
+                          dialogSetState(() {});
+                        }
+                      },
+                      child: Padding(
+                        padding: EdgeInsets.all(isSmall ? 2 : 4),
+                        child: Icon(Icons.remove_circle_outline, size: iconS, color: Colors.red),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          )
+        else
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () async {
+                final result = await _showBusAssignmentDialog(
+                  context,
+                  '',
+                  null,
+                  singleBusLabel: true,
+                );
+                if (result != null) {
+                  final oldEvent = Event(
+                    id: widget.event.id,
+                    title: widget.event.title,
+                    startDate: widget.event.startDate,
+                    startTime: widget.event.startTime,
+                    endDate: widget.event.endDate,
+                    endTime: widget.event.endTime,
+                    assignedDuties: widget.event.assignedDuties,
+                    busAssignments: widget.event.busAssignments,
+                    firstHalfBus: widget.event.firstHalfBus,
+                    secondHalfBus: widget.event.secondHalfBus,
+                    additionalBusesUsed: widget.event.additionalBusesUsed?.map((b) => b).toList(),
+                    firstHalfAdditionalBuses: widget.event.firstHalfAdditionalBuses?.map((b) => b).toList(),
+                    secondHalfAdditionalBuses: widget.event.secondHalfAdditionalBuses?.map((b) => b).toList(),
+                    additionalBusesByDuty: widget.event.additionalBusesByDuty?.map((k, v) => MapEntry(k, List<String>.from(v))),
+                  );
+                  widget.event.changeBusForSingleShift(result);
+                  await EventService.updateEvent(oldEvent, widget.event);
+                  if (widget.onBusAssignmentUpdate != null) {
+                    widget.onBusAssignmentUpdate!(widget.event);
+                  }
+                  if (mounted) {
+                    setState(() {
+                      _firstHalfBus = widget.event.firstHalfBus;
+                      _secondHalfBus = widget.event.secondHalfBus;
+                    });
+                    dialogSetState(() {});
+                  }
+                }
+              },
+              icon: const Icon(Icons.directions_bus, size: 18),
+              label: Text('Add Bus', style: TextStyle(fontSize: labelSize + 1)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryColor,
+                foregroundColor: Colors.white,
+                padding: EdgeInsets.symmetric(vertical: isSmall ? 10 : 12),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
   // Build the bus assignment UI for spare shifts with full duties
   Widget _buildFullDutyBusAssignmentUI(StateSetter dialogSetState) {
     return Container(
@@ -5615,462 +5898,474 @@ class _EventCardState extends State<EventCard> {
             );
           }),
           
-          const Divider(),
-          const SizedBox(height: 8),
-          
-          // Bus assignment section for full duties
-          Row(
-            children: [
-              Icon(Icons.directions_bus, size: 20, color: AppTheme.primaryColor),
-              const SizedBox(width: 8),
-              Text(
-                'Bus Assignment',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                  color: Theme.of(context).textTheme.bodyLarge?.color,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          
-          // Show current bus assignments if any
-          if (_firstHalfBus != null || _secondHalfBus != null) ...[
-            
-            // Current bus assignments display
-            if (_firstHalfBus != null)
-              Builder(
-                builder: (context) {
-                  final screenWidth = MediaQuery.of(context).size.width;
-                  final isSmallScreen = screenWidth < 350;
-                  final iconSize = isSmallScreen ? 16.0 : 18.0;
-                  final iconPadding = isSmallScreen ? 2.0 : 4.0;
-                  final labelFontSize = isSmallScreen ? 11.0 : 12.0;
-                  final busFontSize = isSmallScreen ? 14.0 : 16.0;
-                  final containerPadding = isSmallScreen ? 6.0 : 8.0;
-                  final checkIconSize = isSmallScreen ? 14.0 : 16.0;
-                  
-                  return Container(
-                    padding: EdgeInsets.all(containerPadding),
-                    margin: const EdgeInsets.only(bottom: 8),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).brightness == Brightness.dark
-                          ? Colors.green.shade900.withValues(alpha: 0.3)
-                          : Colors.green.shade50,
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(
-                        color: Theme.of(context).brightness == Brightness.dark
-                            ? Colors.green.shade700
-                            : Colors.green.shade200,
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.check_circle, size: checkIconSize, color: Colors.green),
-                        SizedBox(width: isSmallScreen ? 4 : 8),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Row(
-                                children: [
-                                  Text(
-                                    '1: ',
-                                    style: TextStyle(
-                                      fontSize: labelFontSize,
-                                      fontWeight: FontWeight.w500,
-                                      color: Theme.of(context).textTheme.bodyMedium?.color,
-                                    ),
-                                  ),
-                                  Expanded(
-                                    child: Text(
-                                      _firstHalfBus!,
-                                      style: TextStyle(
-                                        fontSize: busFontSize,
-                                        fontWeight: FontWeight.bold,
-                                        color: Theme.of(context).textTheme.bodyLarge?.color,
-                                      ),
-                                      overflow: TextOverflow.ellipsis,
-                                      maxLines: 1,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                        SizedBox(width: isSmallScreen ? 2 : 4),
-                        // Group icons together tightly - use GestureDetector for tighter control
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            // Track button for first half bus
-                            GestureDetector(
-                              onTap: _busTrackingLoading['tracking_$_firstHalfBus'] == true
-                                  ? null
-                                  : () => _trackBus(_firstHalfBus!),
-                              child: Container(
-                                padding: EdgeInsets.all(iconPadding),
-                                child: _busTrackingLoading['tracking_$_firstHalfBus'] == true
-                                    ? SizedBox(
-                                        width: iconSize - 2,
-                                        height: iconSize - 2,
-                                        child: const CircularProgressIndicator(strokeWidth: 2),
-                                      )
-                                    : Icon(Icons.location_on, size: iconSize, color: Colors.blue),
-                              ),
-                            ),
-                        // Change bus button (swap/recycle icon)
-                        GestureDetector(
-                          onTap: () async {
-                        final result = await _showBusAssignmentDialog(context, 'First Half', _firstHalfBus);
-                        if (result != null) {
-                          final oldEvent = Event(
-                            id: widget.event.id,
-                            title: widget.event.title,
-                            startDate: widget.event.startDate,
-                            startTime: widget.event.startTime,
-                            endDate: widget.event.endDate,
-                            endTime: widget.event.endTime,
-                            assignedDuties: widget.event.assignedDuties,
-                            busAssignments: widget.event.busAssignments,
-                            firstHalfBus: widget.event.firstHalfBus,
-                            secondHalfBus: widget.event.secondHalfBus,
-                            additionalBusesUsed: widget.event.additionalBusesUsed?.map((b) => b).toList(),
-                            firstHalfAdditionalBuses: widget.event.firstHalfAdditionalBuses?.map((b) => b).toList(),
-                            secondHalfAdditionalBuses: widget.event.secondHalfAdditionalBuses?.map((b) => b).toList(),
-                            additionalBusesByDuty: widget.event.additionalBusesByDuty?.map((k, v) => MapEntry(k, List<String>.from(v))),
-                          );
-                          
-                          // Use change bus method to track breakdown buses
-                          widget.event.changeBusForFirstHalf(result);
-                          await EventService.updateEvent(oldEvent, widget.event);
-                          
-                          if (mounted) {
-                            setState(() {
-                              _firstHalfBus = result;
-                            });
-                            dialogSetState(() {});
-                          }
-                        }
-                          },
-                              child: Container(
-                                padding: EdgeInsets.all(iconPadding),
-                                child: Icon(Icons.swap_horiz, size: iconSize, color: Colors.orange),
-                              ),
-                            ),
-                            // Remove bus button
-                            GestureDetector(
-                              onTap: () async {
-                                final oldEvent = Event(
-                                  id: widget.event.id,
-                                  title: widget.event.title,
-                                  startDate: widget.event.startDate,
-                                  startTime: widget.event.startTime,
-                                  endDate: widget.event.endDate,
-                                  endTime: widget.event.endTime,
-                                  assignedDuties: widget.event.assignedDuties,
-                                  busAssignments: widget.event.busAssignments,
-                                  firstHalfBus: widget.event.firstHalfBus,
-                                  secondHalfBus: widget.event.secondHalfBus,
-                                  additionalBusesUsed: widget.event.additionalBusesUsed?.map((b) => b).toList(),
-                                  firstHalfAdditionalBuses: widget.event.firstHalfAdditionalBuses?.map((b) => b).toList(),
-                                  secondHalfAdditionalBuses: widget.event.secondHalfAdditionalBuses?.map((b) => b).toList(),
-                                  additionalBusesByDuty: widget.event.additionalBusesByDuty?.map((k, v) => MapEntry(k, List<String>.from(v))),
-                                );
-                                
-                                // Use remove method to clear primary bus and breakdown history
-                                widget.event.removeBusForFirstHalf();
-                                await EventService.updateEvent(oldEvent, widget.event);
-                                
-                                if (mounted) {
-                                  setState(() {
-                                    _firstHalfBus = null;
-                                  });
-                                  // Also refresh the dialog
-                                  dialogSetState(() {});
-                                }
-                              },
-                              child: Container(
-                                padding: EdgeInsets.all(iconPadding),
-                                child: Icon(Icons.remove_circle_outline, size: iconSize, color: Colors.red),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              ),
-            if (_secondHalfBus != null)
-              Builder(
-                builder: (context) {
-                  final screenWidth = MediaQuery.of(context).size.width;
-                  final isSmallScreen = screenWidth < 350;
-                  final iconSize = isSmallScreen ? 16.0 : 18.0;
-                  final iconPadding = isSmallScreen ? 2.0 : 4.0;
-                  final labelFontSize = isSmallScreen ? 11.0 : 12.0;
-                  final busFontSize = isSmallScreen ? 14.0 : 16.0;
-                  final containerPadding = isSmallScreen ? 6.0 : 8.0;
-                  final checkIconSize = isSmallScreen ? 14.0 : 16.0;
-                  
-                  return Container(
-                    padding: EdgeInsets.all(containerPadding),
-                    margin: const EdgeInsets.only(bottom: 8),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).brightness == Brightness.dark
-                          ? Colors.green.shade900.withValues(alpha: 0.3)
-                          : Colors.green.shade50,
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(
-                        color: Theme.of(context).brightness == Brightness.dark
-                            ? Colors.green.shade700
-                            : Colors.green.shade200,
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.check_circle, size: checkIconSize, color: Colors.green),
-                        SizedBox(width: isSmallScreen ? 4 : 8),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Row(
-                                children: [
-                                  Text(
-                                    '2: ',
-                                    style: TextStyle(
-                                      fontSize: labelFontSize,
-                                      fontWeight: FontWeight.w500,
-                                      color: Theme.of(context).textTheme.bodyMedium?.color,
-                                    ),
-                                  ),
-                                  Expanded(
-                                    child: Text(
-                                      _secondHalfBus!,
-                                      style: TextStyle(
-                                        fontSize: busFontSize,
-                                        fontWeight: FontWeight.bold,
-                                        color: Theme.of(context).textTheme.bodyLarge?.color,
-                                      ),
-                                      overflow: TextOverflow.ellipsis,
-                                      maxLines: 1,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                        SizedBox(width: isSmallScreen ? 2 : 4),
-                        // Group icons together tightly - use GestureDetector for tighter control
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            // Track button for second half bus
-                            GestureDetector(
-                              onTap: _busTrackingLoading['tracking_$_secondHalfBus'] == true
-                                  ? null
-                                  : () => _trackBus(_secondHalfBus!),
-                              child: Container(
-                                padding: EdgeInsets.all(iconPadding),
-                                child: _busTrackingLoading['tracking_$_secondHalfBus'] == true
-                                    ? SizedBox(
-                                        width: iconSize - 2,
-                                        height: iconSize - 2,
-                                        child: const CircularProgressIndicator(strokeWidth: 2),
-                                      )
-                                    : Icon(Icons.location_on, size: iconSize, color: Colors.blue),
-                              ),
-                            ),
-                            // Change bus button (swap/recycle icon)
-                            GestureDetector(
-                              onTap: () async {
-                                final result = await _showBusAssignmentDialog(context, 'Second Half', _secondHalfBus);
-                                if (result != null) {
-                                  final oldEvent = Event(
-                                    id: widget.event.id,
-                                    title: widget.event.title,
-                                    startDate: widget.event.startDate,
-                                    startTime: widget.event.startTime,
-                                    endDate: widget.event.endDate,
-                                    endTime: widget.event.endTime,
-                                    assignedDuties: widget.event.assignedDuties,
-                                    busAssignments: widget.event.busAssignments,
-                                    firstHalfBus: widget.event.firstHalfBus,
-                                    secondHalfBus: widget.event.secondHalfBus,
-                                    additionalBusesUsed: widget.event.additionalBusesUsed?.map((b) => b).toList(),
-                                    firstHalfAdditionalBuses: widget.event.firstHalfAdditionalBuses?.map((b) => b).toList(),
-                                    secondHalfAdditionalBuses: widget.event.secondHalfAdditionalBuses?.map((b) => b).toList(),
-                                    additionalBusesByDuty: widget.event.additionalBusesByDuty?.map((k, v) => MapEntry(k, List<String>.from(v))),
-                                  );
-                                  
-                                  // Use change bus method to track breakdown buses
-                                  widget.event.changeBusForSecondHalf(result);
-                                  await EventService.updateEvent(oldEvent, widget.event);
-                                  
-                                  if (mounted) {
-                                    setState(() {
-                                      _secondHalfBus = result;
-                                    });
-                                    dialogSetState(() {});
-                                  }
-                                }
-                              },
-                              child: Container(
-                                padding: EdgeInsets.all(iconPadding),
-                                child: Icon(Icons.swap_horiz, size: iconSize, color: Colors.orange),
-                              ),
-                            ),
-                            // Remove bus button
-                            GestureDetector(
-                              onTap: () async {
-                                final oldEvent = Event(
-                                  id: widget.event.id,
-                                  title: widget.event.title,
-                                  startDate: widget.event.startDate,
-                                  startTime: widget.event.startTime,
-                                  endDate: widget.event.endDate,
-                                  endTime: widget.event.endTime,
-                                  assignedDuties: widget.event.assignedDuties,
-                                  busAssignments: widget.event.busAssignments,
-                                  firstHalfBus: widget.event.firstHalfBus,
-                                  secondHalfBus: widget.event.secondHalfBus,
-                                  additionalBusesUsed: widget.event.additionalBusesUsed?.map((b) => b).toList(),
-                                  firstHalfAdditionalBuses: widget.event.firstHalfAdditionalBuses?.map((b) => b).toList(),
-                                  secondHalfAdditionalBuses: widget.event.secondHalfAdditionalBuses?.map((b) => b).toList(),
-                                  additionalBusesByDuty: widget.event.additionalBusesByDuty?.map((k, v) => MapEntry(k, List<String>.from(v))),
-                                );
-                                
-                                // Use remove method to clear primary bus and breakdown history
-                                widget.event.removeBusForSecondHalf();
-                                await EventService.updateEvent(oldEvent, widget.event);
-                                
-                                if (mounted) {
-                                  setState(() {
-                                    _secondHalfBus = null;
-                                  });
-                                  // Also refresh the dialog
-                                  dialogSetState(() {});
-                                }
-                              },
-                              child: Container(
-                                padding: EdgeInsets.all(iconPadding),
-                                child: Icon(Icons.remove_circle_outline, size: iconSize, color: Colors.red),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              ),
-            const SizedBox(height: 8),
-          ],
-          
-          // Add bus buttons - only show when buses are not assigned
-          if (_firstHalfBus == null || _secondHalfBus == null) ...[
-            if (_firstHalfBus == null)
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: () async {
-                    final result = await _showBusAssignmentDialog(context, 'First Half', _firstHalfBus);
-                    if (result != null) {
-                        final oldEvent = Event(
-                          id: widget.event.id,
-                          title: widget.event.title,
-                          startDate: widget.event.startDate,
-                          startTime: widget.event.startTime,
-                          endDate: widget.event.endDate,
-                          endTime: widget.event.endTime,
-                          assignedDuties: widget.event.assignedDuties,
-                          busAssignments: widget.event.busAssignments,
-                          firstHalfBus: widget.event.firstHalfBus,
-                          secondHalfBus: widget.event.secondHalfBus,
-                          additionalBusesUsed: widget.event.additionalBusesUsed?.map((b) => b).toList(),
-                          firstHalfAdditionalBuses: widget.event.firstHalfAdditionalBuses?.map((b) => b).toList(),
-                          secondHalfAdditionalBuses: widget.event.secondHalfAdditionalBuses?.map((b) => b).toList(),
-                          additionalBusesByDuty: widget.event.additionalBusesByDuty?.map((k, v) => MapEntry(k, List<String>.from(v))),
-                        );
-                        
-                        // Use change bus method to track breakdown buses (or assign if null)
-                        widget.event.firstHalfBus = result;
-                        await EventService.updateEvent(oldEvent, widget.event);
-                        
-                        if (mounted) {
-                          setState(() {
-                            _firstHalfBus = result;
-                          });
-                          dialogSetState(() {});
-                        }
-                      }
-                    },
-                    icon: const Icon(Icons.directions_bus, size: 18),
-                    label: const Text('Add 1st Half Bus'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.primaryColor,
-                      foregroundColor: Colors.white,
-                    ),
-                  ),
-                ),
-            if (_firstHalfBus == null && _secondHalfBus == null)
-              const SizedBox(height: 8),
-            if (_secondHalfBus == null)
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: () async {
-                    final result = await _showBusAssignmentDialog(context, 'Second Half', _secondHalfBus);
-                    if (result != null) {
-                        final oldEvent = Event(
-                          id: widget.event.id,
-                          title: widget.event.title,
-                          startDate: widget.event.startDate,
-                          startTime: widget.event.startTime,
-                          endDate: widget.event.endDate,
-                          endTime: widget.event.endTime,
-                          assignedDuties: widget.event.assignedDuties,
-                          busAssignments: widget.event.busAssignments,
-                          firstHalfBus: widget.event.firstHalfBus,
-                          secondHalfBus: widget.event.secondHalfBus,
-                          additionalBusesUsed: widget.event.additionalBusesUsed?.map((b) => b).toList(),
-                          firstHalfAdditionalBuses: widget.event.firstHalfAdditionalBuses?.map((b) => b).toList(),
-                          secondHalfAdditionalBuses: widget.event.secondHalfAdditionalBuses?.map((b) => b).toList(),
-                          additionalBusesByDuty: widget.event.additionalBusesByDuty?.map((k, v) => MapEntry(k, List<String>.from(v))),
-                        );
-                        
-                        // Use change bus method to track breakdown buses (or assign if null)
-                        widget.event.secondHalfBus = result;
-                        await EventService.updateEvent(oldEvent, widget.event);
-                        
-                        if (mounted) {
-                          setState(() {
-                            _secondHalfBus = result;
-                          });
-                          dialogSetState(() {});
-                        }
-                      }
-                    },
-                    icon: const Icon(Icons.directions_bus, size: 18),
-                    label: const Text('Add 2nd Half Bus'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.primaryColor,
-                      foregroundColor: Colors.white,
-                    ),
-                  ),
-                ),
-          ],
+          _workoutAwareSpareFullDutyBusBlock(dialogSetState),
         ],
       ),
     );
   }
+
+  /// 1st/2nd half bus UI for full-duty spares on non-workout days (workout/OT use single-bus section).
+  Widget _spareFullDutyBusHalfSectionDialog(StateSetter dialogSetState) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+                const Divider(),
+                const SizedBox(height: 8),
+                
+                // Bus assignment section for full duties
+                Row(
+                  children: [
+                    Icon(Icons.directions_bus, size: 20, color: AppTheme.primaryColor),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Bus Assignment',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        color: Theme.of(context).textTheme.bodyLarge?.color,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                
+                // Show current bus assignments if any
+                if (_firstHalfBus != null || _secondHalfBus != null) ...[
+                  
+                  // Current bus assignments display
+                  if (_firstHalfBus != null)
+                    Builder(
+                      builder: (context) {
+                        final screenWidth = MediaQuery.of(context).size.width;
+                        final isSmallScreen = screenWidth < 350;
+                        final iconSize = isSmallScreen ? 16.0 : 18.0;
+                        final iconPadding = isSmallScreen ? 2.0 : 4.0;
+                        final labelFontSize = isSmallScreen ? 11.0 : 12.0;
+                        final busFontSize = isSmallScreen ? 14.0 : 16.0;
+                        final containerPadding = isSmallScreen ? 6.0 : 8.0;
+                        final checkIconSize = isSmallScreen ? 14.0 : 16.0;
+                        
+                        return Container(
+                          padding: EdgeInsets.all(containerPadding),
+                          margin: const EdgeInsets.only(bottom: 8),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? Colors.green.shade900.withValues(alpha: 0.3)
+                                : Colors.green.shade50,
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(
+                              color: Theme.of(context).brightness == Brightness.dark
+                                  ? Colors.green.shade700
+                                  : Colors.green.shade200,
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.check_circle, size: checkIconSize, color: Colors.green),
+                              SizedBox(width: isSmallScreen ? 4 : 8),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Text(
+                                          '1: ',
+                                          style: TextStyle(
+                                            fontSize: labelFontSize,
+                                            fontWeight: FontWeight.w500,
+                                            color: Theme.of(context).textTheme.bodyMedium?.color,
+                                          ),
+                                        ),
+                                        Expanded(
+                                          child: Text(
+                                            _firstHalfBus!,
+                                            style: TextStyle(
+                                              fontSize: busFontSize,
+                                              fontWeight: FontWeight.bold,
+                                              color: Theme.of(context).textTheme.bodyLarge?.color,
+                                            ),
+                                            overflow: TextOverflow.ellipsis,
+                                            maxLines: 1,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              SizedBox(width: isSmallScreen ? 2 : 4),
+                              // Group icons together tightly - use GestureDetector for tighter control
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  // Track button for first half bus
+                                  GestureDetector(
+                                    onTap: _busTrackingLoading['tracking_$_firstHalfBus'] == true
+                                        ? null
+                                        : () => _trackBus(_firstHalfBus!),
+                                    child: Container(
+                                      padding: EdgeInsets.all(iconPadding),
+                                      child: _busTrackingLoading['tracking_$_firstHalfBus'] == true
+                                          ? SizedBox(
+                                              width: iconSize - 2,
+                                              height: iconSize - 2,
+                                              child: const CircularProgressIndicator(strokeWidth: 2),
+                                            )
+                                          : Icon(Icons.location_on, size: iconSize, color: Colors.blue),
+                                    ),
+                                  ),
+                              // Change bus button (swap/recycle icon)
+                              GestureDetector(
+                                onTap: () async {
+                              final result = await _showBusAssignmentDialog(context, 'First Half', _firstHalfBus);
+                              if (result != null) {
+                                final oldEvent = Event(
+                                  id: widget.event.id,
+                                  title: widget.event.title,
+                                  startDate: widget.event.startDate,
+                                  startTime: widget.event.startTime,
+                                  endDate: widget.event.endDate,
+                                  endTime: widget.event.endTime,
+                                  assignedDuties: widget.event.assignedDuties,
+                                  busAssignments: widget.event.busAssignments,
+                                  firstHalfBus: widget.event.firstHalfBus,
+                                  secondHalfBus: widget.event.secondHalfBus,
+                                  additionalBusesUsed: widget.event.additionalBusesUsed?.map((b) => b).toList(),
+                                  firstHalfAdditionalBuses: widget.event.firstHalfAdditionalBuses?.map((b) => b).toList(),
+                                  secondHalfAdditionalBuses: widget.event.secondHalfAdditionalBuses?.map((b) => b).toList(),
+                                  additionalBusesByDuty: widget.event.additionalBusesByDuty?.map((k, v) => MapEntry(k, List<String>.from(v))),
+                                );
+                                
+                                // Use change bus method to track breakdown buses
+                                widget.event.changeBusForFirstHalf(result);
+                                await EventService.updateEvent(oldEvent, widget.event);
+                                
+                                if (mounted) {
+                                  setState(() {
+                                    _firstHalfBus = result;
+                                  });
+                                  dialogSetState(() {});
+                                }
+                              }
+                                },
+                                    child: Container(
+                                      padding: EdgeInsets.all(iconPadding),
+                                      child: Icon(Icons.swap_horiz, size: iconSize, color: Colors.orange),
+                                    ),
+                                  ),
+                                  // Remove bus button
+                                  GestureDetector(
+                                    onTap: () async {
+                                      final oldEvent = Event(
+                                        id: widget.event.id,
+                                        title: widget.event.title,
+                                        startDate: widget.event.startDate,
+                                        startTime: widget.event.startTime,
+                                        endDate: widget.event.endDate,
+                                        endTime: widget.event.endTime,
+                                        assignedDuties: widget.event.assignedDuties,
+                                        busAssignments: widget.event.busAssignments,
+                                        firstHalfBus: widget.event.firstHalfBus,
+                                        secondHalfBus: widget.event.secondHalfBus,
+                                        additionalBusesUsed: widget.event.additionalBusesUsed?.map((b) => b).toList(),
+                                        firstHalfAdditionalBuses: widget.event.firstHalfAdditionalBuses?.map((b) => b).toList(),
+                                        secondHalfAdditionalBuses: widget.event.secondHalfAdditionalBuses?.map((b) => b).toList(),
+                                        additionalBusesByDuty: widget.event.additionalBusesByDuty?.map((k, v) => MapEntry(k, List<String>.from(v))),
+                                      );
+                                      
+                                      // Use remove method to clear primary bus and breakdown history
+                                      widget.event.removeBusForFirstHalf();
+                                      await EventService.updateEvent(oldEvent, widget.event);
+                                      
+                                      if (mounted) {
+                                        setState(() {
+                                          _firstHalfBus = null;
+                                        });
+                                        // Also refresh the dialog
+                                        dialogSetState(() {});
+                                      }
+                                    },
+                                    child: Container(
+                                      padding: EdgeInsets.all(iconPadding),
+                                      child: Icon(Icons.remove_circle_outline, size: iconSize, color: Colors.red),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  if (_secondHalfBus != null)
+                    Builder(
+                      builder: (context) {
+                        final screenWidth = MediaQuery.of(context).size.width;
+                        final isSmallScreen = screenWidth < 350;
+                        final iconSize = isSmallScreen ? 16.0 : 18.0;
+                        final iconPadding = isSmallScreen ? 2.0 : 4.0;
+                        final labelFontSize = isSmallScreen ? 11.0 : 12.0;
+                        final busFontSize = isSmallScreen ? 14.0 : 16.0;
+                        final containerPadding = isSmallScreen ? 6.0 : 8.0;
+                        final checkIconSize = isSmallScreen ? 14.0 : 16.0;
+                        
+                        return Container(
+                          padding: EdgeInsets.all(containerPadding),
+                          margin: const EdgeInsets.only(bottom: 8),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? Colors.green.shade900.withValues(alpha: 0.3)
+                                : Colors.green.shade50,
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(
+                              color: Theme.of(context).brightness == Brightness.dark
+                                  ? Colors.green.shade700
+                                  : Colors.green.shade200,
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.check_circle, size: checkIconSize, color: Colors.green),
+                              SizedBox(width: isSmallScreen ? 4 : 8),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Text(
+                                          '2: ',
+                                          style: TextStyle(
+                                            fontSize: labelFontSize,
+                                            fontWeight: FontWeight.w500,
+                                            color: Theme.of(context).textTheme.bodyMedium?.color,
+                                          ),
+                                        ),
+                                        Expanded(
+                                          child: Text(
+                                            _secondHalfBus!,
+                                            style: TextStyle(
+                                              fontSize: busFontSize,
+                                              fontWeight: FontWeight.bold,
+                                              color: Theme.of(context).textTheme.bodyLarge?.color,
+                                            ),
+                                            overflow: TextOverflow.ellipsis,
+                                            maxLines: 1,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              SizedBox(width: isSmallScreen ? 2 : 4),
+                              // Group icons together tightly - use GestureDetector for tighter control
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  // Track button for second half bus
+                                  GestureDetector(
+                                    onTap: _busTrackingLoading['tracking_$_secondHalfBus'] == true
+                                        ? null
+                                        : () => _trackBus(_secondHalfBus!),
+                                    child: Container(
+                                      padding: EdgeInsets.all(iconPadding),
+                                      child: _busTrackingLoading['tracking_$_secondHalfBus'] == true
+                                          ? SizedBox(
+                                              width: iconSize - 2,
+                                              height: iconSize - 2,
+                                              child: const CircularProgressIndicator(strokeWidth: 2),
+                                            )
+                                          : Icon(Icons.location_on, size: iconSize, color: Colors.blue),
+                                    ),
+                                  ),
+                                  // Change bus button (swap/recycle icon)
+                                  GestureDetector(
+                                    onTap: () async {
+                                      final result = await _showBusAssignmentDialog(context, 'Second Half', _secondHalfBus);
+                                      if (result != null) {
+                                        final oldEvent = Event(
+                                          id: widget.event.id,
+                                          title: widget.event.title,
+                                          startDate: widget.event.startDate,
+                                          startTime: widget.event.startTime,
+                                          endDate: widget.event.endDate,
+                                          endTime: widget.event.endTime,
+                                          assignedDuties: widget.event.assignedDuties,
+                                          busAssignments: widget.event.busAssignments,
+                                          firstHalfBus: widget.event.firstHalfBus,
+                                          secondHalfBus: widget.event.secondHalfBus,
+                                          additionalBusesUsed: widget.event.additionalBusesUsed?.map((b) => b).toList(),
+                                          firstHalfAdditionalBuses: widget.event.firstHalfAdditionalBuses?.map((b) => b).toList(),
+                                          secondHalfAdditionalBuses: widget.event.secondHalfAdditionalBuses?.map((b) => b).toList(),
+                                          additionalBusesByDuty: widget.event.additionalBusesByDuty?.map((k, v) => MapEntry(k, List<String>.from(v))),
+                                        );
+                                        
+                                        // Use change bus method to track breakdown buses
+                                        widget.event.changeBusForSecondHalf(result);
+                                        await EventService.updateEvent(oldEvent, widget.event);
+                                        
+                                        if (mounted) {
+                                          setState(() {
+                                            _secondHalfBus = result;
+                                          });
+                                          dialogSetState(() {});
+                                        }
+                                      }
+                                    },
+                                    child: Container(
+                                      padding: EdgeInsets.all(iconPadding),
+                                      child: Icon(Icons.swap_horiz, size: iconSize, color: Colors.orange),
+                                    ),
+                                  ),
+                                  // Remove bus button
+                                  GestureDetector(
+                                    onTap: () async {
+                                      final oldEvent = Event(
+                                        id: widget.event.id,
+                                        title: widget.event.title,
+                                        startDate: widget.event.startDate,
+                                        startTime: widget.event.startTime,
+                                        endDate: widget.event.endDate,
+                                        endTime: widget.event.endTime,
+                                        assignedDuties: widget.event.assignedDuties,
+                                        busAssignments: widget.event.busAssignments,
+                                        firstHalfBus: widget.event.firstHalfBus,
+                                        secondHalfBus: widget.event.secondHalfBus,
+                                        additionalBusesUsed: widget.event.additionalBusesUsed?.map((b) => b).toList(),
+                                        firstHalfAdditionalBuses: widget.event.firstHalfAdditionalBuses?.map((b) => b).toList(),
+                                        secondHalfAdditionalBuses: widget.event.secondHalfAdditionalBuses?.map((b) => b).toList(),
+                                        additionalBusesByDuty: widget.event.additionalBusesByDuty?.map((k, v) => MapEntry(k, List<String>.from(v))),
+                                      );
+                                      
+                                      // Use remove method to clear primary bus and breakdown history
+                                      widget.event.removeBusForSecondHalf();
+                                      await EventService.updateEvent(oldEvent, widget.event);
+                                      
+                                      if (mounted) {
+                                        setState(() {
+                                          _secondHalfBus = null;
+                                        });
+                                        // Also refresh the dialog
+                                        dialogSetState(() {});
+                                      }
+                                    },
+                                    child: Container(
+                                      padding: EdgeInsets.all(iconPadding),
+                                      child: Icon(Icons.remove_circle_outline, size: iconSize, color: Colors.red),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  const SizedBox(height: 8),
+                ],
+                
+                // Add bus buttons - only show when buses are not assigned
+                if (_firstHalfBus == null || _secondHalfBus == null) ...[
+                  if (_firstHalfBus == null)
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: () async {
+                          final result = await _showBusAssignmentDialog(context, 'First Half', _firstHalfBus);
+                          if (result != null) {
+                              final oldEvent = Event(
+                                id: widget.event.id,
+                                title: widget.event.title,
+                                startDate: widget.event.startDate,
+                                startTime: widget.event.startTime,
+                                endDate: widget.event.endDate,
+                                endTime: widget.event.endTime,
+                                assignedDuties: widget.event.assignedDuties,
+                                busAssignments: widget.event.busAssignments,
+                                firstHalfBus: widget.event.firstHalfBus,
+                                secondHalfBus: widget.event.secondHalfBus,
+                                additionalBusesUsed: widget.event.additionalBusesUsed?.map((b) => b).toList(),
+                                firstHalfAdditionalBuses: widget.event.firstHalfAdditionalBuses?.map((b) => b).toList(),
+                                secondHalfAdditionalBuses: widget.event.secondHalfAdditionalBuses?.map((b) => b).toList(),
+                                additionalBusesByDuty: widget.event.additionalBusesByDuty?.map((k, v) => MapEntry(k, List<String>.from(v))),
+                              );
+                              
+                              // Use change bus method to track breakdown buses (or assign if null)
+                              widget.event.firstHalfBus = result;
+                              await EventService.updateEvent(oldEvent, widget.event);
+                              
+                              if (mounted) {
+                                setState(() {
+                                  _firstHalfBus = result;
+                                });
+                                dialogSetState(() {});
+                              }
+                            }
+                          },
+                          icon: const Icon(Icons.directions_bus, size: 18),
+                          label: const Text('Add 1st Half Bus'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.primaryColor,
+                            foregroundColor: Colors.white,
+                          ),
+                        ),
+                      ),
+                  if (_firstHalfBus == null && _secondHalfBus == null)
+                    const SizedBox(height: 8),
+                  if (_secondHalfBus == null)
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: () async {
+                          final result = await _showBusAssignmentDialog(context, 'Second Half', _secondHalfBus);
+                          if (result != null) {
+                              final oldEvent = Event(
+                                id: widget.event.id,
+                                title: widget.event.title,
+                                startDate: widget.event.startDate,
+                                startTime: widget.event.startTime,
+                                endDate: widget.event.endDate,
+                                endTime: widget.event.endTime,
+                                assignedDuties: widget.event.assignedDuties,
+                                busAssignments: widget.event.busAssignments,
+                                firstHalfBus: widget.event.firstHalfBus,
+                                secondHalfBus: widget.event.secondHalfBus,
+                                additionalBusesUsed: widget.event.additionalBusesUsed?.map((b) => b).toList(),
+                                firstHalfAdditionalBuses: widget.event.firstHalfAdditionalBuses?.map((b) => b).toList(),
+                                secondHalfAdditionalBuses: widget.event.secondHalfAdditionalBuses?.map((b) => b).toList(),
+                                additionalBusesByDuty: widget.event.additionalBusesByDuty?.map((k, v) => MapEntry(k, List<String>.from(v))),
+                              );
+                              
+                              // Use change bus method to track breakdown buses (or assign if null)
+                              widget.event.secondHalfBus = result;
+                              await EventService.updateEvent(oldEvent, widget.event);
+                              
+                              if (mounted) {
+                                setState(() {
+                                  _secondHalfBus = result;
+                                });
+                                dialogSetState(() {});
+                              }
+                            }
+                          },
+                          icon: const Icon(Icons.directions_bus, size: 18),
+                          label: const Text('Add 2nd Half Bus'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.primaryColor,
+                            foregroundColor: Colors.white,
+                          ),
+                        ),
+                      ),
+                ],
+      ],
+    );
+  }
+
 
   /// Shared line box for icon+text [RichText] rows so Report / route / break share one size on screen.
   static const StrutStyle _detailIconRowStrut = StrutStyle(

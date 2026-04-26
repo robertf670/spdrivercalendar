@@ -1,4 +1,22 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '3.2.3': [
+    {
+      'title': 'M-F Universals/Euro Data',
+      'description': 'Updated weekday universals schedule from the latest sheet 27/04/26.',
+    },
+    {
+      'title': 'Fixed Spare Duty Workout Bus Assignments',
+      'description': 'Workout spare shifts now use one bus field instead of 1st and 2nd half.',
+    },
+    {
+      'title': 'Note Photos: Full Screen',
+      'description': 'Tap a note photo to view it full screen and zoom.',
+    },
+    {
+      'title': 'Bank holiday redundancy',
+      'description': 'Ability to make bank holidays redundant when adding a duty or on an existing duty.',
+    },
+  ],
   '3.2.2': [
     {
       'title': 'Duty Notes: Gallery Photos',

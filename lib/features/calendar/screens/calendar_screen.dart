@@ -57,6 +57,7 @@ import '../../../services/days_in_lieu_service.dart';
 import '../../../services/annual_leave_service.dart';
 import '../../../services/self_certified_sick_days_service.dart';
 import '../../../services/day_note_service.dart';
+import '../../../services/bank_holiday_redundant_day_service.dart';
 import '../dialogs/days_in_lieu_setup_dialog.dart';
 import '../dialogs/annual_leave_setup_dialog.dart';
 
@@ -221,8 +222,11 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
       }
     });
 
-    // Load day notes for the shift details card
+    // Load day notes and bank-holiday redundant (day-only) flags
     DayNoteService.loadDayNotes().then((_) {
+      if (mounted) setState(() {});
+    });
+    BankHolidayRedundantDayService.load().then((_) {
       if (mounted) setState(() {});
     });
 
@@ -759,6 +763,47 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                 ),
                 const SizedBox(height: 16),
                 const Text('What type of event would you like to add?'),
+                if (getBankHoliday(_selectedDay ?? DateTime.now()) != null) ...[
+                  const SizedBox(height: 12),
+                  const Divider(height: 1),
+                  const SizedBox(height: 8),
+                  StatefulBuilder(
+                    builder: (context, setDialog) {
+                      final d = _selectedDay ?? DateTime.now();
+                      final hasWork = getEventsForDay(d).any((e) => e.isWorkShift);
+                      final dayOnly = BankHolidayRedundantDayService.isMarked(d);
+                      if (hasWork) {
+                        return ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          isThreeLine: true,
+                          leading: Icon(
+                            Icons.info_outline,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                          title: const Text('Bank holiday redundant'),
+                          subtitle: const Text(
+                            'You have a work shift. Open the shift, then Edit, and use the "Bank holiday — redundant" switch on that event.',
+                            style: TextStyle(fontSize: 12),
+                          ),
+                        );
+                      }
+                      return SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('Bank holiday redundant (day off)'),
+                        subtitle: const Text(
+                          'No work shift in the app. Mark this bank holiday as redundant (off).',
+                          style: TextStyle(fontSize: 12),
+                        ),
+                        value: dayOnly,
+                        onChanged: (v) async {
+                          await BankHolidayRedundantDayService.setMarked(d, v);
+                          setDialog(() {});
+                          if (mounted) setState(() {});
+                        },
+                      );
+                    },
+                  ),
+                ],
               ],
             ),
           ),
@@ -3293,6 +3338,38 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                           _showSickDayStatusDialog(event);
                         },
                         child: const Text('Sick Day Status'),
+                      ),
+                    ],
+                    if (event.isWorkShift && getBankHoliday(event.startDate) != null) ...[
+                      const SizedBox(height: 12),
+                      StatefulBuilder(
+                        builder: (context, setDialogState) {
+                          final w = MediaQuery.sizeOf(context).width;
+                          return SwitchListTile(
+                            contentPadding: EdgeInsets.zero,
+                            title: Text(
+                              'Bank holiday — redundant',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: w < 350 ? 13.0 : 14.0,
+                              ),
+                            ),
+                            subtitle: Text(
+                              'Rostered on the bank holiday but off (not working)',
+                              style: TextStyle(fontSize: w < 350 ? 11.0 : 12.0),
+                            ),
+                            value: event.bankHolidayRedundant,
+                            onChanged: (v) async {
+                              final oldEvent = event.copyWith();
+                              event.bankHolidayRedundant = v;
+                              await EventService.updateEvent(oldEvent, event);
+                              setDialogState(() {});
+                              if (mounted) {
+                                setState(() {});
+                              }
+                            },
+                          );
+                        },
                       ),
                     ],
                   ],
@@ -6157,13 +6234,24 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                           if (_selectedDay != null && _startDate != null)
                             Padding(
                               padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
-                              child: ShiftDetailsCard(
-                                date: _selectedDay!,
-                                shift: getShiftForDate(_selectedDay!),
-                                shiftInfoMap: _shiftInfoMap,
-                                bankHoliday: getBankHoliday(_selectedDay!),
-                                hasDayNote: DayNoteService.hasNoteForDate(_selectedDay!),
-                                onShowDayNotes: () => _showDayNotesDialog(_selectedDay!),
+                              child: Builder(
+                                builder: (context) {
+                                  final d = _selectedDay!;
+                                  final bh = getBankHoliday(d);
+                                  final se = getEventsForDay(d);
+                                  final showRedundant = bh != null &&
+                                      (BankHolidayRedundantDayService.isMarked(d) ||
+                                          se.any((e) => e.isWorkShift && e.bankHolidayRedundant));
+                                  return ShiftDetailsCard(
+                                    date: d,
+                                    shift: getShiftForDate(d),
+                                    shiftInfoMap: _shiftInfoMap,
+                                    bankHoliday: bh,
+                                    hasDayNote: DayNoteService.hasNoteForDate(d),
+                                    onShowDayNotes: () => _showDayNotesDialog(d),
+                                    showBankHolidayRedundant: showRedundant,
+                                  );
+                                },
                               ),
                             ),
                           if (_selectedDay != null)
@@ -6456,6 +6544,11 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
     // Check if any events have notes or if there's a day note
     final hasNotes = events.any((event) => event.notes != null && event.notes!.trim().isNotEmpty) ||
         DayNoteService.hasNoteForDate(date);
+
+    // Bank holiday redundant: day-only mark and/or a work event flagged redundant
+    final hasBankHolidayRedundant = isBankHoliday &&
+        (BankHolidayRedundantDayService.isMarked(date) ||
+            events.any((e) => e.isWorkShift && e.bankHolidayRedundant));
     
     // Check for sick day events - priority over other colors
     final sickDayEvent = events.firstWhere(
@@ -6521,7 +6614,27 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                                 ? workoutColor
                                 : (shiftInfo?.color ?? Theme.of(context).primaryColor);
     
-    final cellContent = _buildDayCellContent(date, displayText, isDayInLieu, isHoliday, shift, hasEvents, hasSickDay, sickDayColor, dayInLieuColor, isUnpaidLeave, hasWfoEvent, wfoColor, shiftInfo, isSaturdayService, hasNotes, cellColor, badgeSizes, screenWidth);
+    final cellContent = _buildDayCellContent(
+      date,
+      displayText,
+      isDayInLieu,
+      isHoliday,
+      shift,
+      hasEvents,
+      hasSickDay,
+      sickDayColor,
+      dayInLieuColor,
+      isUnpaidLeave,
+      hasWfoEvent,
+      wfoColor,
+      shiftInfo,
+      isSaturdayService,
+      hasNotes,
+      hasBankHolidayRedundant,
+      cellColor,
+      badgeSizes,
+      screenWidth,
+    );
     
     // Determine border color for selected days
     final selectedBorderColor = isBankHoliday ? Colors.red : Theme.of(context).colorScheme.primary;
@@ -6560,7 +6673,27 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                       ),
                     ],
                   ),
-                  child: _buildDayCellContentWithWhiteText(date, displayText, isDayInLieu, isHoliday, shift, hasEvents, hasSickDay, sickDayColor, dayInLieuColor, isUnpaidLeave, hasWfoEvent, wfoColor, shiftInfo, isSaturdayService, hasNotes, cellColor, badgeSizes, screenWidth),
+                  child: _buildDayCellContentWithWhiteText(
+                    date,
+                    displayText,
+                    isDayInLieu,
+                    isHoliday,
+                    shift,
+                    hasEvents,
+                    hasSickDay,
+                    sickDayColor,
+                    dayInLieuColor,
+                    isUnpaidLeave,
+                    hasWfoEvent,
+                    wfoColor,
+                    shiftInfo,
+                    isSaturdayService,
+                    hasNotes,
+                    hasBankHolidayRedundant,
+                    cellColor,
+                    badgeSizes,
+                    screenWidth,
+                  ),
                 )
           : Container(
               margin: const EdgeInsets.all(4.0),
@@ -6601,6 +6734,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
     ShiftInfo? shiftInfo,
     bool isSaturdayService,
     bool hasNotes,
+    bool hasBankHolidayRedundant,
     Color cellColor,
     Map<String, double> badgeSizes,
     double screenWidth,
@@ -6704,6 +6838,20 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
               color: cellColor,
             ),
           ),
+        if (hasBankHolidayRedundant)
+          Positioned(
+            bottom: badgeSizes['top']!,
+            left: badgeSizes['left']!,
+            child: Container(
+              width: 7,
+              height: 7,
+              decoration: BoxDecoration(
+                color: Colors.amber.shade800,
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.white, width: 0.5),
+              ),
+            ),
+          ),
         // Event indicator positioned in bottom-right corner
         // Hidden when day is selected (filled circle mode)
       ],
@@ -6726,6 +6874,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
     ShiftInfo? shiftInfo,
     bool isSaturdayService,
     bool hasNotes,
+    bool hasBankHolidayRedundant,
     Color cellColor,
     Map<String, double> badgeSizes,
     double screenWidth,
@@ -6823,6 +6972,23 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
               Icons.note,
               size: badgeSizes['fontSize']! * 1.5,
               color: cellColor,
+            ),
+          ),
+        if (hasBankHolidayRedundant)
+          Positioned(
+            bottom: badgeSizes['top']!,
+            left: badgeSizes['left']!,
+            child: Container(
+              width: 7,
+              height: 7,
+              decoration: BoxDecoration(
+                color: Colors.amber.shade800,
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: Theme.of(context).colorScheme.onSurface,
+                  width: 0.5,
+                ),
+              ),
             ),
           ),
         // Event indicator positioned in bottom-right corner

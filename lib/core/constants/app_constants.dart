@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 class AppConstants {
   static const String appName = 'Spare Driver Shift Calendar';
-  static const String appVersion = '3.2.2';
+  static const String appVersion = '3.2.3';
   
   // Storage Keys
   static const String eventsStorageKey = 'events';
@@ -43,6 +43,9 @@ class AppConstants {
 
   // Bank holidays (persisted for home screen widget - JSON array of "yyyy-MM-dd" strings)
   static const String bankHolidayDatesKey = 'bankHolidayDates';
+
+  /// JSON array of ISO local date keys for "redundant (day off)" on bank holidays when no work shift.
+  static const String bankHolidayRedundantDaysKey = 'bank_holiday_redundant_days';
 
   // Pay Rate
   static const String spreadPayRateKey = 'spreadPayRate';

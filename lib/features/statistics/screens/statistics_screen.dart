@@ -1363,6 +1363,7 @@ class StatisticsScreenState extends State<StatisticsScreen>
             continue;
           }
           if (!event.isWorkShift) continue;
+          if (event.bankHolidayRedundant) continue;
           final bool countAsRestDayWorked = await _isRestDay(event.startDate);
           if (countAsRestDayWorked) {
             restDaysWorked++;
@@ -1425,6 +1426,10 @@ class StatisticsScreenState extends State<StatisticsScreen>
 
     if (!event.isWorkShift) {
 
+      return Duration.zero;
+    }
+
+    if (event.bankHolidayRedundant) {
       return Duration.zero;
     }
 
