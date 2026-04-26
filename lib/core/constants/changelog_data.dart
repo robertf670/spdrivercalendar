@@ -1,4 +1,14 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '3.2.4': [
+    {
+      'title': 'Event card: work time alignment',
+      'description': 'Work time is right-aligned again next to the duty title.',
+    },
+    {
+      'title': 'Day details card: bank holiday',
+      'description': 'Redundant matches duty chips; shift and bank holiday text align with the icons.',
+    },
+  ],
   '3.2.3': [
     {
       'title': 'M-F Universals/Euro Data',

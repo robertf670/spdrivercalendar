@@ -101,7 +101,9 @@ class ShiftDetailsCard extends StatelessWidget {
           children: [
             Text(
               shiftDisplayName,
-              style: Theme.of(context).textTheme.titleMedium,
+              style: Theme.of(context).textTheme.titleMedium!.copyWith(
+                    height: 1.2,
+                  ),
               maxLines: 3,
               overflow: TextOverflow.ellipsis,
             ),
@@ -130,28 +132,30 @@ class ShiftDetailsCard extends StatelessWidget {
         );
 
     Widget redundantChips() {
-      final b = badgeSizes;
+      final w = screenWidth;
+      // Match event card redundant chip (event_card.dart) for consistent look
       return Padding(
-        padding: EdgeInsets.only(top: b['spacing']! * 0.5),
+        padding: EdgeInsets.only(top: badgeSizes['spacing']! * 0.5),
         child: Wrap(
           spacing: 6,
           runSpacing: 4,
           children: [
             Container(
               padding: EdgeInsets.symmetric(
-                horizontal: b['paddingH']! * 0.6,
-                vertical: b['paddingV']! * 0.4,
+                horizontal: w < 380 ? 6.0 : 8.0,
+                vertical: 3.0,
               ),
+              margin: const EdgeInsets.only(left: 2),
               decoration: BoxDecoration(
                 color: Colors.amber.shade800,
-                borderRadius: BorderRadius.circular(b['radius']! * 0.5),
+                borderRadius: BorderRadius.circular(12.0),
               ),
               child: Text(
-                'Redundant (day off)',
-                style: TextStyle(
-                  fontSize: b['fontSize']!,
-                  fontWeight: FontWeight.w600,
+                w < 380 ? 'Redund.' : 'Redundant',
+                style: const TextStyle(
                   color: Colors.white,
+                  fontSize: 11.0,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
             ),
@@ -161,7 +165,7 @@ class ShiftDetailsCard extends StatelessWidget {
     }
 
     Widget bankHolidayRow() => Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Container(
               padding: const EdgeInsets.all(6),
@@ -175,7 +179,9 @@ class ShiftDetailsCard extends StatelessWidget {
             Expanded(
               child: Text(
                 bankHoliday!.name,
-                style: Theme.of(context).textTheme.bodyMedium,
+                style: Theme.of(context).textTheme.bodyMedium!.copyWith(
+                      height: 1.25,
+                    ),
                 maxLines: 3,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -207,7 +213,7 @@ class ShiftDetailsCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       shiftIconBlock(),
                       const SizedBox(width: 12),
@@ -228,7 +234,7 @@ class ShiftDetailsCard extends StatelessWidget {
                   Expanded(
                     flex: 3,
                     child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         shiftIconBlock(),
                         const SizedBox(width: 12),

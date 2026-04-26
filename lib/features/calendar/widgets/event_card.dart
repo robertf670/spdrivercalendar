@@ -359,7 +359,7 @@ class _EventCardState extends State<EventCard> {
                 startBreakLocation = breakStart;
                 finishBreakLocation = breakEnd;
               }
-              workTime = work.isNotEmpty ? work : null;
+              workTime = work.isNotEmpty ? _formatWorkDurationForDisplay(work) : null;
               _departTimeStr = departFormatted;
               _finishTimeStr = finishFormatted;
             });
@@ -672,7 +672,7 @@ class _EventCardState extends State<EventCard> {
           finishLocation = mappedFinishLocation;
           startBreakLocation = mappedStartBreakLocation;
           finishBreakLocation = mappedFinishBreakLocation;
-          workTime = workTimeStr;
+          workTime = _formatWorkDurationForDisplay(workTimeStr) ?? workTimeStr;
           routeInfo = null;
           _signoffTimeStr = signoffTimeStr;
           _reportTimeStr = reportTimeStr;
@@ -795,7 +795,7 @@ class _EventCardState extends State<EventCard> {
                 finishLocation = end;
                 startBreakLocation = breakStart;
                 finishBreakLocation = breakEnd;
-                workTime = work.isNotEmpty && work != 'nan' ? work : null;
+                workTime = work.isNotEmpty && work != 'nan' ? _formatWorkDurationForDisplay(work) : null;
                 routeInfo = route.isNotEmpty && route != 'nan' ? route : null;
                 _departTimeStr = reportFormatted;
                 _finishTimeStr = signoffFormatted;
@@ -1306,7 +1306,9 @@ class _EventCardState extends State<EventCard> {
                   'finishBreakLocation': mappedBreakEndLoc,
                   'breakStartTime': breakStartTime.isNotEmpty && breakStartTime.toLowerCase() != 'nan' && breakStartTime.toLowerCase() != 'workout' ? breakStartTime : null,
                   'breakEndTime': breakEndTime.isNotEmpty && breakEndTime.toLowerCase() != 'nan' && breakEndTime.toLowerCase() != 'workout' ? breakEndTime : null,
-                  'workTime': workTime.isNotEmpty && workTime.toLowerCase() != 'nan' ? workTime : null, // CSV work time (already has break subtracted)
+                  'workTime': workTime.isNotEmpty && workTime.toLowerCase() != 'nan'
+                      ? _formatWorkDurationForDisplay(workTime)
+                      : null, // CSV work time (already has break subtracted)
                   'location': mappedStartLocation.isNotEmpty && mappedEndLocation.isNotEmpty 
                               ? '$mappedStartLocation - $mappedEndLocation'
                               : mappedStartLocation.isNotEmpty 
@@ -1439,6 +1441,22 @@ class _EventCardState extends State<EventCard> {
     }
   }
   
+  /// CSV column 14 uses duration as H:MM:SS; UNI paths use "7h 5m". Unify for display.
+  String? _formatWorkDurationForDisplay(String? raw) {
+    if (raw == null) return null;
+    final s = raw.trim();
+    if (s.isEmpty || s.toLowerCase() == 'nan') return null;
+    if (!s.contains(':')) {
+      return s;
+    }
+    final parts = s.split(':');
+    if (parts.length < 2) return s;
+    final h = int.tryParse(parts[0].trim());
+    final m = int.tryParse(parts[1].trim());
+    if (h == null || m == null) return s;
+    return '${h}h ${m}m';
+  }
+
   // Helper method to parse time strings
   DateTime _parseTimeFromString(String timeStr) {
     try {
@@ -1710,15 +1728,17 @@ class _EventCardState extends State<EventCard> {
                   Expanded(
                     child: _buildTitleWithRoute(),
                   ),
-                  // Badges + notes wrap on narrow screens (avoids overflow when BH + Redundant + WFO, etc.)
+                  // Badges + notes wrap on narrow screens; Align right-justifies (loose Flexible shrinks Wrap width).
                   Flexible(
                     fit: FlexFit.loose,
-                    child: Wrap(
-                      alignment: WrapAlignment.end,
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      spacing: 4,
-                      runSpacing: 4,
-                      children: [
+                    child: Align(
+                      alignment: Alignment.topRight,
+                      child: Wrap(
+                        alignment: WrapAlignment.end,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        spacing: 4,
+                        runSpacing: 4,
+                        children: [
                         // On larger screens, show work time inline
                         if (workTime != null && !widget.event.title.contains('(OT)') && showWorkTimeInline) ...[
                           Text(
@@ -1861,6 +1881,7 @@ class _EventCardState extends State<EventCard> {
                             ),
                         ],
                       ],
+                    ),
                     ),
                   ),
                 ],
@@ -3596,16 +3617,9 @@ class _EventCardState extends State<EventCard> {
       
       // First, try to use workTime from CSV (column 14) - this already has break subtracted
       if (duty['workTime'] != null && duty['workTime']!.toString().isNotEmpty) {
-        try {
-          final workTimeStr = duty['workTime']!.toString();
-          final timeParts = workTimeStr.split(':');
-          if (timeParts.length >= 2) {
-            final hours = int.parse(timeParts[0]);
-            final minutes = int.parse(timeParts[1]);
-            workDuration = '${hours}h ${minutes}m';
-          }
-        } catch (e) {
-          // Failed to parse CSV workTime, fall through to calculation
+        final formatted = _formatWorkDurationForDisplay(duty['workTime']!.toString());
+        if (formatted != null && formatted.isNotEmpty) {
+          workDuration = formatted;
         }
       }
       
@@ -3678,6 +3692,7 @@ class _EventCardState extends State<EventCard> {
               const SizedBox(width: 8),
               Expanded(
                 child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Expanded(

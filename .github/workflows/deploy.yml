@@ -114,6 +114,8 @@ jobs:
       - name: Deploy to Vercel
         uses: amondnet/vercel-action@v25
         with:
+          # API requires 47.2.2+ (default npx vercel@25.1.0 in the action is too old)
+          vercel-version: 47.2.2
           vercel-token: ${{ secrets.VERCEL_TOKEN }}
           vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
           vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
