@@ -1,5 +1,9 @@
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:intl/intl.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:spdrivercalendar/models/event.dart';
 import 'package:spdrivercalendar/models/shift_info.dart';
 import 'package:spdrivercalendar/theme/app_theme.dart';
@@ -70,6 +74,78 @@ class _EventCardState extends State<EventCard> {
 
   /// Prevents repeated load/save of location data (fixes loop when clicking a duty)
   String? _loadedLocationForEventId;
+
+  final GlobalKey _shareCardRepaintKey = GlobalKey();
+
+  Future<void> _shareEventCardImage(BuildContext context) async {
+    try {
+      // toImage() requires this frame (and any ink splash from the tap) to have painted.
+      // Otherwise debug fails: !debugNeedsPaint (proxy_box RepaintBoundary).
+      await WidgetsBinding.instance.endOfFrame;
+      if (!context.mounted) return;
+      await WidgetsBinding.instance.endOfFrame;
+      if (!context.mounted) return;
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      if (!context.mounted) return;
+
+      final boundary =
+          _shareCardRepaintKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+      if (boundary == null || !boundary.hasSize) {
+        if (context.mounted) {
+          ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+            const SnackBar(content: Text('Could not capture this card yet.')),
+          );
+        }
+        return;
+      }
+
+      final pixelRatio = MediaQuery.devicePixelRatioOf(context).clamp(1.0, 3.0);
+      final image = await boundary.toImage(pixelRatio: pixelRatio);
+      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      image.dispose();
+
+      if (byteData == null) {
+        if (context.mounted) {
+          ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+            const SnackBar(content: Text('Could not create image.')),
+          );
+        }
+        return;
+      }
+
+      final bytes = byteData.buffer.asUint8List();
+      final fileName = _shareCaptureFileName();
+
+      await Share.shareXFiles(
+        [
+          XFile.fromData(
+            bytes,
+            mimeType: 'image/png',
+            name: fileName,
+          ),
+        ],
+        subject: widget.event.title,
+      );
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+          SnackBar(content: Text('Share failed: $e')),
+        );
+      }
+    }
+  }
+
+  String _shareCaptureFileName() {
+    var safe = widget.event.title.replaceAll(RegExp(r'[/\\:*?"<>|]'), '_');
+    safe = safe.replaceAll(RegExp(r'\s+'), '_');
+    if (safe.length > 80) {
+      safe = safe.substring(0, 80);
+    }
+    if (safe.isEmpty) {
+      safe = 'shift';
+    }
+    return 'shift_$safe.png';
+  }
 
   @override
   void initState() {
@@ -1559,14 +1635,19 @@ class _EventCardState extends State<EventCard> {
           ? Theme.of(context).colorScheme.onSurface
           : holidayColor[700];
 
-      return Card(
-        elevation: 2,
-        margin: const EdgeInsets.symmetric(vertical: 8.0),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppTheme.borderRadius),
-        ),
-        color: cardBgColor,
-        child: Padding(
+      final double holidayShareIconSize =
+          MediaQuery.sizeOf(context).width < 350 ? 16.0 : 18.0;
+
+      return RepaintBoundary(
+        key: _shareCardRepaintKey,
+        child: Card(
+          elevation: 2,
+          margin: const EdgeInsets.symmetric(vertical: 8.0),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppTheme.borderRadius),
+          ),
+          color: cardBgColor,
+          child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Row(
             children: [
@@ -1629,8 +1710,24 @@ class _EventCardState extends State<EventCard> {
                   ),
                 ),
               ),
+              Padding(
+                padding: const EdgeInsets.only(left: 4.0),
+                child: InkWell(
+                  onTap: () => _shareEventCardImage(context),
+                  borderRadius: BorderRadius.circular(12),
+                  child: Padding(
+                    padding: const EdgeInsets.all(4.0),
+                    child: Icon(
+                      Icons.share_outlined,
+                      size: holidayShareIconSize,
+                      color: isDark ? Colors.white70 : holidayColor[600],
+                    ),
+                  ),
+                ),
+              ),
             ],
           ),
+        ),
         ),
       );
     }
@@ -1697,17 +1794,19 @@ class _EventCardState extends State<EventCard> {
     final bool showWorkTimeInline =
         screenWidth >= 360 && textScaleFactor <= 1.25;
     
-    return Card(
-      elevation: 2,
-      margin: const EdgeInsets.symmetric(vertical: 8.0),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppTheme.borderRadius),
-        side: widget.isBankHoliday
-            ? const BorderSide(color: AppTheme.errorColor, width: 1.5)
-            : BorderSide.none,
-      ),
-      color: cardColor,
-      child: InkWell(
+    return RepaintBoundary(
+      key: _shareCardRepaintKey,
+      child: Card(
+        elevation: 2,
+        margin: const EdgeInsets.symmetric(vertical: 8.0),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppTheme.borderRadius),
+          side: widget.isBankHoliday
+              ? const BorderSide(color: AppTheme.errorColor, width: 1.5)
+              : BorderSide.none,
+        ),
+        color: cardColor,
+        child: InkWell(
         onTap: () {
           // Check if it's a Spare shift
           if (isSpareShift) {
@@ -1792,6 +1891,23 @@ class _EventCardState extends State<EventCard> {
                                       ),
                                     ),
                                 ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.only(left: 4.0),
+                          child: InkWell(
+                            onTap: () => _shareEventCardImage(context),
+                            borderRadius: BorderRadius.circular(12),
+                            child: Padding(
+                              padding: const EdgeInsets.all(4.0),
+                              child: Icon(
+                                Icons.share_outlined,
+                                size: screenWidth < 350 ? 16.0 : 18.0,
+                                color: Theme.of(context).brightness == Brightness.dark
+                                    ? Colors.white70
+                                    : Colors.black54,
                               ),
                             ),
                           ),
@@ -2430,6 +2546,7 @@ class _EventCardState extends State<EventCard> {
             ],
           ),
         ),
+      ),
       ),
     );
   }

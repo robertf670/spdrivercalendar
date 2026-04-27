@@ -1,4 +1,11 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '3.2.5': [
+    {
+      'title': 'Share Event Card',
+      'description':
+          'Share button on event and holiday cards exports an image of the card via the system share sheet (or download on some browsers).',
+    },
+  ],
   '3.2.4': [
     {
       'title': 'Event card: work time alignment',
