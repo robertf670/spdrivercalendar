@@ -26,6 +26,7 @@ import 'package:spdrivercalendar/calendar_test_helper.dart';
 import 'package:spdrivercalendar/google_calendar_service.dart';
 import 'package:flutter/services.dart'; // For rootBundle
 import 'package:spdrivercalendar/features/calendar/services/shift_service.dart';
+import 'package:spdrivercalendar/services/jamestown_feature_service.dart';
 
 import 'package:spdrivercalendar/services/rest_days_service.dart';
 import 'package:spdrivercalendar/services/rest_day_swap_service.dart';
@@ -896,6 +897,8 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
       isShiftMarkedIn = false;
       markedInZone = '';
     }
+
+    final jamestownEnabled = await JamestownFeatureService.isEnabled();
     
     // Check if widget is still mounted after async operations
     if (!mounted) return;
@@ -1093,6 +1096,12 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                 } catch (e) {
                   shiftNumbers = [];
                 }
+              } else if (selectedZone == JamestownFeatureService.zoneLabel) {
+                if (dayOfWeek == 'Saturday' || dayOfWeek == 'Sunday') {
+                  shiftNumbers = [];
+                } else {
+                  shiftNumbers = await JamestownFeatureService.load30HrShiftCodes();
+                }
               } else if (selectedZone == 'Jamestown Road') {
                 // Only allow Monday-Friday for Jamestown Road shifts
                 if (dayOfWeek == 'Saturday' || dayOfWeek == 'Sunday') {
@@ -1266,6 +1275,10 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                     
                     zones.add('Union');
                     zones.add('Mentor');
+
+                    if (jamestownEnabled) {
+                      zones.add(JamestownFeatureService.zoneLabel);
+                    }
                     
                     return zones;
                   }().map((zone) {
@@ -1431,10 +1444,16 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                   builder: (context) {
                     final dayOfWeek = RosterService.getDayOfWeek(shiftDate);
                     final isWeekend = dayOfWeek == 'Saturday' || dayOfWeek == 'Sunday';
-                    // Shift: require zone match. M-F: show for any Zone 1-4 duty (zone is pre-selected from Settings)
+                    // Shift: require zone match. M-F: show for any Zone 1-4 or Jamestown duty (zone is pre-selected from Settings)
+                    final isJamestownZone = selectedZone == JamestownFeatureService.zoneLabel;
+                    final isRepeatableDutyZone = selectedZone == 'Zone 1' ||
+                        selectedZone == 'Zone 2' ||
+                        selectedZone == 'Zone 3' ||
+                        selectedZone == 'Zone 4' ||
+                        (isJamestownZone && jamestownEnabled);
                     final zoneMatch = isShiftMarkedIn ? (selectedZone == markedInZone) : true;
                     final shouldShowRepeatCheckbox = (isShiftMarkedIn || isMFMarkedIn) &&
-                        (selectedZone == 'Zone 1' || selectedZone == 'Zone 2' || selectedZone == 'Zone 3' || selectedZone == 'Zone 4') &&
+                        isRepeatableDutyZone &&
                         zoneMatch &&
                         !isWeekend;
                     if (shouldShowRepeatCheckbox) {
@@ -1663,8 +1682,9 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                         title = selectedShiftNumber;
                       } else if (selectedZone == 'Bus Check') { // ADDED: Set title for Bus Check
                         title = selectedShiftNumber; // Use the selected duty name (e.g., BusCheck1)
-                      } else if (selectedZone == 'Jamestown Road') {
-                        title = selectedShiftNumber; // Use the shift code (e.g., 811/01)
+                      } else if (selectedZone == JamestownFeatureService.zoneLabel ||
+                          selectedZone == 'Jamestown Road') {
+                        title = selectedShiftNumber; // Use the shift code (e.g., 811/36)
                       } else if (selectedZone == 'Training') {
                         title = selectedShiftNumber; // Use the training code (e.g., CPC)
                       } else {
@@ -1720,8 +1740,8 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                             'endTime': const TimeOfDay(hour: 12, minute: 38),
                           };
                         }
-                      } else if (selectedZone == 'Jamestown Road') {
-                        // For Jamestown Road, load from CSV
+                      } else if (selectedZone == JamestownFeatureService.zoneLabel ||
+                          selectedZone == 'Jamestown Road') {
                         shiftTimes = await _getShiftTimes(selectedZone, selectedShiftNumber, shiftDate);
                       } else if (selectedZone == 'Training') {
                         // For Training, load from training_duties.csv
@@ -1833,9 +1853,19 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                       }
                       
                       // If repeat duty this week is checked for marked-in zone users (Shift or M-F), create events for selected days
-                      if (repeatDutyThisWeek && (isShiftMarkedIn || isMFMarkedIn) &&
-                          (selectedZone == 'Zone 1' || selectedZone == 'Zone 2' || selectedZone == 'Zone 3' || selectedZone == 'Zone 4') &&
-                          selectedZone == markedInZone) {
+                      final isJamestownRepeatZone =
+                          selectedZone == JamestownFeatureService.zoneLabel;
+                      final isRepeatableDutyZone = selectedZone == 'Zone 1' ||
+                          selectedZone == 'Zone 2' ||
+                          selectedZone == 'Zone 3' ||
+                          selectedZone == 'Zone 4' ||
+                          (isJamestownRepeatZone && jamestownEnabled);
+                      final zoneMatchesMarkedIn = selectedZone == markedInZone ||
+                          (isMFMarkedIn && isJamestownRepeatZone && jamestownEnabled);
+                      if (repeatDutyThisWeek &&
+                          (isShiftMarkedIn || isMFMarkedIn) &&
+                          isRepeatableDutyZone &&
+                          zoneMatchesMarkedIn) {
                         // Get the start of the week (Sunday)
                         final weekday = shiftDate.weekday; // 1=Monday, 7=Sunday
                         // Calculate days to subtract to get to Sunday (weekday 7)
@@ -1869,7 +1899,11 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                           
                           // Get shift times for this day (may differ for different days)
                           Map<String, dynamic>? targetShiftTimes;
-                          if (selectedZone == 'Zone 1' || selectedZone == 'Zone 2' || selectedZone == 'Zone 3' || selectedZone == 'Zone 4') {
+                          if (selectedZone == 'Zone 1' ||
+                              selectedZone == 'Zone 2' ||
+                              selectedZone == 'Zone 3' ||
+                              selectedZone == 'Zone 4' ||
+                              selectedZone == JamestownFeatureService.zoneLabel) {
                             targetShiftTimes = await _getShiftTimes(selectedZone, selectedShiftNumber, targetDate);
                           }
                           
@@ -2561,8 +2595,10 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
       } else { // Monday - Friday
         currentDayType = 'MF'; 
       }
+    } else if (zone == JamestownFeatureService.zoneLabel) {
+      csvPath = JamestownFeatureService.duties30HrCsvAsset;
     } else if (zone == 'Jamestown Road') {
-      csvPath = 'assets/JAMESTOWN_DUTIES.csv';
+      csvPath = JamestownFeatureService.dutiesMainCsvAsset;
       // Jamestown Road only works Monday-Friday
     } else if (zone == 'Training') {
       csvPath = 'assets/training_duties.csv';
@@ -2715,8 +2751,8 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
             }
           }
         }
-        // === Handle Jamestown Road CSV format ===
-        else if (zone == 'Jamestown Road') {
+        // === Handle Jamestown CSV format ===
+        else if (zone == JamestownFeatureService.zoneLabel || zone == 'Jamestown Road') {
           // Expecting format: shift,duty,report,depart,location,startbreak,startbreaklocation,breakreport,finishbreak,finishbreaklocation,finish,finishlocation,signoff,spread,work,relief,route
           if (parts.length >= 17) {
             final csvShiftCode = parts[0].trim();
@@ -6541,8 +6577,8 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
         _workoutDates!.contains(DateTime(date.year, date.month, date.day));
     final workoutColor = ColorCustomizationService.getColorForShift('WORKOUT');
     
-    // Check if any events have notes or if there's a day note
-    final hasNotes = events.any((event) => event.notes != null && event.notes!.trim().isNotEmpty) ||
+    // Check if any events have notes (text and/or images) or if there's a day note
+    final hasNotes = events.any((event) => event.hasNoteContent) ||
         DayNoteService.hasNoteForDate(date);
 
     // Bank holiday redundant: day-only mark and/or a work event flagged redundant

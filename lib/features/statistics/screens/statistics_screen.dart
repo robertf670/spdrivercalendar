@@ -10,6 +10,7 @@ import 'package:spdrivercalendar/features/calendar/services/holiday_service.dart
 import 'package:spdrivercalendar/models/holiday.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:spdrivercalendar/theme/app_theme.dart';
+import 'package:spdrivercalendar/services/jamestown_feature_service.dart';
 
 // Import the new widgets
 import '../widgets/frequency_chart.dart';
@@ -1661,55 +1662,50 @@ class StatisticsScreenState extends State<StatisticsScreen>
   // --- ADD HELPER FUNCTION for loading Jamestown work time ---
   Future<Duration?> _loadJamestownWorkTime(String shiftCode) async {
     try {
-      // Check cache first
-      const fileName = 'JAMESTOWN_DUTIES.csv';
-      if (_csvWorkTimeCache.containsKey(fileName)) {
-        final cachedFile = _csvWorkTimeCache[fileName]!;
+      const cacheKey = 'JAMESTOWN_DUTIES';
+      if (_csvWorkTimeCache.containsKey(cacheKey)) {
+        final cachedFile = _csvWorkTimeCache[cacheKey]!;
         if (cachedFile.containsKey(shiftCode)) {
           return cachedFile[shiftCode];
         }
       }
 
-      // Load and parse JAMESTOWN_DUTIES.csv
-      final csvData = await rootBundle.loadString('assets/$fileName');
-      final lines = csvData.split('\n');
       final Map<String, Duration> parsedDurations = {};
 
-      // Skip header line and process data
-      for (int i = 1; i < lines.length; i++) {
-        final line = lines[i].trim().replaceAll('\r', '');
-        if (line.isEmpty) continue;
-        
-        final parts = line.split(',');
-        // Expected format: shift,duty,report,depart,location,startbreak,startbreaklocation,breakreport,finishbreak,finishbreaklocation,finish,finishlocation,signoff,spread,work,relief,route
-        if (parts.length >= 15) {
-          final currentShiftCode = parts[0].trim();
-          final workTimeStr = parts[14].trim(); // work column
-          
-          if (workTimeStr.isNotEmpty && workTimeStr.toLowerCase() != 'nan') {
-            // Parse work time in HH:MM format
-            final timeParts = workTimeStr.split(':');
-            if (timeParts.length >= 2) {
-              try {
-                final hours = int.parse(timeParts[0]);
-                final minutes = int.parse(timeParts[1]);
-                final duration = Duration(hours: hours, minutes: minutes);
-                parsedDurations[currentShiftCode] = duration;
-              } catch (e) {
-                // Failed to parse work time for shift
+      for (final assetPath in JamestownFeatureService.csvSearchOrder) {
+        final csvData = await rootBundle.loadString(assetPath);
+        final lines = csvData.split('\n');
+
+        for (int i = 1; i < lines.length; i++) {
+          final line = lines[i].trim().replaceAll('\r', '');
+          if (line.isEmpty) continue;
+
+          final parts = line.split(',');
+          if (parts.length >= 15) {
+            final currentShiftCode = parts[0].trim();
+            if (parsedDurations.containsKey(currentShiftCode)) continue;
+
+            final workTimeStr = parts[14].trim();
+            if (workTimeStr.isNotEmpty && workTimeStr.toLowerCase() != 'nan') {
+              final timeParts = workTimeStr.split(':');
+              if (timeParts.length >= 2) {
+                try {
+                  final hours = int.parse(timeParts[0]);
+                  final minutes = int.parse(timeParts[1]);
+                  parsedDurations[currentShiftCode] =
+                      Duration(hours: hours, minutes: minutes);
+                } catch (e) {
+                  // Failed to parse work time for shift
+                }
               }
             }
           }
         }
       }
 
-      // Cache the parsed data
-      _csvWorkTimeCache[fileName] = parsedDurations;
-
-      // Return the duration for the requested shift
+      _csvWorkTimeCache[cacheKey] = parsedDurations;
       return parsedDurations[shiftCode];
     } catch (e) {
-      // Failed to load Jamestown work time CSV
       return null;
     }
   }

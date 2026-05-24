@@ -1,4 +1,23 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '3.2.7': [
+    {
+      'title': 'M-F PZ4/32 times',
+      'description':
+          'Corrected times for M-F duty PZ4/32.',
+    },
+    {
+      'title': 'Share event card contrast',
+      'description':
+          'Fixed shared duty card images showing dark text on a dark background on some devices.',
+    },
+  ],
+  '3.2.6': [
+    {
+      'title': 'Calendar: note icon for image-only duty notes',
+      'description':
+          'Day cells show the note badge when a duty has gallery images but no text, matching event cards.',
+    },
+  ],
   '3.2.5': [
     {
       'title': 'Share Event Card',

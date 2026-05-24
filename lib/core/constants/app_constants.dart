@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 class AppConstants {
   static const String appName = 'Spare Driver Shift Calendar';
-  static const String appVersion = '3.2.5';
+  static const String appVersion = '3.2.7';
   
   // Storage Keys
   static const String eventsStorageKey = 'events';
@@ -64,6 +64,10 @@ class AppConstants {
 
   // Admin Panel
   static const String adminRememberDeviceKey = 'adminRememberDevice';
+
+  // Secret Jamestown duties (password-unlock in Settings)
+  static const String jamestownEnabledKey = 'jamestownEnabled';
+  static const String jamestownUnlockedKey = 'jamestownUnlocked';
 
   // PWA Web Access (Web only)
   static const String workAccessGrantedKey = 'workAccessGranted';

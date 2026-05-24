@@ -18,6 +18,7 @@ import 'package:spdrivercalendar/services/color_customization_service.dart';
 import 'package:spdrivercalendar/core/services/storage_service.dart';
 import 'package:spdrivercalendar/core/constants/app_constants.dart';
 import 'package:spdrivercalendar/services/self_certified_sick_days_service.dart';
+import 'package:spdrivercalendar/services/jamestown_feature_service.dart';
 
 class EventCard extends StatefulWidget {
   final Event event;
@@ -145,6 +146,19 @@ class _EventCardState extends State<EventCard> {
       safe = 'shift';
     }
     return 'shift_$safe.png';
+  }
+
+  /// Blends a translucent card tint over the scaffold so share capture matches on-screen.
+  Color _opaqueShareCardColor(Color cardColor) {
+    return Color.alphaBlend(cardColor, Theme.of(context).scaffoldBackgroundColor);
+  }
+
+  /// RepaintBoundary capture has no parent backdrop; semi-transparent cards composite to black without this.
+  Widget _shareCaptureShell({required Widget child}) {
+    return ColoredBox(
+      color: Theme.of(context).scaffoldBackgroundColor,
+      child: child,
+    );
   }
 
   @override
@@ -498,6 +512,10 @@ class _EventCardState extends State<EventCard> {
       return;
     }
 
+    if (widget.event.title.startsWith('811/')) {
+      return;
+    }
+
     try {
       final shiftCode = widget.event.title.replaceAll('Shift: ', '').trim();
       final routeData = await RouteService.getRouteInfo(shiftCode, widget.event.startDate);
@@ -811,26 +829,13 @@ class _EventCardState extends State<EventCard> {
   // Helper method to load data for Jamestown Road shifts
   Future<void> _loadJamestownShiftData(String shiftCode) async {
     try {
-      
-      // Load the Jamestown CSV file
-      final file = await rootBundle.loadString('assets/JAMESTOWN_DUTIES.csv');
-      final lines = file.split('\n');
-      
-      // Find the matching shift
-      for (int i = 1; i < lines.length; i++) { // Skip header line
-        final line = lines[i].trim();
-        if (line.isEmpty) continue;
-        final parts = line.split(',');
-        
-        // Expecting format: shift,duty,report,depart,location,startbreak,startbreaklocation,breakreport,finishbreak,finishbreaklocation,finish,finishlocation,signoff,spread,work,relief,route
-        if (parts.length >= 17) {
-          final shift = parts[0].trim();
-          if (shift == shiftCode) {
+      final parts = await JamestownFeatureService.findShiftCsvParts(shiftCode);
+      if (parts != null && parts.length >= 17) {
             // Found matching shift, extract location and time data
             final reportLocation = parts[4].trim(); // location column
             final finishLoc = parts[11].trim(); // finishlocation column
-            final reportTimeRaw = parts[2].trim(); // report column (to match other duties)
-            final signoffTimeRaw = parts[12].trim(); // signoff column (to match other duties)
+            final departTimeRaw = parts[3].trim(); // depart column for route row
+            final finishTimeRaw = parts[10].trim(); // finish column for route row
             
             // Get break information
             final breakStartTime = parts[5].trim(); // startbreak column
@@ -854,8 +859,8 @@ class _EventCardState extends State<EventCard> {
             // Format locations for display
             final start = reportLocation.isNotEmpty && reportLocation != 'nan' ? mapLocationName(reportLocation) : '';
             final end = finishLoc.isNotEmpty && finishLoc != 'nan' ? mapLocationName(finishLoc) : '';
-            final reportFormatted = _formatTimeWithoutSeconds(reportTimeRaw);
-            final signoffFormatted = _formatTimeWithoutSeconds(signoffTimeRaw);
+            final departFormatted = _formatTimeWithoutSeconds(departTimeRaw);
+            final finishFormatted = _formatTimeWithoutSeconds(finishTimeRaw);
             
             // Format break locations only if not a workout
             String? breakStart;
@@ -872,14 +877,13 @@ class _EventCardState extends State<EventCard> {
                 startBreakLocation = breakStart;
                 finishBreakLocation = breakEnd;
                 workTime = work.isNotEmpty && work != 'nan' ? _formatWorkDurationForDisplay(work) : null;
-                routeInfo = route.isNotEmpty && route != 'nan' ? route : null;
-                _departTimeStr = reportFormatted;
-                _finishTimeStr = signoffFormatted;
+                dutyRouteInfo = _formatJamestownRouteForDisplay(route);
+                routeInfo = null;
+                _departTimeStr = departFormatted;
+                _finishTimeStr = finishFormatted;
               });
             }
             return;
-          }
-        }
       }
       
       // If no match found, set to defaults
@@ -891,6 +895,7 @@ class _EventCardState extends State<EventCard> {
           finishBreakLocation = null;
           workTime = null;
           routeInfo = null;
+          dutyRouteInfo = null;
         });
       }
     } catch (e) {
@@ -903,6 +908,7 @@ class _EventCardState extends State<EventCard> {
           finishBreakLocation = null;
           workTime = null;
           routeInfo = null;
+          dutyRouteInfo = null;
         });
       }
     }
@@ -1628,9 +1634,9 @@ class _EventCardState extends State<EventCard> {
 
       // Use theme-aware colors: light mode = light tint + dark text; dark mode = muted tint to match calendar cells
       final isDark = Theme.of(context).brightness == Brightness.dark;
-      final cardBgColor = isDark
+      final Color cardBgColor = isDark
           ? (holidayColor.shade500).withValues(alpha: 0.15)
-          : holidayColor[100];
+          : (holidayColor[100] ?? holidayColor.shade100);
       final textColor = isDark
           ? Theme.of(context).colorScheme.onSurface
           : holidayColor[700];
@@ -1640,19 +1646,20 @@ class _EventCardState extends State<EventCard> {
 
       return RepaintBoundary(
         key: _shareCardRepaintKey,
-        child: Card(
-          elevation: 2,
-          margin: const EdgeInsets.symmetric(vertical: 8.0),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppTheme.borderRadius),
-          ),
-          color: cardBgColor,
-          child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Row(
-            children: [
-              Icon(
-                holidayIcon,
+        child: _shareCaptureShell(
+          child: Card(
+            elevation: 2,
+            margin: const EdgeInsets.symmetric(vertical: 8.0),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppTheme.borderRadius),
+            ),
+            color: _opaqueShareCardColor(cardBgColor),
+            child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Row(
+              children: [
+                Icon(
+                  holidayIcon,
                 color: isDark ? holidayColor.shade300 : holidayColor,
                 size: 24,
               ),
@@ -1728,6 +1735,7 @@ class _EventCardState extends State<EventCard> {
             ],
           ),
         ),
+          ),
         ),
       );
     }
@@ -1796,17 +1804,18 @@ class _EventCardState extends State<EventCard> {
     
     return RepaintBoundary(
       key: _shareCardRepaintKey,
-      child: Card(
-        elevation: 2,
-        margin: const EdgeInsets.symmetric(vertical: 8.0),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppTheme.borderRadius),
-          side: widget.isBankHoliday
-              ? const BorderSide(color: AppTheme.errorColor, width: 1.5)
-              : BorderSide.none,
-        ),
-        color: cardColor,
-        child: InkWell(
+      child: _shareCaptureShell(
+        child: Card(
+          elevation: 2,
+          margin: const EdgeInsets.symmetric(vertical: 8.0),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppTheme.borderRadius),
+            side: widget.isBankHoliday
+                ? const BorderSide(color: AppTheme.errorColor, width: 1.5)
+                : BorderSide.none,
+          ),
+          color: _opaqueShareCardColor(cardColor),
+          child: InkWell(
         onTap: () {
           // Check if it's a Spare shift
           if (isSpareShift) {
@@ -2253,38 +2262,7 @@ class _EventCardState extends State<EventCard> {
                   ],
                   ),
                 ),
-                // Add gap after break times if this is NOT a Jamestown shift (Jamestown gets gap from route section)
-                if (!widget.event.title.startsWith('811/'))
-                  const SizedBox(height: 8.0), // Consistent gap after break times
-              ],
-              // JAMESTOWN ROAD: Route information (if available for Jamestown Road shifts only)
-              if (routeInfo != null && widget.event.title.startsWith('811/')) ...[
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(
-                      Icons.route_outlined,
-                      size: 16,
-                      color: Theme.of(context).brightness == Brightness.dark
-                          ? Colors.white
-                          : Colors.black,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child:                       Text(
-                        'Routes: $routeInfo',
-                        style: TextStyle(
-                          color: Theme.of(context).brightness == Brightness.dark
-                              ? Colors.white
-                              : Colors.black,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w400, // Match date styling for administrative/reference info
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8.0), // Larger gap before assignment section
+                const SizedBox(height: 8.0), // Consistent gap after break times
               ],
               // Show assigned duty details if available
               if (widget.event.assignedDuties != null && widget.event.assignedDuties!.isNotEmpty) ...[
@@ -2547,6 +2525,7 @@ class _EventCardState extends State<EventCard> {
           ),
         ),
       ),
+        ),
       ),
     );
   }
@@ -4286,9 +4265,10 @@ class _EventCardState extends State<EventCard> {
     final int titleMaxLines =
         MediaQuery.textScalerOf(context).scale(1.0) > 1.15 ? 4 : 2;
     
-   // For PZ1, PZ2, PZ4, and Universal/Euro duties, show route on a separate line
+   // For PZ, Jamestown (811/xx), and Universal/Euro duties, show route on a separate line
     if ((widget.event.title.startsWith('PZ1/') || widget.event.title.startsWith('PZ2/') ||
          widget.event.title.startsWith('PZ3/') || widget.event.title.startsWith('PZ4/') ||
+         widget.event.title.startsWith('811/') ||
          RegExp(r'^\d+/').hasMatch(widget.event.title)) &&
         dutyRouteInfo != null && dutyRouteInfo!.isNotEmpty) {
       return Column(
@@ -4382,6 +4362,25 @@ class _EventCardState extends State<EventCard> {
   }
 
   // Add helper function to format the title without route info
+  String _formatJamestownRouteForDisplay(String route) {
+    final trimmed = route.trim();
+    if (trimmed.isEmpty || trimmed.toLowerCase() == 'nan') {
+      return '';
+    }
+    final parts = trimmed
+        .split('/')
+        .map((part) => part.trim())
+        .where((part) => part.isNotEmpty)
+        .toList();
+    if (parts.isEmpty) {
+      return '';
+    }
+    if (parts.length == 1) {
+      return parts.first;
+    }
+    return parts.join(' • ');
+  }
+
   String _formatDisplayTitleWithoutRoute(String title) {
     String formattedTitle = title;
     
@@ -4394,10 +4393,6 @@ class _EventCardState extends State<EventCard> {
             formattedTitle = 'Bus Check $numberPart';
         }
       }
-    }
-    // Check for Jamestown Road shifts (format: 811/xx)
-    else if (title.startsWith('811/')) {
-      formattedTitle = '$title - Jamestown';
     }
     // Note: Route information for PZ1/PZ4 duties is handled separately in _buildTitleWithRoute
     

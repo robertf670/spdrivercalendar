@@ -5,6 +5,7 @@ import 'package:spdrivercalendar/features/calendar/services/roster_service.dart'
 import 'package:spdrivercalendar/models/bank_holiday.dart';
 import 'package:spdrivercalendar/models/shift_data.dart';
 import 'package:spdrivercalendar/core/utils/location_utils.dart';
+import 'package:spdrivercalendar/services/jamestown_feature_service.dart';
 
 class ShiftService {
   // List of bank holidays
@@ -269,21 +270,8 @@ class ShiftService {
   // Helper method to get break time for Jamestown Road shifts
   static Future<String> _getJamestownShiftBreakTime(String shiftCode, String dayOfWeek, DateTime date) async {
     try {
-      // Load the Jamestown CSV file
-      final file = await rootBundle.loadString('assets/JAMESTOWN_DUTIES.csv');
-      final lines = file.split('\n');
-      
-      // Find the matching shift (skip header line)
-      for (int i = 1; i < lines.length; i++) {
-        final line = lines[i].trim();
-        if (line.isEmpty) continue;
-        final parts = line.split(',');
-        
-        // Expecting format: shift,duty,report,depart,location,startbreak,startbreaklocation,breakreport,finishbreak,finishbreaklocation,finish,finishlocation,signoff,spread,work,relief,route
-        if (parts.length >= 17) {
-          final shift = parts[0].trim();
-          if (shift == shiftCode) {
-            // Found matching shift, extract break information
+      final parts = await JamestownFeatureService.findShiftCsvParts(shiftCode);
+      if (parts != null && parts.length >= 17) {
             final breakStart = parts[5].trim(); // startbreak column
             final breakEnd = parts[8].trim(); // finishbreak column
             
@@ -319,8 +307,6 @@ class ShiftService {
             
             // If parsing failed, assume workout
             return 'Workout';
-          }
-        }
       }
       
       return 'No break info';
