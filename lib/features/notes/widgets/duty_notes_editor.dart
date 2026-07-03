@@ -1,6 +1,8 @@
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:spdrivercalendar/models/event.dart';
 import 'package:spdrivercalendar/services/note_attachment_service.dart';
 
@@ -77,6 +79,18 @@ class DutyNotesEditorState extends State<DutyNotesEditor> {
     });
   }
 
+  void _updateImageAt(int index, Uint8List bytes) {
+    setState(() {
+      _images = List<Uint8List>.from(_images)..[index] = bytes;
+    });
+  }
+
+  String _photoShareFileName(int index) {
+    final title = widget.event.title.replaceAll(RegExp(r'[^\w\-]+'), '_');
+    final date = DateFormat('yyyy-MM-dd').format(widget.event.startDate);
+    return '${title}_${date}_photo${index + 1}.jpg';
+  }
+
   double _thumbSize(BuildContext context) {
     final w = MediaQuery.sizeOf(context).width;
     if (w < 350) return 52;
@@ -127,7 +141,12 @@ class DutyNotesEditorState extends State<DutyNotesEditor> {
                 bytes: _images[i],
                 size: thumb,
                 onRemove: () => _removeAt(i),
-                onView: () => _openDutyNotePhotoViewer(context, _images[i]),
+                onView: () => _openDutyNotePhotoViewer(
+                  context,
+                  initialBytes: _images[i],
+                  shareFileName: _photoShareFileName(i),
+                  onBytesChanged: (updated) => _updateImageAt(i, updated),
+                ),
               ),
             if (_images.length < NoteAttachmentService.maxImagesPerEvent)
               _AddPhotoTile(size: thumb, onTap: _addFromGallery),
@@ -138,51 +157,156 @@ class DutyNotesEditorState extends State<DutyNotesEditor> {
   }
 }
 
-/// Full screen + pinch zoom for a duty note photo.
-void _openDutyNotePhotoViewer(BuildContext context, Uint8List bytes) {
+/// Full screen viewer with pinch zoom, rotate, and share/save.
+void _openDutyNotePhotoViewer(
+  BuildContext context, {
+  required Uint8List initialBytes,
+  required String shareFileName,
+  required ValueChanged<Uint8List> onBytesChanged,
+}) {
   final w = MediaQuery.sizeOf(context).width;
   final pad = w < 350 ? 8.0 : 12.0;
   showDialog<void>(
     context: context,
     barrierColor: Colors.black87,
     builder: (dialogContext) {
-      return Dialog(
-        backgroundColor: Colors.transparent,
-        insetPadding: EdgeInsets.all(pad),
-        child: Material(
-          color: Colors.black,
-          clipBehavior: Clip.antiAlias,
-          borderRadius: BorderRadius.circular(4),
-          child: SafeArea(
-            child: Stack(
-              children: [
-                Center(
-                  child: InteractiveViewer(
-                    boundaryMargin: const EdgeInsets.all(64),
-                    minScale: 0.5,
-                    maxScale: 4.0,
-                    child: Image.memory(
-                      bytes,
-                      fit: BoxFit.contain,
-                    ),
-                  ),
-                ),
-                Positioned(
-                  top: 0,
-                  right: 0,
-                  child: IconButton(
-                    icon: const Icon(Icons.close, color: Colors.white, size: 28),
-                    tooltip: 'Close',
-                    onPressed: () => Navigator.of(dialogContext).pop(),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
+      return _DutyNotePhotoViewerDialog(
+        initialBytes: initialBytes,
+        shareFileName: shareFileName,
+        onBytesChanged: onBytesChanged,
+        insetPadding: pad,
       );
     },
   );
+}
+
+class _DutyNotePhotoViewerDialog extends StatefulWidget {
+  const _DutyNotePhotoViewerDialog({
+    required this.initialBytes,
+    required this.shareFileName,
+    required this.onBytesChanged,
+    required this.insetPadding,
+  });
+
+  final Uint8List initialBytes;
+  final String shareFileName;
+  final ValueChanged<Uint8List> onBytesChanged;
+  final double insetPadding;
+
+  @override
+  State<_DutyNotePhotoViewerDialog> createState() =>
+      _DutyNotePhotoViewerDialogState();
+}
+
+class _DutyNotePhotoViewerDialogState extends State<_DutyNotePhotoViewerDialog> {
+  late Uint8List _bytes;
+  bool _sharing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _bytes = widget.initialBytes;
+  }
+
+  void _rotate() {
+    final rotated = NoteAttachmentService.rotateClockwise90(_bytes);
+    setState(() => _bytes = rotated);
+    widget.onBytesChanged(rotated);
+  }
+
+  Future<void> _sharePhoto() async {
+    if (_sharing) return;
+    setState(() => _sharing = true);
+    try {
+      await Share.shareXFiles(
+        [
+          XFile.fromData(
+            _bytes,
+            mimeType: 'image/jpeg',
+            name: widget.shareFileName,
+          ),
+        ],
+        subject: 'Duty note photo',
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+          SnackBar(content: Text('Could not share photo: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _sharing = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final iconSize = MediaQuery.sizeOf(context).width < 350 ? 24.0 : 28.0;
+
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      insetPadding: EdgeInsets.all(widget.insetPadding),
+      child: Material(
+        color: Colors.black,
+        clipBehavior: Clip.antiAlias,
+        borderRadius: BorderRadius.circular(4),
+        child: SafeArea(
+          child: Stack(
+            children: [
+              Center(
+                child: InteractiveViewer(
+                  boundaryMargin: const EdgeInsets.all(64),
+                  minScale: 0.5,
+                  maxScale: 4.0,
+                  child: Image.memory(
+                    _bytes,
+                    fit: BoxFit.contain,
+                  ),
+                ),
+              ),
+              Positioned(
+                top: 0,
+                left: 0,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: Icon(Icons.rotate_right, color: Colors.white, size: iconSize),
+                      tooltip: 'Rotate',
+                      onPressed: _rotate,
+                    ),
+                    IconButton(
+                      icon: _sharing
+                          ? SizedBox(
+                              width: iconSize,
+                              height: iconSize,
+                              child: const CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : Icon(Icons.share, color: Colors.white, size: iconSize),
+                      tooltip: 'Share / save photo',
+                      onPressed: _sharing ? null : _sharePhoto,
+                    ),
+                  ],
+                ),
+              ),
+              Positioned(
+                top: 0,
+                right: 0,
+                child: IconButton(
+                  icon: Icon(Icons.close, color: Colors.white, size: iconSize),
+                  tooltip: 'Close',
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _AttachmentThumb extends StatelessWidget {

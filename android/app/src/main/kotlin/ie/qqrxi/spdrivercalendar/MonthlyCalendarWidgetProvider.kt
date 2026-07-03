@@ -535,6 +535,9 @@ class MonthlyCalendarWidgetProvider : AppWidgetProvider() {
                    title.startsWith("BusCheck") ||
                    title == "CPC" ||
                    title == "22B/01" ||
+                   title == "Union" ||
+                   title == "Mentor" ||
+                   title == "Training" ||
                    title.matches(Regex("^\\d+/.*"))
         }
         

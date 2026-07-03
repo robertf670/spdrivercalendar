@@ -26,6 +26,7 @@ class SearchScreenState extends State<SearchScreen> {
   String? _selectedShiftType;
   bool _overtimeOnly = false;
   bool _hasNotes = false;
+  bool _hasPhotos = false;
   String? _selectedSickDayType;
   bool _holidaysOnly = false;
   bool _sickDaysOnly = false;
@@ -76,6 +77,7 @@ class SearchScreenState extends State<SearchScreen> {
         shiftType: _selectedShiftType,
         overtimeOnly: _overtimeOnly ? true : null,
         hasNotes: _hasNotes ? true : null,
+        hasPhotos: _hasPhotos ? true : null,
         sickDayType: _selectedSickDayType,
         holidaysOnly: _holidaysOnly ? true : null,
         sickDaysOnly: _sickDaysOnly ? true : null,
@@ -104,6 +106,7 @@ class SearchScreenState extends State<SearchScreen> {
       _selectedShiftType = null;
       _overtimeOnly = false;
       _hasNotes = false;
+      _hasPhotos = false;
       _selectedSickDayType = null;
       _holidaysOnly = false;
       _sickDaysOnly = false;
@@ -586,6 +589,16 @@ class SearchScreenState extends State<SearchScreen> {
                         },
                       ),
                       FilterChip(
+                        label: const Text('Has Photos', style: TextStyle(fontSize: 11)),
+                        selected: _hasPhotos,
+                        onSelected: (value) {
+                          setState(() {
+                            _hasPhotos = value;
+                          });
+                          _performSearch();
+                        },
+                      ),
+                      FilterChip(
                         label: const Text('Holidays', style: TextStyle(fontSize: 11)),
                         selected: _holidaysOnly,
                         onSelected: (value) {
@@ -665,6 +678,16 @@ class SearchScreenState extends State<SearchScreen> {
                         onSelected: (value) {
                           setState(() {
                             _hasNotes = value;
+                          });
+                          _performSearch();
+                        },
+                      ),
+                      FilterChip(
+                        label: const Text('Has Photos'),
+                        selected: _hasPhotos,
+                        onSelected: (value) {
+                          setState(() {
+                            _hasPhotos = value;
                           });
                           _performSearch();
                         },

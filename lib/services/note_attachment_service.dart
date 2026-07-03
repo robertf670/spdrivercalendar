@@ -52,6 +52,13 @@ class NoteAttachmentService {
   }
 
   /// Picks a single image from gallery, compresses to JPEG. Returns null if cancelled.
+  static Uint8List rotateClockwise90(Uint8List input) {
+    final decoded = img.decodeImage(input);
+    if (decoded == null) return input;
+    final rotated = img.copyRotate(decoded, angle: 90);
+    return Uint8List.fromList(img.encodeJpg(rotated, quality: jpegQuality));
+  }
+
   static Future<Uint8List?> pickFromGallery() async {
     final picker = ImagePicker();
     final x = await picker.pickImage(

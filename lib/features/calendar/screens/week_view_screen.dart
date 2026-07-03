@@ -534,6 +534,23 @@ class WeekViewScreenState extends State<WeekViewScreen> {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
+          if (event.isCustomTraining &&
+              event.trainingDescription != null &&
+              event.trainingDescription!.trim().isNotEmpty)
+            Padding(
+              padding: EdgeInsets.only(top: sizes['dutyCardMargin']! * 0.15),
+              child: Text(
+                event.trainingDescription!.trim(),
+                style: TextStyle(
+                  fontSize: sizes['timeText']! * 0.9,
+                  fontWeight: FontWeight.w500,
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.75),
+                ),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
           
           SizedBox(height: sizes['dutyCardMargin']! * 0.4),
           

@@ -39,6 +39,7 @@ class AllNotesScreenState extends State<AllNotesScreen> {
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   String _searchQuery = ''; // Store search query state
+  bool _filterHasPhotos = false;
   DateTime? _selectedMonth; // Add selected month state
   int _selectedYear = DateTime.now().year;
 
@@ -162,6 +163,13 @@ class AllNotesScreenState extends State<AllNotesScreen> {
         final titleMatch = item.title.toLowerCase().contains(query);
         final noteMatch = item.note.toLowerCase().contains(query);
         return titleMatch || noteMatch;
+      }).toList();
+    }
+
+    // Apply has-photos filter (duty notes with images only)
+    if (_filterHasPhotos) {
+      filtered = filtered.where((item) {
+        return !item.isDayNote && item.event?.hasNoteImages == true;
       }).toList();
     }
 
@@ -398,6 +406,42 @@ class AllNotesScreenState extends State<AllNotesScreen> {
                     ),
                   ),
                 ),
+                if (_filterHasPhotos)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 8.0),
+                    child: FilterChip(
+                      label: const Text('Has photos'),
+                      onSelected: (_) {
+                        setState(() {
+                          _filterHasPhotos = false;
+                          _filterAndGroupNotes();
+                        });
+                      },
+                      selected: true,
+                      showCheckmark: false,
+                      deleteIcon: const Icon(Icons.close, size: 18),
+                      onDeleted: () {
+                        setState(() {
+                          _filterHasPhotos = false;
+                          _filterAndGroupNotes();
+                        });
+                      },
+                    ),
+                  )
+                else
+                  Padding(
+                    padding: const EdgeInsets.only(left: 8.0),
+                    child: FilterChip(
+                      label: const Text('Has photos'),
+                      selected: false,
+                      onSelected: (selected) {
+                        setState(() {
+                          _filterHasPhotos = selected;
+                          _filterAndGroupNotes();
+                        });
+                      },
+                    ),
+                  ),
                 // Month filter chip (if month is selected)
                 if (_selectedMonth != null)
                   Padding(

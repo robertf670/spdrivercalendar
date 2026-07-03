@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:intl/intl.dart';
 import 'package:spdrivercalendar/core/constants/app_constants.dart';
+import 'package:spdrivercalendar/core/constants/training_constants.dart';
+import 'package:spdrivercalendar/features/calendar/widgets/custom_training_form.dart';
 import 'package:spdrivercalendar/core/services/storage_service.dart';
 import 'package:spdrivercalendar/features/calendar/services/roster_service.dart';
 import 'package:spdrivercalendar/features/calendar/services/event_service.dart';
@@ -958,6 +960,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
           5: false, // Friday
           6: false, // Saturday
         };
+        final customTrainingFormKey = GlobalKey<CustomTrainingFormState>();
         
         return StatefulBuilder(
           builder: (context, setState) {
@@ -1166,6 +1169,9 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                 } catch (e) {
                   shiftNumbers = [];
                 }
+                if (!shiftNumbers.contains(TrainingConstants.customTrainingShiftOption)) {
+                  shiftNumbers.add(TrainingConstants.customTrainingShiftOption);
+                }
               } else {
                 // Regular zone shifts
                 final filename = RosterService.getShiftFilename(zoneNumber, dayOfWeekForFilename, shiftDate);
@@ -1266,12 +1272,8 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                       'Spare',
                       'Uni/Euro',
                       'Bus Check',
+                      'Training',
                     ]);
-                    
-                    // Add Training only for Mon-Sat (not Sunday)
-                    if (dayOfWeek != 'Sunday') {
-                      zones.add('Training');
-                    }
                     
                     zones.add('Union');
                     zones.add('Mentor');
@@ -1350,6 +1352,11 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                             }
                           },
                         ),
+                if (selectedZone == 'Training' &&
+                    selectedShiftNumber == TrainingConstants.customTrainingShiftOption) ...[
+                  const SizedBox(height: 16),
+                  CustomTrainingForm(key: customTrainingFormKey),
+                ],
                 // Show checkbox for M-F marked in users selecting Uni/Euro (not on weekends)
                 Builder(
                   builder: (context) {
@@ -1686,7 +1693,11 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                           selectedZone == 'Jamestown Road') {
                         title = selectedShiftNumber; // Use the shift code (e.g., 811/36)
                       } else if (selectedZone == 'Training') {
-                        title = selectedShiftNumber; // Use the training code (e.g., CPC)
+                        if (selectedShiftNumber == TrainingConstants.customTrainingShiftOption) {
+                          title = TrainingConstants.customTrainingTitle;
+                        } else {
+                          title = selectedShiftNumber; // e.g. CPC
+                        }
                       } else {
                         // Regular PZ shifts
                         title = selectedShiftNumber; // Title is the shift code (e.g., PZ1/01)
@@ -1743,8 +1754,18 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                       } else if (selectedZone == JamestownFeatureService.zoneLabel ||
                           selectedZone == 'Jamestown Road') {
                         shiftTimes = await _getShiftTimes(selectedZone, selectedShiftNumber, shiftDate);
+                      } else if (selectedZone == 'Training' &&
+                          selectedShiftNumber == TrainingConstants.customTrainingShiftOption) {
+                        final customData = customTrainingFormKey.currentState?.buildData();
+                        if (customData == null) {
+                          if (!mounted) return;
+                          ScaffoldMessenger.of(dialogContext).showSnackBar(
+                            const SnackBar(content: Text('Please enter training times.')),
+                          );
+                          return;
+                        }
+                        shiftTimes = customTrainingShiftTimes(customData);
                       } else if (selectedZone == 'Training') {
-                        // For Training, load from training_duties.csv
                         shiftTimes = await _getShiftTimes(selectedZone, selectedShiftNumber, shiftDate);
                       } else {
                         // For other zones, load from CSV
@@ -1762,6 +1783,12 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                       }
                       
                       // Create the event with non-null assurances, including break times, work time, and routes
+                      CustomTrainingFormData? customTrainingData;
+                      if (selectedZone == 'Training' &&
+                          selectedShiftNumber == TrainingConstants.customTrainingShiftOption) {
+                        customTrainingData = customTrainingFormKey.currentState?.buildData();
+                      }
+
                       final event = Event(
                         id: DateTime.now().millisecondsSinceEpoch.toString(),
                         title: title,
@@ -1775,6 +1802,8 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                         breakEndTime: shiftTimes['breakEndTime'] as TimeOfDay?,
                         workTime: shiftTimes['workTime'] as Duration?,
                         routes: shiftTimes['routes'] as List<String>?,
+                        trainingDescription: customTrainingData?.description,
+                        startLocation: customTrainingData?.location,
                       );
                       
                       // Add event and close dialog
@@ -3258,6 +3287,38 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
     }
   }
 
+  Future<void> _editCustomTrainingEvent(Event event) async {
+    if (!event.isCustomTraining || !mounted) return;
+
+    final result = await showCustomTrainingFormDialog(
+      context,
+      dialogTitle: 'Edit Training Details',
+      initialData: CustomTrainingFormData(
+        startTime: event.startTime,
+        endTime: event.endTime,
+        description: event.trainingDescription,
+        location: event.startLocation,
+      ),
+    );
+
+    if (result == null || !mounted) return;
+
+    final nextDay = customTrainingEndsNextDay(result.startTime, result.endTime);
+    final updated = event.copyWith(
+      startTime: result.startTime,
+      endTime: result.endTime,
+      endDate: nextDay
+          ? event.startDate.add(const Duration(days: 1))
+          : event.startDate,
+      trainingDescription: result.description ?? '',
+      startLocation: result.location,
+      finishLocation: null,
+    );
+
+    await EventService.updateEvent(event, updated);
+    if (mounted) setState(() {});
+  }
+
   void _editEvent(Event event) {
     // If this is a refresh trigger (with any suffix), force a complete refresh
     if (event.id == 'refresh_trigger' || event.id.startsWith('refresh_trigger_')) {
@@ -3356,6 +3417,16 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                       },
                       child: const Text('Notes'),
                     ),
+                    if (event.isCustomTraining) ...[
+                      const SizedBox(height: 8),
+                      TextButton(
+                        onPressed: () async {
+                          Navigator.of(context).pop();
+                          await _editCustomTrainingEvent(event);
+                        },
+                        child: const Text('Edit Training Details'),
+                      ),
+                    ],
                     if (event.isEligibleForOvertimeTracking) ...[
                       const SizedBox(height: 8),
                       TextButton(

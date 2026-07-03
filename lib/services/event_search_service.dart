@@ -14,6 +14,7 @@ class EventSearchService {
     String? shiftType,
     bool? overtimeOnly,
     bool? hasNotes,
+    bool? hasPhotos,
     String? sickDayType,
     bool? holidaysOnly,
     bool? sickDaysOnly,
@@ -35,6 +36,16 @@ class EventSearchService {
         
         // Search in notes
         if (event.notes != null && event.notes!.toLowerCase().contains(searchLower)) {
+          return true;
+        }
+
+        // Search in custom training description and location
+        if (event.trainingDescription != null &&
+            event.trainingDescription!.toLowerCase().contains(searchLower)) {
+          return true;
+        }
+        if (event.startLocation != null &&
+            event.startLocation!.toLowerCase().contains(searchLower)) {
           return true;
         }
         
@@ -186,6 +197,11 @@ class EventSearchService {
     // Has notes filter (text and/or images)
     if (hasNotes == true) {
       filtered = filtered.where((event) => event.hasNoteContent).toList();
+    }
+
+    // Has photos filter (duty note images only)
+    if (hasPhotos == true) {
+      filtered = filtered.where((event) => event.hasNoteImages).toList();
     }
     
     // Sick day filter

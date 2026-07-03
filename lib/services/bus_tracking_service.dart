@@ -204,11 +204,18 @@ class BusTrackingService {
     }
   }
 
+  /// Finds the index of an exact vehicle ID path, avoiding prefix collisions
+  /// (e.g. vehicles/ie-538 must not match vehicles/ie-5384).
+  static int _indexOfExactVehicleId(String htmlContent, String vehicleId) {
+    final pattern = RegExp('${RegExp.escape('vehicles/$vehicleId')}(?!\\d)');
+    final match = pattern.firstMatch(htmlContent);
+    return match?.start ?? -1;
+  }
+
   /// Get context around a vehicle ID to validate it matches our bus number
   static String _getVehicleContext(String htmlContent, String vehicleId, int contextSize) {
     try {
-      final vehiclePattern = 'vehicles/$vehicleId';
-      final index = htmlContent.indexOf(vehiclePattern);
+      final index = _indexOfExactVehicleId(htmlContent, vehicleId);
       if (index == -1) return '';
 
       final start = (index - contextSize).clamp(0, htmlContent.length);
@@ -289,6 +296,7 @@ class BusTrackingService {
             '>$busNumber<',
             '"$busNumber"',
             "'$busNumber'",
+            '\n$busNumber\n',
             '<td>$busNumber</td>',
             '<td> $busNumber </td>',
           ];

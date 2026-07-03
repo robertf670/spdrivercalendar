@@ -1,4 +1,21 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '3.2.8': [
+    {
+      'title': 'Note Photos: Rotate and Share',
+      'description':
+          'Rotate and share duty note photos from the full-screen viewer. Filter notes with photos in All Notes and Search.',
+    },
+    {
+      'title': 'Custom Training duty',
+      'description':
+          'Added Custom option under the Training zone with your own start/finish times, optional description, and location.',
+    },
+    {
+      'title': 'Bus tracking: VT47 fix',
+      'description':
+          'Fixed bus tracking failing for VT47 and other buses whose bustimes vehicle ID is a prefix of another vehicle.',
+    },
+  ],
   '3.2.7': [
     {
       'title': 'M-F PZ4/32 times',

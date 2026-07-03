@@ -305,6 +305,24 @@ class _EventCardState extends State<EventCard> {
     }
 
     try {
+      if (widget.event.isCustomTraining) {
+        if (mounted) {
+          setState(() {
+            startLocation = widget.event.startLocation;
+            finishLocation = null;
+            _departTimeStr = widget.event.formattedStartTime;
+            _finishTimeStr = widget.event.formattedEndTime;
+            startBreakLocation = null;
+            finishBreakLocation = null;
+            workTime = null;
+            routeInfo = null;
+            dutyRouteInfo = null;
+            isLoading = false;
+          });
+        }
+        return;
+      }
+
       // Extract the shift code
       String shiftCode;
       
@@ -2190,7 +2208,7 @@ class _EventCardState extends State<EventCard> {
                 const SizedBox(height: 3.0), // Reduced gap - route/location and breaks are related
               ],
               // MODIFIED: Break times row (if available AND NOT BusCheck AND is work shift AND NOT training shift AND NOT spare shift)
-              if (breakTime != null && !isBusCheckShift && !widget.event.title.contains('(OT)') && widget.event.isWorkShift && widget.event.title != 'CPC' && widget.event.title != 'Union' && widget.event.title != 'Mentor' && !widget.event.title.startsWith('SP') && widget.event.title != '22B/01') ...[
+              if (breakTime != null && !isBusCheckShift && !widget.event.title.contains('(OT)') && widget.event.isWorkShift && widget.event.title != 'CPC' && widget.event.title != 'Union' && widget.event.title != 'Mentor' && !widget.event.isCustomTraining && !widget.event.title.startsWith('SP') && widget.event.title != '22B/01') ...[
                 Padding(
                   padding: const EdgeInsets.only(bottom: 2.0), // Match report line padding
                   child: Row(
@@ -4334,6 +4352,23 @@ class _EventCardState extends State<EventCard> {
             maxLines: titleMaxLines,
             overflow: TextOverflow.ellipsis,
           ),
+          if (widget.event.isCustomTraining &&
+              widget.event.trainingDescription != null &&
+              widget.event.trainingDescription!.trim().isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(
+              widget.event.trainingDescription!.trim(),
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.white.withValues(alpha: 0.85)
+                    : Colors.black.withValues(alpha: 0.75),
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
           // Add sick day status badge if applicable
           if (widget.event.sickDayType != null) ...[
             const SizedBox(height: 4),
@@ -6631,6 +6666,7 @@ class _EventCardState extends State<EventCard> {
     // For PZ shifts, Jamestown Road shifts, Training shifts, and Universal/Euro shifts, use the specialized display format
     if (widget.event.title.startsWith('PZ') || widget.event.title.startsWith('811/') ||
         widget.event.title == 'CPC' || widget.event.title == 'Union' || widget.event.title == 'Mentor' ||
+        widget.event.isCustomTraining ||
         RegExp(r'^\d+/').hasMatch(widget.event.title)) {
       return <TextSpan>[
         if (startLocation != null && startLocation!.isNotEmpty) ...[

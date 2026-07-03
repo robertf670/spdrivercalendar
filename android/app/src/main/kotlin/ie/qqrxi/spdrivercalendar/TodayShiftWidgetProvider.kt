@@ -95,7 +95,12 @@ class TodayShiftWidgetProvider : AppWidgetProvider() {
                 } else {
                     views.setTextViewText(R.id.widget_header, "Today's Shift")
                     // Show title if no duty code available
-                    views.setTextViewText(R.id.widget_title, todayEvent.title)
+                    val titleText = if (!todayEvent.trainingDescription.isNullOrEmpty()) {
+                        "${todayEvent.title} — ${todayEvent.trainingDescription}"
+                    } else {
+                        todayEvent.title
+                    }
+                    views.setTextViewText(R.id.widget_title, titleText)
                     views.setViewVisibility(R.id.widget_title, android.view.View.VISIBLE)
                 }
                 
@@ -372,6 +377,10 @@ class TodayShiftWidgetProvider : AppWidgetProvider() {
                         if (startLocation.isNullOrEmpty() || startLocation == "null") {
                             startLocation = null
                         }
+                        var trainingDescription: String? = eventObj.optString("trainingDescription", null)
+                        if (trainingDescription.isNullOrEmpty() || trainingDescription == "null") {
+                            trainingDescription = null
+                        }
                         var finishLocation: String? = eventObj.optString("finishLocation", null)
                         if (finishLocation.isNullOrEmpty() || finishLocation == "null") {
                             finishLocation = null
@@ -573,7 +582,8 @@ class TodayShiftWidgetProvider : AppWidgetProvider() {
                             finishLocation = finishLocation,
                             startBreakLocation = startBreakLocation,
                             finishBreakLocation = finishBreakLocation,
-                            dutyStartTime = dutyStartTime
+                            dutyStartTime = dutyStartTime,
+                            trainingDescription = trainingDescription
                         )
                     }
                 }
@@ -633,6 +643,9 @@ class TodayShiftWidgetProvider : AppWidgetProvider() {
                    title.startsWith("BusCheck") ||
                    title == "CPC" ||
                    title == "22B/01" ||
+                   title == "Union" ||
+                   title == "Mentor" ||
+                   title == "Training" ||
                    title.matches(Regex("^\\d+/.*"))
         }
         
@@ -767,6 +780,7 @@ data class TodayEvent(
     val finishLocation: String? = null,
     val startBreakLocation: String? = null,
     val finishBreakLocation: String? = null,
-    val dutyStartTime: String? = null
+    val dutyStartTime: String? = null,
+    val trainingDescription: String? = null
 )
 

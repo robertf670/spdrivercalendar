@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:spdrivercalendar/core/constants/training_constants.dart';
 
 // New class for enhanced duty tracking
 class AssignedDuty {
@@ -128,6 +129,8 @@ class Event {
   bool isHoliday;  // Whether this event represents a holiday
   String? holidayType;  // The type of holiday ('winter' or 'summer')
   String? notes; // Add notes field
+  /// Optional short label for custom training duties (title: [TrainingConstants.customTrainingTitle]).
+  String? trainingDescription;
   /// Local-only note images: ordered JPEG filenames (`0.jpg`, `1.jpg`, …) under app storage for [id].
   List<String>? noteImagePaths;
   // Add new fields for overtime tracking
@@ -172,6 +175,7 @@ class Event {
     this.isHoliday = false,
     this.holidayType,
     this.notes,
+    this.trainingDescription,
     this.noteImagePaths,
     this.hasLateBreak = false,
     this.tookFullBreak = false,
@@ -428,6 +432,7 @@ class Event {
     bool? isHoliday,
     String? holidayType,
     String? notes,
+    String? trainingDescription,
     List<String>? noteImagePaths,
     bool? hasLateBreak,
     bool? tookFullBreak,
@@ -472,6 +477,7 @@ class Event {
       isHoliday: isHoliday ?? this.isHoliday,
       holidayType: holidayType ?? this.holidayType,
       notes: notes ?? this.notes,
+      trainingDescription: trainingDescription ?? this.trainingDescription,
       noteImagePaths: noteImagePaths ?? this.noteImagePaths,
       hasLateBreak: hasLateBreak ?? this.hasLateBreak,
       tookFullBreak: tookFullBreak ?? this.tookFullBreak,
@@ -521,6 +527,9 @@ class Event {
       'isHoliday': isHoliday,
       'holidayType': holidayType,
       'notes': notes,
+      'trainingDescription': (trainingDescription != null && trainingDescription!.trim().isNotEmpty)
+          ? trainingDescription!.trim()
+          : null,
       'noteImagePaths': (noteImagePaths != null && noteImagePaths!.isNotEmpty)
           ? noteImagePaths
           : null,
@@ -605,6 +614,7 @@ class Event {
       isHoliday: map['isHoliday'] ?? false,
       holidayType: map['holidayType'],
       notes: map['notes'],
+      trainingDescription: map['trainingDescription'],
       noteImagePaths: map['noteImagePaths'] != null
           ? List<String>.from(map['noteImagePaths'])
           : null,
@@ -653,6 +663,8 @@ class Event {
   }
   
   // Is this a work shift?
+  bool get isCustomTraining => title == TrainingConstants.customTrainingTitle;
+
   bool get isWorkShift => title.startsWith('Shift:') || 
                          title.startsWith('SP') || 
                          title.startsWith('PZ') || 
@@ -661,6 +673,7 @@ class Event {
                          title == '22B/01' ||
                          title == 'Union' ||
                          title == 'Mentor' ||
+                         isCustomTraining ||
                          RegExp(r'^\d+/').hasMatch(title);
   
   // Check if this duty is eligible for overtime tracking
