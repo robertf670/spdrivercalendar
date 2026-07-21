@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:spdrivercalendar/models/bank_holiday.dart';
 import 'package:spdrivercalendar/models/shift_data.dart';
 import 'package:spdrivercalendar/features/calendar/services/shift_service.dart';
+import 'package:spdrivercalendar/features/calendar/services/roster_schedule_service.dart';
 
 class RosterService {
   // The 5-week roster pattern with Sunday as the first day of the week
@@ -54,6 +55,14 @@ class RosterService {
   
   // Get shift for a specific date
   static String getShiftForDate(DateTime date, DateTime startDate, int startWeek) {
+    final anchor = RosterScheduleService.resolveAnchor(
+      date: date,
+      fallbackStartDate: startDate,
+      fallbackStartWeek: startWeek,
+    );
+    startDate = anchor.startDate;
+    startWeek = anchor.startWeek;
+
     // Normalize both dates to midnight UTC for consistent comparison
     final normalizedDate = DateTime.utc(date.year, date.month, date.day);
     final normalizedStartDate = DateTime.utc(startDate.year, startDate.month, startDate.day);

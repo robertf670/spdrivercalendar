@@ -23,6 +23,7 @@ class BackupService {
     'holidays',
     AppConstants.startDateKey,
     AppConstants.startWeekKey,
+    AppConstants.rosterScheduleChangesKey,
     AppConstants.isDarkModeKey,
     AppConstants.syncToGoogleCalendarKey,
     AppConstants.includeBusAssignmentsInGoogleCalendarKey,

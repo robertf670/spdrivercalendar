@@ -7,6 +7,7 @@ import 'package:spdrivercalendar/google_calendar_service.dart';
 import 'package:spdrivercalendar/features/settings/screens/google_calendar_settings_screen.dart';
 import 'package:spdrivercalendar/features/settings/screens/google_calendar_help_screen.dart';
 import 'package:spdrivercalendar/features/settings/screens/admin_dashboard_screen.dart';
+import 'package:spdrivercalendar/features/settings/screens/dev_menu_screen.dart';
 import 'package:spdrivercalendar/features/settings/screens/live_updates_preferences_screen.dart';
 import 'package:spdrivercalendar/features/feedback/screens/feedback_screen.dart';
 import 'package:spdrivercalendar/theme/app_theme.dart';
@@ -23,6 +24,7 @@ import '../../../config/app_config.dart';
 import 'package:spdrivercalendar/services/days_in_lieu_service.dart';
 import 'package:spdrivercalendar/services/annual_leave_service.dart';
 import 'package:spdrivercalendar/services/color_customization_service.dart';
+import 'package:spdrivercalendar/services/dev_menu_access_service.dart';
 import 'package:spdrivercalendar/services/jamestown_feature_service.dart';
 
 // Define Preference Keys for Notifications (Consider moving to AppConstants if not already there)
@@ -587,10 +589,9 @@ class SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObser
                     icon: Icons.admin_panel_settings,
                     children: [
                       _buildAdminPanelButton(),
+                      _buildDevMenuButton(),
                     ],
                   ),
-                  const SizedBox(height: 8),
-                  _buildJamestownToggle(),
                   // Debug only - not included in release builds
                   if (kDebugMode) ...[
                     const SizedBox(height: 8),
@@ -962,9 +963,12 @@ class SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObser
                         const DropdownMenuItem(value: 'Zone 2', child: Text('Zone 2')),
                         const DropdownMenuItem(value: 'Zone 3', child: Text('Zone 3')),
                         const DropdownMenuItem(value: 'Zone 4', child: Text('Zone 4')),
-                        if (_jamestownEnabled)
+                        if (_jamestownEnabled ||
+                            _markedInZone ==
+                                JamestownFeatureService.zoneLabel)
                           DropdownMenuItem(
                             value: JamestownFeatureService.zoneLabel,
+                            enabled: _jamestownEnabled,
                             child: Text(JamestownFeatureService.zoneLabel),
                           ),
                       ],
@@ -2079,6 +2083,25 @@ class SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObser
     );
   }
 
+  Widget _buildDevMenuButton() {
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 4.0),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppTheme.borderRadius),
+      ),
+      child: ListTile(
+        leading: Icon(
+          Icons.developer_mode,
+          color: Colors.deepPurple.shade600,
+        ),
+        title: const Text('Dev Menu'),
+        subtitle: const Text('Developer feature settings'),
+        trailing: const Icon(Icons.lock_outline),
+        onTap: _checkDevMenuAccess,
+      ),
+    );
+  }
+
   /// Debug only (kDebugMode). Clears all calendar events. Remove before release.
   Widget _buildClearCalendarButton() {
     return Card(
@@ -2260,44 +2283,21 @@ class SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObser
     );
   }
 
-  Widget _buildJamestownToggle() {
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 4.0),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppTheme.borderRadius),
-      ),
-      child: SwitchListTile(
-        title: const Text('Jamestown'),
-        subtitle: const Text('Enable Jamestown duties'),
-        secondary: Icon(
-          Icons.location_on_outlined,
-          color: _jamestownEnabled ? AppTheme.primaryColor : null,
-        ),
-        value: _jamestownEnabled,
-        onChanged: _handleJamestownToggle,
-      ),
-    );
-  }
-
-  Future<void> _handleJamestownToggle(bool value) async {
-    if (!value) {
-      await JamestownFeatureService.setEnabled(false);
-      if (mounted) setState(() => _jamestownEnabled = false);
+  Future<void> _checkDevMenuAccess() async {
+    final isUnlocked = await DevMenuAccessService.isUnlocked();
+    if (!mounted) {
       return;
     }
 
-    final remembered = await JamestownFeatureService.isPasswordRemembered();
-    if (remembered) {
-      await JamestownFeatureService.setEnabled(true);
-      if (mounted) setState(() => _jamestownEnabled = true);
+    if (isUnlocked) {
+      await _navigateToDevMenu();
       return;
     }
 
-    if (!mounted) return;
-    _showJamestownPasswordDialog();
+    _showDevMenuPasswordDialog();
   }
 
-  void _showJamestownPasswordDialog() {
+  void _showDevMenuPasswordDialog() {
     final passwordController = TextEditingController();
 
     showDialog<void>(
@@ -2307,14 +2307,14 @@ class SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObser
           children: [
             Icon(Icons.lock_outline),
             SizedBox(width: 8),
-            Text('Jamestown'),
+            Text('Dev Menu'),
           ],
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Enter password to enable Jamestown duties.'),
+            const Text('Enter the password to access developer settings.'),
             const SizedBox(height: 16),
             TextField(
               controller: passwordController,
@@ -2325,7 +2325,7 @@ class SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObser
                 border: OutlineInputBorder(),
                 prefixIcon: Icon(Icons.lock_outline),
               ),
-              onSubmitted: (_) => _submitJamestownPassword(
+              onSubmitted: (_) => _submitDevMenuPassword(
                 dialogContext,
                 passwordController.text,
               ),
@@ -2338,30 +2338,28 @@ class SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObser
             child: const Text('Cancel'),
           ),
           ElevatedButton(
-            onPressed: () => _submitJamestownPassword(
+            onPressed: () => _submitDevMenuPassword(
               dialogContext,
               passwordController.text,
             ),
-            child: const Text('Enable'),
+            child: const Text('Access'),
           ),
         ],
       ),
     );
   }
 
-  Future<void> _submitJamestownPassword(
+  Future<void> _submitDevMenuPassword(
     BuildContext dialogContext,
     String password,
   ) async {
-    final unlocked = await JamestownFeatureService.unlockWithPassword(password);
+    final unlocked = await DevMenuAccessService.unlockWithPassword(password);
     if (!dialogContext.mounted) return;
 
     if (unlocked) {
-      await JamestownFeatureService.setEnabled(true);
-      if (!dialogContext.mounted) return;
       Navigator.pop(dialogContext);
       if (!mounted) return;
-      setState(() => _jamestownEnabled = true);
+      await _navigateToDevMenu();
       return;
     }
 
@@ -2370,6 +2368,19 @@ class SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObser
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Incorrect password.')),
     );
+  }
+
+  Future<void> _navigateToDevMenu() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const DevMenuScreen(),
+      ),
+    );
+
+    if (mounted) {
+      await _loadJamestownSettings();
+    }
   }
 
   Widget _buildOvernightDutiesToggle() {

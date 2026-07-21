@@ -17,7 +17,7 @@ class EventService {
   static DateTime? _lastLoadedMonth;
   
   // Cache for user preferences
-  static bool _showOvernightDutiesOnBothDays = true; // Default to true
+  static bool _showOvernightDutiesOnBothDays = false;
   static bool _preferencesLoaded = false;
   
   // Track which months have been populated to avoid redundant calls
@@ -48,11 +48,11 @@ class EventService {
     
     try {
       final prefs = await SharedPreferences.getInstance();
-      _showOvernightDutiesOnBothDays = prefs.getBool(AppConstants.showOvernightDutiesOnBothDaysKey) ?? true;
+      _showOvernightDutiesOnBothDays = prefs.getBool(AppConstants.showOvernightDutiesOnBothDaysKey) ?? false;
       _preferencesLoaded = true;
     } catch (e) {
       _logError('_loadPreferences', 'Failed to load preferences: $e');
-      _showOvernightDutiesOnBothDays = true; // Default to true on error
+      _showOvernightDutiesOnBothDays = false;
       _preferencesLoaded = true;
     }
   }
@@ -257,24 +257,12 @@ class EventService {
       });
     }
     
-    // Ensure the entire month is populated from cache (only once per month)
-    // CRITICAL FIX: Always populate if monthly cache exists - remove overly restrictive _populatedMonths check
-    // The _populatedMonths set was causing issues where month navigation would skip population
+    // Ensure the entire month is populated from cache only once.
     if (_monthlyCache.containsKey(monthKey)) {
-      // Check if we need to populate (if no events for this month in _events)
-      final hasEventsForMonth = _events.keys.any((key) {
-        final keyDate = DateTime.parse(key);
-        return keyDate.year == day.year && keyDate.month == day.month;
-      });
-      
-      if (!hasEventsForMonth) {
+      if (!_populatedMonths.contains(monthKey)) {
         _populateEventsFromCache(day);
-      } else {
-        // _logError('getEventsForDay', 'Month $monthKey already populated in _events cache');
+        _populatedMonths.add(monthKey);
       }
-      
-      // Still track populated months, but don't let it block population
-      _populatedMonths.add(monthKey);
     }
 
     // Final check after population with filtering
@@ -537,6 +525,59 @@ class EventService {
     }
   }
   
+  /// Preloads every month in [year] with a single storage read and JSON parse.
+  static Future<void> preloadYear(int year) async {
+    final missingMonths = <int>[
+      for (var month = 1; month <= 12; month++)
+        if (!_monthlyCache.containsKey('$year-$month')) month,
+    ];
+
+    if (missingMonths.isNotEmpty) {
+      final parsedByMonth = <int, List<Event>>{
+        for (final month in missingMonths) month: <Event>[],
+      };
+
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        final eventsJson = prefs.getString(AppConstants.eventsStorageKey);
+        if (eventsJson != null && eventsJson.isNotEmpty) {
+          final Map<String, dynamic> decodedData = jsonDecode(eventsJson);
+          for (final entry in decodedData.entries) {
+            try {
+              final eventDate = DateTime.parse(entry.key);
+              final monthEvents = eventDate.year == year
+                  ? parsedByMonth[eventDate.month]
+                  : null;
+              if (monthEvents == null || entry.value is! List) continue;
+
+              for (final eventData in entry.value as List<dynamic>) {
+                if (eventData is! Map) continue;
+                final eventMap = Map<String, dynamic>.from(eventData);
+                if (_validateEventData(eventMap)) {
+                  monthEvents.add(Event.fromMap(eventMap));
+                }
+              }
+            } catch (_) {
+              // Skip malformed date entries or events.
+            }
+          }
+        }
+      } catch (error) {
+        _logError('preloadYear', error);
+      }
+
+      for (final month in missingMonths) {
+        _monthlyCache['$year-$month'] = parsedByMonth[month]!;
+      }
+    }
+
+    for (var month = 1; month <= 12; month++) {
+      final date = DateTime(year, month);
+      _populateEventsFromCache(date);
+      _populatedMonths.add('$year-$month');
+    }
+  }
+
   // Preload events for a month (to be called when calendar page changes)
   static Future<void> preloadMonth(DateTime month) async {
     final monthKey = '${month.year}-${month.month}';

@@ -668,6 +668,7 @@ class Event {
   bool get isWorkShift => title.startsWith('Shift:') || 
                          title.startsWith('SP') || 
                          title.startsWith('PZ') || 
+                         title.startsWith('DZ1/') ||
                          title.startsWith('BusCheck') ||
                          title == 'CPC' ||
                          title == '22B/01' ||

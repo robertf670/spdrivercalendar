@@ -9,6 +9,7 @@ import 'package:spdrivercalendar/core/constants/training_constants.dart';
 import 'package:spdrivercalendar/features/calendar/widgets/custom_training_form.dart';
 import 'package:spdrivercalendar/core/services/storage_service.dart';
 import 'package:spdrivercalendar/features/calendar/services/roster_service.dart';
+import 'package:spdrivercalendar/features/calendar/services/roster_schedule_service.dart';
 import 'package:spdrivercalendar/features/calendar/services/event_service.dart';
 import 'package:spdrivercalendar/features/calendar/services/holiday_service.dart';
 import 'package:spdrivercalendar/features/calendar/services/workout_highlight_service.dart';
@@ -29,6 +30,7 @@ import 'package:spdrivercalendar/google_calendar_service.dart';
 import 'package:flutter/services.dart'; // For rootBundle
 import 'package:spdrivercalendar/features/calendar/services/shift_service.dart';
 import 'package:spdrivercalendar/services/jamestown_feature_service.dart';
+import 'package:spdrivercalendar/services/donnybrook_feature_service.dart';
 
 import 'package:spdrivercalendar/services/rest_days_service.dart';
 import 'package:spdrivercalendar/services/rest_day_swap_service.dart';
@@ -118,6 +120,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
   bool _highlightWorkoutDays = false; // Default to false (OFF)
   Set<DateTime>? _workoutDates; // Cached workout dates for visible month (null = loading)
   final Map<String, Set<DateTime>> _workoutDatesMonthCache = {}; // Per-month cache when no global cache
+  final Set<String> _workoutDateLoadsInProgress = {};
 
   // Holiday section expanded state (year -> expanded)
   final Map<int, bool> _holidayYearExpanded = {};
@@ -271,7 +274,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
     }
   }
 
-  Future<void> _loadMarkedInSettings() async {
+  Future<void> _loadMarkedInSettings({bool refreshWorkoutDates = false}) async {
     if (!mounted) return;
     
     final markedInEnabled = await StorageService.getBool(AppConstants.markedInEnabledKey);
@@ -300,13 +303,12 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
       if (needsUpdate) {
         setState(() {});
         if (_highlightWorkoutDays) {
-          _loadWorkoutDates();
+          await _loadWorkoutDates();
         } else {
           _workoutDates = {};
         }
-      } else if (_highlightWorkoutDays) {
-        // Reload workout dates when returning (e.g. after Settings → Refresh Workout Highlights)
-        _loadWorkoutDates();
+      } else if (_highlightWorkoutDays && refreshWorkoutDates) {
+        await _loadWorkoutDates();
       }
     }
   }
@@ -319,26 +321,37 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
 
     final cached = await WorkoutHighlightService.loadWorkoutDatesCache();
     if (cached != null && mounted) {
-      setState(() => _workoutDates = cached);
+      if (!const SetEquality<DateTime>().equals(_workoutDates, cached)) {
+        setState(() => _workoutDates = cached);
+      }
       return;
     }
 
     final monthKey = '${_focusedDay.year}-${_focusedDay.month}';
     if (_workoutDatesMonthCache.containsKey(monthKey) && mounted) {
-      setState(() => _workoutDates = _workoutDatesMonthCache[monthKey]);
+      final monthDates = _workoutDatesMonthCache[monthKey]!;
+      if (!const SetEquality<DateTime>().equals(_workoutDates, monthDates)) {
+        setState(() => _workoutDates = monthDates);
+      }
       return;
     }
 
-    setState(() => _workoutDates = null); // Mark as loading
-    await _loadWorkoutDatesForMonth(_focusedDay);
+    if (_workoutDateLoadsInProgress.contains(monthKey)) return;
+    _workoutDateLoadsInProgress.add(monthKey);
+    try {
+      if (_workoutDates != null && mounted) {
+        setState(() => _workoutDates = null);
+      }
+      await _loadWorkoutDatesForMonth(_focusedDay);
+    } finally {
+      _workoutDateLoadsInProgress.remove(monthKey);
+    }
   }
 
   /// Load workout dates for the visible month only (fallback when no cache).
   /// Results are cached per-month to avoid re-scanning when navigating back.
   Future<void> _loadWorkoutDatesForMonth(DateTime month) async {
     if (!_highlightWorkoutDays) return;
-    
-    setState(() => _workoutDates = null); // Mark as loading
     
     final workoutSet = <DateTime>{};
     final firstDay = DateTime(month.year, month.month, 1);
@@ -352,6 +365,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
         if (event.isHoliday || event.sickDayType != null) continue;
         final dutyCode = event.title.replaceAll('Shift: ', '').trim();
         if (!event.title.startsWith('Shift:') && !event.title.startsWith('SP') &&
+            !event.title.startsWith(DonnybrookFeatureService.shiftPrefix) &&
             !RegExp(r'^\d{1,3}/\d{1,2}').hasMatch(dutyCode) &&
             !event.title.toUpperCase().contains('PZ')) continue;
         try {
@@ -369,7 +383,9 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
     if (mounted) {
       final monthKey = '${month.year}-${month.month}';
       _workoutDatesMonthCache[monthKey] = workoutSet;
-      setState(() => _workoutDates = workoutSet);
+      if (!const SetEquality<DateTime>().equals(_workoutDates, workoutSet)) {
+        setState(() => _workoutDates = workoutSet);
+      }
     }
   }
 
@@ -486,6 +502,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
 
 
   Future<void> _loadSettings() async {
+    await RosterScheduleService.initialize();
     final startDateString = await StorageService.getString(AppConstants.startDateKey);
     final startWeek = await StorageService.getInt(AppConstants.startWeekKey);
     
@@ -511,7 +528,10 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
     }
   }
 
-  void _showFirstRunDialog() {
+  void _showFirstRunDialog({bool allowEffectiveDate = false}) {
+    var selectedWeek = _startWeek;
+    DateTime? effectiveDate;
+
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -533,13 +553,13 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Text(
-                      'Choose this week\'s rest days',
+                      'Choose the new rest-day block',
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
                     const SizedBox(height: 12),
                     DropdownButtonFormField<int>(
                       isExpanded: true,
-                      value: _startWeek,
+                      value: selectedWeek,
                       decoration: InputDecoration(
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
@@ -559,10 +579,51 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                       onChanged: (value) {
                         if (value == null) return;
                         setDialogState(() {
-                          _startWeek = value;
+                          selectedWeek = value;
                         });
                       },
                     ),
+                    if (allowEffectiveDate) ...[
+                      const SizedBox(height: 12),
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: const Icon(Icons.event),
+                        title: const Text('Apply from date'),
+                        subtitle: Text(
+                          effectiveDate == null
+                              ? 'Not set — apply immediately as normal'
+                              : 'Week beginning ${DateFormat('EEE, d MMM yyyy').format(effectiveDate!)}',
+                        ),
+                        trailing: effectiveDate == null
+                            ? null
+                            : IconButton(
+                                tooltip: 'Clear date',
+                                icon: const Icon(Icons.clear),
+                                onPressed: () {
+                                  setDialogState(() {
+                                    effectiveDate = null;
+                                  });
+                                },
+                              ),
+                        onTap: () async {
+                          final selectedDate = await showDatePicker(
+                            context: dialogContext,
+                            initialDate: effectiveDate ?? DateTime.now(),
+                            firstDate: DateTime(2020),
+                            lastDate: DateTime(2100),
+                            helpText: 'Select when the new rest days begin',
+                          );
+                          if (selectedDate != null) {
+                            setDialogState(() {
+                              effectiveDate =
+                                  RosterScheduleService.sundayOfWeek(
+                                selectedDate,
+                              );
+                            });
+                          }
+                        },
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -576,10 +637,17 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                     ),
                     FilledButton(
                       onPressed: () async {
-                        _startDate = RosterService.getSundayOfCurrentWeek();
-
                         final navigator = Navigator.of(dialogContext);
-                        await _saveSettings();
+                        if (effectiveDate == null) {
+                          _startWeek = selectedWeek;
+                          _startDate = RosterService.getSundayOfCurrentWeek();
+                          await _saveSettings();
+                        } else {
+                          await RosterScheduleService.setChange(
+                            effectiveDate: effectiveDate!,
+                            startWeek: selectedWeek,
+                          );
+                        }
                         navigator.pop();
 
                         if (mounted) {
@@ -600,7 +668,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
 
   // Define the missing method
   void _resetRestDays() {
-    _showFirstRunDialog(); // Show the dialog to re-select rest days
+    _showFirstRunDialog(allowEffectiveDate: true);
   }
 
   @override
@@ -901,6 +969,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
     }
 
     final jamestownEnabled = await JamestownFeatureService.isEnabled();
+    final donnybrook1Enabled = await DonnybrookFeatureService.isEnabled();
     
     // Check if widget is still mounted after async operations
     if (!mounted) return;
@@ -910,7 +979,9 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
       context: context,
       builder: (dialogContext) {
         // Pre-select zone from Settings when marked in (Shift or M-F)
-        String selectedZone = markedInZone.isNotEmpty ? markedInZone : 'Zone 1';
+        String selectedZone = donnybrook1Enabled
+            ? DonnybrookFeatureService.zoneLabel
+            : (markedInZone.isNotEmpty ? markedInZone : 'Zone 1');
         String selectedShiftNumber = '';
         List<String> shiftNumbers = [];
         bool isLoading = true;
@@ -1099,6 +1170,11 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                 } catch (e) {
                   shiftNumbers = [];
                 }
+              } else if (selectedZone == DonnybrookFeatureService.zoneLabel) {
+                shiftNumbers =
+                    await DonnybrookFeatureService.loadShiftCodesForDate(
+                  shiftDate,
+                );
               } else if (selectedZone == JamestownFeatureService.zoneLabel) {
                 if (dayOfWeek == 'Saturday' || dayOfWeek == 'Sunday') {
                   shiftNumbers = [];
@@ -1152,6 +1228,9 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                     final parts = line.split(',');
                     if (parts.isNotEmpty) {
                       final shift = parts[0].trim();
+                      if (donnybrook1Enabled && shift != 'CPC') {
+                        continue;
+                      }
                       // Exclude EA Type Training shifts (overtime-only)
                       if (shift.contains('EA Type Training')) {
                         continue;
@@ -1254,6 +1333,13 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                   value: selectedZone,
                   isExpanded: true,
                   items: () {
+                    if (donnybrook1Enabled) {
+                      return <String>[
+                        DonnybrookFeatureService.zoneLabel,
+                        'Training',
+                      ];
+                    }
+
                     final dayOfWeek = RosterService.getDayOfWeek(shiftDate);
                     List<String> zones = [
                       'Zone 1',
@@ -1457,6 +1543,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                         selectedZone == 'Zone 2' ||
                         selectedZone == 'Zone 3' ||
                         selectedZone == 'Zone 4' ||
+                        selectedZone == DonnybrookFeatureService.zoneLabel ||
                         (isJamestownZone && jamestownEnabled);
                     final zoneMatch = isShiftMarkedIn ? (selectedZone == markedInZone) : true;
                     final shouldShowRepeatCheckbox = (isShiftMarkedIn || isMFMarkedIn) &&
@@ -1689,6 +1776,9 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                         title = selectedShiftNumber;
                       } else if (selectedZone == 'Bus Check') { // ADDED: Set title for Bus Check
                         title = selectedShiftNumber; // Use the selected duty name (e.g., BusCheck1)
+                      } else if (selectedZone ==
+                          DonnybrookFeatureService.zoneLabel) {
+                        title = selectedShiftNumber;
                       } else if (selectedZone == JamestownFeatureService.zoneLabel ||
                           selectedZone == 'Jamestown Road') {
                         title = selectedShiftNumber; // Use the shift code (e.g., 811/36)
@@ -1751,6 +1841,10 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                             'endTime': const TimeOfDay(hour: 12, minute: 38),
                           };
                         }
+                      } else if (selectedZone ==
+                          DonnybrookFeatureService.zoneLabel) {
+                        shiftTimes = await _getShiftTimes(
+                            selectedZone, selectedShiftNumber, shiftDate);
                       } else if (selectedZone == JamestownFeatureService.zoneLabel ||
                           selectedZone == 'Jamestown Road') {
                         shiftTimes = await _getShiftTimes(selectedZone, selectedShiftNumber, shiftDate);
@@ -1888,6 +1982,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                           selectedZone == 'Zone 2' ||
                           selectedZone == 'Zone 3' ||
                           selectedZone == 'Zone 4' ||
+                          selectedZone == DonnybrookFeatureService.zoneLabel ||
                           (isJamestownRepeatZone && jamestownEnabled);
                       final zoneMatchesMarkedIn = selectedZone == markedInZone ||
                           (isMFMarkedIn && isJamestownRepeatZone && jamestownEnabled);
@@ -1932,6 +2027,8 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
                               selectedZone == 'Zone 2' ||
                               selectedZone == 'Zone 3' ||
                               selectedZone == 'Zone 4' ||
+                              selectedZone ==
+                                  DonnybrookFeatureService.zoneLabel ||
                               selectedZone == JamestownFeatureService.zoneLabel) {
                             targetShiftTimes = await _getShiftTimes(selectedZone, selectedShiftNumber, targetDate);
                           }
@@ -2629,6 +2726,8 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
     } else if (zone == 'Jamestown Road') {
       csvPath = JamestownFeatureService.dutiesMainCsvAsset;
       // Jamestown Road only works Monday-Friday
+    } else if (zone == DonnybrookFeatureService.zoneLabel) {
+      csvPath = DonnybrookFeatureService.resolveDutyCsvAsset(shiftDate);
     } else if (zone == 'Training') {
       csvPath = 'assets/training_duties.csv';
     } else if (zone == 'Uni/Euro') {
@@ -6216,10 +6315,6 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
 
   @override
   Widget build(BuildContext context) {
-    // Reload marked in settings immediately when build is called
-    // This ensures settings are fresh when navigating back to the screen
-    _loadMarkedInSettings();
-
     final textScaler = MediaQuery.textScalerOf(context);
     final textScaleFactor = textScaler.scale(1.0);
     // Full title + action icons overflow when accessibility text is large; shorten title.
@@ -7290,7 +7385,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
       ),
     ).then((result) {
       // Reload marked in settings when returning from settings page
-      _loadMarkedInSettings();
+      _loadMarkedInSettings(refreshWorkoutDates: true);
       // If Settings cleared future events, refresh calendar and show feedback
       if (result is int && result >= 0) {
         _refreshCalendarAfterDataChange();
@@ -10946,6 +11041,8 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
           startWeek: _startWeek,
           holidays: _holidays,
           bankHolidays: _bankHolidays,
+          markedInEnabled: _markedInEnabled,
+          markedInStatus: _markedInStatus,
         ),
       ),
     );
@@ -11026,7 +11123,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
 
       // Load workout dates for highlight if enabled (uses cache if available)
       if (_highlightWorkoutDays) {
-        _loadWorkoutDates();
+        await _loadWorkoutDates();
       } else if (mounted) {
         _workoutDates = {};
       }

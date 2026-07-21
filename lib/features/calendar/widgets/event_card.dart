@@ -18,6 +18,7 @@ import 'package:spdrivercalendar/services/color_customization_service.dart';
 import 'package:spdrivercalendar/core/services/storage_service.dart';
 import 'package:spdrivercalendar/core/constants/app_constants.dart';
 import 'package:spdrivercalendar/services/self_certified_sick_days_service.dart';
+import 'package:spdrivercalendar/services/donnybrook_feature_service.dart';
 import 'package:spdrivercalendar/services/jamestown_feature_service.dart';
 
 class EventCard extends StatefulWidget {
@@ -404,11 +405,17 @@ class _EventCardState extends State<EventCard> {
         zoneNumber = match.group(1) ?? '1';
       }
       
-      // Get the appropriate filename based on day of week and bank holiday status
-      final filename = RosterService.getShiftFilename(zoneNumber, dayOfWeekForFilename, widget.event.startDate);
+      // Get the appropriate file based on duty type and service day.
+      final assetPath = shiftCode.startsWith(
+        DonnybrookFeatureService.shiftPrefix,
+      )
+          ? DonnybrookFeatureService.resolveDutyCsvAsset(
+              widget.event.startDate,
+            )
+          : 'assets/${RosterService.getShiftFilename(zoneNumber, dayOfWeekForFilename, widget.event.startDate)}';
       
       // Load the CSV file
-      final file = await rootBundle.loadString('assets/$filename');
+      final file = await rootBundle.loadString(assetPath);
       final lines = file.split('\n');
       
       // Find the matching shift
@@ -530,7 +537,8 @@ class _EventCardState extends State<EventCard> {
       return;
     }
 
-    if (widget.event.title.startsWith('811/')) {
+    if (widget.event.title.startsWith('811/') ||
+        widget.event.title.startsWith(DonnybrookFeatureService.shiftPrefix)) {
       return;
     }
 
@@ -2078,7 +2086,10 @@ class _EventCardState extends State<EventCard> {
               
               // NEW: Report - Sign Off line (for PZ shifts and UNI overtime shifts)
               // Skip for EA Training (no times/locations)
-              if (!_isEATraining && (widget.event.title.startsWith('PZ') || widget.event.title.startsWith('811/') || (widget.event.title.contains('(OT)') && RegExp(r'^\d{2,3}/').hasMatch(widget.event.title.replaceAll(RegExp(r'[AB]? \(OT\)$'), '')))))
+              if (!_isEATraining && (widget.event.title.startsWith('PZ') ||
+                  widget.event.title.startsWith('811/') ||
+                  widget.event.title.startsWith(DonnybrookFeatureService.shiftPrefix) ||
+                  (widget.event.title.contains('(OT)') && RegExp(r'^\d{2,3}/').hasMatch(widget.event.title.replaceAll(RegExp(r'[AB]? \(OT\)$'), '')))))
                 Padding(
                   padding: const EdgeInsets.only(bottom: 2.0), // Reduced space - time info goes together
                   child: Row(
@@ -2242,6 +2253,7 @@ class _EventCardState extends State<EventCard> {
                               // Check if this shift type should show break locations
                               final shouldShowLocations = widget.event.title.contains('PZ') || 
                                                           widget.event.title.startsWith('811/') || 
+                                                          widget.event.title.startsWith(DonnybrookFeatureService.shiftPrefix) ||
                                                           RegExp(r'^\d+/').hasMatch(widget.event.title) ||
                                                           widget.event.title == '23' || 
                                                           widget.event.title == '24';
@@ -6664,7 +6676,9 @@ class _EventCardState extends State<EventCard> {
     }
     
     // For PZ shifts, Jamestown Road shifts, Training shifts, and Universal/Euro shifts, use the specialized display format
-    if (widget.event.title.startsWith('PZ') || widget.event.title.startsWith('811/') ||
+    if (widget.event.title.startsWith('PZ') ||
+        widget.event.title.startsWith('811/') ||
+        widget.event.title.startsWith(DonnybrookFeatureService.shiftPrefix) ||
         widget.event.title == 'CPC' || widget.event.title == 'Union' || widget.event.title == 'Mentor' ||
         widget.event.isCustomTraining ||
         RegExp(r'^\d+/').hasMatch(widget.event.title)) {

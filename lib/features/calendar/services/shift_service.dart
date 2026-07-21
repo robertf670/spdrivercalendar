@@ -5,6 +5,7 @@ import 'package:spdrivercalendar/features/calendar/services/roster_service.dart'
 import 'package:spdrivercalendar/models/bank_holiday.dart';
 import 'package:spdrivercalendar/models/shift_data.dart';
 import 'package:spdrivercalendar/core/utils/location_utils.dart';
+import 'package:spdrivercalendar/services/donnybrook_feature_service.dart';
 import 'package:spdrivercalendar/services/jamestown_feature_service.dart';
 
 class ShiftService {
@@ -22,8 +23,8 @@ class ShiftService {
     }
   }
   
-  // Direct access to bank holidays
-  static List<BankHoliday> bankHolidays = _bankHolidays;
+  // Direct access to the currently loaded bank holidays.
+  static List<BankHoliday> get bankHolidays => _bankHolidays;
 
   // Get break time information for an event
   static Future<String?> getBreakTime(Event event) async {
@@ -66,7 +67,13 @@ class ShiftService {
     // Check if this is a Jamestown Road shift
     bool isJamestownRoad = shiftCode.startsWith('811/');
     
-    if (isJamestownRoad) {
+    if (shiftCode.startsWith(DonnybrookFeatureService.shiftPrefix)) {
+      final parts = await DonnybrookFeatureService.findShiftCsvParts(
+        shiftCode,
+        event.startDate,
+      );
+      return parts == null ? 'No break info' : _parseBreakTime(parts);
+    } else if (isJamestownRoad) {
       return await _getJamestownShiftBreakTime(shiftCode, dayOfWeek, event.startDate);
     } else if (isUniEuro) {
       return await _getUniShiftBreakTime(shiftCode, dayOfWeek, event.startDate);

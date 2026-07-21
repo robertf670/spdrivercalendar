@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:spdrivercalendar/core/constants/app_constants.dart';
 import 'package:spdrivercalendar/models/event.dart';
 import 'package:spdrivercalendar/features/calendar/services/shift_service.dart';
+import 'package:spdrivercalendar/services/donnybrook_feature_service.dart';
 
 /// Service to compute and cache which calendar dates have workout duties.
 /// Used by the "Refresh Workout Highlights" button in Settings to scan all
@@ -44,6 +45,9 @@ class WorkoutHighlightService {
                   event.title.replaceAll('Shift: ', '').trim();
               if (!event.title.startsWith('Shift:') &&
                   !event.title.startsWith('SP') &&
+                  !event.title.startsWith(
+                    DonnybrookFeatureService.shiftPrefix,
+                  ) &&
                   !RegExp(r'^\d{1,3}/\d{1,2}').hasMatch(dutyCode) &&
                   !event.title.toUpperCase().contains('PZ')) {
                 continue;

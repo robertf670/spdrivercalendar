@@ -1,4 +1,27 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '3.2.9': [
+    {
+      'title': 'Zone 4 route label',
+      'description': 'All current Zone 4 duties now display route 23/24.',
+    },
+    {
+      'title': 'Overnight duties setting',
+      'description': 'Fixed the overnight duties setting for new users.',
+    },
+    {
+      'title': 'Workout colour performance',
+      'description':
+          'Fixed calendar lag when workout day colouring is enabled.',
+    },
+    {
+      'title': 'Year View performance',
+      'description': 'Improved Year View loading speed and responsiveness.',
+    },
+    {
+      'title': 'Scheduled rest-day changes',
+      'description': 'Rest-day blocks can now be changed from a selected date.',
+    },
+  ],
   '3.2.8': [
     {
       'title': 'Note Photos: Rotate and Share',

@@ -2,9 +2,8 @@ import 'package:flutter/services.dart';
 import 'package:spdrivercalendar/core/constants/app_constants.dart';
 import 'package:spdrivercalendar/core/services/storage_service.dart';
 
-/// Secret Jamestown 30hr duties — unlock via settings password.
+/// Controls access to the secret Jamestown duties.
 class JamestownFeatureService {
-  static const String password = '2113';
   static const String zoneLabel = 'Jamestown';
   static const String duties30HrCsvAsset = 'assets/jamestown_30hr.csv';
   static const String dutiesMainCsvAsset = 'assets/JAMESTOWN_DUTIES.csv';
@@ -20,19 +19,12 @@ class JamestownFeatureService {
 
   static Future<void> setEnabled(bool enabled) async {
     await StorageService.saveBool(AppConstants.jamestownEnabledKey, enabled);
-  }
-
-  static Future<bool> isPasswordRemembered() async {
-    return StorageService.getBool(AppConstants.jamestownUnlockedKey);
-  }
-
-  static bool isValidPassword(String input) => input == password;
-
-  /// Saves unlock state on success so the user is not prompted again.
-  static Future<bool> unlockWithPassword(String input) async {
-    if (!isValidPassword(input)) return false;
-    await StorageService.saveBool(AppConstants.jamestownUnlockedKey, true);
-    return true;
+    if (enabled) {
+      await StorageService.saveBool(
+        AppConstants.donnybrook1EnabledKey,
+        false,
+      );
+    }
   }
 
   /// Shift codes from the secret 30hr roster (811/36 … 811/40).

@@ -4,6 +4,7 @@ import 'package:spdrivercalendar/models/event.dart';
 import 'package:flutter/services.dart';
 import 'dart:convert';
 import 'package:spdrivercalendar/features/calendar/services/roster_service.dart';
+import 'package:spdrivercalendar/features/calendar/services/roster_schedule_service.dart';
 import 'package:spdrivercalendar/core/services/storage_service.dart';
 import 'package:spdrivercalendar/core/constants/app_constants.dart';
 import 'package:spdrivercalendar/features/calendar/services/holiday_service.dart';
@@ -11,6 +12,7 @@ import 'package:spdrivercalendar/models/holiday.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:spdrivercalendar/theme/app_theme.dart';
 import 'package:spdrivercalendar/services/jamestown_feature_service.dart';
+import 'package:spdrivercalendar/services/donnybrook_feature_service.dart';
 
 // Import the new widgets
 import '../widgets/frequency_chart.dart';
@@ -1489,6 +1491,9 @@ class StatisticsScreenState extends State<StatisticsScreen>
       } else if (shiftCode.startsWith('811/')) {
         // Handle Jamestown Road shifts
         return await _loadJamestownWorkTime(shiftCode);
+
+      } else if (shiftCode.startsWith(DonnybrookFeatureService.shiftPrefix)) {
+        return await _loadDonnybrookWorkTime(shiftCode, event.startDate);
       
       // Check for UNI using firstMatch with simplified regex
       } else if (RegExp(r'^\d+/').firstMatch(shiftCode) != null) { // Use \d+ (one or more digits)
@@ -1708,6 +1713,22 @@ class StatisticsScreenState extends State<StatisticsScreen>
     } catch (e) {
       return null;
     }
+  }
+
+  Future<Duration?> _loadDonnybrookWorkTime(
+      String shiftCode, DateTime eventDate) async {
+    final parts = await DonnybrookFeatureService.findShiftCsvParts(
+      shiftCode,
+      eventDate,
+    );
+    if (parts == null || parts.length <= 14) return null;
+
+    final timeParts = parts[14].trim().split(':');
+    if (timeParts.length < 2) return null;
+    final hours = int.tryParse(timeParts[0]);
+    final minutes = int.tryParse(timeParts[1]);
+    if (hours == null || minutes == null) return null;
+    return Duration(hours: hours, minutes: minutes);
   }
 
   // --- ADD HELPER FUNCTION for loading/parsing a SINGLE UNI file --- 
@@ -2268,6 +2289,7 @@ class StatisticsScreenState extends State<StatisticsScreen>
   /// Returns zone name from duty code: Zone 1, Zone 3, Zone 4, or Uni/Euro
   String? _getZoneFromDutyCode(String dutyCode) {
     final code = dutyCode.startsWith('UNI:') ? dutyCode.substring(4) : dutyCode;
+    if (code.startsWith(DonnybrookFeatureService.shiftPrefix)) return 'DB Z1';
     if (code.startsWith('PZ1') || code.contains('PZ1/')) return 'Zone 1';
     if (code.startsWith('PZ2') || code.contains('PZ2/')) return 'Zone 2';
     if (code.startsWith('PZ3') || code.contains('PZ3/')) return 'Zone 3';
@@ -2373,6 +2395,38 @@ class StatisticsScreenState extends State<StatisticsScreen>
 
   // --- Add Calculation Logic --- 
 
+  DateTime _rosterWeekZeroCycleStartForDate(DateTime date) {
+    final anchor = RosterScheduleService.resolveAnchor(
+      date: date,
+      fallbackStartDate: _startDate!,
+      fallbackStartWeek: _startWeek,
+    );
+    final normalizedDate = DateTime.utc(date.year, date.month, date.day);
+    final normalizedAnchor = DateTime.utc(
+      anchor.startDate.year,
+      anchor.startDate.month,
+      anchor.startDate.day,
+    );
+    final referenceCycleStart =
+        normalizedAnchor.subtract(Duration(days: anchor.startWeek * 7));
+    final daysSinceReference =
+        normalizedDate.difference(referenceCycleStart).inDays;
+    final cycleShift = (daysSinceReference / 35).floor();
+    return referenceCycleStart.add(Duration(days: cycleShift * 35));
+  }
+
+  DateTime _restSunMonCycleStartForDate(DateTime date) {
+    const restSunMonWeekIndex = 3;
+    final weekZeroStart = _rosterWeekZeroCycleStartForDate(date);
+    var cycleStart =
+        weekZeroStart.add(const Duration(days: restSunMonWeekIndex * 7));
+    final normalizedDate = DateTime.utc(date.year, date.month, date.day);
+    if (cycleStart.isAfter(normalizedDate)) {
+      cycleStart = cycleStart.subtract(const Duration(days: 35));
+    }
+    return cycleStart;
+  }
+
   Future<void> _calculateSundayPairStatistics() async {
     if (_startDate == null) {
       if (mounted) setState(() => _sundayStatsLoading = false);
@@ -2382,31 +2436,11 @@ class StatisticsScreenState extends State<StatisticsScreen>
     if (mounted) setState(() => _sundayStatsLoading = true);
 
     final now = DateTime.now();
-    const rosterCycleDays = 35; // 5 weeks * 7 days
     const maxMinutes = 870; // 14.5 hours
 
     try {
-      // --- Determine current 5-week block --- 
-      // Normalize now and _startDate to midnight UTC for consistent calculations
-      final normalizedNow = DateTime.utc(now.year, now.month, now.day);
-      final normalizedStartDate = DateTime.utc(_startDate!.year, _startDate!.month, _startDate!.day);
-
-      // --- Corrected Logic --- 
-      // 1. Find the actual start date of the cycle block containing the user's _startDate
-      final referenceCycleStartDate = normalizedStartDate.subtract(Duration(days: _startWeek * 7));
-
-      // 2. Calculate cycle shift relative to this reference start date
-      final daysSinceReference = normalizedNow.difference(referenceCycleStartDate).inDays;
-      final cycleShift = (daysSinceReference / rosterCycleDays).floor();
-      
-      // 3. Calculate the start date of the cycle containing 'now'
-      final currentCycleStartDate = referenceCycleStartDate.add(Duration(days: cycleShift * rosterCycleDays));
-      // --- End Corrected Logic --- 
-      
-      // Ensure the currentCycleStartDate corresponds to the start week (_startWeek)
-      // It should be the Sunday of the week that has the roster pattern index matching _startWeek.
-      // Adjust if necessary (this logic assumes _startDate is already the correct Sunday for _startWeek)
-      // No adjustment needed here based on RosterService logic if _startDate is correctly set.
+      final currentCycleStartDate =
+          _rosterWeekZeroCycleStartForDate(now);
 
       // The L-Sunday is the start of Week 0 of this cycle
       // The E-Sunday is the start of Week 2 of this cycle
@@ -2414,7 +2448,9 @@ class StatisticsScreenState extends State<StatisticsScreen>
       final currentEsun = currentCycleStartDate.add(const Duration(days: 14)); // Week 2, Day 0
 
       // --- Determine previous 5-week block ---
-      final previousCycleStartDate = currentCycleStartDate.subtract(const Duration(days: rosterCycleDays));
+      final previousCycleStartDate = _rosterWeekZeroCycleStartForDate(
+        currentCycleStartDate.subtract(const Duration(days: 1)),
+      );
       final previousLsun = previousCycleStartDate;
       final previousEsun = previousCycleStartDate.add(const Duration(days: 14));
 
@@ -2484,23 +2520,14 @@ class StatisticsScreenState extends State<StatisticsScreen>
     if (mounted) setState(() => _cycleStatsLoading = true);
 
     const rosterCycleDays = 35;
-    const restSunMonWeekIndex = 3; // Week 3 = RRLLLLL (Rest Sun, Rest Mon)
 
     try {
       final now = DateTime.now();
-      final normalizedNow = DateTime.utc(now.year, now.month, now.day);
-      final normalizedStartDate = DateTime.utc(_startDate!.year, _startDate!.month, _startDate!.day);
-
-      // Reference: Sunday that starts roster week 0
-      final referenceBlockStart = normalizedStartDate.subtract(Duration(days: _startWeek * 7));
-      // Cycle starts on Sunday of "rest Sun-Mon" week (week 3)
-      final firstCycleStartDate = referenceBlockStart.add(Duration(days: restSunMonWeekIndex * 7));
-
-      final daysSinceFirstCycle = normalizedNow.difference(firstCycleStartDate).inDays;
-      final cycleShift = (daysSinceFirstCycle / rosterCycleDays).floor();
-      final currentCycleStartDate = firstCycleStartDate.add(Duration(days: cycleShift * rosterCycleDays));
+      final currentCycleStartDate = _restSunMonCycleStartForDate(now);
       final currentCycleEndDate = currentCycleStartDate.add(const Duration(days: 34));
-      final previousCycleStartDate = currentCycleStartDate.subtract(const Duration(days: rosterCycleDays));
+      final previousCycleStartDate = _restSunMonCycleStartForDate(
+        currentCycleStartDate.subtract(const Duration(days: 1)),
+      );
       final previousCycleEndDate = previousCycleStartDate.add(const Duration(days: 34));
 
       Duration currentTotal = Duration.zero;
@@ -2616,6 +2643,7 @@ class StatisticsScreenState extends State<StatisticsScreen>
   }
 
   Future<void> _loadRosterSettings() async {
+    await RosterScheduleService.initialize();
     final startDateString = await StorageService.getString(AppConstants.startDateKey);
     final startWeek = await StorageService.getInt(AppConstants.startWeekKey, defaultValue: 0);
     

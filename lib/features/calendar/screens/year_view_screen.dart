@@ -7,8 +7,6 @@ import 'package:spdrivercalendar/models/event.dart';
 import 'package:spdrivercalendar/models/holiday.dart';
 import 'package:spdrivercalendar/models/bank_holiday.dart';
 import 'package:spdrivercalendar/services/color_customization_service.dart';
-import 'package:spdrivercalendar/core/services/storage_service.dart';
-import 'package:spdrivercalendar/core/constants/app_constants.dart';
 import 'package:spdrivercalendar/services/rest_day_swap_service.dart';
 
 // Cached data structure for a single day
@@ -51,6 +49,8 @@ class YearViewScreen extends StatefulWidget {
   final int startWeek;
   final List<Holiday> holidays;
   final List<BankHoliday>? bankHolidays;
+  final bool markedInEnabled;
+  final String markedInStatus;
 
   const YearViewScreen({
     super.key,
@@ -60,6 +60,8 @@ class YearViewScreen extends StatefulWidget {
     this.startWeek = 0,
     required this.holidays,
     this.bankHolidays,
+    required this.markedInEnabled,
+    required this.markedInStatus,
   });
 
   @override
@@ -93,13 +95,10 @@ class YearViewScreenState extends State<YearViewScreen> {
   void initState() {
     super.initState();
     _currentYear = widget.year;
+    _markedInEnabled = widget.markedInEnabled;
+    _markedInStatus = widget.markedInStatus;
     _buildIndexes();
-    // Load settings first, then build cache
-    _loadMarkedInSettings().then((_) {
-      if (mounted) {
-        _preloadMonthsProgressive();
-      }
-    });
+    _preloadMonthsProgressive();
   }
 
   void _buildIndexes() {
@@ -131,34 +130,6 @@ class YearViewScreenState extends State<YearViewScreen> {
     return '${date.year}-${date.month}-${date.day}';
   }
 
-  Future<void> _loadMarkedInSettings() async {
-    final markedInEnabled = await StorageService.getBool(AppConstants.markedInEnabledKey);
-    final markedInStatus = await StorageService.getString(AppConstants.markedInStatusKey) ?? '';
-    if (mounted) {
-      // Check if M-F settings changed
-      final newMarkedInEnabled = markedInEnabled && markedInStatus.isNotEmpty;
-      final newMarkedInStatus = markedInStatus.isEmpty ? 'Spare' : markedInStatus;
-      final settingsChanged = _markedInEnabled != newMarkedInEnabled || 
-                              _markedInStatus != newMarkedInStatus;
-      
-      setState(() {
-        // Determine if marked-in is actually enabled (enabled flag must be true AND status must not be empty)
-        _markedInEnabled = newMarkedInEnabled;
-        _markedInStatus = newMarkedInStatus;
-      });
-      
-      // If M-F settings changed, clear cache and rebuild
-      if (settingsChanged) {
-        _dayCellCache.clear();
-        _loadedMonths.clear();
-        _isInitialLoad = true;
-        if (mounted) {
-          _preloadMonthsProgressive();
-        }
-      }
-    }
-  }
-
   @override
   void didUpdateWidget(YearViewScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -178,49 +149,39 @@ class YearViewScreenState extends State<YearViewScreen> {
       _buildIndexes();
       _dayCellCache.clear(); // Clear cache when holidays change
     }
-    _loadMarkedInSettings();
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    // Reload marked-in settings when screen becomes visible again
-    // This ensures settings are fresh when navigating back to the screen
-    _loadMarkedInSettings();
+    if (oldWidget.markedInEnabled != widget.markedInEnabled ||
+        oldWidget.markedInStatus != widget.markedInStatus) {
+      _markedInEnabled = widget.markedInEnabled;
+      _markedInStatus = widget.markedInStatus;
+      _loadedMonths.clear();
+      _dayCellCache.clear();
+      _isInitialLoad = true;
+      _preloadMonthsProgressive();
+    }
   }
 
   Future<void> _preloadMonthsProgressive() async {
-    // Load months progressively - show them as they finish loading
-    // This provides immediate feedback instead of blocking until all 12 are ready
-    
-    // Start loading all months in parallel
-    final futures = <Future>[];
-    for (int month = 1; month <= 12; month++) {
-      final date = DateTime(_currentYear, month, 1);
-      final future = EventService.preloadMonth(date).then((_) {
-        if (mounted) {
-          setState(() {
-            _loadedMonths.add(month);
-            // Build cache for this month
-            _buildMonthCache(month);
-          });
-        }
-      }).catchError((_) {
-        // Still mark as loaded even if there's an error
-        if (mounted) {
-          setState(() {
-            _loadedMonths.add(month);
-          });
-        }
+    final loadingYear = _currentYear;
+    await EventService.preloadYear(loadingYear);
+    if (!mounted || loadingYear != _currentYear) return;
+
+    const batchSize = 3;
+    for (var batchStart = 1; batchStart <= 12; batchStart += batchSize) {
+      final batchEnd = (batchStart + batchSize - 1).clamp(1, 12);
+      final completedMonths = <int>{};
+
+      for (var month = batchStart; month <= batchEnd; month++) {
+        _buildMonthCache(month);
+        completedMonths.add(month);
+      }
+
+      if (!mounted || loadingYear != _currentYear) return;
+      setState(() {
+        _loadedMonths.addAll(completedMonths);
+        _isInitialLoad = false;
       });
-      futures.add(future);
-    }
-    
-    // Don't wait for all - let them complete progressively
-    // This allows UI to update as months finish loading
-    _isInitialLoad = false;
-    if (mounted) {
-      setState(() {});
+
+      await Future<void>.delayed(Duration.zero);
     }
   }
 

@@ -19,6 +19,7 @@ class MonthlyCalendarWidgetProvider : AppWidgetProvider() {
         private const val HOLIDAYS_KEY = "flutter.holidays"
         private const val START_DATE_KEY = "flutter.startDate"
         private const val START_WEEK_KEY = "flutter.startWeek"
+        private const val ROSTER_SCHEDULE_CHANGES_KEY = "flutter.rosterScheduleChanges"
         private const val MARKED_IN_ENABLED_KEY = "flutter.markedInEnabled"
         private const val MARKED_IN_STATUS_KEY = "flutter.markedInStatus"
         private const val BANK_HOLIDAY_DATES_KEY = "flutter.bankHolidayDates"
@@ -140,6 +141,10 @@ class MonthlyCalendarWidgetProvider : AppWidgetProvider() {
                 }
                 
                 val eventsMap = parseEvents(eventsJson)
+                val rosterScheduleChanges = parseRosterScheduleChanges(
+                    prefs.getString(ROSTER_SCHEDULE_CHANGES_KEY, null)
+                        ?: prefs.getString("rosterScheduleChanges", null)
+                )
                 
                 // Get holidays
                 val holidaysJson = prefs.getString(HOLIDAYS_KEY, null) ?: prefs.getString("holidays", null)
@@ -155,7 +160,7 @@ class MonthlyCalendarWidgetProvider : AppWidgetProvider() {
                 val restDaySwaps = loadRestDaySwaps(prefs)
                 
                 // Calculate and display calendar grid
-                displayCalendar(views, context, colorContext, currentYear, currentMonth, startDateStr, startWeek, eventsMap, holidays, isMFMarkedIn, bankHolidayDates, restDaySwaps)
+                displayCalendar(views, context, colorContext, currentYear, currentMonth, startDateStr, startWeek, rosterScheduleChanges, eventsMap, holidays, isMFMarkedIn, bankHolidayDates, restDaySwaps)
                 
                 // Set up click intent to open the app
                 val intent = android.content.Intent(context, MainActivity::class.java)
@@ -248,6 +253,7 @@ class MonthlyCalendarWidgetProvider : AppWidgetProvider() {
             month: Int,
             startDateStr: String?,
             startWeek: Int,
+            rosterScheduleChanges: List<Pair<Date, Int>>,
             eventsMap: Map<String, List<EventInfo>>,
             holidays: List<HolidayInfo>,
             isMFMarkedIn: Boolean = false,
@@ -329,7 +335,7 @@ class MonthlyCalendarWidgetProvider : AppWidgetProvider() {
                         if (displayDate != null) {
                             // Get roster pattern, event status, and holiday status
                             val dateKey = formatDateKey(displayDate.time)
-                            val pattern = getRosterPattern(displayDate.time, startDateStr, startWeek, isMFMarkedIn, bankHolidayDates, restDaySwaps)
+                            val pattern = getRosterPattern(displayDate.time, startDateStr, startWeek, rosterScheduleChanges, isMFMarkedIn, bankHolidayDates, restDaySwaps)
                             val hasEvent = eventsMap.containsKey(dateKey)
                             val holidayType = getHolidayTypeForDate(displayDate.time, holidays)
                             
@@ -446,8 +452,32 @@ class MonthlyCalendarWidgetProvider : AppWidgetProvider() {
             }
             return emptySet()
         }
+
+        private fun parseRosterScheduleChanges(json: String?): List<Pair<Date, Int>> {
+            if (json.isNullOrEmpty()) return emptyList()
+
+            return try {
+                val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US).apply {
+                    isLenient = false
+                }
+                val changes = mutableListOf<Pair<Date, Int>>()
+                val array = JSONArray(json)
+                for (index in 0 until array.length()) {
+                    val item = array.optJSONObject(index) ?: continue
+                    val effectiveDate =
+                        dateFormat.parse(item.optString("effectiveDate", "")) ?: continue
+                    val effectiveStartWeek = item.optInt("startWeek", -1)
+                    if (effectiveStartWeek in 0..4) {
+                        changes.add(Pair(effectiveDate, effectiveStartWeek))
+                    }
+                }
+                changes.sortedBy { it.first }
+            } catch (e: Exception) {
+                emptyList()
+            }
+        }
         
-        private fun getRosterPattern(date: Date, startDateStr: String?, startWeek: Int, isMFMarkedIn: Boolean = false, bankHolidayDates: Set<String> = emptySet(), restDaySwaps: Map<String, String> = emptyMap()): String? {
+        private fun getRosterPattern(date: Date, startDateStr: String?, startWeek: Int, rosterScheduleChanges: List<Pair<Date, Int>> = emptyList(), isMFMarkedIn: Boolean = false, bankHolidayDates: Set<String> = emptySet(), restDaySwaps: Map<String, String> = emptyMap()): String? {
             val dateKey = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(date)
             restDaySwaps[dateKey]?.let { return it }
             
@@ -465,8 +495,14 @@ class MonthlyCalendarWidgetProvider : AppWidgetProvider() {
             if (startDateStr == null) return null
             
             try {
-                val startDate = SimpleDateFormat("yyyy-MM-dd", Locale.US).parse(startDateStr)
+                var startDate = SimpleDateFormat("yyyy-MM-dd", Locale.US).parse(startDateStr)
                     ?: return null
+                var resolvedStartWeek = startWeek
+                for ((effectiveDate, effectiveStartWeek) in rosterScheduleChanges) {
+                    if (effectiveDate.after(date)) break
+                    startDate = effectiveDate
+                    resolvedStartWeek = effectiveStartWeek
+                }
                 
                 val dayOfWeek = calendar.get(Calendar.DAY_OF_WEEK) // 1=Sunday, 7=Saturday
                 val dayIndex = (dayOfWeek + 6) % 7 // Convert to 0=Sunday
@@ -478,7 +514,7 @@ class MonthlyCalendarWidgetProvider : AppWidgetProvider() {
                 
                 // Calculate week number in 5-week cycle
                 val weeksSinceStart = daysSinceStart / 7
-                val weekNumber = (startWeek + weeksSinceStart) % 5
+                val weekNumber = (resolvedStartWeek + weeksSinceStart) % 5
                 if (weekNumber < 0) {
                     val adjustedWeek = (weekNumber + 5) % 5
                     val pattern = rosterWeeks[adjustedWeek]

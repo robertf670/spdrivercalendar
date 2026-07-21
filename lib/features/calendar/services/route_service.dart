@@ -208,6 +208,15 @@ class RouteService {
   static Future<RouteInfo?> _getPZ4RouteInfo(String shiftCode, DateTime eventDate) async {
     try {
       final fileName = _getRouteFilename('4', eventDate);
+
+      // Every Zone 4 duty in the current Route 23/24 schedule can operate
+      // either route, so the card should always show the combined label.
+      if (fileName.endsWith('_ROUTE2324.csv')) {
+        return RouteInfo(
+          isWorkout: false,
+          fixedDisplayLabel: '23/24',
+        );
+      }
       
       // Check cache first
       if (_routeCache.containsKey(fileName)) {
