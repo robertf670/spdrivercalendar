@@ -1,0 +1,15 @@
+rules_version = '2';
+
+// Live update images — public read; write allowed (admin gated in-app, same as Firestore).
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /live_updates/{fileName} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

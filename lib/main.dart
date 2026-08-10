@@ -6,7 +6,6 @@ import 'package:spdrivercalendar/core/constants/app_constants.dart';
 import 'package:spdrivercalendar/core/services/storage_service.dart';
 import 'package:spdrivercalendar/features/calendar/services/shift_service.dart';
 import 'package:spdrivercalendar/features/calendar/services/roster_service.dart';
-import 'package:spdrivercalendar/features/welcome/screens/welcome_screen.dart';
 import 'package:spdrivercalendar/features/google/screens/google_login_screen.dart';
 import 'package:spdrivercalendar/features/calendar/screens/calendar_screen.dart';
 import 'package:spdrivercalendar/features/access/screens/access_screen.dart';
@@ -200,20 +199,6 @@ class MyAppState extends State<MyApp> with WidgetsBindingObserver {
                   }
                 },
               ),
-              AppConstants.welcomeRoute: (context) => WelcomeScreen(
-                onGetStarted: () async {
-                  await StorageService.saveBool(AppConstants.hasSeenWelcomeKey, true);
-                  // Marks initial onboarding as done (legacy key name; no longer requires Google sign-in).
-                  await StorageService.saveBool(AppConstants.hasCompletedGoogleLoginKey, true);
-                  if (!context.mounted) return;
-                  final isFromSettings = ModalRoute.of(context)?.settings.arguments as bool? ?? false;
-                  if (isFromSettings) {
-                    Navigator.pop(context);
-                  } else {
-                    Navigator.pushReplacementNamed(context, AppConstants.homeRoute);
-                  }
-                },
-              ),
               AppConstants.googleLoginRoute: (context) => GoogleLoginScreen(
                 onLoginComplete: () async {
                   Navigator.pushReplacementNamed(context, AppConstants.homeRoute);
@@ -295,12 +280,22 @@ class SplashScreenState extends State<SplashScreen> {
   }
 
   Future<void> _checkOnboardingStatus() async {
-    final hasSeenWelcome = await StorageService.getBool(AppConstants.hasSeenWelcomeKey, defaultValue: false);
-    final nextRoute =
-        hasSeenWelcome ? AppConstants.homeRoute : AppConstants.welcomeRoute;
+    // Welcome carousel retired as redundant — go straight to the calendar.
+    // Keep storage keys marked so backups / legacy checks stay consistent.
+    final hasSeenWelcome = await StorageService.getBool(
+      AppConstants.hasSeenWelcomeKey,
+      defaultValue: false,
+    );
+    if (!hasSeenWelcome) {
+      await StorageService.saveBool(AppConstants.hasSeenWelcomeKey, true);
+      await StorageService.saveBool(
+        AppConstants.hasCompletedGoogleLoginKey,
+        true,
+      );
+    }
 
     if (mounted) {
-      widget.onInitializationComplete(nextRoute);
+      widget.onInitializationComplete(AppConstants.homeRoute);
     }
   }
 

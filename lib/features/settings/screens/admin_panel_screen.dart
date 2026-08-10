@@ -1,8 +1,12 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:spdrivercalendar/theme/app_theme.dart';
 import '../../../models/live_update.dart';
 import '../../../services/live_updates_service.dart';
+import '../../../services/live_update_image_service.dart';
+import '../../../services/note_attachment_service.dart';
 import 'package:http/http.dart' as http;
 
 class AdminPanelScreen extends StatefulWidget {
@@ -524,6 +528,7 @@ class AdminPanelScreenState extends State<AdminPanelScreen> {
                 ),
               );
             }
+            rethrow;
           }
         },
       ),
@@ -637,7 +642,7 @@ class AdminPanelScreenState extends State<AdminPanelScreen> {
 // Dialog for creating/editing updates
 class UpdateDialog extends StatefulWidget {
   final LiveUpdate? existingUpdate;
-  final Function(LiveUpdate) onSave;
+  final Future<void> Function(LiveUpdate) onSave;
 
   const UpdateDialog({
     super.key,
@@ -655,13 +660,21 @@ class UpdateDialogState extends State<UpdateDialog> {
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _routesController = TextEditingController();
-  
+  final _titleFocus = FocusNode();
+  final _descriptionFocus = FocusNode();
+  final _routesFocus = FocusNode();
+  final _urlFocus = FocusNode();
+
   String _priority = 'info';
   DateTime _startTime = DateTime.now();
   DateTime _endTime = DateTime.now().add(const Duration(hours: 2));
   bool _forceVisible = false;
   bool _enableScheduledVisibility = true;
   int _hoursBeforeStart = 2;
+  Uint8List? _pendingImageBytes;
+  String? _existingImageUrl;
+  bool _removeExistingImage = false;
+  bool _saving = false;
 
   @override
   void initState() {
@@ -677,23 +690,41 @@ class UpdateDialogState extends State<UpdateDialog> {
       _forceVisible = update.forceVisible;
       _enableScheduledVisibility = update.enableScheduledVisibility;
       _hoursBeforeStart = update.hoursBeforeStart;
+      _existingImageUrl = update.hasImage ? update.imageUrl : null;
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
-    return Dialog(
-      child: Container(
-        constraints: const BoxConstraints(maxWidth: 500, maxHeight: 600),
+    final mq = MediaQuery.of(context);
+    // Keep dialog size stable when the keyboard opens (size shrinks by
+    // viewInsets on mobile — that remount/rebuild was breaking cursor selection).
+    final screenWidth = mq.size.width;
+    final screenHeight = mq.size.height + mq.viewInsets.bottom;
+    final dialogWidth = (screenWidth * 0.95).clamp(0.0, 500.0).toDouble();
+    final dialogHeight = (screenHeight * 0.9).clamp(0.0, 600.0).toDouble();
+    final contentPadding = screenWidth < 350 ? 12.0 : 16.0;
+
+    return AnimatedPadding(
+      padding: EdgeInsets.only(bottom: mq.viewInsets.bottom),
+      duration: const Duration(milliseconds: 100),
+      curve: Curves.decelerate,
+      child: Dialog(
+      insetPadding: EdgeInsets.symmetric(
+        horizontal: screenWidth < 350 ? 8.0 : 16.0,
+        vertical: 16.0,
+      ),
+      child: SizedBox(
+        width: dialogWidth,
+        height: dialogHeight,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             // Header
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.all(contentPadding),
               decoration: BoxDecoration(
                 color: theme.colorScheme.primary,
                 borderRadius: const BorderRadius.only(
@@ -705,15 +736,18 @@ class UpdateDialogState extends State<UpdateDialog> {
                 children: [
                   Icon(Icons.edit, color: theme.colorScheme.onPrimary),
                   const SizedBox(width: 8),
+                  Expanded(
+                    child:
                   Text(
                     widget.existingUpdate != null ? 'Edit Update' : 'Add New Update',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       color: theme.colorScheme.onPrimary,
                       fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
-                  ),
-                  const Spacer(),
+                      fontSize: screenWidth < 350 ? 14.0 : 16.0,
+                      ),
+                    ),),
                   IconButton(
                     onPressed: () => Navigator.pop(context),
                     icon: Icon(Icons.close, color: theme.colorScheme.onPrimary),
@@ -724,17 +758,25 @@ class UpdateDialogState extends State<UpdateDialog> {
             // Form
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
+                keyboardDismissBehavior:
+                    ScrollViewKeyboardDismissBehavior.onDrag,
+                padding: EdgeInsets.all(contentPadding),
                 child: Form(
                   key: _formKey,
                   child: Column(
                     children: [
-                      // URL Field for auto-filling
+                      // URL Field for auto-filling (parse only via button —
+                      // auto-parse on every keystroke caused focus/cursor bugs).
                       TextFormField(
+                        key: const ValueKey('live_update_url'),
                         controller: _urlController,
+                        focusNode: _urlFocus,
+                        keyboardType: TextInputType.url,
+                        textInputAction: TextInputAction.done,
+                        scrollPadding: const EdgeInsets.all(80),
                         decoration: InputDecoration(
                           labelText: 'Paste URL (Optional)',
-                          hintText: 'Paste Dublin Bus or news URL to auto-fill details',
+                          hintText: 'Paste Dublin Bus or news URL, then tap parse',
                           border: const OutlineInputBorder(),
                           suffixIcon: IconButton(
                             onPressed: _parseUrl,
@@ -742,15 +784,17 @@ class UpdateDialogState extends State<UpdateDialog> {
                             tooltip: 'Parse URL',
                           ),
                         ),
-                        onChanged: (value) {
-                          if (value.isNotEmpty && (value.contains('dublinbus.ie') || value.contains('http'))) {
-                            _parseUrl();
-                          }
-                        },
                       ),
                       const SizedBox(height: 16),
                       TextFormField(
+                        key: const ValueKey('live_update_title'),
                         controller: _titleController,
+                        focusNode: _titleFocus,
+                        textCapitalization: TextCapitalization.sentences,
+                        textInputAction: TextInputAction.next,
+                        scrollPadding: const EdgeInsets.all(80),
+                        onFieldSubmitted: (_) =>
+                            _descriptionFocus.requestFocus(),
                         decoration: const InputDecoration(
                           labelText: 'Title',
                           hintText: 'e.g., Route 9 Diversion',
@@ -765,13 +809,21 @@ class UpdateDialogState extends State<UpdateDialog> {
                       ),
                       const SizedBox(height: 16),
                       TextFormField(
+                        key: const ValueKey('live_update_description'),
                         controller: _descriptionController,
+                        focusNode: _descriptionFocus,
+                        keyboardType: TextInputType.multiline,
+                        textInputAction: TextInputAction.newline,
+                        textCapitalization: TextCapitalization.sentences,
+                        minLines: 3,
+                        maxLines: 8,
+                        scrollPadding: const EdgeInsets.all(120),
                         decoration: const InputDecoration(
                           labelText: 'Description',
                           hintText: 'e.g., Diverted via Nassau St due to gas leak',
                           border: OutlineInputBorder(),
+                          alignLabelWithHint: true,
                         ),
-                        maxLines: 3,
                         validator: (value) {
                           if (value == null || value.trim().isEmpty) {
                             return 'Description is required';
@@ -779,6 +831,8 @@ class UpdateDialogState extends State<UpdateDialog> {
                           return null;
                         },
                       ),
+                      const SizedBox(height: 16),
+                      _buildImageSection(theme, screenWidth),
                       const SizedBox(height: 16),
                       DropdownButtonFormField<String>(
                         value: _priority,
@@ -795,7 +849,11 @@ class UpdateDialogState extends State<UpdateDialog> {
                       ),
                       const SizedBox(height: 16),
                       TextFormField(
+                        key: const ValueKey('live_update_routes'),
                         controller: _routesController,
+                        focusNode: _routesFocus,
+                        textInputAction: TextInputAction.done,
+                        scrollPadding: const EdgeInsets.all(80),
                         decoration: const InputDecoration(
                           labelText: 'Routes Affected (optional)',
                           hintText: 'e.g., Route 9, Route 122',
@@ -947,17 +1005,26 @@ class UpdateDialogState extends State<UpdateDialog> {
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   TextButton(
-                    onPressed: () => Navigator.pop(context),
+                    onPressed: _saving ? null : () => Navigator.pop(context),
                     child: const Text('Cancel'),
                   ),
                   const SizedBox(width: 8),
                   ElevatedButton(
-                    onPressed: _saveUpdate,
+                    onPressed: _saving ? null : _saveUpdate,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: theme.colorScheme.primary,
                       foregroundColor: Colors.white,
                     ),
-                    child: Text(widget.existingUpdate != null ? 'Update' : 'Create'),
+                    child: _saving
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : Text(widget.existingUpdate != null ? 'Update' : 'Create'),
                   ),
                 ],
               ),
@@ -965,7 +1032,108 @@ class UpdateDialogState extends State<UpdateDialog> {
           ],
         ),
       ),
+    ),
     );
+  }
+
+  bool get _hasImagePreview =>
+      _pendingImageBytes != null ||
+      (!_removeExistingImage &&
+          _existingImageUrl != null &&
+          _existingImageUrl!.isNotEmpty);
+
+  Widget _buildImageSection(ThemeData theme, double screenWidth) {
+    final previewHeight = screenWidth < 350 ? 120.0 : screenWidth < 450 ? 140.0 : 160.0;
+
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(screenWidth < 350 ? 10.0 : 12.0),
+      decoration: BoxDecoration(
+        border: Border.all(color: theme.colorScheme.outline),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.image_outlined, color: theme.colorScheme.primary),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Image (optional)',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: screenWidth < 350 ? 13.0 : 14.0,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'One photo drivers can zoom, rotate, and share',
+            style: TextStyle(
+              fontSize: screenWidth < 350 ? 11.0 : 12.0,
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+            ),
+          ),
+          const SizedBox(height: 12),
+          if (_hasImagePreview) ...[
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: SizedBox(
+                width: double.infinity,
+                height: previewHeight,
+                child: _pendingImageBytes != null
+                    ? Image.memory(_pendingImageBytes!, fit: BoxFit.cover)
+                    : Image.network(
+                        _existingImageUrl!,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Container(
+                          color: theme.colorScheme.surfaceContainerHighest,
+                          alignment: Alignment.center,
+                          child: const Icon(Icons.broken_image_outlined),
+                        ),
+                      ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                onPressed: _saving
+                    ? null
+                    : () {
+                        setState(() {
+                          _pendingImageBytes = null;
+                          if (_existingImageUrl != null) {
+                            _removeExistingImage = true;
+                          }
+                        });
+                      },
+                icon: const Icon(Icons.delete_outline, size: 18),
+                label: const Text('Remove image'),
+              ),
+            ),
+          ] else
+            OutlinedButton.icon(
+              onPressed: _saving ? null : _pickImage,
+              icon: const Icon(Icons.add_photo_alternate_outlined),
+              label: const Text('Add image from gallery'),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _pickImage() async {
+    final bytes = await NoteAttachmentService.pickFromGallery();
+    if (bytes == null || !mounted) return;
+    setState(() {
+      _pendingImageBytes = bytes;
+      _removeExistingImage = false;
+    });
   }
 
   Future<void> _selectDateTime(bool isStartTime) async {
@@ -1283,16 +1451,38 @@ class UpdateDialogState extends State<UpdateDialog> {
     );
   }
 
-  void _saveUpdate() {
-    if (_formKey.currentState!.validate()) {
-      final routes = _routesController.text
-          .split(',')
-          .map((s) => s.trim())
-          .where((s) => s.isNotEmpty)
-          .toList();
+  Future<void> _saveUpdate() async {
+    if (!_formKey.currentState!.validate() || _saving) return;
+
+    setState(() => _saving = true);
+    final routes = _routesController.text
+        .split(',')
+        .map((s) => s.trim())
+        .where((s) => s.isNotEmpty)
+        .toList();
+
+    final updateId = widget.existingUpdate?.id ??
+        DateTime.now().millisecondsSinceEpoch.toString();
+
+    String? imageUrl;
+    try {
+      if (_pendingImageBytes != null) {
+        imageUrl = await LiveUpdateImageService.uploadImage(
+          updateId: updateId,
+          bytes: _pendingImageBytes!,
+        );
+      } else if (_removeExistingImage) {
+        await LiveUpdateImageService.deleteImage(
+          updateId: updateId,
+          imageUrl: _existingImageUrl,
+        );
+        imageUrl = null;
+      } else {
+        imageUrl = _existingImageUrl;
+      }
 
       final update = LiveUpdate(
-        id: widget.existingUpdate?.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
+        id: updateId,
         title: _titleController.text.trim(),
         description: _descriptionController.text.trim(),
         priority: _priority,
@@ -1301,16 +1491,33 @@ class UpdateDialogState extends State<UpdateDialog> {
         routesAffected: routes,
         forceVisible: _forceVisible,
         enableScheduledVisibility: _enableScheduledVisibility && !_forceVisible,
-        hoursBeforeStart: _enableScheduledVisibility && !_forceVisible ? _hoursBeforeStart : 0,
+        hoursBeforeStart:
+            _enableScheduledVisibility && !_forceVisible ? _hoursBeforeStart : 0,
+        imageUrl: imageUrl,
       );
 
-      widget.onSave(update);
+      await widget.onSave(update);
+      if (!mounted) return;
       Navigator.pop(context);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _saving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Could not save image: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
   @override
   void dispose() {
+    _urlFocus.dispose();
+    _titleFocus.dispose();
+    _descriptionFocus.dispose();
+    _routesFocus.dispose();
+    _urlController.dispose();
     _titleController.dispose();
     _descriptionController.dispose();
     _routesController.dispose();
@@ -1372,16 +1579,31 @@ class PollDialogState extends State<PollDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return Dialog(
-      child: Container(
-        constraints: const BoxConstraints(maxWidth: 500, maxHeight: 700),
+    final mq = MediaQuery.of(context);
+    final screenWidth = mq.size.width;
+    final screenHeight = mq.size.height + mq.viewInsets.bottom;
+    final dialogWidth = (screenWidth * 0.95).clamp(0.0, 500.0).toDouble();
+    final dialogHeight = (screenHeight * 0.9).clamp(0.0, 700.0).toDouble();
+    final contentPadding = screenWidth < 350 ? 12.0 : 16.0;
+    return AnimatedPadding(
+      padding: EdgeInsets.only(bottom: mq.viewInsets.bottom),
+      duration: const Duration(milliseconds: 100),
+      curve: Curves.decelerate,
+      child: Dialog(
+      insetPadding: EdgeInsets.symmetric(
+        horizontal: screenWidth < 350 ? 8.0 : 16.0,
+        vertical: 16.0,
+      ),
+      child: SizedBox(
+        width: dialogWidth,
+        height: dialogHeight,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             // Header
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.all(contentPadding),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
@@ -1407,15 +1629,18 @@ class PollDialogState extends State<PollDialog> {
                 children: [
                   const Icon(Icons.poll, color: Colors.white),
                   const SizedBox(width: 8),
+                  Expanded(
+                    child:
                   Text(
                     widget.existingPoll != null ? 'Edit Poll' : 'Create New Poll',
-                    style: const TextStyle(
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
-                  ),
-                  const Spacer(),
+                      fontSize: screenWidth < 350 ? 14.0 : 16.0,
+                      ),
+                    ),),
                   IconButton(
                     onPressed: () => Navigator.pop(context),
                     icon: const Icon(Icons.close, color: Colors.white),
@@ -1426,13 +1651,19 @@ class PollDialogState extends State<PollDialog> {
             // Form
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
+                keyboardDismissBehavior:
+                    ScrollViewKeyboardDismissBehavior.onDrag,
+                padding: EdgeInsets.all(contentPadding),
                 child: Form(
                   key: _formKey,
                   child: Column(
                     children: [
                       TextFormField(
+                        key: const ValueKey('poll_title'),
                         controller: _titleController,
+                        textCapitalization: TextCapitalization.sentences,
+                        textInputAction: TextInputAction.next,
+                        scrollPadding: const EdgeInsets.all(80),
                         decoration: const InputDecoration(
                           labelText: 'Poll Question',
                           hintText: 'e.g., Which route do you prefer?',
@@ -1447,13 +1678,20 @@ class PollDialogState extends State<PollDialog> {
                       ),
                       const SizedBox(height: 16),
                       TextFormField(
+                        key: const ValueKey('poll_description'),
                         controller: _descriptionController,
+                        keyboardType: TextInputType.multiline,
+                        textInputAction: TextInputAction.newline,
+                        textCapitalization: TextCapitalization.sentences,
+                        minLines: 2,
+                        maxLines: 6,
+                        scrollPadding: const EdgeInsets.all(120),
                         decoration: const InputDecoration(
                           labelText: 'Description (Optional)',
                           hintText: 'Additional context for the poll',
                           border: OutlineInputBorder(),
+                          alignLabelWithHint: true,
                         ),
-                        maxLines: 2,
                       ),
                       const SizedBox(height: 16),
                       // Poll Options
@@ -1515,6 +1753,7 @@ class PollDialogState extends State<PollDialog> {
                       const SizedBox(height: 16),
                       DropdownButtonFormField<String>(
                         value: _voteVisibility,
+                        isExpanded: true,
                         decoration: const InputDecoration(
                           labelText: 'Vote Visibility',
                           border: OutlineInputBorder(),
@@ -1522,19 +1761,23 @@ class PollDialogState extends State<PollDialog> {
                         items: const [
                           DropdownMenuItem(
                             value: 'always',
-                            child: Text('Always show counts'),
+                            child: Text('Always show counts',
+                              overflow: TextOverflow.ellipsis,),
                           ),
                           DropdownMenuItem(
                             value: 'after_vote',
-                            child: Text('Show after user votes'),
+                            child: Text('Show after user votes',
+                              overflow: TextOverflow.ellipsis,),
                           ),
                           DropdownMenuItem(
                             value: 'after_end',
-                            child: Text('Show after poll ends'),
+                            child: Text('Show after poll ends',
+                              overflow: TextOverflow.ellipsis,),
                           ),
                           DropdownMenuItem(
                             value: 'never',
-                            child: Text('Never show counts'),
+                            child: Text('Never show counts',
+                              overflow: TextOverflow.ellipsis,),
                           ),
                         ],
                         onChanged: (value) => setState(() => _voteVisibility = value!),
@@ -1606,6 +1849,7 @@ class PollDialogState extends State<PollDialog> {
           ],
         ),
       ),
+    ),
     );
   }
 

@@ -1,9 +1,24 @@
 # Responsive Design Issues Report
 ## Areas Missing Responsive Features for Small Phones
 
+> **Audit refreshed:** July 2026  
+> Bills, Payscale, Add Event, Feedback, Version History, Statistics, Timing Points, and Admin panel dialogs now contain responsive handling. The former About screen no longer exists. Bills and Payscale passed a 320px web check; both Admin edit dialogs pass 320px widget tests.
+
+### Current status
+
+- [x] Bills responsive table sizing
+- [x] Payscale responsive table sizing
+- [x] About grid item retired with the removed screen
+- [x] Admin panel dialog constraints
+- [x] Add Event dialog responsive sizing
+- [x] Feedback responsive sizing
+- [x] Version History responsive sizing
+- [x] Statistics responsive sizing
+- [x] Timing Points responsive sizing
+
 ### 🔴 **Critical Issues** (Will cause overflow/break on small phones)
 
-#### 1. **Bills Screen** (`lib/features/bills/screens/bills_screen.dart`)
+#### 1. **Bills Screen** (`lib/features/bills/screens/bills_screen.dart`) — Resolved
 **Problem:**
 - Fixed column widths: `fixedColumnWidth = 80px`, `dataColumnWidth = 110px`
 - Fixed header height: `headerHeight = 60px`
@@ -24,7 +39,7 @@ final padding = screenWidth < 350 ? 8.0 : 12.0;
 
 ---
 
-#### 2. **Payscale Screen** (`lib/features/payscale/screens/payscale_screen.dart`)
+#### 2. **Payscale Screen** (`lib/features/payscale/screens/payscale_screen.dart`) — Resolved
 **Problem:**
 - Fixed column widths: `fixedColumnWidth: 190.0`, `dataColumnWidth: 120.0`
 - Fixed header height: `headerHeight: 56.0`
@@ -42,7 +57,10 @@ final padding = screenWidth < 350 ? 8.0 : screenWidth < 600 ? 12.0 : 16.0;
 
 ---
 
-#### 3. **About Screen - Grid Layout** (`lib/features/about/screens/about_screen.dart`)
+#### 3. **About Screen - Grid Layout** — Retired
+The referenced screen no longer exists, so this item is no longer applicable.
+
+<!-- Historical finding retained below for context.
 **Problem:**
 - Fixed grid: `crossAxisCount: 3` (line 196)
 - Fixed padding: `padding: const EdgeInsets.all(16.0)` (line 36)
@@ -57,10 +75,11 @@ final crossAxisCount = screenWidth < 350 ? 2 : screenWidth < 600 ? 2 : 3;
 final padding = screenWidth < 350 ? 8.0 : screenWidth < 600 ? 12.0 : 16.0;
 final cardPadding = screenWidth < 350 ? 12.0 : screenWidth < 600 ? 16.0 : 24.0;
 ```
+-->
 
 ---
 
-#### 4. **Admin Panel Dialog** (`lib/features/settings/screens/admin_panel_screen.dart`)
+#### 4. **Admin Panel Dialog** (`lib/features/settings/screens/admin_panel_screen.dart`) — Resolved
 **Problem:**
 - Fixed max width: `maxWidth: 500` (line 681)
 - Fixed max height: `maxHeight: 600` (line 681)
@@ -81,7 +100,7 @@ final padding = screenWidth < 350 ? 12.0 : 16.0;
 
 ### 🟡 **Moderate Issues** (May cause minor layout problems)
 
-#### 5. **Add Event Dialog** (`lib/features/calendar/dialogs/add_event_dialog.dart`)
+#### 5. **Add Event Dialog** (`lib/features/calendar/dialogs/add_event_dialog.dart`) — Resolved
 **Problem:**
 - Uses default `AlertDialog` with no responsive sizing
 - Fixed padding/spacing throughout
@@ -102,7 +121,7 @@ return AlertDialog(
 
 ---
 
-#### 6. **Feedback Screen** (`lib/features/feedback/screens/feedback_screen.dart`)
+#### 6. **Feedback Screen** (`lib/features/feedback/screens/feedback_screen.dart`) — Resolved
 **Problem:**
 - Fixed padding: `padding: const EdgeInsets.all(24.0)` (line 113)
 - Fixed icon size: `size: 64` (line 122)
@@ -119,7 +138,7 @@ final iconSize = screenWidth < 350 ? 48.0 : 64.0;
 
 ---
 
-#### 7. **Version History Screen** (`lib/features/settings/screens/version_history_screen.dart`)
+#### 7. **Version History Screen** (`lib/features/settings/screens/version_history_screen.dart`) — Resolved
 **Problem:**
 - Fixed padding: `padding: const EdgeInsets.all(16.0)` (line 130)
 - Fixed card padding: `padding: const EdgeInsets.all(16.0)` (line 205)
@@ -136,10 +155,10 @@ final padding = screenWidth < 350 ? 8.0 : screenWidth < 600 ? 12.0 : 16.0;
 
 ### 🟢 **Minor Issues** (Generally okay but could be improved)
 
-#### 8. **Statistics Screen** (`lib/features/statistics/screens/statistics_screen.dart`)
+#### 8. **Statistics Screen** (`lib/features/statistics/screens/statistics_screen.dart`) — Resolved
 **Status:** Mostly responsive, but some fixed padding values could be made responsive.
 
-#### 9. **Timing Points Screen** (`lib/features/timing_points/screens/timing_points_screen.dart`)
+#### 9. **Timing Points Screen** (`lib/features/timing_points/screens/timing_points_screen.dart`) — Resolved
 **Status:** Uses percentage-based padding (`MediaQuery.of(context).size.width * 0.05`) which is good, but could benefit from breakpoint-based sizing.
 
 ---
@@ -147,10 +166,7 @@ final padding = screenWidth < 350 ? 8.0 : screenWidth < 600 ? 12.0 : 16.0;
 ## Summary
 
 ### Priority Fixes Needed:
-1. **Payscale Screen** - Fixed 190px column will break on small phones
-2. **Bills Screen** - Fixed column widths need responsive sizing
-3. **About Screen Grid** - 3-column grid too cramped on small screens
-4. **Admin Panel Dialog** - Fixed 500px width too wide for small phones
+1. **Remaining screen audit** - record other fixed dialog and dense-grid risks for later phases
 
 ### Quick Wins:
 - Add responsive padding to all screens using breakpoints

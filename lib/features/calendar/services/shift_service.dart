@@ -31,8 +31,9 @@ class ShiftService {
     // Extract the shift code from the title
     final shiftCode = event.title.replaceAll('Shift: ', '').trim();
     
-    // Handle Spare shifts - check if they have exactly one full duty
-    if (shiftCode.startsWith('SP')) {
+    // Spare / 22B/01 — break info comes from the single assigned full duty
+    // (e.g. 22B/01 + workout 4/07 must resolve PZ4/07, not look up "22B/01").
+    if (shiftCode.startsWith('SP') || shiftCode == '22B/01') {
       String? dutyCode;
       if (event.assignedDuties != null && event.assignedDuties!.length == 1) {
         dutyCode = event.assignedDuties![0];

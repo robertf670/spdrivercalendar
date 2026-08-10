@@ -6,6 +6,7 @@ import '../services/user_preferences_service.dart';
 import '../services/poll_service.dart';
 import '../features/settings/screens/live_updates_preferences_screen.dart';
 import '../theme/app_theme.dart';
+import '../widgets/live_update_image_viewer.dart';
 
 class LiveUpdatesDetailsScreen extends StatefulWidget {
   const LiveUpdatesDetailsScreen({super.key});
@@ -973,6 +974,11 @@ class LiveUpdatesDetailsScreenState extends State<LiveUpdatesDetailsScreen> {
                       height: 1.4,
                     ),
                   ),
+
+                  if (update.hasImage) ...[
+                    const SizedBox(height: 12),
+                    _buildUpdateImageThumbnail(update),
+                  ],
                   
                   const SizedBox(height: 16),
                   
@@ -1077,6 +1083,77 @@ class LiveUpdatesDetailsScreenState extends State<LiveUpdatesDetailsScreen> {
               ),
             ),
           ),
+    );
+  }
+
+  Widget _buildUpdateImageThumbnail(LiveUpdate update) {
+    final media = MediaQuery.of(context);
+    final screenWidth = media.size.width;
+    final dpr = media.devicePixelRatio;
+    final height = screenWidth < 350
+        ? 140.0
+        : screenWidth < 450
+            ? 160.0
+            : 180.0;
+    final cacheHeight = (height * dpr).round();
+    final cacheWidth = (screenWidth * dpr).round().clamp(1, 1600);
+
+    return GestureDetector(
+      onTap: () => openLiveUpdateImageViewer(
+        context,
+        imageUrl: update.imageUrl!,
+        shareFileName: 'live_update_${update.id}.jpg',
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: Stack(
+          alignment: Alignment.bottomRight,
+          children: [
+            SizedBox(
+              width: double.infinity,
+              height: height,
+              child: Image.network(
+                update.imageUrl!,
+                fit: BoxFit.cover,
+                cacheWidth: cacheWidth,
+                cacheHeight: cacheHeight,
+                filterQuality: FilterQuality.low,
+                errorBuilder: (_, __, ___) => Container(
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                  alignment: Alignment.center,
+                  child: const Icon(Icons.broken_image_outlined),
+                ),
+              ),
+            ),
+            Container(
+              margin: const EdgeInsets.all(8),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.black54,
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.zoom_in,
+                    size: screenWidth < 350 ? 14 : 16,
+                    color: Colors.white,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Tap to view',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: screenWidth < 350 ? 11 : 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

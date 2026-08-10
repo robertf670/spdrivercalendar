@@ -1,4 +1,41 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '4.0.0': [
+    {
+      'title': 'Calendar Rebuild',
+      'description':
+          'Major internal rebuild of the calendar for better maintainability and smoother updates. Features work the same as before.',
+    },
+    {
+      'title': 'View Board For Zone Duties',
+      'description':
+          'View Board is now available on Zone 1, 3, and 4 duties, with the board for that day type.',
+    },
+    {
+      'title': '22B/01 Workout Duties',
+      'description':
+          '22B/01 with a workout duty now shows as a workout with a single bus assignment.',
+    },
+    {
+      'title': 'Zone 4 Bill From 23 Aug',
+      'description':
+          'Zone 4 uses the new 23/24 bill from 23 August 2026 (Mon–Fri, Saturday, and Sunday). Earlier dates keep the previous bill. View Board for Zone 4 is unavailable from that date until new boards are ready.',
+    },
+    {
+      'title': 'Zone 4 Bills Screen Cutover',
+      'description':
+          'The Bills screen now switches to the new Zone 4 bill from 23 August 2026 automatically.',
+    },
+    {
+      'title': 'Live Update Photos',
+      'description':
+          'Pictures can be added to live updates now.',
+    },
+    {
+      'title': 'Dismissable Live Update Banners',
+      'description':
+          'You can dismiss a live update banner with the X. Open Live Updates from the calendar menu anytime to view them again. The menu shows how many are active.',
+    },
+  ],
   '3.2.9': [
     {
       'title': 'Zone 4 route label',

@@ -2,8 +2,8 @@
 
 > **Purpose:** A long-term roadmap to make the app faster, smoother, maintainable, and ready to roll out across **10+ depots** with significantly more data than today.
 >
-> **Current version:** 3.2.8  
-> **Last updated:** July 2026 (remote CSV section added)  
+> **Current version:** 4.0.0  
+> **Last updated:** August 2026 (Phase 1 calendar decomposition complete)  
 > **Status:** Living document — update as phases complete or priorities shift.
 
 ---
@@ -84,7 +84,7 @@ The app today serves drivers at **one operational context** — zones, duty CSVs
 | **CSVs bundled in APK only** | Every duty fix requires app release | `RouteService` uses `rootBundle.loadString('assets/...')` |
 | **Mixed folder structure** | Confusing ownership | `lib/features/` + legacy `lib/services/`, `lib/screens/` |
 | **Static singleton services** | Hard to test, tight coupling | Most `*Service.initialize()` patterns |
-| **Minimal test coverage** | Refactors are dangerous | 1 test file in `test/` |
+| **Minimal test coverage** | Refactors remain risky despite Phase 0 progress | 7 test files / 34 tests; screen-embedded calendar logic remains largely untested |
 | **Known broken features** | User trust | Notifications (per README) |
 | **Platform workaround** | Full app rebuild on resume | `RebuildText` + native channel |
 
@@ -102,7 +102,7 @@ The app today serves drivers at **one operational context** — zones, duty CSVs
 
 ## 3. Strategic Pillars
 
-All work should align to these five pillars:
+All work should align to these six pillars:
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -115,7 +115,7 @@ All work should align to these five pillars:
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-**Rule:** Do not start pillar 2 (performance refactors) on the calendar until pillar 3 has a plan for splitting `calendar_screen.dart` — otherwise optimisations will be lost in the next edit.
+**Rule:** Do not start pillar 3 (calendar performance refactors) until pillar 4 has a plan for splitting `calendar_screen.dart` — otherwise optimisations may be lost in the next edit.
 
 ---
 
@@ -146,8 +146,8 @@ class DepotConfig {
 1. First launch (or settings) → **Select depot**
 2. App downloads **depot manifest** (small JSON) from Firebase Storage / Firestore
 3. Only that depot’s CSVs, rosters, and config are cached locally
-4. All storage keys that are depot-specific are **namespaced**: `events_{depotId}`, `markedInZone_{depotId}`, etc.
-5. User data (their calendar events) stays tied to their chosen depot
+4. Operational data and settings that genuinely vary by depot are scoped to the selected depot.
+5. The user’s calendar remains intact if depot selection is introduced later; changing depot changes operational configuration, not ownership of existing events.
 
 ### 4.2 Depot manifest structure (Firebase Storage)
 
@@ -207,10 +207,10 @@ Avoid mixing “Zone 1” as both a depot identifier and an in-depot zone.
 
 ### 4.5 Migration path for existing users
 
-1. Ship depot selector with **one default depot** pre-selected (current behaviour, zero disruption)
-2. Add `depotId` to backup format (version bump)
-3. When second depot goes live, existing users keep their data under default depot ID
-4. Document that **switching depot** is a destructive or export/import action (user calendar data is depot-specific)
+1. Keep the current single-depot behaviour, including Jamestown and Donnybrook, until multi-depot work is explicitly prioritised.
+2. Ship a future depot selector with **one default depot** pre-selected (current behaviour, zero disruption).
+3. Add the selected depot/config identifier to the backup format when the feature is implemented.
+4. Switching depot is non-destructive: retain the user’s calendar while refreshing depot-specific operational data and rest-day configuration.
 
 ### 4.6 APK / bundle size strategy
 
@@ -374,7 +374,7 @@ lib/
 
 ### 7.2 State management decision
 
-**Recommendation: Riverpod** (or use existing **Provider** — already in pubspec).
+**Decision: Provider.** It is already in `pubspec.yaml` and will be introduced incrementally during Phase 1 rather than through a big-bang migration.
 
 | Layer | Responsibility |
 |-------|----------------|
@@ -413,10 +413,10 @@ Target decomposition:
 
 Finish work tracked in `RESPONSIVE_ISSUES_REPORT.md`:
 
-- [ ] Bills screen — fixed column widths
-- [ ] Payscale screen — fixed column widths  
-- [ ] About screen — 3-column grid on small phones
-- [ ] Admin panel dialog — fixed max dimensions
+- [x] Bills screen — responsive breakpoint helper implemented
+- [x] Payscale screen — responsive breakpoint helper implemented  
+- [x] About screen item removed — the referenced screen no longer exists
+- [x] Admin panel dialog — responsive width, height, padding, and title handling implemented
 - [ ] Audit remaining screens against `.cursor/rules/responsive_design.mdc`
 
 ### 8.2 Design system
@@ -644,7 +644,7 @@ Same pipeline applies per-depot once multi-depot is live — only the Storage pa
 ### 9.12 Firebase Storage security rules
 
 ```text
-# Read: authenticated app users (or public read if no auth on mobile — decide in Phase 2a)
+# Read: public, so installed app and deployed web users can retrieve operational content without sign-in
 # Write: false via client — uploads only via Firebase Console / admin SDK
 match /csv_files/{allPaths=**} { allow read: if true; allow write: if false; }
 match /depots/{depotId}/csv_files/{allPaths=**} { allow read: if true; allow write: if false; }
@@ -806,11 +806,15 @@ Validate depot match on restore.
 
 **Goal:** Know your numbers; stop the bleeding.
 
-- [ ] Profile cold start, calendar jank, save latency — document baselines
-- [ ] Fix notifications (or document why blocked)
-- [ ] Complete critical responsive fixes (bills, payscale)
-- [ ] Remove or implement unused `provider` dependency
-- [ ] Create `lib/features/depot/` placeholder + `DepotConfig` model (design only)
+- [x] Capture Phase 0 Android emulator and local profile-web baselines; retain physical-device and deployed-domain comparisons as optional follow-up measurements
+- [x] Defer notifications — currently disabled and not a required feature
+- [x] Complete critical responsive fixes for bills and payscale
+- [x] Fix remaining Admin panel dialog constraints
+- [x] Verify Bills and Payscale at 320px; verify Admin edit dialogs with 320px widget tests
+- [x] Select Provider for incremental adoption in Phase 1
+- [x] Add focused roster, event serialisation, and pure-logic safety tests
+- [x] Produce the Phase 1 calendar decomposition map
+- [x] Defer depot models and selectors until multi-depot becomes an active requirement
 
 **Release:** Patch version — no user-visible architecture change.
 
@@ -820,12 +824,14 @@ Validate depot match on restore.
 
 **Goal:** Make the calendar maintainable and rebuild-efficient.
 
-- [ ] Extract `CalendarController`
-- [ ] Split `calendar_screen.dart` into widgets (see §7.3)
-- [ ] Introduce Provider/Riverpod for calendar state
-- [ ] Scoped rebuilds on day selection / month change
-- [ ] Defer non-critical startup init (§6.2)
-- [ ] Unit tests for roster/date logic
+- [x] Extract `CalendarController`
+- [x] Split `calendar_screen.dart` into widgets (see §7.3)
+- [x] Introduce Provider for calendar state
+- [x] Scoped rebuilds on day selection / month change
+- [x] Defer non-critical startup init (§6.2)
+- [x] Unit tests for roster/date logic
+
+**Status:** Complete — `calendar_screen.dart` is a composition/orchestration shell; domain rules live in feature services/utils/dialogs with unit/widget coverage. Further thinning of show-dialog wiring can continue opportunistically.
 
 **Release:** Minor version — users should feel snappier calendar.
 
@@ -970,8 +976,12 @@ Record major decisions here as they are made.
 |------|----------|-----------|-------------------------|
 | 2026-07 | Remote CSVs as explicit pillar | Add/update duty files without app releases; required for 10+ depots | Keep all CSVs in APK |
 | 2026-07 | Create this plan | 10+ depot goal requires structured approach | Ad-hoc fixes |
+| 2026-07 | Provider for calendar state | Already available; supports incremental `ChangeNotifier` migration | Riverpod; continued screen-level `setState` |
+| 2026-07 | Multi-depot deferred | Preserve current Jamestown and Donnybrook behaviour while modernising safely | Build depot architecture in Phase 0 |
+| 2026-07 | Depot switching keeps calendar data | Depot selection changes operational configuration, not user event ownership | Destructive switch; per-depot calendars |
+| 2026-07 | Firebase Storage content is public-read | App and web users need access without account sign-in; client writes remain blocked | Required or anonymous authentication |
+| 2026-07 | Notifications deferred | Feature is currently disabled and is not required for this modernisation phase | Repair during Phase 0 |
 | TBD | `manifest.json` with per-file hashes | Supports adding new CSV files on the fly | Single timestamp-only version.json |
-| TBD | Riverpod vs Provider | — | Provider already in pubspec |
 | TBD | Isar vs drift | — | Stay on SharedPreferences |
 | TBD | Hybrid vs remote-only depot bundle | — | Bundle all depots |
 | TBD | Firebase Storage vs Firestore for depot config | — | Keep everything in APK |
@@ -1016,6 +1026,8 @@ When adding a new depot:
 | Document | Purpose |
 |----------|---------|
 | `TESTING_PLAN.md` | **Primary testing spec** — P0–P3 priorities, first 10 tests, CI, manual matrix |
+| `docs/performance-baseline.md` | Repeatable Android and deployed-web baseline procedure and results |
+| `docs/calendar-decomposition-inventory.md` | Phase 1 responsibilities, invariants, and extraction order |
 | `CSV_UPDATE_SYSTEM_PLAN.md` | **Primary spec** for Phase 2a remote CSV implementation |
 | `RESPONSIVE_ISSUES_REPORT.md` | UI overflow fixes |
 | `ROSTER_FEATURE_INVESTIGATION.md` | Zone 1 M-F roster implementation notes |

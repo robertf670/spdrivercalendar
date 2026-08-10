@@ -12,7 +12,9 @@ class LiveUpdate {
   final bool forceVisible; // Show immediately regardless of start time (for updates only)
   final bool enableScheduledVisibility; // Enable scheduled visibility feature (for updates only)
   final int hoursBeforeStart; // Hours before startTime to display (0 = at start time) (for updates only)
-  
+  /// Optional Firebase Storage download URL for an attached image (updates only).
+  final String? imageUrl;
+
   // Poll-specific fields
   final String type; // 'update' or 'poll'
   final List<String>? pollOptions; // Poll options (null for updates)
@@ -32,6 +34,7 @@ class LiveUpdate {
     this.forceVisible = false,
     this.enableScheduledVisibility = false,
     this.hoursBeforeStart = 0,
+    this.imageUrl,
     this.type = 'update',
     this.pollOptions,
     this.voteVisibility,
@@ -39,6 +42,8 @@ class LiveUpdate {
     this.totalVotes,
     this.resultsVisibleUntil,
   });
+
+  bool get hasImage => imageUrl != null && imageUrl!.isNotEmpty;
 
   LiveUpdate copyWith({
     String? id,
@@ -51,6 +56,8 @@ class LiveUpdate {
     bool? forceVisible,
     bool? enableScheduledVisibility,
     int? hoursBeforeStart,
+    String? imageUrl,
+    bool clearImageUrl = false,
     String? type,
     List<String>? pollOptions,
     String? voteVisibility,
@@ -67,8 +74,10 @@ class LiveUpdate {
       endTime: endTime ?? this.endTime,
       routesAffected: routesAffected ?? this.routesAffected,
       forceVisible: forceVisible ?? this.forceVisible,
-      enableScheduledVisibility: enableScheduledVisibility ?? this.enableScheduledVisibility,
+      enableScheduledVisibility:
+          enableScheduledVisibility ?? this.enableScheduledVisibility,
       hoursBeforeStart: hoursBeforeStart ?? this.hoursBeforeStart,
+      imageUrl: clearImageUrl ? null : (imageUrl ?? this.imageUrl),
       type: type ?? this.type,
       pollOptions: pollOptions ?? this.pollOptions,
       voteVisibility: voteVisibility ?? this.voteVisibility,
@@ -77,10 +86,10 @@ class LiveUpdate {
       resultsVisibleUntil: resultsVisibleUntil ?? this.resultsVisibleUntil,
     );
   }
-  
+
   /// Check if this is a poll
   bool get isPoll => type == 'poll';
-  
+
   /// Check if this is an update
   bool get isUpdate => type == 'update';
 
@@ -97,6 +106,7 @@ class LiveUpdate {
       'forceVisible': forceVisible,
       'enableScheduledVisibility': enableScheduledVisibility,
       'hoursBeforeStart': hoursBeforeStart,
+      'imageUrl': imageUrl,
       'type': type,
       'pollOptions': pollOptions,
       'voteVisibility': voteVisibility,
@@ -119,12 +129,19 @@ class LiveUpdate {
       forceVisible: json['forceVisible'] ?? false,
       enableScheduledVisibility: json['enableScheduledVisibility'] ?? false,
       hoursBeforeStart: json['hoursBeforeStart'] ?? 0,
+      imageUrl: json['imageUrl'] as String?,
       type: json['type'] ?? 'update',
-      pollOptions: json['pollOptions'] != null ? List<String>.from(json['pollOptions']) : null,
+      pollOptions: json['pollOptions'] != null
+          ? List<String>.from(json['pollOptions'])
+          : null,
       voteVisibility: json['voteVisibility'],
-      voteCounts: json['voteCounts'] != null ? List<int>.from(json['voteCounts']) : null,
+      voteCounts: json['voteCounts'] != null
+          ? List<int>.from(json['voteCounts'])
+          : null,
       totalVotes: json['totalVotes'],
-      resultsVisibleUntil: json['resultsVisibleUntil'] != null ? DateTime.parse(json['resultsVisibleUntil']) : null,
+      resultsVisibleUntil: json['resultsVisibleUntil'] != null
+          ? DateTime.parse(json['resultsVisibleUntil'])
+          : null,
     );
   }
 
@@ -141,18 +158,25 @@ class LiveUpdate {
       forceVisible: data['forceVisible'] ?? false,
       enableScheduledVisibility: data['enableScheduledVisibility'] ?? false,
       hoursBeforeStart: data['hoursBeforeStart'] ?? 0,
+      imageUrl: data['imageUrl'] as String?,
       type: data['type'] ?? 'update',
-      pollOptions: data['pollOptions'] != null ? List<String>.from(data['pollOptions']) : null,
+      pollOptions: data['pollOptions'] != null
+          ? List<String>.from(data['pollOptions'])
+          : null,
       voteVisibility: data['voteVisibility'],
-      voteCounts: data['voteCounts'] != null ? List<int>.from(data['voteCounts']) : null,
+      voteCounts: data['voteCounts'] != null
+          ? List<int>.from(data['voteCounts'])
+          : null,
       totalVotes: data['totalVotes'],
-      resultsVisibleUntil: data['resultsVisibleUntil'] != null ? (data['resultsVisibleUntil'] as Timestamp).toDate() : null,
+      resultsVisibleUntil: data['resultsVisibleUntil'] != null
+          ? (data['resultsVisibleUntil'] as Timestamp).toDate()
+          : null,
     );
   }
 
   /// Convert to Firestore document data
   Map<String, dynamic> toFirestore() {
-    final map = {
+    final map = <String, dynamic>{
       'title': title,
       'description': description,
       'priority': priority,
@@ -165,7 +189,11 @@ class LiveUpdate {
       'type': type,
       'createdAt': Timestamp.fromDate(DateTime.now()),
     };
-    
+
+    if (imageUrl != null && imageUrl!.isNotEmpty) {
+      map['imageUrl'] = imageUrl;
+    }
+
     // Add poll-specific fields if this is a poll
     if (isPoll) {
       map['pollOptions'] = pollOptions ?? [];
@@ -176,44 +204,44 @@ class LiveUpdate {
         map['resultsVisibleUntil'] = Timestamp.fromDate(resultsVisibleUntil!);
       }
     }
-    
+
     return map;
   }
 
   /// Check if this update/poll is currently active
   bool get isActive {
     final now = DateTime.now();
-    
+
     // For polls, simple time-based check
     if (isPoll) {
       return now.isAfter(startTime) && now.isBefore(endTime);
     }
-    
+
     // For updates, calculate scheduled visibility time if enabled
     DateTime effectiveStartTime = startTime;
     if (enableScheduledVisibility && hoursBeforeStart > 0) {
       effectiveStartTime = startTime.subtract(Duration(hours: hoursBeforeStart));
     }
-    
-    // Show if force visible is enabled and before end time, OR 
+
+    // Show if force visible is enabled and before end time, OR
     // during scheduled time window (which may be before actual start time)
     return (forceVisible && now.isBefore(endTime)) ||
-           (now.isAfter(effectiveStartTime) && now.isBefore(endTime));
+        (now.isAfter(effectiveStartTime) && now.isBefore(endTime));
   }
-  
+
   /// Check if poll should be shown (active or within results window)
   bool get shouldShowPoll {
     if (!isPoll) return false;
     final now = DateTime.now();
-    
+
     // Show if active
     if (isActive) return true;
-    
+
     // Show if ended but within results window
     if (resultsVisibleUntil != null && now.isBefore(resultsVisibleUntil!)) {
       return true;
     }
-    
+
     return false;
   }
 
@@ -244,9 +272,9 @@ class LiveUpdate {
 
   /// Check if this update is in scheduled visibility mode
   bool get isScheduledForEarlyVisibility {
-    return enableScheduledVisibility && 
-           hoursBeforeStart > 0 && 
-           DateTime.now().isBefore(startTime) && 
-           DateTime.now().isAfter(effectiveStartTime);
+    return enableScheduledVisibility &&
+        hoursBeforeStart > 0 &&
+        DateTime.now().isBefore(startTime) &&
+        DateTime.now().isAfter(effectiveStartTime);
   }
-} 
+}

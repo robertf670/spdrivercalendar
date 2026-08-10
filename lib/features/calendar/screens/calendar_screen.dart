@@ -1,91 +1,99 @@
-import 'dart:math' as math;
-
-import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
-import 'package:table_calendar/table_calendar.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 import 'package:spdrivercalendar/core/constants/app_constants.dart';
-import 'package:spdrivercalendar/core/constants/training_constants.dart';
+import 'package:spdrivercalendar/features/calendar/controllers/calendar_controller.dart';
+import 'package:spdrivercalendar/features/calendar/utils/calendar_day_display_text.dart';
+import 'package:spdrivercalendar/features/calendar/utils/calendar_day_appearance.dart';
+import 'package:spdrivercalendar/features/calendar/utils/events_for_day.dart';
+import 'package:spdrivercalendar/features/calendar/utils/roster_shift_lookup.dart';
+import 'package:spdrivercalendar/features/calendar/services/workout_dates_loader.dart';
+import 'package:spdrivercalendar/features/calendar/services/leave_balance_setup.dart';
+import 'package:spdrivercalendar/features/calendar/services/work_shift_marked_in_prefs.dart';
 import 'package:spdrivercalendar/features/calendar/widgets/custom_training_form.dart';
 import 'package:spdrivercalendar/core/services/storage_service.dart';
+import 'package:spdrivercalendar/features/calendar/services/duty_time_lookup_service.dart';
 import 'package:spdrivercalendar/features/calendar/services/roster_service.dart';
 import 'package:spdrivercalendar/features/calendar/services/roster_schedule_service.dart';
 import 'package:spdrivercalendar/features/calendar/services/event_service.dart';
 import 'package:spdrivercalendar/features/calendar/services/holiday_service.dart';
 import 'package:spdrivercalendar/features/calendar/services/workout_highlight_service.dart';
-import 'package:googleapis/calendar/v3.dart' as calendar;
 import 'package:spdrivercalendar/services/bus_tracking_service.dart';
-import 'package:spdrivercalendar/features/calendar/widgets/event_card.dart';
-import 'package:spdrivercalendar/features/calendar/widgets/shift_details_card.dart';
+import 'package:spdrivercalendar/features/calendar/dialogs/event_duty_notes_dialog.dart';
+import 'package:spdrivercalendar/features/calendar/dialogs/universal_board_dialog.dart';
+import 'package:spdrivercalendar/features/calendar/dialogs/day_notes_dialog.dart';
+import 'package:spdrivercalendar/features/calendar/dialogs/sick_day_status_dialog.dart';
+import 'package:spdrivercalendar/features/calendar/dialogs/overtime_selection_dialog.dart';
+import 'package:spdrivercalendar/features/calendar/dialogs/late_finish_selection_dialog.dart';
+import 'package:spdrivercalendar/features/calendar/dialogs/break_status_dialog.dart';
+import 'package:spdrivercalendar/features/calendar/widgets/calendar_day_cell.dart';
+import 'package:spdrivercalendar/features/calendar/widgets/calendar_grid.dart';
+import 'package:spdrivercalendar/features/calendar/widgets/day_detail_section.dart';
 import 'package:spdrivercalendar/features/calendar/dialogs/add_event_dialog.dart';
-import 'package:spdrivercalendar/features/statistics/screens/statistics_screen.dart';
+import 'package:spdrivercalendar/features/calendar/dialogs/add_event_type_dialog.dart';
+import 'package:spdrivercalendar/features/calendar/dialogs/work_for_others_dialog.dart';
+import 'package:spdrivercalendar/features/calendar/dialogs/remove_rest_day_swap_dialog.dart';
+import 'package:spdrivercalendar/features/calendar/dialogs/rest_day_swap_picker_dialog.dart';
+import 'package:spdrivercalendar/features/calendar/dialogs/overtime_half_type_dialog.dart';
+import 'package:spdrivercalendar/features/calendar/services/overtime_duty_shift_loader.dart';
+import 'package:spdrivercalendar/features/calendar/services/overtime_duty_event_persister.dart';
+import 'package:spdrivercalendar/features/calendar/dialogs/overtime_duty_details_dialog.dart';
+import 'package:spdrivercalendar/features/calendar/services/work_shift_duty_loader.dart';
+import 'package:spdrivercalendar/features/calendar/services/work_shift_event_persister.dart';
+import 'package:spdrivercalendar/features/calendar/dialogs/work_shift_dialog.dart';
+import 'package:spdrivercalendar/features/calendar/utils/edit_event_display_title.dart';
+import 'package:spdrivercalendar/features/calendar/widgets/edit_event_bus_assignment_section.dart';
+import 'package:spdrivercalendar/features/calendar/dialogs/edit_event_dialog.dart';
+import 'package:spdrivercalendar/features/calendar/utils/holiday_dates.dart';
+import 'package:spdrivercalendar/features/calendar/utils/booked_holidays_filter.dart';
+import 'package:spdrivercalendar/features/calendar/services/holiday_balance_loader.dart';
+import 'package:spdrivercalendar/features/calendar/dialogs/booked_holidays_dialog.dart';
+import 'package:spdrivercalendar/features/calendar/dialogs/add_holidays_dialog.dart';
+import 'package:spdrivercalendar/features/calendar/widgets/existing_holidays_section.dart';
+import 'package:spdrivercalendar/features/calendar/dialogs/multi_date_holiday_picker_dialog.dart';
+import 'package:spdrivercalendar/features/calendar/dialogs/holiday_year_picker_dialog.dart';
+import 'package:spdrivercalendar/features/calendar/dialogs/holiday_sunday_date_picker_dialog.dart';
+import 'package:spdrivercalendar/features/calendar/dialogs/summer_holiday_duration_dialog.dart';
+import 'package:spdrivercalendar/features/calendar/services/holiday_lookup_service.dart';
+import 'package:spdrivercalendar/features/calendar/services/google_calendar_event_description_builder.dart';
+import 'package:spdrivercalendar/features/calendar/services/google_calendar_event_sync_service.dart';
+import 'package:spdrivercalendar/features/calendar/services/event_status_update_service.dart';
+import 'package:spdrivercalendar/features/calendar/services/event_deletion_service.dart';
+import 'package:spdrivercalendar/features/calendar/services/holiday_booking_service.dart';
+import 'package:spdrivercalendar/features/calendar/utils/edit_event_open_action.dart';
+import 'package:spdrivercalendar/features/calendar/services/self_certified_sick_day_guard.dart';
+import 'package:spdrivercalendar/features/calendar/utils/calendar_month_navigation.dart';
+import 'package:spdrivercalendar/features/calendar/utils/shift_info_map_factory.dart';
+import 'package:spdrivercalendar/features/calendar/utils/calendar_events_by_date.dart';
+import 'package:spdrivercalendar/features/calendar/services/calendar_display_settings_loader.dart';
+import 'package:spdrivercalendar/features/calendar/services/calendar_holiday_cache.dart';
+import 'package:spdrivercalendar/features/calendar/navigation/calendar_feature_navigation.dart';
+import 'package:spdrivercalendar/features/calendar/widgets/calendar_scaffold.dart';
+import 'package:spdrivercalendar/features/calendar/dialogs/rest_day_setup_dialog.dart';
+import 'package:spdrivercalendar/features/calendar/services/work_for_others_shift_loader.dart';
+import 'package:spdrivercalendar/features/calendar/utils/work_for_others_title.dart';
+import 'package:spdrivercalendar/features/calendar/utils/rest_day_swap_planning.dart';
 import 'package:spdrivercalendar/features/settings/screens/settings_screen.dart';
 import 'package:spdrivercalendar/models/event.dart';
 import 'package:spdrivercalendar/models/bank_holiday.dart';
 import 'package:spdrivercalendar/models/shift_info.dart';
 import 'package:spdrivercalendar/models/holiday.dart';
 import 'package:spdrivercalendar/theme/app_theme.dart';
-import 'package:spdrivercalendar/calendar_test_helper.dart';
-import 'package:spdrivercalendar/google_calendar_service.dart';
-import 'package:flutter/services.dart'; // For rootBundle
 import 'package:spdrivercalendar/features/calendar/services/shift_service.dart';
 import 'package:spdrivercalendar/services/jamestown_feature_service.dart';
 import 'package:spdrivercalendar/services/donnybrook_feature_service.dart';
 
 import 'package:spdrivercalendar/services/rest_days_service.dart';
 import 'package:spdrivercalendar/services/rest_day_swap_service.dart';
-import 'package:spdrivercalendar/features/contacts/contacts_page.dart'; // Add this line
-import 'package:spdrivercalendar/core/services/cache_service.dart'; // Added import
-import 'package:spdrivercalendar/features/notes/screens/all_notes_screen.dart'; // Import the new screen
-import 'package:spdrivercalendar/features/notes/widgets/duty_notes_editor.dart';
-// Add import for feedback screen (will be created later)
-// ignore: unused_import
-import 'package:spdrivercalendar/features/feedback/screens/feedback_screen.dart';
-import 'package:spdrivercalendar/features/bills/screens/bills_screen.dart'; // Import the Bills screen
-import 'package:spdrivercalendar/features/payscale/screens/payscale_screen.dart'; // Import the Payscale screen
-import 'package:spdrivercalendar/features/timing_points/screens/timing_points_screen.dart'; // Import the Timing Points screen
-import 'package:spdrivercalendar/features/toilet_codes/screens/toilet_codes_screen.dart'; // Import the Toilet Codes screen
-import 'package:spdrivercalendar/features/calendar/screens/week_view_screen.dart'; // Import the Week View screen
-import 'package:spdrivercalendar/features/calendar/screens/year_view_screen.dart'; // Import the Year View screen
-import 'package:spdrivercalendar/features/search/screens/search_screen.dart'; // Import the Search screen
-import 'package:uuid/uuid.dart';
 import 'package:spdrivercalendar/services/update_service.dart';
 import 'package:spdrivercalendar/core/widgets/enhanced_update_dialog.dart';
 import 'package:spdrivercalendar/services/color_customization_service.dart';
-import '../../../widgets/live_updates_banner.dart';
-import '../../../screens/live_updates_details_screen.dart';
-import '../../../services/live_updates_service.dart';
-import '../../../models/live_update.dart';
-import '../../../services/universal_board_service.dart';
 import '../../../models/universal_board.dart';
 import '../../../services/days_in_lieu_service.dart';
-import '../../../services/annual_leave_service.dart';
-import '../../../services/self_certified_sick_days_service.dart';
 import '../../../services/day_note_service.dart';
 import '../../../services/bank_holiday_redundant_day_service.dart';
 import '../dialogs/days_in_lieu_setup_dialog.dart';
 import '../dialogs/annual_leave_setup_dialog.dart';
-
-// Add this new widget class before the CalendarScreen class
-class _StableLiveUpdatesBanner extends StatefulWidget {
-  final VoidCallback onTap;
-
-  const _StableLiveUpdatesBanner({
-    required this.onTap,
-  });
-
-  @override
-  _StableLiveUpdatesBannerState createState() => _StableLiveUpdatesBannerState();
-}
-
-class _StableLiveUpdatesBannerState extends State<_StableLiveUpdatesBanner> {
-  @override
-  Widget build(BuildContext context) {
-    return LiveUpdatesBanner(
-      onTap: widget.onTap,
-    );
-  }
-}
 
 class CalendarScreen extends StatefulWidget {
   final ValueNotifier<bool> isDarkModeNotifier;
@@ -97,8 +105,9 @@ class CalendarScreen extends StatefulWidget {
 }
 
 class CalendarScreenState extends State<CalendarScreen> with TickerProviderStateMixin, WidgetsBindingObserver {
-  DateTime? _selectedDay;
-  DateTime _focusedDay = DateTime.now();
+  late final CalendarController _calendarController;
+  DateTime? get _selectedDay => _calendarController.selectedDay;
+  DateTime get _focusedDay => _calendarController.focusedDay;
   DateTime? _startDate;
   int _startWeek = 0;
   List<BankHoliday>? _bankHolidays;
@@ -122,22 +131,21 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
   final Map<String, Set<DateTime>> _workoutDatesMonthCache = {}; // Per-month cache when no global cache
   final Set<String> _workoutDateLoadsInProgress = {};
 
-  // Holiday section expanded state (year -> expanded)
-  final Map<int, bool> _holidayYearExpanded = {};
-
   // Add holiday color constant
   static const Color holidayColor = Color(0xFF00BCD4); // Teal color for holidays
 
+  final _eventStatusUpdateService = EventStatusUpdateService();
+  final _selfCertifiedSickDayGuard = SelfCertifiedSickDayGuard();
+  final _eventDeletionService = EventDeletionService();
+  final _holidayBookingService = HolidayBookingService();
+  final _displaySettingsLoader = CalendarDisplaySettingsLoader();
+  final _holidayCache = CalendarHolidayCache();
+  final _workoutDatesLoader = WorkoutDatesLoader();
+  final _leaveBalanceSetup = LeaveBalanceSetup();
+  final _workShiftMarkedInPrefsLoader = WorkShiftMarkedInPrefsLoader();
+
   void _initializeShiftColors() {
-    final colors = ColorCustomizationService.getShiftColors();
-    _shiftInfoMap = {
-      'E': ShiftInfo('Early', colors['E']!),
-      'L': ShiftInfo('Late', colors['L']!),
-      'M': ShiftInfo('Middle', colors['M']!),
-      'R': ShiftInfo('Rest', colors['R']!),
-      'W': ShiftInfo('Work', colors['W']!), // Use Work color from customization service
-      'WFO': ShiftInfo('Work For Others', colors['WFO']!), // Work For Others color
-    };
+    _shiftInfoMap = buildShiftInfoMap(ColorCustomizationService.getShiftColors());
   }
 
   void refreshShiftColors() {
@@ -202,7 +210,12 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
   @override
   void initState() {
     super.initState();
-    _selectedDay = DateTime.now();
+    final today = DateTime.now();
+    _calendarController = CalendarController(
+      initialFocusedDay: today,
+      initialSelectedDay: today,
+      initiallyLoading: true,
+    );
     _initializeShiftColors();
     _loadMarkedInSettings();
     _animationController = AnimationController(
@@ -236,36 +249,43 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
       if (mounted) setState(() {});
     });
 
-    // Schedule automatic update check after calendar loads
-    _scheduleAutomaticUpdateCheck();
-    
-    // Check if user needs to set days in lieu balance
-    _checkDaysInLieuSetup();
+    // Defer non-critical startup work until after the first calendar frame.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _scheduleAutomaticUpdateCheck();
+      _checkDaysInLieuSetup();
+    });
+  }
+
+  @override
+  void dispose() {
+    ColorCustomizationService.clearColorChangeCallback();
+    WidgetsBinding.instance.removeObserver(this);
+    _animationController.dispose();
+    _scrollController.dispose();
+    _calendarController.dispose();
+    super.dispose();
   }
 
   Future<void> _checkDaysInLieuSetup() async {
-    // Wait a bit for the screen to fully load
     await Future.delayed(const Duration(milliseconds: 500));
-    
     if (!mounted) return;
-    
-    final hasSetDaysInLieu = await DaysInLieuService.hasSetInitialBalance();
-    final hasSetAnnualLeave = await AnnualLeaveService.hasSetInitialBalance();
-    
-    if (!hasSetDaysInLieu && mounted) {
-      // Show the days in lieu setup dialog
+
+    final status = await _leaveBalanceSetup.check();
+    if (!mounted) return;
+
+    if (status.needsDaysInLieu) {
       await showDialog(
         context: context,
         barrierDismissible: false,
         builder: (context) => const DaysInLieuSetupDialog(),
       );
     }
-    
-    // Wait a bit before showing annual leave dialog
+
     await Future.delayed(const Duration(milliseconds: 300));
-    
-    if (!hasSetAnnualLeave && mounted) {
-      // Show the annual leave setup dialog
+    if (!mounted) return;
+
+    if (status.needsAnnualLeave) {
       await showDialog(
         context: context,
         barrierDismissible: false,
@@ -276,61 +296,49 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
 
   Future<void> _loadMarkedInSettings({bool refreshWorkoutDates = false}) async {
     if (!mounted) return;
-    
-    final markedInEnabled = await StorageService.getBool(AppConstants.markedInEnabledKey);
-    final markedInStatus = await StorageService.getString(AppConstants.markedInStatusKey) ?? '';
-    
-    // Determine if marked-in is actually enabled (enabled flag must be true AND status must not be empty)
-    final newMarkedInEnabled = markedInEnabled && markedInStatus.isNotEmpty;
-    final newMarkedInStatus = markedInStatus.isEmpty ? 'Spare' : markedInStatus;
-    final newShowDutyCodes = await StorageService.getBool(AppConstants.showDutyCodesOnCalendarKey, defaultValue: true);
-    final newAnimatedSelectedDay = await StorageService.getBool(AppConstants.animatedSelectedDayKey, defaultValue: true);
-    final newHighlightWorkoutDays = await StorageService.getBool(AppConstants.highlightWorkoutDaysKey, defaultValue: false);
-    
-    // Always update state to ensure calendar rebuilds with latest settings
-    if (mounted) {
-      final needsUpdate = _markedInEnabled != newMarkedInEnabled || 
-                         _markedInStatus != newMarkedInStatus ||
-                         _showDutyCodesOnCalendar != newShowDutyCodes ||
-                         _animatedSelectedDay != newAnimatedSelectedDay ||
-                         _highlightWorkoutDays != newHighlightWorkoutDays;
-      _markedInEnabled = newMarkedInEnabled;
-      _markedInStatus = newMarkedInStatus;
-      _showDutyCodesOnCalendar = newShowDutyCodes;
-      _animatedSelectedDay = newAnimatedSelectedDay;
-      _highlightWorkoutDays = newHighlightWorkoutDays;
-      
-      if (needsUpdate) {
-        setState(() {});
-        if (_highlightWorkoutDays) {
-          await _loadWorkoutDates();
-        } else {
-          _workoutDates = {};
-        }
-      } else if (_highlightWorkoutDays && refreshWorkoutDates) {
+
+    final settings = await _displaySettingsLoader.load();
+    if (!mounted) return;
+
+    final needsUpdate = _markedInEnabled != settings.markedInEnabled ||
+        _markedInStatus != settings.markedInStatus ||
+        _showDutyCodesOnCalendar != settings.showDutyCodesOnCalendar ||
+        _animatedSelectedDay != settings.animatedSelectedDay ||
+        _highlightWorkoutDays != settings.highlightWorkoutDays;
+
+    _markedInEnabled = settings.markedInEnabled;
+    _markedInStatus = settings.markedInStatus;
+    _showDutyCodesOnCalendar = settings.showDutyCodesOnCalendar;
+    _animatedSelectedDay = settings.animatedSelectedDay;
+    _highlightWorkoutDays = settings.highlightWorkoutDays;
+
+    if (needsUpdate) {
+      setState(() {});
+      if (_highlightWorkoutDays) {
         await _loadWorkoutDates();
+      } else {
+        _workoutDates = {};
       }
+    } else if (_highlightWorkoutDays && refreshWorkoutDates) {
+      await _loadWorkoutDates();
     }
   }
 
-  /// Load workout dates - prefers cached full-scan data (from Settings → Refresh Workout Highlights),
-  /// falls back to month-only loading for the focused month when no cache exists.
-  /// Uses per-month cache to avoid re-scanning when navigating back to previously viewed months.
   Future<void> _loadWorkoutDates() async {
     if (!_highlightWorkoutDays) return;
 
-    final cached = await WorkoutHighlightService.loadWorkoutDatesCache();
+    final cached = await _workoutDatesLoader.loadCachedDates();
     if (cached != null && mounted) {
-      if (!const SetEquality<DateTime>().equals(_workoutDates, cached)) {
+      if (!WorkoutDatesLoader.setsEqual(_workoutDates, cached)) {
         setState(() => _workoutDates = cached);
       }
       return;
     }
 
-    final monthKey = '${_focusedDay.year}-${_focusedDay.month}';
+    final monthKey = WorkoutDatesLoader.monthKey(_focusedDay);
     if (_workoutDatesMonthCache.containsKey(monthKey) && mounted) {
       final monthDates = _workoutDatesMonthCache[monthKey]!;
-      if (!const SetEquality<DateTime>().equals(_workoutDates, monthDates)) {
+      if (!WorkoutDatesLoader.setsEqual(_workoutDates, monthDates)) {
         setState(() => _workoutDates = monthDates);
       }
       return;
@@ -348,46 +356,19 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
     }
   }
 
-  /// Load workout dates for the visible month only (fallback when no cache).
-  /// Results are cached per-month to avoid re-scanning when navigating back.
   Future<void> _loadWorkoutDatesForMonth(DateTime month) async {
     if (!_highlightWorkoutDays) return;
-    
-    final workoutSet = <DateTime>{};
-    final firstDay = DateTime(month.year, month.month, 1);
-    final lastDay = DateTime(month.year, month.month + 1, 0);
-    
-    await EventService.preloadMonth(month);
-    
-    for (var d = firstDay; d.isBefore(lastDay) || d.isAtSameMomentAs(lastDay); d = d.add(const Duration(days: 1))) {
-      final events = EventService.getEventsForDay(d);
-      for (final event in events) {
-        if (event.isHoliday || event.sickDayType != null) continue;
-        final dutyCode = event.title.replaceAll('Shift: ', '').trim();
-        if (!event.title.startsWith('Shift:') && !event.title.startsWith('SP') &&
-            !event.title.startsWith(DonnybrookFeatureService.shiftPrefix) &&
-            !RegExp(r'^\d{1,3}/\d{1,2}').hasMatch(dutyCode) &&
-            !event.title.toUpperCase().contains('PZ')) continue;
-        try {
-          final breakTime = await ShiftService.getBreakTime(event);
-          if (breakTime != null && breakTime.toLowerCase() == 'workout') {
-            workoutSet.add(DateTime(d.year, d.month, d.day));
-            break; // One workout per day is enough
-          }
-        } catch (_) {
-          // Ignore per-event errors
-        }
-      }
-    }
-    
-    if (mounted) {
-      final monthKey = '${month.year}-${month.month}';
-      _workoutDatesMonthCache[monthKey] = workoutSet;
-      if (!const SetEquality<DateTime>().equals(_workoutDates, workoutSet)) {
-        setState(() => _workoutDates = workoutSet);
-      }
+
+    final workoutSet = await _workoutDatesLoader.loadForMonth(month);
+    if (!mounted) return;
+
+    final monthKey = WorkoutDatesLoader.monthKey(month);
+    _workoutDatesMonthCache[monthKey] = workoutSet;
+    if (!WorkoutDatesLoader.setsEqual(_workoutDates, workoutSet)) {
+      setState(() => _workoutDates = workoutSet);
     }
   }
+
 
   Future<void> _scheduleAutomaticUpdateCheck() async {
     // Check for updates immediately when calendar loads - no delay
@@ -421,13 +402,11 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
 
   Future<void> _initializeCurrentMonth() async {
     try {
-      final cacheService = CacheService();
-      
       // Run independent data loading in parallel with error handling
       final results = await Future.wait([
         RestDaysService.initialize(),
-        _loadBankHolidays(cacheService),
-        _loadHolidaysWithCache(cacheService),
+        _holidayCache.loadBankHolidays(),
+        _holidayCache.loadHolidays(),
         _loadSettings(),
       ], eagerError: true);
 
@@ -442,60 +421,22 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
       await EventService.preloadMonth(DateTime.now());
     } catch (e) {
       // Handle error appropriately
+    } finally {
+      if (mounted) {
+        _calendarController.setVisibleMonthLoading(false);
+      }
     }
   }
 
-  Future<List<BankHoliday>> _loadBankHolidays(CacheService cacheService) async {
-    const cacheKey = 'bank_holidays';
-    
-    // Try to get from cache first
-    final cached = cacheService.get<List<BankHoliday>>(cacheKey);
-    if (cached != null) return cached;
-    
-    // If not in cache, load from service
-    final holidays = await RosterService.loadBankHolidays();
-    
-    // Cache the results for 24 hours
-    cacheService.set(cacheKey, holidays, expiration: const Duration(hours: 24));
-    
-    return holidays;
-  }
-
-  Future<List<Holiday>> _loadHolidaysWithCache(CacheService cacheService) async {
-    const cacheKey = 'holidays_list_cache'; // Changed to avoid conflict with StorageService cache
-    
-    // Try to get from cache first
-    final cached = cacheService.get<List<Holiday>>(cacheKey);
-    if (cached != null) return cached;
-    
-    // If not in cache, load from service
-    final holidays = await HolidayService.getHolidays();
-    
-    // Cache the results for 24 hours
-    cacheService.set(cacheKey, holidays, expiration: const Duration(hours: 24));
-    
-    return holidays;
-  }
-
-  // Reload holidays from storage (bypasses cache)
   Future<void> _reloadHolidays() async {
     try {
-      // CRITICAL FIX: Explicitly invalidate the calendar's cache before reloading
-      const cacheKey = 'holidays_list_cache'; // Changed to match the new cache key
-      final cacheService = CacheService();
-      cacheService.remove(cacheKey);
-      
-      // Also clear StorageService cache to ensure fresh data
-      StorageService.clearCacheForKey('holidays');
-      
-      final holidays = await HolidayService.getHolidays();
+      final holidays = await _holidayCache.reloadHolidays();
       if (mounted) {
         setState(() {
           _holidays = holidays;
         });
       }
     } catch (e) {
-      // Handle error gracefully - but log it for debugging
       debugPrint('Error reloading holidays: $e');
     }
   }
@@ -528,142 +469,30 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
     }
   }
 
-  void _showFirstRunDialog({bool allowEffectiveDate = false}) {
-    var selectedWeek = _startWeek;
-    DateTime? effectiveDate;
-
-    showDialog(
+  Future<void> _showFirstRunDialog({bool allowEffectiveDate = false}) async {
+    final result = await showDialog<RestDaySetupResult>(
       context: context,
       barrierDismissible: false,
-      builder: (BuildContext dialogContext) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return AlertDialog(
-              title: Text(
-                'Choose rest days:',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-              ),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text(
-                      'Choose the new rest-day block',
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                    const SizedBox(height: 12),
-                    DropdownButtonFormField<int>(
-                      isExpanded: true,
-                      value: selectedWeek,
-                      decoration: InputDecoration(
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                      ),
-                      items: List.generate(5, (index) {
-                        return DropdownMenuItem<int>(
-                          value: index,
-                          child: Text(
-                            'Rest: ${RosterService.getRestDaysForWeek(index)}',
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        );
-                      }),
-                      onChanged: (value) {
-                        if (value == null) return;
-                        setDialogState(() {
-                          selectedWeek = value;
-                        });
-                      },
-                    ),
-                    if (allowEffectiveDate) ...[
-                      const SizedBox(height: 12),
-                      ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        leading: const Icon(Icons.event),
-                        title: const Text('Apply from date'),
-                        subtitle: Text(
-                          effectiveDate == null
-                              ? 'Not set — apply immediately as normal'
-                              : 'Week beginning ${DateFormat('EEE, d MMM yyyy').format(effectiveDate!)}',
-                        ),
-                        trailing: effectiveDate == null
-                            ? null
-                            : IconButton(
-                                tooltip: 'Clear date',
-                                icon: const Icon(Icons.clear),
-                                onPressed: () {
-                                  setDialogState(() {
-                                    effectiveDate = null;
-                                  });
-                                },
-                              ),
-                        onTap: () async {
-                          final selectedDate = await showDatePicker(
-                            context: dialogContext,
-                            initialDate: effectiveDate ?? DateTime.now(),
-                            firstDate: DateTime(2020),
-                            lastDate: DateTime(2100),
-                            helpText: 'Select when the new rest days begin',
-                          );
-                          if (selectedDate != null) {
-                            setDialogState(() {
-                              effectiveDate =
-                                  RosterScheduleService.sundayOfWeek(
-                                selectedDate,
-                              );
-                            });
-                          }
-                        },
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              actions: [
-                _dialogFooterActions(
-                  dialogContext,
-                  children: [
-                    TextButton(
-                      onPressed: () => Navigator.of(dialogContext).pop(),
-                      child: const Text('Cancel'),
-                    ),
-                    FilledButton(
-                      onPressed: () async {
-                        final navigator = Navigator.of(dialogContext);
-                        if (effectiveDate == null) {
-                          _startWeek = selectedWeek;
-                          _startDate = RosterService.getSundayOfCurrentWeek();
-                          await _saveSettings();
-                        } else {
-                          await RosterScheduleService.setChange(
-                            effectiveDate: effectiveDate!,
-                            startWeek: selectedWeek,
-                          );
-                        }
-                        navigator.pop();
-
-                        if (mounted) {
-                          setState(() {});
-                        }
-                      },
-                      child: const Text('Save'),
-                    ),
-                  ],
-                ),
-              ],
-            );
-          },
-        );
-      },
+      builder: (_) => RestDaySetupDialog(
+        initialStartWeek: _startWeek,
+        allowEffectiveDate: allowEffectiveDate,
+      ),
     );
+    if (result == null || !mounted) return;
+
+    if (result.effectiveDate == null) {
+      _startWeek = result.startWeek;
+      _startDate = RosterService.getSundayOfCurrentWeek();
+      await _saveSettings();
+    } else {
+      await RosterScheduleService.setChange(
+        effectiveDate: result.effectiveDate!,
+        startWeek: result.startWeek,
+      );
+    }
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   // Define the missing method
@@ -687,23 +516,15 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
     }
   }
   
-  // Roster-only shift (no swap overrides) - used by RestDaySwapService fallback
   String _getRosterShiftForDate(DateTime date) {
-    if (_startDate == null) return '';
-
-    if (_markedInEnabled) {
-      if (_markedInStatus == 'M-F') {
-        final bankHoliday = getBankHoliday(date);
-        if (bankHoliday != null) return 'R';
-        final weekday = date.weekday;
-        if (weekday >= 1 && weekday <= 5) return 'W';
-        return 'R';
-      }
-      if (_markedInStatus == 'Shift') {
-        return RosterService.getShiftForDate(date, _startDate!, _startWeek);
-      }
-    }
-    return RosterService.getShiftForDate(date, _startDate!, _startWeek);
+    return rosterShiftForDate(
+      date: date,
+      startDate: _startDate,
+      startWeek: _startWeek,
+      markedInEnabled: _markedInEnabled,
+      markedInStatus: _markedInStatus,
+      bankHolidayForDate: getBankHoliday,
+    );
   }
 
   // Full shift lookup with swap overrides
@@ -719,68 +540,22 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
   // Calculate the shift for a given date (includes swap overrides)
   String getShiftForDate(DateTime date) => getShiftResultForDate(date).shift;
 
-  /// True if day should show rest day badge/indicators.
-  /// False for swapped work days (working on swapped day = normal work, not rest day rate).
   bool _isRosteredRestDay(DateTime date) {
     final result = getShiftResultForDate(date);
-    if (result.shift != 'R') return false;
-    if (result.isSwappedWork) return false; // Swapped work = not a rest day for badge/rate
-    return true;
+    return isRosteredRestDay(
+      shift: result.shift,
+      isSwappedWork: result.isSwappedWork,
+    );
   }
   
-  // Get events for a specific day
   List<Event> getEventsForDay(DateTime day) {
-    List<Event> events = EventService.getEventsForDay(day);
-    List<Event> holidayEvents = [];
-    
-    // First, check for holidays and create holiday events
-    for (final holiday in _holidays) {
-      if (holiday.containsDate(day)) {
-        // Check if a holiday event already exists for this day
-        bool holidayExists = events.any((event) => 
-          event.isHoliday && 
-          event.holidayType == holiday.type &&
-          event.startDate == day
-        );
-        
-        if (!holidayExists) {
-          String holidayTitle;
-          switch (holiday.type) {
-            case 'winter':
-              holidayTitle = 'Winter Holiday';
-              break;
-            case 'summer':
-              holidayTitle = 'Summer Holiday';
-              break;
-            case 'unpaid_leave':
-              holidayTitle = 'Unpaid Leave';
-              break;
-            case 'day_in_lieu':
-              holidayTitle = 'Day In Lieu';
-              break;
-            case 'other':
-            default:
-              holidayTitle = 'Holiday';
-          }
-          
-          final holidayEvent = Event(
-            id: 'holiday_${holiday.id}_${day.millisecondsSinceEpoch}',
-            title: holidayTitle,
-            startDate: day,
-            startTime: const TimeOfDay(hour: 0, minute: 0),
-            endDate: day,
-            endTime: const TimeOfDay(hour: 23, minute: 59),
-            isHoliday: true,
-            holidayType: holiday.type,
-          );
-          holidayEvents.add(holidayEvent);
-        }
-      }
-    }
-    
-    // Combine holiday events with regular events, ensuring holidays appear first
-    return [...holidayEvents, ...events];
+    return eventsForDay(
+      day: day,
+      persistedEvents: EventService.getEventsForDay(day),
+      holidays: _holidays,
+    );
   }
+
 
   // Get bank holiday for a specific date
   BankHoliday? getBankHoliday(DateTime date) {
@@ -794,133 +569,44 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
   }
   
   void _showAddEventDialog() {
-    showDialog(
+    final selectedDay = _selectedDay ?? DateTime.now();
+    final isBankHoliday = getBankHoliday(selectedDay) != null;
+    final hasWorkShift =
+        getEventsForDay(selectedDay).any((event) => event.isWorkShift);
+
+    showDialog<void>(
       context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Add Event'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Add disclaimer about duty information FIRST
-                Container(
-                  padding: const EdgeInsets.all(10.0),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-                    borderRadius: BorderRadius.circular(6.0),
-                  ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Icon(
-                        Icons.info_outline,
-                        color: Theme.of(context).colorScheme.primary,
-                        size: 18,
-                      ),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: Text(
-                          'The duty information in this app is taken from the bills provided in the depot. There may be mistakes at times.',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-                const Text('What type of event would you like to add?'),
-                if (getBankHoliday(_selectedDay ?? DateTime.now()) != null) ...[
-                  const SizedBox(height: 12),
-                  const Divider(height: 1),
-                  const SizedBox(height: 8),
-                  StatefulBuilder(
-                    builder: (context, setDialog) {
-                      final d = _selectedDay ?? DateTime.now();
-                      final hasWork = getEventsForDay(d).any((e) => e.isWorkShift);
-                      final dayOnly = BankHolidayRedundantDayService.isMarked(d);
-                      if (hasWork) {
-                        return ListTile(
-                          contentPadding: EdgeInsets.zero,
-                          isThreeLine: true,
-                          leading: Icon(
-                            Icons.info_outline,
-                            color: Theme.of(context).colorScheme.primary,
-                          ),
-                          title: const Text('Bank holiday redundant'),
-                          subtitle: const Text(
-                            'You have a work shift. Open the shift, then Edit, and use the "Bank holiday — redundant" switch on that event.',
-                            style: TextStyle(fontSize: 12),
-                          ),
-                        );
-                      }
-                      return SwitchListTile(
-                        contentPadding: EdgeInsets.zero,
-                        title: const Text('Bank holiday redundant (day off)'),
-                        subtitle: const Text(
-                          'No work shift in the app. Mark this bank holiday as redundant (off).',
-                          style: TextStyle(fontSize: 12),
-                        ),
-                        value: dayOnly,
-                        onChanged: (v) async {
-                          await BankHolidayRedundantDayService.setMarked(d, v);
-                          setDialog(() {});
-                          if (mounted) setState(() {});
-                        },
-                      );
-                    },
-                  ),
-                ],
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              child: const Text('Normal Event'),
-              onPressed: () {
-                Navigator.of(context).pop();
-                _showNormalEventDialog();
-              },
-            ),
-            TextButton(
-              child: const Text('Work Shift'),
-              onPressed: () {
-                Navigator.of(context).pop();
-                _showWorkShiftDialog();
-              },
-            ),
-            TextButton( // Added Overtime button
-              child: const Text('Overtime'),
-              onPressed: () {
-                Navigator.of(context).pop();
-                _promptForOvertimeHalfType(); // Call the function to show overtime options
-              },
-            ),
-            // Only show Work For Others button on rest days
-            if (getShiftForDate(_selectedDay ?? DateTime.now()) == 'R')
-              TextButton(
-                child: const Text('Work For Others'),
-                onPressed: () {
-                  Navigator.of(context).pop();
-                  _showWorkForOthersDialog();
-                },
-              ),
-            // Rest day swap - swap work day with rest day in same week
-            if (_startDate != null)
-              TextButton(
-                child: const Text('Swap Rest Day'),
-                onPressed: () {
-                  Navigator.of(context).pop();
-                  _showRestDaySwapDialog();
-                },
-              ),
-          ],
-        );
-      },
+      builder: (dialogContext) => AddEventTypeDialog(
+        showBankHolidaySection: isBankHoliday,
+        hasWorkShiftOnDay: hasWorkShift,
+        isDayOnlyRedundant: BankHolidayRedundantDayService.isMarked(selectedDay),
+        showWorkForOthers: getShiftForDate(selectedDay) == 'R',
+        showSwapRestDay: _startDate != null,
+        onToggleDayOnlyRedundant: (marked) async {
+          await BankHolidayRedundantDayService.setMarked(selectedDay, marked);
+          if (mounted) setState(() {});
+        },
+        onNormalEvent: () {
+          Navigator.of(dialogContext).pop();
+          _showNormalEventDialog();
+        },
+        onWorkShift: () {
+          Navigator.of(dialogContext).pop();
+          _showWorkShiftDialog();
+        },
+        onOvertime: () {
+          Navigator.of(dialogContext).pop();
+          _promptForOvertimeHalfType();
+        },
+        onWorkForOthers: () {
+          Navigator.of(dialogContext).pop();
+          _showWorkForOthersDialog();
+        },
+        onSwapRestDay: () {
+          Navigator.of(dialogContext).pop();
+          _showRestDaySwapDialog();
+        },
+      ),
     );
   }
 
@@ -940,1323 +626,114 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
 
   // Show dialog to select and add a work shift
   void _showWorkShiftDialog() async {
-    final now = DateTime.now();
-    final shiftDate = _selectedDay ?? now;
-    
-    // Check if user is M-F marked in and if it's a weekday
-    bool isMFMarkedIn = false;
-    // Check if user is marked-in on Shift status and get their zone
-    bool isShiftMarkedIn = false;
-    String markedInZone = '';
-    
-    try {
-      final markedInEnabled = await StorageService.getBool(AppConstants.markedInEnabledKey);
-      final markedInStatus = await StorageService.getString(AppConstants.markedInStatusKey) ?? '';
-      isMFMarkedIn = markedInEnabled && markedInStatus == 'M-F';
-      
-      // Load zone for Shift or M-F (M-F needs it for 12-week roster checkbox)
-      if (markedInEnabled && (markedInStatus == 'Shift' || markedInStatus == 'M-F')) {
-        markedInZone = await StorageService.getString(AppConstants.markedInZoneKey) ?? 'Zone 1';
-        if (markedInStatus == 'Shift') {
-          isShiftMarkedIn = true;
-        }
-      }
-    } catch (e) {
-      // If we can't check, default to false
-      isMFMarkedIn = false;
-      isShiftMarkedIn = false;
-      markedInZone = '';
-    }
+    final shiftDate = _selectedDay ?? DateTime.now();
+    final prefs = await _workShiftMarkedInPrefsLoader.load();
+    final isMFMarkedIn = prefs.isMFMarkedIn;
+    final isShiftMarkedIn = prefs.isShiftMarkedIn;
+    final markedInZone = prefs.markedInZone;
 
     final jamestownEnabled = await JamestownFeatureService.isEnabled();
     final donnybrook1Enabled = await DonnybrookFeatureService.isEnabled();
-    
-    // Check if widget is still mounted after async operations
+
     if (!mounted) return;
-    
-    // Show dialog with loading state initially
-    showDialog(
+
+    final shiftLoader = WorkShiftDutyLoader();
+
+    showDialog<void>(
       context: context,
-      builder: (dialogContext) {
-        // Pre-select zone from Settings when marked in (Shift or M-F)
-        String selectedZone = donnybrook1Enabled
-            ? DonnybrookFeatureService.zoneLabel
-            : (markedInZone.isNotEmpty ? markedInZone : 'Zone 1');
-        String selectedShiftNumber = '';
-        List<String> shiftNumbers = [];
-        bool isLoading = true;
-        // For M-F Uni/Euro repeat feature
-        bool repeatUniEuroThisWeek = false;
-        Map<int, bool> uniEuroSelectedDays = {
-          0: false, // Sunday
-          1: false, // Monday
-          2: false, // Tuesday
-          3: false, // Wednesday
-          4: false, // Thursday
-          5: false, // Friday
-          6: false, // Saturday
-        };
-        Map<int, bool> uniEuroDisabledDays = {
-          0: false, // Sunday
-          1: false, // Monday
-          2: false, // Tuesday
-          3: false, // Wednesday
-          4: false, // Thursday
-          5: false, // Friday
-          6: false, // Saturday
-        };
-        // For Zone 1 M-F 12-week roster auto-fill
-        bool fillNext12Weeks = false;
-        // For Zone 1 Shift 15-week roster auto-fill
-        bool fillNext15Weeks = false;
-        // For Zone 3 Shift 10-week roster auto-fill
-        bool fillNext10Weeks = false;
-        // For marked-in zone repeat feature
-        bool repeatDutyThisWeek = false;
-        Map<int, bool> selectedDays = {
-          0: false, // Sunday
-          1: false, // Monday
-          2: false, // Tuesday
-          3: false, // Wednesday
-          4: false, // Thursday
-          5: false, // Friday
-          6: false, // Saturday
-        };
-        Map<int, bool> disabledDays = {
-          0: false, // Sunday
-          1: false, // Monday
-          2: false, // Tuesday
-          3: false, // Wednesday
-          4: false, // Thursday
-          5: false, // Friday
-          6: false, // Saturday
-        };
-        final customTrainingFormKey = GlobalKey<CustomTrainingFormState>();
-        
-        return StatefulBuilder(
-          builder: (context, setState) {
-          // Function to load shift numbers for selected zone
-          void loadShiftNumbers() async {
-            // Skip loading for 22B/01, Union, and Mentor as they are fixed duties
-            if (selectedZone == '22B/01' || selectedZone == 'Union' || selectedZone == 'Mentor') {
-              setState(() {
-                shiftNumbers = [];
-                selectedShiftNumber = '';
-                isLoading = false;
-              });
-              return;
-            }
-            
-            setState(() {
-              isLoading = true;
-            });
-            
-            try {
-              final dayOfWeek = RosterService.getDayOfWeek(shiftDate);
-              final zoneNumber = selectedZone.replaceAll('Zone ', '');
-              
-              // Convert full day name to abbreviated format for file loading
-              String dayOfWeekForFilename;
-              if (dayOfWeek == 'Saturday') {
-                dayOfWeekForFilename = 'SAT';
-              } else if (dayOfWeek == 'Sunday') {
-                dayOfWeekForFilename = 'SUN';
-              } else {
-                dayOfWeekForFilename = 'M-F';
-              }
-              
-              // Handle different zones differently
-              if (selectedZone == 'Spare') {
-                // For Spare, create shift options using just the time
-                shiftNumbers = [];
-                
-                // Generate time options for spare shifts (04:00 to 16:00 in 15 min increments)
-                for (int hour = 4; hour <= 16; hour++) {
-                  for (int minute = 0; minute < 60; minute += 15) {
-                    // Stop at 16:00 exactly (don't include 16:15, 16:30, etc.)
-                    if (hour == 16 && minute > 0) continue;
-                    
-                    final hourStr = hour.toString().padLeft(2, '0');
-                    final minuteStr = minute.toString().padLeft(2, '0');
-                    final timeStr = '$hourStr:$minuteStr';
-                    shiftNumbers.add(timeStr);
-                  }
-                }
-              } else if (selectedZone == 'Uni/Euro') {
-                // Uni/Euro shifts - use both files on weekdays, only 7DAYs on weekends
-                List<String> combinedShifts = [];
-                
-                // Always load from UNI_7DAYs.csv first
-                try {
-                  final csv = await rootBundle.loadString('assets/UNI_7DAYs.csv');
-                  final lines = csv.split('\n');
-                  
-                  // Skip header line and load duty codes
-                  for (var i = 1; i < lines.length; i++) {
-                    if (lines[i].trim().isEmpty) continue;
-                    final parts = lines[i].split(',');
-                    if (parts.isNotEmpty) {
-                      // For regular work shifts, include ALL duties (including workouts)
-                      combinedShifts.add(parts[0]);
-                    }
-                  }
-                } catch (e) {
-                  // Silently handle CSV parsing errors - file may not exist or be malformed
-                }
-                
-                // On weekdays, also load from UNI_M-F.csv
-                if (dayOfWeek != 'Saturday' && dayOfWeek != 'Sunday') {
-                  try {
-                    final csv = await rootBundle.loadString('assets/UNI_M-F.csv');
-                    final lines = csv.split('\n');
-                    
-                    // Skip header line and load duty codes
-                    for (var i = 1; i < lines.length; i++) {
-                      if (lines[i].trim().isEmpty) continue;
-                      final parts = lines[i].split(',');
-                      if (parts.isNotEmpty) {
-                        // For regular work shifts, include ALL duties (including workouts)
-                        combinedShifts.add(parts[0]);
-                      }
-                    }
-                  } catch (e) {
-                    // Silently handle CSV parsing errors - file may not exist or be malformed
-                  }
-                }
-                
-                // Keep only unique shifts while preserving order (first occurrence wins)
-                shiftNumbers = [];
-                final seenShifts = <String>{};
-                for (final shift in combinedShifts) {
-                  if (!seenShifts.contains(shift)) {
-                    seenShifts.add(shift);
-                    shiftNumbers.add(shift);
-                  }
-                }
-              } else if (selectedZone == 'Bus Check') { 
-                try {
-                  final csv = await rootBundle.loadString('assets/buscheck.csv');
-                  final lines = csv.split('\n');
-                  shiftNumbers = [];
-                  final seenShifts = <String>{};
-                  String currentDayType = ''; 
-
-                  // Determine day type string for CSV matching
-                  if (dayOfWeek == 'Saturday') {
-                    currentDayType = 'SAT';
-                  } else if (dayOfWeek == 'Sunday') {
-                    currentDayType = 'SUN';
-                  } else { // Monday - Friday
-                    currentDayType = 'MF'; 
-                  }
-
-                  // Skip the header line
-                  for (int i = 1; i < lines.length; i++) {
-                    final line = lines[i].trim().replaceAll('\r', '');
-                    if (line.isEmpty) continue;
-                    final parts = line.split(',');
-                    // Expecting format: duty,day,start,finish
-                    if (parts.length >= 2) {
-                      final shiftName = parts[0].trim();
-                      final shiftDayType = parts[1].trim();
-
-                      // Add shift if day type matches and it's not already added
-                      if (shiftDayType == currentDayType && shiftName.isNotEmpty && !seenShifts.contains(shiftName)) {
-                        seenShifts.add(shiftName);
-                        shiftNumbers.add(shiftName);
-                      }
-                    }
-                  }
-                } catch (e) {
-                  shiftNumbers = [];
-                }
-              } else if (selectedZone == DonnybrookFeatureService.zoneLabel) {
-                shiftNumbers =
-                    await DonnybrookFeatureService.loadShiftCodesForDate(
-                  shiftDate,
-                );
-              } else if (selectedZone == JamestownFeatureService.zoneLabel) {
-                if (dayOfWeek == 'Saturday' || dayOfWeek == 'Sunday') {
-                  shiftNumbers = [];
-                } else {
-                  shiftNumbers = await JamestownFeatureService.load30HrShiftCodes();
-                }
-              } else if (selectedZone == 'Jamestown Road') {
-                // Only allow Monday-Friday for Jamestown Road shifts
-                if (dayOfWeek == 'Saturday' || dayOfWeek == 'Sunday') {
-                  shiftNumbers = [];
-                } else {
-                  try {
-                    final csv = await rootBundle.loadString('assets/JAMESTOWN_DUTIES.csv');
-                    final lines = csv.split('\n');
-                    shiftNumbers = [];
-                    final seenShifts = <String>{};
-
-                    // Skip the header line
-                    for (int i = 1; i < lines.length; i++) {
-                      final line = lines[i].trim().replaceAll('\r', '');
-                      if (line.isEmpty) continue;
-                      final parts = line.split(',');
-                      // Expecting format: shift,duty,report,depart,location,startbreak,startbreaklocation,breakreport,finishbreak,finishbreaklocation,finish,finishlocation,signoff,spread,work,relief,route
-                      if (parts.isNotEmpty && parts[0].trim().isNotEmpty) {
-                        final shift = parts[0].trim();
-                        
-                        // Add unique shifts only
-                        if (!seenShifts.contains(shift) && shift != "shift") {
-                          seenShifts.add(shift);
-                          shiftNumbers.add(shift);
-                        }
-                      }
-                    }
-                  } catch (e) {
-                    shiftNumbers = [];
-                  }
-                }
-              } else if (selectedZone == 'Training') {
-                // Load Training shifts from training_duties.csv
-                // Exclude EA Type Training shifts (they are overtime-only)
-                try {
-                  final csv = await rootBundle.loadString('assets/training_duties.csv');
-                  final lines = csv.split('\n');
-                  shiftNumbers = [];
-                  final seenShifts = <String>{};
-                  
-                  // Skip header line and collect all shift codes
-                  for (int i = 1; i < lines.length; i++) {
-                    final line = lines[i].trim().replaceAll('\r', '');
-                    if (line.isEmpty) continue;
-                    final parts = line.split(',');
-                    if (parts.isNotEmpty) {
-                      final shift = parts[0].trim();
-                      if (donnybrook1Enabled && shift != 'CPC') {
-                        continue;
-                      }
-                      // Exclude EA Type Training shifts (overtime-only)
-                      if (shift.contains('EA Type Training')) {
-                        continue;
-                      }
-                      // Route 13 Training is M-Sat only (not Sundays)
-                      if (shift == 'Route 13 Training' && dayOfWeek == 'Sunday') {
-                        continue;
-                      }
-                      if (shift.isNotEmpty && !seenShifts.contains(shift)) {
-                        shiftNumbers.add(shift);
-                        seenShifts.add(shift);
-                      }
-                    }
-                  }
-                } catch (e) {
-                  shiftNumbers = [];
-                }
-                if (!shiftNumbers.contains(TrainingConstants.customTrainingShiftOption)) {
-                  shiftNumbers.add(TrainingConstants.customTrainingShiftOption);
-                }
-              } else {
-                // Regular zone shifts
-                final filename = RosterService.getShiftFilename(zoneNumber, dayOfWeekForFilename, shiftDate);
-                
-                try {
-                  final csv = await rootBundle.loadString('assets/$filename');
-                  final lines = csv.split('\n');
-                  shiftNumbers = [];
-                  final seenShifts = <String>{};
-                  
-                  // Skip the header line
-                  for (int i = 1; i < lines.length; i++) {
-                    final line = lines[i].trim();
-                    if (line.isEmpty) continue;
-                    final parts = line.split(',');
-                    if (parts.isNotEmpty && parts[0].trim().isNotEmpty) {
-                      final shift = parts[0].trim();
-                      
-                      // For regular work shifts, include ALL duties (including workouts)
-                      if (!seenShifts.contains(shift) && shift != "shift") {
-                        seenShifts.add(shift);
-                        shiftNumbers.add(shift);
-                      }
-                    }
-                  }
-                } catch (e) {
-                  shiftNumbers = [];
-                }
-              }
-              
-              // Load Zone 1 rosters when Zone 1 is selected (for 12-week M-F and 15-week Shift fill)
-              if (selectedZone == 'Zone 1') {
-                await RosterService.loadZone1MFRoster();
-                await RosterService.loadZone1ShiftRoster();
-              }
-              // Load Zone 3 Shift roster when Zone 3 is selected (for 10-week fill)
-              if (selectedZone == 'Zone 3') {
-                await RosterService.loadZone3ShiftRoster();
-              }
-              
-              // If no selected shift number yet but shifts are available, select the first one
-              if (selectedShiftNumber.isEmpty && shiftNumbers.isNotEmpty) {
-                selectedShiftNumber = shiftNumbers[0];
-              }
-            } catch (e) {
-              shiftNumbers = [];
-            } finally {
-            setState(() {
-              isLoading = false;
-            });
-            }
-          }
-          
-          // Load shift numbers initially
-          if (isLoading) {
-            loadShiftNumbers();
-          }
-                  
-          final screenH = MediaQuery.sizeOf(context).height;
-          return AlertDialog(
-            // Title is inside scrollable content so large text + form fit within the viewport.
-            title: null,
-            content: ConstrainedBox(
-              constraints: BoxConstraints(
-                maxWidth: double.maxFinite,
-                maxHeight: screenH * 0.72,
-              ),
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                Text(
-                  'Add Work Shift for ${DateFormat('EEE, MMM d').format(shiftDate)}',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-                const SizedBox(height: 16),
-                const Text('Zone:', style: TextStyle(fontWeight: FontWeight.bold)),
-                DropdownButton<String>(
-                  value: selectedZone,
-                  isExpanded: true,
-                  items: () {
-                    if (donnybrook1Enabled) {
-                      return <String>[
-                        DonnybrookFeatureService.zoneLabel,
-                        'Training',
-                      ];
-                    }
-
-                    final dayOfWeek = RosterService.getDayOfWeek(shiftDate);
-                    List<String> zones = [
-                      'Zone 1',
-                      'Zone 2',
-                      'Zone 3',
-                      'Zone 4',
-                    ];
-                    
-                    // Add 22B/01 right after Zone 4 for Sundays only
-                    if (dayOfWeek == 'Sunday') {
-                      zones.add('22B/01');
-                    }
-                    
-                    // Add remaining zones
-                    zones.addAll([
-                      'Spare',
-                      'Uni/Euro',
-                      'Bus Check',
-                      'Training',
-                    ]);
-                    
-                    zones.add('Union');
-                    zones.add('Mentor');
-
-                    if (jamestownEnabled) {
-                      zones.add(JamestownFeatureService.zoneLabel);
-                    }
-                    
-                    return zones;
-                  }().map((zone) {
-                    return DropdownMenuItem(
-                      value: zone,
-                      child: Text(zone),
-                    );
-                  }).toList(),
-                  onChanged: (value) {
-                    if (value != null && value != selectedZone) {
-                      setState(() {
-                        selectedZone = value;
-                        selectedShiftNumber = '';
-                        loadShiftNumbers();
-                      });
-                    }
-                  },
-                ),
-                
-                const SizedBox(height: 16),
-                const Text('Shift:', style: TextStyle(fontWeight: FontWeight.bold)),
-                // Handle 22B/01, Union, and Mentor special cases - no shift selection needed
-                selectedZone == '22B/01' || selectedZone == 'Union' || selectedZone == 'Mentor'
-                  ? Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.grey),
-                        borderRadius: BorderRadius.circular(4),
-                        color: Colors.grey.withValues(alpha: 0.1),
-                      ),
-                      child: Text(
-                        selectedZone == 'Union'
-                            ? 'Union Duties'
-                            : selectedZone == 'Mentor'
-                                ? 'Mentor Duties'
-                                : 'Fixed Duty - No shift selection required',
-                        style: const TextStyle(
-                          color: Colors.grey,
-                          fontStyle: FontStyle.italic,
-                        ),
-                      ),
-                    )
-                  : isLoading
-                    ? const SizedBox(
-                        height: 50,
-                        child: Center(
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        ),
-                      )
-                    : shiftNumbers.isEmpty
-                      ? Text(selectedZone == 'Zone 2'
-                          ? 'Coming soon'
-                          : 'No shifts available for selected zone and date')
-                      : DropdownButton<String>(
-                          value: selectedShiftNumber.isEmpty ? shiftNumbers[0] : selectedShiftNumber,
-                          isExpanded: true,
-                          items: shiftNumbers.map((shift) {
-                            return DropdownMenuItem(
-                              value: shift,
-                              child: Text(shift),
-                            );
-                          }).toList(),
-                          onChanged: (value) {
-                            if (value != null) {
-                              setState(() {
-                                selectedShiftNumber = value;
-                              });
-                            }
-                          },
-                        ),
-                if (selectedZone == 'Training' &&
-                    selectedShiftNumber == TrainingConstants.customTrainingShiftOption) ...[
-                  const SizedBox(height: 16),
-                  CustomTrainingForm(key: customTrainingFormKey),
-                ],
-                // Show checkbox for M-F marked in users selecting Uni/Euro (not on weekends)
-                Builder(
-                  builder: (context) {
-                    final dayOfWeek = RosterService.getDayOfWeek(shiftDate);
-                    final isWeekend = dayOfWeek == 'Saturday' || dayOfWeek == 'Sunday';
-                    final shouldShowRepeatCheckbox = isMFMarkedIn && selectedZone == 'Uni/Euro' && !isWeekend;
-                    if (shouldShowRepeatCheckbox) {
-                      return Column(
-                        children: [
-                          const SizedBox(height: 16),
-                          Row(
-                            children: [
-                              Checkbox(
-                                value: repeatUniEuroThisWeek,
-                                onChanged: (value) async {
-                                  setState(() {
-                                    repeatUniEuroThisWeek = value ?? false;
-                                  });
-                                  
-                                  if (repeatUniEuroThisWeek) {
-                                    // When checking, check which weekdays already have work shifts
-                                    // Get the start of the week (Sunday)
-                                    final weekday = shiftDate.weekday; // 1=Monday, 7=Sunday
-                                    final daysToSunday = weekday == 7 ? 0 : weekday;
-                                    final weekStart = shiftDate.subtract(Duration(days: daysToSunday));
-                                    
-                                    // Check each weekday (Monday-Friday, indices 1-5) for existing work shifts
-                                    final newDisabledDays = <int, bool>{};
-                                    for (int dayIndex = 1; dayIndex <= 5; dayIndex++) {
-                                      final targetDate = weekStart.add(Duration(days: dayIndex));
-                                      final existingEvents = EventService.getEventsForDay(targetDate);
-                                      
-                                      // Check if there's a work shift (non-holiday event) on this day
-                                      final hasWorkShift = existingEvents.any((e) => !e.isHoliday);
-                                      newDisabledDays[dayIndex] = hasWorkShift;
-                                    }
-                                    
-                                    setState(() {
-                                      uniEuroDisabledDays = newDisabledDays;
-                                      
-                                      // Automatically select the current day if it's not disabled (only for weekdays)
-                                      if (weekday >= 1 && weekday <= 5) {
-                                        if (!(uniEuroDisabledDays[weekday] ?? false)) {
-                                          uniEuroSelectedDays[weekday] = true;
-                                        }
-                                      }
-                                    });
-                                  } else {
-                                    // If unchecking, clear all selected days and disabled days
-                                    setState(() {
-                                      uniEuroSelectedDays = {
-                                        0: false, 1: false, 2: false, 3: false,
-                                        4: false, 5: false, 6: false,
-                                      };
-                                      uniEuroDisabledDays = {
-                                        0: false, 1: false, 2: false, 3: false,
-                                        4: false, 5: false, 6: false,
-                                      };
-                                    });
-                                  }
-                                },
-                              ),
-                              const Expanded(
-                                child: Text(
-                                  'Would you like to repeat this shift this week?',
-                                  style: TextStyle(fontSize: 14),
-                                ),
-                              ),
-                            ],
-                          ),
-                          if (repeatUniEuroThisWeek) ...[
-                            const SizedBox(height: 12),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                              children: [
-                                _buildDayToggle(context, setState, 1, 'M', uniEuroSelectedDays[1] ?? false, uniEuroSelectedDays, uniEuroDisabledDays[1] ?? false),
-                                _buildDayToggle(context, setState, 2, 'T', uniEuroSelectedDays[2] ?? false, uniEuroSelectedDays, uniEuroDisabledDays[2] ?? false),
-                                _buildDayToggle(context, setState, 3, 'W', uniEuroSelectedDays[3] ?? false, uniEuroSelectedDays, uniEuroDisabledDays[3] ?? false),
-                                _buildDayToggle(context, setState, 4, 'T', uniEuroSelectedDays[4] ?? false, uniEuroSelectedDays, uniEuroDisabledDays[4] ?? false),
-                                _buildDayToggle(context, setState, 5, 'F', uniEuroSelectedDays[5] ?? false, uniEuroSelectedDays, uniEuroDisabledDays[5] ?? false),
-                              ],
-                            ),
-                          ],
-                        ],
-                      );
-                    }
-                    return const SizedBox.shrink();
-                  },
-                ),
-                // Show checkbox for marked-in Shift or M-F users when zone matches (not on weekends)
-                Builder(
-                  builder: (context) {
-                    final dayOfWeek = RosterService.getDayOfWeek(shiftDate);
-                    final isWeekend = dayOfWeek == 'Saturday' || dayOfWeek == 'Sunday';
-                    // Shift: require zone match. M-F: show for any Zone 1-4 or Jamestown duty (zone is pre-selected from Settings)
-                    final isJamestownZone = selectedZone == JamestownFeatureService.zoneLabel;
-                    final isRepeatableDutyZone = selectedZone == 'Zone 1' ||
-                        selectedZone == 'Zone 2' ||
-                        selectedZone == 'Zone 3' ||
-                        selectedZone == 'Zone 4' ||
-                        selectedZone == DonnybrookFeatureService.zoneLabel ||
-                        (isJamestownZone && jamestownEnabled);
-                    final zoneMatch = isShiftMarkedIn ? (selectedZone == markedInZone) : true;
-                    final shouldShowRepeatCheckbox = (isShiftMarkedIn || isMFMarkedIn) &&
-                        isRepeatableDutyZone &&
-                        zoneMatch &&
-                        !isWeekend;
-                    if (shouldShowRepeatCheckbox) {
-                      return Column(
-                        children: [
-                          const SizedBox(height: 16),
-                          Row(
-                            children: [
-                              Checkbox(
-                                value: repeatDutyThisWeek,
-                                onChanged: (value) async {
-                                  setState(() {
-                                    repeatDutyThisWeek = value ?? false;
-                                  });
-                                  
-                                  if (repeatDutyThisWeek) {
-                                    // When checking, check which weekdays already have work shifts
-                                    // Get the start of the week (Sunday)
-                                    final weekday = shiftDate.weekday; // 1=Monday, 7=Sunday
-                                    final daysToSunday = weekday == 7 ? 0 : weekday;
-                                    final weekStart = shiftDate.subtract(Duration(days: daysToSunday));
-                                    
-                                    // Check each weekday (Monday-Friday, indices 1-5) for existing work shifts
-                                    final newDisabledDays = <int, bool>{};
-                                    for (int dayIndex = 1; dayIndex <= 5; dayIndex++) {
-                                      final targetDate = weekStart.add(Duration(days: dayIndex));
-                                      final existingEvents = EventService.getEventsForDay(targetDate);
-                                      
-                                      // Check if there's a work shift (non-holiday event) on this day
-                                      final hasWorkShift = existingEvents.any((e) => !e.isHoliday);
-                                      newDisabledDays[dayIndex] = hasWorkShift;
-                                    }
-                                    
-                                    setState(() {
-                                      disabledDays = newDisabledDays;
-                                      
-                                      // Automatically select the current day if it's not disabled (only for weekdays)
-                                      if (weekday >= 1 && weekday <= 5) {
-                                        if (!(disabledDays[weekday] ?? false)) {
-                                          selectedDays[weekday] = true;
-                                        }
-                                      }
-                                    });
-                                  } else {
-                                    // If unchecking, clear all selected days and disabled days
-                                    setState(() {
-                                      selectedDays = {
-                                        0: false, 1: false, 2: false, 3: false,
-                                        4: false, 5: false, 6: false,
-                                      };
-                                      disabledDays = {
-                                        0: false, 1: false, 2: false, 3: false,
-                                        4: false, 5: false, 6: false,
-                                      };
-                                    });
-                                  }
-                                },
-                              ),
-                              const Expanded(
-                                child: Text(
-                                  'Would you like to repeat this duty this week?',
-                                  style: TextStyle(fontSize: 14),
-                                ),
-                              ),
-                            ],
-                          ),
-                          if (repeatDutyThisWeek) ...[
-                            const SizedBox(height: 12),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                              children: [
-                                _buildDayToggle(context, setState, 1, 'M', selectedDays[1] ?? false, selectedDays, disabledDays[1] ?? false),
-                                _buildDayToggle(context, setState, 2, 'T', selectedDays[2] ?? false, selectedDays, disabledDays[2] ?? false),
-                                _buildDayToggle(context, setState, 3, 'W', selectedDays[3] ?? false, selectedDays, disabledDays[3] ?? false),
-                                _buildDayToggle(context, setState, 4, 'T', selectedDays[4] ?? false, selectedDays, disabledDays[4] ?? false),
-                                _buildDayToggle(context, setState, 5, 'F', selectedDays[5] ?? false, selectedDays, disabledDays[5] ?? false),
-                              ],
-                            ),
-                          ],
-                        ],
-                      );
-                    }
-                    return const SizedBox.shrink();
-                  },
-                ),
-                // Show checkbox for Zone 1 M-F 12-week roster auto-fill
-                Builder(
-                  builder: (context) {
-                    final dayOfWeek = RosterService.getDayOfWeek(shiftDate);
-                    final isWeekend = dayOfWeek == 'Saturday' || dayOfWeek == 'Sunday';
-                    final dutyInRoster = RosterService.isZone1MFDutyInRoster(selectedShiftNumber);
-                    final shouldShowRosterCheckbox = isMFMarkedIn &&
-                        selectedZone == 'Zone 1' &&
-                        !isWeekend &&
-                        dutyInRoster;
-                    if (shouldShowRosterCheckbox) {
-                      return Column(
-                        children: [
-                          const SizedBox(height: 16),
-                          Row(
-                            children: [
-                              Checkbox(
-                                value: fillNext12Weeks,
-                                onChanged: (value) {
-                                  setState(() {
-                                    fillNext12Weeks = value ?? false;
-                                  });
-                                },
-                              ),
-                              const Expanded(
-                                child: Text(
-                                  'Auto-fill the next 12 weeks from my roster?',
-                                  style: TextStyle(fontSize: 14),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      );
-                    }
-                    return const SizedBox.shrink();
-                  },
-                ),
-                // Show checkbox for Zone 1 Shift 15-week roster auto-fill
-                Builder(
-                  builder: (context) {
-                    final dayIndex = shiftDate.weekday % 7; // 0=Sun, 1=Mon, ..., 6=Sat
-                    final shiftWeekIndex = RosterService.getZone1ShiftWeekIndex(dayIndex, selectedShiftNumber);
-                    final shouldShowShiftRosterCheckbox =
-                        AppConstants.enableZone1ShiftDutyRosterAutoFill &&
-                        isShiftMarkedIn &&
-                        selectedZone == 'Zone 1' &&
-                        shiftWeekIndex != null;
-                    if (shouldShowShiftRosterCheckbox) {
-                      return Column(
-                        children: [
-                          const SizedBox(height: 16),
-                          Row(
-                            children: [
-                              Checkbox(
-                                value: fillNext15Weeks,
-                                onChanged: (value) {
-                                  setState(() {
-                                    fillNext15Weeks = value ?? false;
-                                  });
-                                },
-                              ),
-                              const Expanded(
-                                child: Text(
-                                  'Auto-fill the next 15 weeks from my roster?',
-                                  style: TextStyle(fontSize: 14),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      );
-                    }
-                    return const SizedBox.shrink();
-                  },
-                ),
-                // Show checkbox for Zone 3 Shift 10-week roster auto-fill
-                Builder(
-                  builder: (context) {
-                    final dayIndex = shiftDate.weekday % 7;
-                    final zone3WeekIndex = RosterService.getZone3ShiftWeekIndex(dayIndex, selectedShiftNumber);
-                    final shouldShowZone3RosterCheckbox = isShiftMarkedIn &&
-                        selectedZone == 'Zone 3' &&
-                        zone3WeekIndex != null;
-                    if (shouldShowZone3RosterCheckbox) {
-                      return Column(
-                        children: [
-                          const SizedBox(height: 16),
-                          Row(
-                            children: [
-                              Checkbox(
-                                value: fillNext10Weeks,
-                                onChanged: (value) {
-                                  setState(() {
-                                    fillNext10Weeks = value ?? false;
-                                  });
-                                },
-                              ),
-                              const Expanded(
-                                child: Text(
-                                  'Auto-fill the next 10 weeks from my roster?',
-                                  style: TextStyle(fontSize: 14),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      );
-                    }
-                    return const SizedBox.shrink();
-                  },
-                ),
-                ],
-              ),
-            ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(dialogContext).pop(),
-                child: const Text('Cancel'),
-              ),
-              TextButton(
-                onPressed: isLoading || (selectedZone != '22B/01' && selectedZone != 'Union' && selectedZone != 'Mentor' && (shiftNumbers.isEmpty || selectedShiftNumber.isEmpty))
-                  ? null  // Disable button if loading or no shifts available (except for 22B/01, Union, and Mentor)
-                  : () async {
-                      // Create title based on zone and shift
-                      String title = '';
-                      // For 22B/01 Sunday duty
-                      if (selectedZone == '22B/01') {
-                        title = '22B/01';
-                      } else if (selectedZone == 'Union') {
-                        title = 'Union';
-                      } else if (selectedZone == 'Mentor') {
-                        title = 'Mentor';
-                      } else if (selectedZone == 'Spare') {
-                        // Convert the time (like "06:00") to SP code (like "SP0600")
-                        final timeStr = selectedShiftNumber; // The time is now directly stored
-                        final timeWithoutColon = timeStr.replaceAll(':', '');
-                        title = 'SP$timeWithoutColon';
-                      } else if (selectedZone == 'Uni/Euro') {
-                        title = selectedShiftNumber;
-                      } else if (selectedZone == 'Bus Check') { // ADDED: Set title for Bus Check
-                        title = selectedShiftNumber; // Use the selected duty name (e.g., BusCheck1)
-                      } else if (selectedZone ==
-                          DonnybrookFeatureService.zoneLabel) {
-                        title = selectedShiftNumber;
-                      } else if (selectedZone == JamestownFeatureService.zoneLabel ||
-                          selectedZone == 'Jamestown Road') {
-                        title = selectedShiftNumber; // Use the shift code (e.g., 811/36)
-                      } else if (selectedZone == 'Training') {
-                        if (selectedShiftNumber == TrainingConstants.customTrainingShiftOption) {
-                          title = TrainingConstants.customTrainingTitle;
-                        } else {
-                          title = selectedShiftNumber; // e.g. CPC
-                        }
-                      } else {
-                        // Regular PZ shifts
-                        title = selectedShiftNumber; // Title is the shift code (e.g., PZ1/01)
-                      }
-                      
-                      // Load shift times based on zone
-                      Map<String, dynamic>? shiftTimes;
-                      
-                      if (selectedZone == '22B/01') {
-                        // Fixed times for 22B/01: 04:30 start, 5h 30m work duration
-                        shiftTimes = {
-                          'startTime': const TimeOfDay(hour: 4, minute: 30),
-                          'endTime': const TimeOfDay(hour: 10, minute: 0), // 04:30 + 5h 30m = 10:00
-                        };
-                      } else if (selectedZone == 'Union' || selectedZone == 'Mentor') {
-                        // Fixed times for Union and Mentor: 9am–3pm
-                        shiftTimes = {
-                          'startTime': const TimeOfDay(hour: 9, minute: 0),
-                          'endTime': const TimeOfDay(hour: 15, minute: 0),
-                        };
-                      } else if (selectedZone == 'Spare') {
-                        // Parse the time directly from the dropdown value (e.g., "04:00")
-                        final timeParts = selectedShiftNumber.split(':');
-                        if (timeParts.length == 2) {
-                          final hour = int.parse(timeParts[0]);
-                          final minute = int.parse(timeParts[1]);
-                          
-                          // Calculate end time (8h 38m later)
-                          int endHour = hour + 8;
-                          int endMinute = minute + 38;
-                          
-                          // Adjust for minute overflow
-                          if (endMinute >= 60) {
-                            endHour += 1;
-                            endMinute -= 60;
-                          }
-                          
-                          // Adjust for 24-hour wrap
-                          if (endHour >= 24) {
-                            endHour -= 24;
-                          }
-                          
-                          shiftTimes = {
-                            'startTime': TimeOfDay(hour: hour, minute: minute),
-                            'endTime': TimeOfDay(hour: endHour, minute: endMinute),
-                          };
-                        } else {
-                          // Fallback if pattern doesn't match
-                          shiftTimes = {
-                            'startTime': const TimeOfDay(hour: 4, minute: 0),
-                            'endTime': const TimeOfDay(hour: 12, minute: 38),
-                          };
-                        }
-                      } else if (selectedZone ==
-                          DonnybrookFeatureService.zoneLabel) {
-                        shiftTimes = await _getShiftTimes(
-                            selectedZone, selectedShiftNumber, shiftDate);
-                      } else if (selectedZone == JamestownFeatureService.zoneLabel ||
-                          selectedZone == 'Jamestown Road') {
-                        shiftTimes = await _getShiftTimes(selectedZone, selectedShiftNumber, shiftDate);
-                      } else if (selectedZone == 'Training' &&
-                          selectedShiftNumber == TrainingConstants.customTrainingShiftOption) {
-                        final customData = customTrainingFormKey.currentState?.buildData();
-                        if (customData == null) {
-                          if (!mounted) return;
-                          ScaffoldMessenger.of(dialogContext).showSnackBar(
-                            const SnackBar(content: Text('Please enter training times.')),
-                          );
-                          return;
-                        }
-                        shiftTimes = customTrainingShiftTimes(customData);
-                      } else if (selectedZone == 'Training') {
-                        shiftTimes = await _getShiftTimes(selectedZone, selectedShiftNumber, shiftDate);
-                      } else {
-                        // For other zones, load from CSV
-                        shiftTimes = await _getShiftTimes(selectedZone, selectedShiftNumber, shiftDate);
-                      }
-                      
-                      // Handle potential null shiftTimes (error loading CSV etc.)
-                      if (shiftTimes == null) {
-                         // Could not retrieve shift times
-                         if (!mounted) return;
-                         ScaffoldMessenger.of(dialogContext).showSnackBar(
-                           const SnackBar(content: Text('Error retrieving shift times. Please try again.')),
-                         );
-                         return; // Stop execution if times are null
-                      }
-                      
-                      // Create the event with non-null assurances, including break times, work time, and routes
-                      CustomTrainingFormData? customTrainingData;
-                      if (selectedZone == 'Training' &&
-                          selectedShiftNumber == TrainingConstants.customTrainingShiftOption) {
-                        customTrainingData = customTrainingFormKey.currentState?.buildData();
-                      }
-
-                      final event = Event(
-                        id: DateTime.now().millisecondsSinceEpoch.toString(),
-                        title: title,
-                        startDate: shiftDate,
-                        startTime: shiftTimes['startTime']!,
-                        endDate: shiftTimes['isNextDay'] == true
-                            ? shiftDate.add(const Duration(days: 1))  // Next day
-                            : shiftDate,
-                        endTime: shiftTimes['endTime']!,
-                        breakStartTime: shiftTimes['breakStartTime'] as TimeOfDay?,
-                        breakEndTime: shiftTimes['breakEndTime'] as TimeOfDay?,
-                        workTime: shiftTimes['workTime'] as Duration?,
-                        routes: shiftTimes['routes'] as List<String>?,
-                        trainingDescription: customTrainingData?.description,
-                        startLocation: customTrainingData?.location,
-                      );
-                      
-                      // Add event and close dialog
-                      await EventService.addEvent(event);
-                      
-                      // If repeat Uni/Euro this week is checked for M-F marked-in users, create events for selected days
-                      if (repeatUniEuroThisWeek && isMFMarkedIn && selectedZone == 'Uni/Euro') {
-                        // Get the start of the week (Sunday)
-                        final weekday = shiftDate.weekday; // 1=Monday, 7=Sunday
-                        // Calculate days to subtract to get to Sunday (weekday 7)
-                        final daysToSunday = weekday == 7 ? 0 : weekday;
-                        final weekStart = shiftDate.subtract(Duration(days: daysToSunday));
-                        
-                        // Loop through weekdays only (Monday-Friday, indices 1-5)
-                        for (int dayIndex = 1; dayIndex <= 5; dayIndex++) {
-                          // Skip if this day is not selected
-                          if (!(uniEuroSelectedDays[dayIndex] ?? false)) {
-                            continue;
-                          }
-                          
-                          final targetDate = weekStart.add(Duration(days: dayIndex));
-                          
-                          // Skip if it's the same day (already handled above)
-                          if (targetDate.year == shiftDate.year &&
-                              targetDate.month == shiftDate.month &&
-                              targetDate.day == shiftDate.day) {
-                            continue;
-                          }
-                          
-                          // Check if an event with the same title already exists on this day
-                          final existingEvents = EventService.getEventsForDay(targetDate);
-                          final duplicateExists = existingEvents.any((e) => e.title == title);
-                          
-                          if (duplicateExists) {
-                            // Skip this day - event already exists
-                            continue;
-                          }
-                          
-                          // Check if there's a bank holiday on this day
-                          final bankHoliday = ShiftService.getBankHoliday(targetDate, ShiftService.bankHolidays);
-                          if (bankHoliday != null) {
-                            continue; // Skip bank holidays
-                          }
-                          
-                          // Get shift times for this day (may differ for different days)
-                          Map<String, dynamic>? targetShiftTimes;
-                          if (selectedZone == 'Uni/Euro') {
-                            targetShiftTimes = await _getShiftTimes(selectedZone, selectedShiftNumber, targetDate);
-                          }
-                          
-                          // Use the same shift times if available, otherwise use original
-                          final finalShiftTimes = targetShiftTimes ?? shiftTimes;
-                          
-                          // Create event for this day
-                          final weekEvent = Event(
-                            id: '${title}_${targetDate.millisecondsSinceEpoch}',
-                            title: title,
-                            startDate: targetDate,
-                            startTime: finalShiftTimes['startTime']!,
-                            endDate: finalShiftTimes['isNextDay'] == true
-                                ? targetDate.add(const Duration(days: 1))
-                                : targetDate,
-                            endTime: finalShiftTimes['endTime']!,
-                            breakStartTime: finalShiftTimes['breakStartTime'] as TimeOfDay?,
-                            breakEndTime: finalShiftTimes['breakEndTime'] as TimeOfDay?,
-                            workTime: finalShiftTimes['workTime'] as Duration?,
-                            routes: finalShiftTimes['routes'] as List<String>?,
-                          );
-                          
-                          await EventService.addEvent(weekEvent);
-                          
-                          // Sync to Google if enabled
-                          if (!mounted) return;
-                          _checkAndSyncToGoogleCalendar(weekEvent, context);
-                        }
-                      }
-                      
-                      // If repeat duty this week is checked for marked-in zone users (Shift or M-F), create events for selected days
-                      final isJamestownRepeatZone =
-                          selectedZone == JamestownFeatureService.zoneLabel;
-                      final isRepeatableDutyZone = selectedZone == 'Zone 1' ||
-                          selectedZone == 'Zone 2' ||
-                          selectedZone == 'Zone 3' ||
-                          selectedZone == 'Zone 4' ||
-                          selectedZone == DonnybrookFeatureService.zoneLabel ||
-                          (isJamestownRepeatZone && jamestownEnabled);
-                      final zoneMatchesMarkedIn = selectedZone == markedInZone ||
-                          (isMFMarkedIn && isJamestownRepeatZone && jamestownEnabled);
-                      if (repeatDutyThisWeek &&
-                          (isShiftMarkedIn || isMFMarkedIn) &&
-                          isRepeatableDutyZone &&
-                          zoneMatchesMarkedIn) {
-                        // Get the start of the week (Sunday)
-                        final weekday = shiftDate.weekday; // 1=Monday, 7=Sunday
-                        // Calculate days to subtract to get to Sunday (weekday 7)
-                        final daysToSunday = weekday == 7 ? 0 : weekday;
-                        final weekStart = shiftDate.subtract(Duration(days: daysToSunday));
-                        
-                        // Loop through weekdays only (Monday-Friday, indices 1-5)
-                        for (int dayIndex = 1; dayIndex <= 5; dayIndex++) {
-                          // Skip if this day is not selected
-                          if (!(selectedDays[dayIndex] ?? false)) {
-                            continue;
-                          }
-                          
-                          final targetDate = weekStart.add(Duration(days: dayIndex));
-                          
-                          // Skip if it's the same day (already handled above)
-                          if (targetDate.year == shiftDate.year &&
-                              targetDate.month == shiftDate.month &&
-                              targetDate.day == shiftDate.day) {
-                            continue;
-                          }
-                          
-                          // Check if an event with the same title already exists on this day
-                          final existingEvents = EventService.getEventsForDay(targetDate);
-                          final duplicateExists = existingEvents.any((e) => e.title == title);
-                          
-                          if (duplicateExists) {
-                            // Skip this day - event already exists
-                            continue;
-                          }
-                          
-                          // Get shift times for this day (may differ for different days)
-                          Map<String, dynamic>? targetShiftTimes;
-                          if (selectedZone == 'Zone 1' ||
-                              selectedZone == 'Zone 2' ||
-                              selectedZone == 'Zone 3' ||
-                              selectedZone == 'Zone 4' ||
-                              selectedZone ==
-                                  DonnybrookFeatureService.zoneLabel ||
-                              selectedZone == JamestownFeatureService.zoneLabel) {
-                            targetShiftTimes = await _getShiftTimes(selectedZone, selectedShiftNumber, targetDate);
-                          }
-                          
-                          // Use the same shift times if available, otherwise use original
-                          final finalShiftTimes = targetShiftTimes ?? shiftTimes;
-                          
-                          // Create event for this day
-                          final repeatEvent = Event(
-                            id: '${title}_${targetDate.millisecondsSinceEpoch}',
-                            title: title,
-                            startDate: targetDate,
-                            startTime: finalShiftTimes['startTime']!,
-                            endDate: finalShiftTimes['isNextDay'] == true
-                                ? targetDate.add(const Duration(days: 1))
-                                : targetDate,
-                            endTime: finalShiftTimes['endTime']!,
-                            breakStartTime: finalShiftTimes['breakStartTime'] as TimeOfDay?,
-                            breakEndTime: finalShiftTimes['breakEndTime'] as TimeOfDay?,
-                            workTime: finalShiftTimes['workTime'] as Duration?,
-                            routes: finalShiftTimes['routes'] as List<String>?,
-                          );
-                          
-                          await EventService.addEvent(repeatEvent);
-                          
-                          // Sync to Google if enabled
-                          if (!mounted) return;
-                          _checkAndSyncToGoogleCalendar(repeatEvent, context);
-                        }
-                      }
-                      
-                      // Zone 1 M-F 12-week roster auto-fill (skip filled days)
-                      if (fillNext12Weeks && isMFMarkedIn && selectedZone == 'Zone 1') {
-                        await RosterService.loadZone1MFRoster();
-                        final weekIndex = RosterService.getZone1MFWeekIndex(selectedShiftNumber);
-                        if (weekIndex != null) {
-                          final anchorMonday = RosterService.getMondayOfWeek(shiftDate);
-                          
-                          for (int w = 0; w < 12; w++) {
-                            final weekStart = anchorMonday.add(Duration(days: w * 7));
-                            
-                            for (int d = 0; d < 5; d++) {
-                              final targetDate = weekStart.add(Duration(days: d));
-                              
-                              if (targetDate.year == shiftDate.year &&
-                                  targetDate.month == shiftDate.month &&
-                                  targetDate.day == shiftDate.day) {
-                                continue;
-                              }
-                              
-                              final existingEvents = EventService.getEventsForDay(targetDate);
-                              final hasWorkShift = existingEvents.any((e) => !e.isHoliday);
-                              if (hasWorkShift) continue;
-                              
-                              final bankHoliday = ShiftService.getBankHoliday(targetDate, ShiftService.bankHolidays);
-                              if (bankHoliday != null) continue;
-                              
-                              final dutyIndex = (weekIndex + w) % 12;
-                              final dutyCode = RosterService.getZone1MFDutyForWeekIndex(dutyIndex);
-                              if (dutyCode == null) continue;
-                              
-                              final targetShiftTimes = await _getShiftTimes(selectedZone, dutyCode, targetDate);
-                              if (targetShiftTimes == null) continue;
-                              
-                              final rosterEvent = Event(
-                                id: '${dutyCode}_${targetDate.millisecondsSinceEpoch}',
-                                title: dutyCode,
-                                startDate: targetDate,
-                                startTime: targetShiftTimes['startTime']!,
-                                endDate: targetShiftTimes['isNextDay'] == true
-                                    ? targetDate.add(const Duration(days: 1))
-                                    : targetDate,
-                                endTime: targetShiftTimes['endTime']!,
-                                breakStartTime: targetShiftTimes['breakStartTime'] as TimeOfDay?,
-                                breakEndTime: targetShiftTimes['breakEndTime'] as TimeOfDay?,
-                                workTime: targetShiftTimes['workTime'] as Duration?,
-                                routes: targetShiftTimes['routes'] as List<String>?,
-                              );
-                              
-                              await EventService.addEvent(rosterEvent);
-                              if (!mounted) return;
-                              _checkAndSyncToGoogleCalendar(rosterEvent, context);
-                            }
-                          }
-                        }
-                      }
-                      
-                      // Zone 1 Shift 15-week roster auto-fill (skip rest days, filled days, bank holidays, Saturday service)
-                      if (AppConstants.enableZone1ShiftDutyRosterAutoFill &&
-                          fillNext15Weeks &&
-                          isShiftMarkedIn &&
-                          selectedZone == 'Zone 1') {
-                        await RosterService.loadZone1ShiftRoster();
-                        final dayIndex = shiftDate.weekday % 7; // 0=Sun, 1=Mon, ..., 6=Sat
-                        final weekIndex = RosterService.getZone1ShiftWeekIndex(dayIndex, selectedShiftNumber);
-                        if (weekIndex != null) {
-                          final weekStartSunday = RosterService.getSundayOfWeek(shiftDate);
-                          for (int w = 0; w < 15; w++) {
-                            for (int d = 0; d < 7; d++) {
-                              final targetDate = weekStartSunday.add(Duration(days: w * 7 + d));
-                              if (targetDate.year == shiftDate.year &&
-                                  targetDate.month == shiftDate.month &&
-                                  targetDate.day == shiftDate.day) {
-                                continue;
-                              }
-                              final duty = RosterService.getZone1ShiftDayDuty((weekIndex + w) % 86, d);
-                              if (duty == null || duty == 'R') continue;
-                              final existingEvents = EventService.getEventsForDay(targetDate);
-                              final hasWorkShift = existingEvents.any((e) => !e.isHoliday);
-                              if (hasWorkShift) continue;
-                              final bankHoliday = ShiftService.getBankHoliday(targetDate, ShiftService.bankHolidays);
-                              if (bankHoliday != null) continue;
-                              if (RosterService.isSaturdayService(targetDate)) continue;
-                              final targetShiftTimes = await _getShiftTimes(selectedZone, duty, targetDate);
-                              if (targetShiftTimes == null) continue;
-                              final rosterEvent = Event(
-                                id: '${duty}_${targetDate.millisecondsSinceEpoch}',
-                                title: duty,
-                                startDate: targetDate,
-                                startTime: targetShiftTimes['startTime']!,
-                                endDate: targetShiftTimes['isNextDay'] == true
-                                    ? targetDate.add(const Duration(days: 1))
-                                    : targetDate,
-                                endTime: targetShiftTimes['endTime']!,
-                                breakStartTime: targetShiftTimes['breakStartTime'] as TimeOfDay?,
-                                breakEndTime: targetShiftTimes['breakEndTime'] as TimeOfDay?,
-                                workTime: targetShiftTimes['workTime'] as Duration?,
-                                routes: targetShiftTimes['routes'] as List<String>?,
-                              );
-                              await EventService.addEvent(rosterEvent);
-                              if (!mounted) return;
-                              _checkAndSyncToGoogleCalendar(rosterEvent, context);
-                            }
-                          }
-                        }
-                      }
-                      
-                      // Zone 3 Shift 10-week roster auto-fill (skip rest days, filled days, bank holidays, Saturday service)
-                      if (fillNext10Weeks && isShiftMarkedIn && selectedZone == 'Zone 3') {
-                        await RosterService.loadZone3ShiftRoster();
-                        final dayIndex = shiftDate.weekday % 7;
-                        final weekIndex = RosterService.getZone3ShiftWeekIndex(dayIndex, selectedShiftNumber);
-                        if (weekIndex != null) {
-                          final weekStartSunday = RosterService.getSundayOfWeek(shiftDate);
-                          for (int w = 0; w < 10; w++) {
-                            for (int d = 0; d < 7; d++) {
-                              final targetDate = weekStartSunday.add(Duration(days: w * 7 + d));
-                              if (targetDate.year == shiftDate.year &&
-                                  targetDate.month == shiftDate.month &&
-                                  targetDate.day == shiftDate.day) {
-                                continue;
-                              }
-                              final duty = RosterService.getZone3ShiftDayDuty((weekIndex + w) % 10, d);
-                              if (duty == null || duty == 'R') continue;
-                              final existingEvents = EventService.getEventsForDay(targetDate);
-                              final hasWorkShift = existingEvents.any((e) => !e.isHoliday);
-                              if (hasWorkShift) continue;
-                              final bankHoliday = ShiftService.getBankHoliday(targetDate, ShiftService.bankHolidays);
-                              if (bankHoliday != null) continue;
-                              if (RosterService.isSaturdayService(targetDate)) continue;
-                              final targetShiftTimes = await _getShiftTimes(selectedZone, duty, targetDate);
-                              if (targetShiftTimes == null) continue;
-                              final rosterEvent = Event(
-                                id: '${duty}_${targetDate.millisecondsSinceEpoch}',
-                                title: duty,
-                                startDate: targetDate,
-                                startTime: targetShiftTimes['startTime']!,
-                                endDate: targetShiftTimes['isNextDay'] == true
-                                    ? targetDate.add(const Duration(days: 1))
-                                    : targetDate,
-                                endTime: targetShiftTimes['endTime']!,
-                                breakStartTime: targetShiftTimes['breakStartTime'] as TimeOfDay?,
-                                breakEndTime: targetShiftTimes['breakEndTime'] as TimeOfDay?,
-                                workTime: targetShiftTimes['workTime'] as Duration?,
-                                routes: targetShiftTimes['routes'] as List<String>?,
-                              );
-                              await EventService.addEvent(rosterEvent);
-                              if (!mounted) return;
-                              _checkAndSyncToGoogleCalendar(rosterEvent, context);
-                            }
-                          }
-                        }
-                      }
-                      
-                      if (!mounted) return;
-                      Navigator.of(dialogContext).pop();
-                      
-                      // Sync to Google if enabled (before any other async operations)
-                      if (!mounted) return;
-                      _checkAndSyncToGoogleCalendar(event, context);
-                      
-                      // Force UI refresh immediately after adding an event
-                      if (mounted) {
-                        // Preload the current month's events to ensure we have the latest data
-                        await EventService.preloadMonth(_focusedDay);
-                        
-                        // Update state to show the new event immediately
-                        setState(() {});
-                        
-                        // Force complete refresh using the same mechanism as spare duties
-                        _editEvent(Event(
-                          id: 'refresh_trigger',
-                          title: '',
-                          startDate: _selectedDay ?? DateTime.now(),
-                          startTime: const TimeOfDay(hour: 0, minute: 0),
-                          endDate: _selectedDay ?? DateTime.now(),
-                          endTime: const TimeOfDay(hour: 0, minute: 0),
-                          busAssignments: {},
-                        ));
-                      }
-                    },
-                child: const Text('Add Shift'),
-              ),
-            ],
-          );
-          },
-        );
-      },
+      builder: (dialogContext) => WorkShiftDialog(
+        shiftDate: shiftDate,
+        isMFMarkedIn: isMFMarkedIn,
+        isShiftMarkedIn: isShiftMarkedIn,
+        markedInZone: markedInZone,
+        jamestownEnabled: jamestownEnabled,
+        donnybrook1Enabled: donnybrook1Enabled,
+        loadShiftNumbers: (selectedZone) => shiftLoader.loadShiftNumbers(
+          selectedZone: selectedZone,
+          shiftDate: shiftDate,
+          donnybrook1Enabled: donnybrook1Enabled,
+        ),
+        dayHasBlockingEvent: (date) =>
+            EventService.getEventsForDay(date).any((e) => !e.isHoliday),
+        onAddShift: (selection) => _addWorkShiftFromSelection(
+          dialogContext: dialogContext,
+          shiftDate: shiftDate,
+          selection: selection,
+          isMFMarkedIn: isMFMarkedIn,
+          isShiftMarkedIn: isShiftMarkedIn,
+          markedInZone: markedInZone,
+          jamestownEnabled: jamestownEnabled,
+        ),
+      ),
     );
   }
 
-  // Show dialog to select and add a Work For Others shift (only on rest days)
+  Future<void> _addWorkShiftFromSelection({
+    required BuildContext dialogContext,
+    required DateTime shiftDate,
+    required WorkShiftDialogSelection selection,
+    required bool isMFMarkedIn,
+    required bool isShiftMarkedIn,
+    required String markedInZone,
+    required bool jamestownEnabled,
+  }) async {
+    final persister = WorkShiftEventPersister(
+      lookupShiftTimes: (zone, shiftNumber, date) =>
+          _getShiftTimes(zone, shiftNumber, date),
+      onEventCreated: (created) async {
+        if (!mounted) return;
+        await _checkAndSyncToGoogleCalendar(created, context);
+      },
+    );
+
+    final result = await persister.persist(
+      shiftDate: shiftDate,
+      selection: selection,
+      isMFMarkedIn: isMFMarkedIn,
+      isShiftMarkedIn: isShiftMarkedIn,
+      markedInZone: markedInZone,
+      jamestownEnabled: jamestownEnabled,
+    );
+
+    if (result.status == WorkShiftPersistStatus.missingCustomTrainingTimes) {
+      if (!dialogContext.mounted) return;
+      ScaffoldMessenger.of(dialogContext).showSnackBar(
+        const SnackBar(content: Text('Please enter training times.')),
+      );
+      return;
+    }
+    if (result.status == WorkShiftPersistStatus.shiftTimesUnavailable) {
+      if (!dialogContext.mounted) return;
+      ScaffoldMessenger.of(dialogContext).showSnackBar(
+        const SnackBar(
+          content: Text('Error retrieving shift times. Please try again.'),
+        ),
+      );
+      return;
+    }
+
+    if (dialogContext.mounted) {
+      Navigator.of(dialogContext).pop();
+    }
+    if (!mounted) return;
+    await EventService.preloadMonth(_focusedDay);
+    if (!mounted) return;
+    setState(() {});
+    _editEvent(Event(
+      id: 'refresh_trigger',
+      title: '',
+      startDate: _selectedDay ?? DateTime.now(),
+      startTime: const TimeOfDay(hour: 0, minute: 0),
+      endDate: _selectedDay ?? DateTime.now(),
+      endTime: const TimeOfDay(hour: 0, minute: 0),
+      busAssignments: {},
+    ));
+  }
+
   void _showWorkForOthersDialog() {
-    final now = DateTime.now();
-    final shiftDate = _selectedDay ?? now;
-    
-    // Validate that this is a rest day
-    final String shiftType = getShiftForDate(shiftDate);
+    final shiftDate = _selectedDay ?? DateTime.now();
+
+    final shiftType = getShiftForDate(shiftDate);
     if (shiftType != 'R') {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -2266,291 +743,87 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
       );
       return;
     }
-    
-    String selectedZone = 'Zone 1';
-    String selectedShiftNumber = '';
-    List<String> shiftNumbers = [];
-    bool isLoading = true;
-    
-    // Show dialog with loading state initially
-    showDialog(
+
+    final shiftLoader = WorkForOthersShiftLoader();
+
+    showDialog<void>(
       context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (context, setState) {
-          // Function to load shift numbers for selected zone
-          void loadShiftNumbers() async {
-            setState(() {
-              isLoading = true;
-            });
-            
-            try {
-              final dayOfWeek = RosterService.getDayOfWeek(shiftDate);
-              final zoneNumber = selectedZone.replaceAll('Zone ', '');
-              
-              // Convert full day name to abbreviated format for file loading
-              String dayOfWeekForFilename;
-              if (dayOfWeek == 'Saturday') {
-                dayOfWeekForFilename = 'SAT';
-              } else if (dayOfWeek == 'Sunday') {
-                dayOfWeekForFilename = 'SUN';
-              } else {
-                dayOfWeekForFilename = 'M-F';
-              }
-              
-              // Handle different zones
-              if (selectedZone == 'Uni/Euro') {
-                // Uni/Euro shifts - use both files on weekdays, only 7DAYs on weekends
-                List<String> combinedShifts = [];
-                
-                // Always load from UNI_7DAYs.csv first
-                try {
-                  final csv = await rootBundle.loadString('assets/UNI_7DAYs.csv');
-                  final lines = csv.split('\n');
-                  
-                  // Skip header line and load duty codes
-                  for (var i = 1; i < lines.length; i++) {
-                    if (lines[i].trim().isEmpty) continue;
-                    final parts = lines[i].split(',');
-                    if (parts.isNotEmpty) {
-                      combinedShifts.add(parts[0]);
-                    }
-                  }
-                } catch (e) {
-                  // Silently handle CSV parsing errors
-                }
-                
-                // On weekdays, also load from UNI_M-F.csv
-                if (dayOfWeek != 'Saturday' && dayOfWeek != 'Sunday') {
-                  try {
-                    final csv = await rootBundle.loadString('assets/UNI_M-F.csv');
-                    final lines = csv.split('\n');
-                    
-                    // Skip header line and load duty codes
-                    for (var i = 1; i < lines.length; i++) {
-                      if (lines[i].trim().isEmpty) continue;
-                      final parts = lines[i].split(',');
-                      if (parts.isNotEmpty) {
-                        combinedShifts.add(parts[0]);
-                      }
-                    }
-                  } catch (e) {
-                    // Silently handle CSV parsing errors
-                  }
-                }
-                
-                // Keep only unique shifts while preserving order
-                shiftNumbers = [];
-                final seenShifts = <String>{};
-                for (final shift in combinedShifts) {
-                  if (!seenShifts.contains(shift)) {
-                    seenShifts.add(shift);
-                    shiftNumbers.add(shift);
-                  }
-                }
-              } else {
-                // Regular zone shifts (Zone 1, 3, 4)
-                final filename = RosterService.getShiftFilename(zoneNumber, dayOfWeekForFilename, shiftDate);
-                
-                try {
-                  final csv = await rootBundle.loadString('assets/$filename');
-                  final lines = csv.split('\n');
-                  shiftNumbers = [];
-                  final seenShifts = <String>{};
-                  
-                  // Skip the header line
-                  for (int i = 1; i < lines.length; i++) {
-                    final line = lines[i].trim();
-                    if (line.isEmpty) continue;
-                    final parts = line.split(',');
-                    if (parts.isNotEmpty && parts[0].trim().isNotEmpty) {
-                      final shift = parts[0].trim();
-                      
-                      if (!seenShifts.contains(shift) && shift != "shift") {
-                        seenShifts.add(shift);
-                        shiftNumbers.add(shift);
-                      }
-                    }
-                  }
-                } catch (e) {
-                  shiftNumbers = [];
-                }
-              }
-              
-              // If no selected shift number yet but shifts are available, select the first one
-              if (selectedShiftNumber.isEmpty && shiftNumbers.isNotEmpty) {
-                selectedShiftNumber = shiftNumbers[0];
-              }
-            } catch (e) {
-              shiftNumbers = [];
-            } finally {
-              setState(() {
-                isLoading = false;
-              });
-            }
+      builder: (dialogContext) => WorkForOthersDialog(
+        shiftDate: shiftDate,
+        loadShiftNumbers: (selectedZone) => shiftLoader.loadShiftNumbers(
+          selectedZone: selectedZone,
+          shiftDate: shiftDate,
+        ),
+        onAddShift: ({
+          required selectedZone,
+          required selectedShiftNumber,
+        }) async {
+          final currentShiftType = getShiftForDate(shiftDate);
+          if (currentShiftType != 'R') {
+            if (!dialogContext.mounted) return;
+            ScaffoldMessenger.of(dialogContext).showSnackBar(
+              const SnackBar(
+                content: Text('Work For Others can only be added on rest days.'),
+                backgroundColor: Colors.red,
+              ),
+            );
+            return;
           }
-          
-          // Load shift numbers initially
-          if (isLoading) {
-            loadShiftNumbers();
-          }
-                  
-          return AlertDialog(
-            title: Text('Add Work For Others for ${DateFormat('EEE, MMM d').format(shiftDate)}'),
-            content: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Zone:', style: TextStyle(fontWeight: FontWeight.bold)),
-                  DropdownButton<String>(
-                    value: selectedZone,
-                    isExpanded: true,
-                    items: [
-                      'Zone 1',
-                      'Zone 2',
-                      'Zone 3',
-                      'Zone 4',
-                      'Uni/Euro',
-                    ].map((zone) {
-                      return DropdownMenuItem(
-                        value: zone,
-                        child: Text(zone),
-                      );
-                    }).toList(),
-                    onChanged: (value) {
-                      if (value != null) {
-                        setState(() {
-                          selectedZone = value;
-                          selectedShiftNumber = '';
-                        });
-                        loadShiftNumbers();
-                      }
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  const Text('Shift Number:', style: TextStyle(fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 8),
-                  isLoading
-                      ? const Center(child: CircularProgressIndicator())
-                      : shiftNumbers.isEmpty
-                          ? const Text('No shifts available for selected zone and date.')
-                          : DropdownButton<String>(
-                              value: selectedShiftNumber.isEmpty && shiftNumbers.isNotEmpty ? shiftNumbers[0] : selectedShiftNumber,
-                              isExpanded: true,
-                              items: shiftNumbers.map((shift) {
-                                return DropdownMenuItem(
-                                  value: shift,
-                                  child: Text(shift),
-                                );
-                              }).toList(),
-                              onChanged: (value) {
-                                if (value != null) {
-                                  setState(() {
-                                    selectedShiftNumber = value;
-                                  });
-                                }
-                              },
-                            ),
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(
-                child: const Text('Cancel'),
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
-              ),
-              TextButton(
-                onPressed: shiftNumbers.isEmpty || isLoading
-                    ? null
-                    : () async {
-                        // Validate rest day again before saving
-                        final String currentShiftType = getShiftForDate(shiftDate);
-                        if (currentShiftType != 'R') {
-                          if (!mounted) return;
-                          ScaffoldMessenger.of(dialogContext).showSnackBar(
-                            const SnackBar(
-                              content: Text('Work For Others can only be added on rest days.'),
-                              backgroundColor: Colors.red,
-                            ),
-                          );
-                          return;
-                        }
-                        
-                        // Format title as "PZ1/12" or "807/20" etc. (no WFO suffix - badge provides identification)
-                        String title = selectedShiftNumber;
-                        // Ensure proper format - if it doesn't start with PZ, add it for zones
-                        if (selectedZone != 'Uni/Euro' && !title.startsWith('PZ')) {
-                          final zoneNum = selectedZone.replaceAll('Zone ', '');
-                          title = 'PZ$zoneNum/$title';
-                        }
-                        // Don't add WFO to title - the badge is enough for identification
-                        
-                        // Get shift times
-                        Map<String, dynamic>? shiftTimes;
-                        if (selectedZone == 'Uni/Euro') {
-                          shiftTimes = await _getShiftTimes(selectedZone, selectedShiftNumber, shiftDate);
-                        } else {
-                          shiftTimes = await _getShiftTimes(selectedZone.replaceAll('Zone ', ''), selectedShiftNumber, shiftDate);
-                        }
-                        
-                        // Handle potential null shiftTimes
-                        if (shiftTimes == null) {
-                          if (!mounted) return;
-                          ScaffoldMessenger.of(dialogContext).showSnackBar(
-                            const SnackBar(content: Text('Error retrieving shift times. Please try again.')),
-                          );
-                          return;
-                        }
-                        
-                        // Create the event with isWorkForOthers = true
-                        final event = Event(
-                          id: DateTime.now().millisecondsSinceEpoch.toString(),
-                          title: title,
-                          startDate: shiftDate,
-                          startTime: shiftTimes['startTime']!,
-                          endDate: shiftTimes['isNextDay'] == true
-                              ? shiftDate.add(const Duration(days: 1))
-                              : shiftDate,
-                          endTime: shiftTimes['endTime']!,
-                          breakStartTime: shiftTimes['breakStartTime'] as TimeOfDay?,
-                          breakEndTime: shiftTimes['breakEndTime'] as TimeOfDay?,
-                          workTime: shiftTimes['workTime'] as Duration?,
-                          routes: shiftTimes['routes'] as List<String>?,
-                          isWorkForOthers: true,
-                        );
-                        
-                        // Add event and close dialog
-                        await EventService.addEvent(event);
-                        if (!mounted) return;
-                        Navigator.of(dialogContext).pop();
-                        
-                        // Sync to Google if enabled
-                        if (!mounted) return;
-                        _checkAndSyncToGoogleCalendar(event, context);
-                        
-                        // Force UI refresh
-                        if (mounted) {
-                          await EventService.preloadMonth(_focusedDay);
-                          setState(() {});
-                          
-                          // Force complete refresh
-                          _editEvent(Event(
-                            id: 'refresh_trigger',
-                            title: '',
-                            startDate: _selectedDay ?? DateTime.now(),
-                            startTime: const TimeOfDay(hour: 0, minute: 0),
-                            endDate: _selectedDay ?? DateTime.now(),
-                            endTime: const TimeOfDay(hour: 0, minute: 0),
-                            busAssignments: {},
-                          ));
-                        }
-                      },
-                child: const Text('Add Shift'),
-              ),
-            ],
+
+          final title = buildWorkForOthersTitle(
+            selectedZone: selectedZone,
+            selectedShiftNumber: selectedShiftNumber,
           );
+
+          final Map<String, dynamic>? shiftTimes;
+          if (selectedZone == 'Uni/Euro') {
+            shiftTimes =
+                await _getShiftTimes(selectedZone, selectedShiftNumber, shiftDate);
+          } else {
+            shiftTimes = await _getShiftTimes(
+              selectedZone.replaceAll('Zone ', ''),
+              selectedShiftNumber,
+              shiftDate,
+            );
+          }
+
+          if (shiftTimes == null) {
+            if (!dialogContext.mounted) return;
+            ScaffoldMessenger.of(dialogContext).showSnackBar(
+              const SnackBar(
+                content: Text('Error retrieving shift times. Please try again.'),
+              ),
+            );
+            return;
+          }
+
+          final event = Event(
+            id: DateTime.now().millisecondsSinceEpoch.toString(),
+            title: title,
+            startDate: shiftDate,
+            startTime: shiftTimes['startTime']!,
+            endDate: shiftTimes['isNextDay'] == true
+                ? shiftDate.add(const Duration(days: 1))
+                : shiftDate,
+            endTime: shiftTimes['endTime']!,
+            breakStartTime: shiftTimes['breakStartTime'] as TimeOfDay?,
+            breakEndTime: shiftTimes['breakEndTime'] as TimeOfDay?,
+            workTime: shiftTimes['workTime'] as Duration?,
+            routes: shiftTimes['routes'] as List<String>?,
+            isWorkForOthers: true,
+          );
+
+          await EventService.addEvent(event);
+          if (dialogContext.mounted) {
+            Navigator.of(dialogContext).pop();
+          }
+          if (!mounted) return;
+
+          _checkAndSyncToGoogleCalendar(event, context);
+          await EventService.preloadMonth(_focusedDay);
+          if (!mounted) return;
+          setState(() {});
+          _refreshEventCardsAfterStatusChange();
         },
       ),
     );
@@ -2561,39 +834,14 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
     final shiftResult = getShiftResultForDate(selected);
     final isWorkDay = shiftResult.shift != 'R' && shiftResult.shift.isNotEmpty;
     final isRestDay = shiftResult.shift == 'R';
+    final existingSwaps = RestDaySwapService.getSwaps();
 
-    // Check if this day is already in a swap (offer remove)
-    RestDaySwap? existingSwap;
-    for (final s in RestDaySwapService.getSwaps()) {
-      final norm = DateTime(selected.year, selected.month, selected.day);
-      if ((s.workDate.year == norm.year && s.workDate.month == norm.month && s.workDate.day == norm.day) ||
-          (s.restDate.year == norm.year && s.restDate.month == norm.month && s.restDate.day == norm.day)) {
-        existingSwap = s;
-        break;
-      }
-    }
-
+    final existingSwap =
+        RestDaySwapPlanning.findSwapForDate(existingSwaps, selected);
     if (existingSwap != null) {
-      final swap = existingSwap;
       final remove = await showDialog<bool>(
         context: context,
-        builder: (ctx) => AlertDialog(
-          title: const Text('Remove rest day swap'),
-          content: Text(
-            'This day is part of a swap. Remove it? '
-            '(${DateFormat('EEE d MMM').format(swap.workDate)} ↔ ${DateFormat('EEE d MMM').format(swap.restDate)})',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Remove swap'),
-            ),
-          ],
-        ),
+        builder: (_) => RemoveRestDaySwapDialog(swap: existingSwap),
       );
       if (remove == true && mounted) {
         await RestDaySwapService.removeSwapForDate(selected);
@@ -2609,27 +857,12 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
       return;
     }
 
-    // Get week (Sun–Sat) containing selected day
-    final weekday = selected.weekday % 7; // 0=Sun, 1=Mon, ...
-    final weekStart = selected.subtract(Duration(days: weekday));
-
-    final candidates = <DateTime>[];
-    final swappedDateKeys = <String>{};
-    for (final s in RestDaySwapService.getSwaps()) {
-      swappedDateKeys.add('${s.workDate.year}-${s.workDate.month}-${s.workDate.day}');
-      swappedDateKeys.add('${s.restDate.year}-${s.restDate.month}-${s.restDate.day}');
-    }
-    for (var i = 0; i < 7; i++) {
-      final d = weekStart.add(Duration(days: i));
-      if (d.year == selected.year && d.month == selected.month && d.day == selected.day) continue;
-      if (swappedDateKeys.contains('${d.year}-${d.month}-${d.day}')) continue;
-      final rosterShift = _getRosterShiftForDate(d);
-      if (isWorkDay && rosterShift == 'R') {
-        candidates.add(d);
-      } else if (isRestDay && rosterShift != 'R' && rosterShift.isNotEmpty) {
-        candidates.add(d);
-      }
-    }
+    final candidates = RestDaySwapPlanning.buildCandidates(
+      selected: selected,
+      isWorkDay: isWorkDay,
+      existingSwaps: existingSwaps,
+      rosterShiftForDate: _getRosterShiftForDate,
+    );
 
     if (candidates.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -2638,36 +871,29 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
       return;
     }
 
+    final options = candidates.map((day) {
+      final result = getShiftResultForDate(day);
+      return RestDaySwapCandidateOption(
+        date: day,
+        label: isWorkDay ? 'Rest' : result.shift,
+      );
+    }).toList();
+
     final picked = await showDialog<DateTime>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(isWorkDay ? 'Swap with rest day' : 'Swap with work day'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: candidates.map((d) {
-              final res = getShiftResultForDate(d);
-              final label = isWorkDay ? 'Rest' : res.shift;
-              return ListTile(
-                title: Text('${DateFormat('EEEE d MMM').format(d)} ($label)'),
-                onTap: () => Navigator.pop(ctx, d),
-              );
-            }).toList(),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
-          ),
-        ],
+      builder: (_) => RestDaySwapPickerDialog(
+        isWorkDay: isWorkDay,
+        candidates: options,
       ),
     );
 
     if (picked != null && mounted) {
-      final workDate = isWorkDay ? selected : picked;
-      final restDate = isWorkDay ? picked : selected;
-      final shiftType = _getRosterShiftForDate(workDate);
+      final pair = RestDaySwapPlanning.resolvePair(
+        selected: selected,
+        picked: picked,
+        isWorkDay: isWorkDay,
+      );
+      final shiftType = _getRosterShiftForDate(pair.workDate);
       if (shiftType == 'R' || shiftType.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Could not determine shift type.')),
@@ -2675,714 +901,73 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
         return;
       }
       await RestDaySwapService.addSwap(
-        workDate: workDate,
-        restDate: restDate,
+        workDate: pair.workDate,
+        restDate: pair.restDate,
         shiftType: shiftType,
       );
+      if (!mounted) return;
       setState(() {});
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Swapped ${DateFormat('EEE').format(workDate)} with ${DateFormat('EEE').format(restDate)}.'),
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Swapped ${DateFormat('EEE').format(pair.workDate)} with ${DateFormat('EEE').format(pair.restDate)}.',
           ),
-        );
-      }
-    }
-  }
-
-  // Get shift times from CSV file
-  Future<Map<String, dynamic>?> _getShiftTimes(String zone, String shiftNumber, DateTime shiftDate, {bool isOvertimeShift = false}) async { // Return type changed to nullable
-          // Getting shift times
-
-    // RosterService handles Bank Holidays internally by returning 'Sunday'
-    final dayOfWeek = RosterService.getDayOfWeek(shiftDate);
-    final zoneNumber = zone.replaceAll("Zone ", "");
-    String csvPath;
-    String currentDayType = ''; // Day type code used in the specific CSV
-
-    // Convert full day name to abbreviated format for file loading
-    String dayOfWeekForFilename;
-    if (dayOfWeek == 'Saturday') {
-      dayOfWeekForFilename = 'SAT';
-    } else if (dayOfWeek == 'Sunday') {
-      dayOfWeekForFilename = 'SUN';
-    } else {
-      dayOfWeekForFilename = 'M-F';
-    }
-
-    // Determine the correct CSV path and day type string based on zone
-    if (zone == 'Bus Check') {
-      csvPath = 'assets/buscheck.csv';
-      // Map RosterService output to BusCheck CSV day codes
-      if (dayOfWeek == 'Saturday') {
-        currentDayType = 'SAT';
-      } else if (dayOfWeek == 'Sunday') {
-        currentDayType = 'SUN';
-      } else { // Monday - Friday
-        currentDayType = 'MF'; 
-      }
-    } else if (zone == JamestownFeatureService.zoneLabel) {
-      csvPath = JamestownFeatureService.duties30HrCsvAsset;
-    } else if (zone == 'Jamestown Road') {
-      csvPath = JamestownFeatureService.dutiesMainCsvAsset;
-      // Jamestown Road only works Monday-Friday
-    } else if (zone == DonnybrookFeatureService.zoneLabel) {
-      csvPath = DonnybrookFeatureService.resolveDutyCsvAsset(shiftDate);
-    } else if (zone == 'Training') {
-      csvPath = 'assets/training_duties.csv';
-    } else if (zone == 'Uni/Euro') {
-      // Uni/Euro logic requires checking multiple files based on day type.
-      // We'll handle this directly within the loop for Uni/Euro below.
-      // Setting a dummy path here, won't be used directly.
-      csvPath = 'assets/UNI_7DAYs.csv'; 
-    } else {
-      // Regular Zones (1, 3, 4)
-      csvPath = 'assets/${RosterService.getShiftFilename(zoneNumber, dayOfWeekForFilename, shiftDate)}';
-      // For PZ shifts, we don't need currentDayType as we match shift code directly
-    }
-
-    // Loading CSV files for zone
-
-    try {
-       // --- Handle Uni/Euro Separately (Needs multiple file checks) --- 
-       if (zone == 'Uni/Euro') {
-         bool isWeekend = dayOfWeek == 'Saturday' || dayOfWeek == 'Sunday';
-         List<String> filesToTry = ['assets/UNI_7DAYs.csv'];
-         if (!isWeekend) {
-             filesToTry.add('assets/UNI_M-F.csv');
-         }
-
-         for (final filePath in filesToTry) {
-            try {
-                final csv = await rootBundle.loadString(filePath);
-                final lines = csv.split('\n');
-                bool headerSkippedGetShift = false;
-                for (final line in lines) {
-                    if (line.trim().isEmpty) continue;
-                    
-                    // Skip header row
-                    if (!headerSkippedGetShift) {
-                      headerSkippedGetShift = true;
-                      continue;
-                    }
-                    
-                    final parts = line.split(',');
-                    if (parts.length >= 15 && parts[0].trim() == shiftNumber) {
-                        
-                        // New 17-column format: shift,duty,report,depart,location,startbreak,startbreaklocation,breakreport,finishbreak,finishbreaklocation,finish,finishlocation,signoff,spread,work,relief,routes
-                        final startTimeRaw = parts.length > 2 ? parts[2].trim() : '';
-                        final endTimeRaw = parts.length > 10 ? parts[10].trim() : '';
-                        
-                        if (startTimeRaw.isNotEmpty && endTimeRaw.isNotEmpty) {
-                          final startTime = _parseTimeOfDay(startTimeRaw);
-                          final endTime = _parseTimeOfDay(endTimeRaw);
-                          
-                          if (startTime != null && endTime != null) {
-                              final isNextDay = endTime.hour < startTime.hour || 
-                                                (endTime.hour == startTime.hour && endTime.minute < startTime.minute);
-                              
-                              // Extract break times
-                              // UNI format: shift,duty,report,depart,location,startbreak,startbreaklocation,breakreport,finishbreak,finishbreaklocation,finish,finishlocation,signoff,spread,work,relief,routes
-                              // So startbreak is column 5, finishbreak is column 8
-                              TimeOfDay? breakStart;
-                              TimeOfDay? breakEnd;
-                              final uniStartBreak = parts.length > 5 ? parts[5].trim() : '';
-                              final uniFinishBreak = parts.length > 8 ? parts[8].trim() : '';
-                              
-                              final isWorkout = uniStartBreak.toLowerCase() == 'nan' || 
-                                               uniStartBreak.toLowerCase() == 'workout' ||
-                                               uniStartBreak.isEmpty ||
-                                               uniFinishBreak.toLowerCase() == 'nan' ||
-                                               uniFinishBreak.toLowerCase() == 'workout' ||
-                                               uniFinishBreak.isEmpty ||
-                                               uniStartBreak == uniFinishBreak;
-                              
-                              if (!isWorkout) {
-                                breakStart = _parseTimeOfDay(uniStartBreak);
-                                breakEnd = _parseTimeOfDay(uniFinishBreak);
-                              }
-                              
-                              // Extract work time (column 14)
-                              Duration? workTime;
-                              final workTimeStr = parts.length > 14 ? parts[14].trim() : '';
-                              if (workTimeStr.isNotEmpty && workTimeStr.toLowerCase() != 'nan') {
-                                final timeParts = workTimeStr.split(':');
-                                if (timeParts.length >= 2) {
-                                  final hours = int.tryParse(timeParts[0]);
-                                  final minutes = int.tryParse(timeParts[1]);
-                                  if (hours != null && minutes != null) {
-                                    workTime = Duration(hours: hours, minutes: minutes);
-                                  }
-                                }
-                              }
-                              
-                              // Extract routes (column 16)
-                              List<String> routes = [];
-                              final routesStr = parts.length > 16 ? parts[16].trim() : '';
-                              if (routesStr.isNotEmpty && routesStr.toLowerCase() != 'nan') {
-                                routes.add(routesStr);
-                              }
-                              
-                              return {
-                                  'startTime': startTime,
-                                  'endTime': endTime,
-                                  'isNextDay': isNextDay,
-                                  'breakStartTime': breakStart,
-                                  'breakEndTime': breakEnd,
-                                  'workTime': workTime,
-                                  'routes': routes,
-                              };
-                          } else {
-                          }
-                        } else {
-                        }
-                    }
-                }
-            } catch (e) {
-                // Continue to next file if one fails
-            }
-         }
-         return null; // Not found after checking relevant files
-       }
-
-       // --- Handle BusCheck and Regular Zones (Single file check) --- 
-      final csv = await rootBundle.loadString(csvPath);
-      final lines = csv.split('\n');
-
-      // Skip header row
-                  for (int i = 1; i < lines.length; i++) {
-                    final line = lines[i].trim().replaceAll('\r', '');
-                    if (line.isEmpty) continue;
-                    final parts = line.split(',');
-
-        // === Handle Bus Check CSV format ===
-        if (zone == 'Bus Check') {
-                    // Expecting format: duty,day,start,finish
-          if (parts.length >= 4) {
-            final csvShiftCode = parts[0].trim();
-            final csvDayType = parts[1].trim();
-            
-            if (csvShiftCode == shiftNumber && csvDayType == currentDayType) {
-              final startTime = _parseTimeOfDay(parts[2].trim());
-              final endTime = _parseTimeOfDay(parts[3].trim());
-
-              if (startTime != null && endTime != null) {
-                 final isNextDay = endTime.hour < startTime.hour || 
-                                   (endTime.hour == startTime.hour && endTime.minute < startTime.minute);
-                 return {
-                   'startTime': startTime,
-                   'endTime': endTime,
-                   'isNextDay': isNextDay,
-                 };
-              } else {
-              }
-            }
-          }
-        }
-        // === Handle Jamestown CSV format ===
-        else if (zone == JamestownFeatureService.zoneLabel || zone == 'Jamestown Road') {
-          // Expecting format: shift,duty,report,depart,location,startbreak,startbreaklocation,breakreport,finishbreak,finishbreaklocation,finish,finishlocation,signoff,spread,work,relief,route
-          if (parts.length >= 17) {
-            final csvShiftCode = parts[0].trim();
-            
-            if (csvShiftCode == shiftNumber) {
-              // For overtime shifts, use start time (depart time) instead of report time
-              final startTime = isOvertimeShift 
-                  ? _parseTimeOfDay(parts[3].trim()) // Depart time for overtime
-                  : _parseTimeOfDay(parts[2].trim()); // Report time for regular shifts
-              final endTime = _parseTimeOfDay(parts[10].trim()); // Finish time
-
-              if (startTime != null && endTime != null) {
-                 final isNextDay = endTime.hour < startTime.hour || 
-                                   (endTime.hour == startTime.hour && endTime.minute < startTime.minute);
-                 
-                 // Extract break times
-                 TimeOfDay? breakStart;
-                 TimeOfDay? breakEnd;
-                 final startBreakStr = parts.length > 5 ? parts[5].trim() : '';
-                 final finishBreakStr = parts.length > 8 ? parts[8].trim() : '';
-                 
-                 final isWorkout = startBreakStr.toLowerCase() == 'nan' || 
-                                  startBreakStr.toLowerCase() == 'workout' ||
-                                  startBreakStr.isEmpty ||
-                                  finishBreakStr.toLowerCase() == 'nan' ||
-                                  finishBreakStr.toLowerCase() == 'workout' ||
-                                  finishBreakStr.isEmpty ||
-                                  startBreakStr == finishBreakStr;
-                 
-                 if (!isWorkout) {
-                   breakStart = _parseTimeOfDay(startBreakStr);
-                   breakEnd = _parseTimeOfDay(finishBreakStr);
-                 }
-                 
-                 // Extract work time
-                 Duration? workTime;
-                 final workTimeStr = parts.length > 14 ? parts[14].trim() : '';
-                 if (workTimeStr.isNotEmpty && workTimeStr.toLowerCase() != 'nan') {
-                   final timeParts = workTimeStr.split(':');
-                   if (timeParts.length >= 2) {
-                     final hours = int.tryParse(timeParts[0]);
-                     final minutes = int.tryParse(timeParts[1]);
-                     if (hours != null && minutes != null) {
-                       workTime = Duration(hours: hours, minutes: minutes);
-                     }
-                   }
-                 }
-                 
-                 // Extract route (column 16)
-                 List<String> routes = [];
-                 final routeStr = parts.length > 16 ? parts[16].trim() : '';
-                 if (routeStr.isNotEmpty && routeStr.toLowerCase() != 'nan') {
-                   routes.add(routeStr);
-                 }
-                 
-                 return {
-                   'startTime': startTime,
-                   'endTime': endTime,
-                   'isNextDay': isNextDay,
-                   'breakStartTime': breakStart,
-                   'breakEndTime': breakEnd,
-                   'workTime': workTime,
-                   'routes': routes,
-                 };
-              } else {
-              }
-            }
-          }
-        }
-        // === Handle Training CSV format ===
-        else if (zone == 'Training') {
-          // Expecting format: shift,starttime,endtime,startlocation,endlocation
-          if (parts.length >= 5) {
-            final csvShiftCode = parts[0].trim();
-            
-            if (csvShiftCode == shiftNumber) {
-              final startTime = _parseTimeOfDay(parts[1].trim()); // Start time
-              final endTime = _parseTimeOfDay(parts[2].trim()); // End time
-
-              if (startTime != null && endTime != null) {
-                final isNextDay = endTime.hour < startTime.hour || 
-                                  (endTime.hour == startTime.hour && endTime.minute < startTime.minute);
-                return {
-                  'startTime': startTime,
-                  'endTime': endTime,
-                  'isNextDay': isNextDay,
-                };
-              }
-            }
-          }
-        }
-        // === Handle Regular Zone CSV format ===
-        else {
-          // Expecting PZ format (index 0 is shift, 2 is report, 3 is depart, 5 is startbreak, 8 is finishbreak, 12 is signOff, 14 is work)
-          if (parts.length >= 15) { 
-             final csvShiftCode = parts[0].trim();
-             // No need to normalize PZ codes if shiftNumber is passed correctly (e.g. PZ1/01)
-             if (csvShiftCode == shiftNumber) {
-                
-                // For overtime shifts, use start time (depart time) instead of report time
-                final startTime = isOvertimeShift 
-                    ? _parseTimeOfDay(parts[3].trim()) // Depart time for overtime
-                    : _parseTimeOfDay(parts[2].trim()); // Report time for regular shifts
-                final endTime = _parseTimeOfDay(parts[12].trim()); // SignOff time
-
-                if (startTime != null && endTime != null) {
-                    final isNextDay = endTime.hour < startTime.hour || 
-                                      (endTime.hour == startTime.hour && endTime.minute < startTime.minute);
-                    
-                    // Extract break times (columns 5 and 8)
-                    TimeOfDay? breakStart;
-                    TimeOfDay? breakEnd;
-                    final startBreakStr = parts.length > 5 ? parts[5].trim() : '';
-                    final finishBreakStr = parts.length > 8 ? parts[8].trim() : '';
-                    
-                    // Check if it's a workout (break times are 'nan' or 'workout')
-                    final isWorkout = startBreakStr.toLowerCase() == 'nan' || 
-                                     startBreakStr.toLowerCase() == 'workout' ||
-                                     startBreakStr.isEmpty ||
-                                     finishBreakStr.toLowerCase() == 'nan' ||
-                                     finishBreakStr.toLowerCase() == 'workout' ||
-                                     finishBreakStr.isEmpty;
-                    
-                    if (!isWorkout) {
-                      breakStart = _parseTimeOfDay(startBreakStr);
-                      breakEnd = _parseTimeOfDay(finishBreakStr);
-                    }
-                    
-                    // Extract work time (column 14)
-                    Duration? workTime;
-                    final workTimeStr = parts.length > 14 ? parts[14].trim() : '';
-                    if (workTimeStr.isNotEmpty && workTimeStr.toLowerCase() != 'nan') {
-                      final timeParts = workTimeStr.split(':');
-                      if (timeParts.length >= 2) {
-                        final hours = int.tryParse(timeParts[0]);
-                        final minutes = int.tryParse(timeParts[1]);
-                        if (hours != null && minutes != null) {
-                          workTime = Duration(hours: hours, minutes: minutes);
-                        }
-                      }
-                    }
-                    
-                    // Extract routes from locations (columns 4, 6, 9, 11)
-                    List<String> routes = [];
-                    final startLocation = parts.length > 4 ? parts[4].trim() : '';
-                    final breakStartLoc = parts.length > 6 ? parts[6].trim() : '';
-                    final breakFinishLoc = parts.length > 9 ? parts[9].trim() : '';
-                    final finishLoc = parts.length > 11 ? parts[11].trim() : '';
-                    
-                    // Extract route from location codes (e.g., "39A-BWALK" -> "39A")
-                    String? extractRoute(String loc) {
-                      if (loc.isEmpty || loc.toLowerCase() == 'nan' || loc.toUpperCase() == 'GARAGE') {
-                        return null;
-                      }
-                      final dashIndex = loc.indexOf('-');
-                      if (dashIndex > 0) {
-                        String route = loc.substring(0, dashIndex);
-                        // Simplify compound routes like "C1/C2" to just "C"
-                        if (route.contains('/')) {
-                          final match = RegExp(r'([A-Z]+)').firstMatch(route);
-                          if (match != null) {
-                            return match.group(1);
-                          }
-                        }
-                        return route;
-                      }
-                      // For PZ4, check for route in parentheses (e.g., "PSQW-PE(9)" -> "9")
-                      final parenMatch = RegExp(r'\((\d+)\)').firstMatch(loc);
-                      if (parenMatch != null) {
-                        return parenMatch.group(1);
-                      }
-                      return null;
-                    }
-                    
-                    if (!isWorkout) {
-                      // For regular shifts, get routes from break locations
-                      final firstRoute = extractRoute(breakStartLoc) ?? extractRoute(startLocation);
-                      final secondRoute = extractRoute(breakFinishLoc) ?? extractRoute(finishLoc);
-                      if (firstRoute != null && !routes.contains(firstRoute)) routes.add(firstRoute);
-                      if (secondRoute != null && !routes.contains(secondRoute)) routes.add(secondRoute);
-                    } else {
-                      // For workouts, get route from any location
-                      final route = extractRoute(startLocation) ?? extractRoute(finishLoc) ?? extractRoute(breakStartLoc);
-                      if (route != null && !routes.contains(route)) routes.add(route);
-                    }
-                    
-                    return {
-                      'startTime': startTime,
-                      'endTime': endTime,
-                      'isNextDay': isNextDay,
-                      'breakStartTime': breakStart,
-                      'breakEndTime': breakEnd,
-                      'workTime': workTime,
-                      'routes': routes,
-                    };
-                      } else {
-                }
-             }
-          }
-        }
-      }
-    } catch (e) {
-              // Error loading or parsing CSV file
-       return null; // Return null on error
-    }
-
-    // No match found or error occurred
-    return null; // Return null if no match found
-  }
-  
-  // Helper function to parse HH:MM strings into TimeOfDay
-  TimeOfDay? _parseTimeOfDay(String? timeString) {
-    if (timeString == null || timeString.isEmpty) return null;
-    try {
-      final parts = timeString.split(':');
-      if (parts.length >= 2) {
-        final hour = int.tryParse(parts[0]);
-        final minute = int.tryParse(parts[1]);
-        if (hour != null && minute != null) {
-          return TimeOfDay(hour: hour, minute: minute);
-        }
-      }
-    } catch (e) {
-      // Silently handle time parsing errors - invalid format
-    }
-    return null;
-  }
-
-  // Helper to sync bus assignments to Google Calendar
-  Future<void> _syncBusAssignmentsToGoogleCalendar(Event event) async {
-    try {
-      // Check if Google Calendar sync is enabled
-      final syncEnabled = await StorageService.getBool(AppConstants.syncToGoogleCalendarKey, defaultValue: false);
-      final isSignedIn = await GoogleCalendarService.isSignedIn();
-      
-      if (!syncEnabled || !isSignedIn) {
-        return; // Skip if not enabled or not signed in
-      }
-
-      // Convert to full DateTime objects for Google Calendar search
-      final startDateTime = DateTime(
-        event.startDate.year, 
-        event.startDate.month, 
-        event.startDate.day,
-        event.startTime.hour,
-        event.startTime.minute,
+        ),
       );
-      
-      final endDateTime = DateTime(
-        event.endDate.year, 
-        event.endDate.month, 
-        event.endDate.day,
-        event.endTime.hour,
-        event.endTime.minute,
-      );
-
-      // Search for existing Google Calendar events on the same day
-      final dayStart = DateTime(event.startDate.year, event.startDate.month, event.startDate.day);
-      final dayEnd = dayStart.add(const Duration(days: 1));
-      
-      final existingEvents = await GoogleCalendarService.listEvents(
-        startTime: dayStart.toUtc(),
-        endTime: dayEnd.toUtc(),
-      );
-
-      // Find matching event by title and time
-      calendar.Event? matchingEvent;
-      for (final gcalEvent in existingEvents) {
-        if (gcalEvent.summary == event.title &&
-            gcalEvent.start?.dateTime != null &&
-            gcalEvent.end?.dateTime != null) {
-          
-          final gcalStart = gcalEvent.start!.dateTime!.toLocal();
-          final gcalEnd = gcalEvent.end!.dateTime!.toLocal();
-          
-          // Check if times match (within 1 minute tolerance)
-          if ((gcalStart.difference(startDateTime).abs().inMinutes <= 1) &&
-              (gcalEnd.difference(endDateTime).abs().inMinutes <= 1)) {
-            matchingEvent = gcalEvent;
-            break;
-          }
-        }
-      }
-
-      if (matchingEvent != null) {
-        // Build updated description with bus assignments
-        final updatedDescription = await _buildGoogleCalendarDescription(event);
-        
-        // Update the event description
-        matchingEvent.description = updatedDescription;
-        
-        // Update the event in Google Calendar
-        await GoogleCalendarService.updateEvent(
-          eventId: matchingEvent.id!,
-          event: matchingEvent,
-        );
-      }
-    } catch (e) {
-      // Continue silently - don't block user if sync fails
     }
   }
 
-  // Helper to build Google Calendar description with bus assignments
-  Future<String?> _buildGoogleCalendarDescription(Event event) async {
-    List<String> descriptionParts = [];
-    
-    // Add break times if available (and not a workout)
-    final breakTime = await ShiftService.getBreakTime(event);
-    if (breakTime != null && !breakTime.toLowerCase().contains('workout') && breakTime.isNotEmpty) {
-      descriptionParts.add('Break Times: $breakTime');
-    }
-    
-    // Add Work For Others indicator if applicable
-    if (event.isWorkForOthers) {
-      descriptionParts.add('(Work For Others)');
-    } else {
-      // Add rest day indicator if applicable (only if not WFO)
-      // Swapped work days do NOT get rest day indicator - they're normal work
-      final result = getShiftResultForDate(event.startDate);
-      final bool isRest = result.shift == 'R' && !result.isSwappedWork;
-      if (isRest) {
-        descriptionParts.add('(Working on Rest Day)');
-      }
-    }
-    
-    // Add sick day status if applicable
-    if (event.sickDayType != null) {
-      String sickDayLabel;
-      switch (event.sickDayType) {
-        case 'normal':
-          sickDayLabel = 'Normal Sick Day';
-          break;
-        case 'self-certified':
-          sickDayLabel = 'Self-Certified Sick Day';
-          break;
-        case 'force-majeure':
-          sickDayLabel = 'Force Majeure';
-          break;
-        default:
-          sickDayLabel = event.sickDayType!;
-      }
-      descriptionParts.add('📋 Sick Day: $sickDayLabel');
-    }
-    
-    // Add bus assignment information (if enabled)
-    final includeBusAssignments = await StorageService.getBool(AppConstants.includeBusAssignmentsInGoogleCalendarKey, defaultValue: true);
-    
-    if (includeBusAssignments) {
-      final busInfo = await _formatBusAssignmentForGoogleCalendar(event);
-      if (busInfo != null) {
-        if (descriptionParts.isNotEmpty) {
-          descriptionParts.add(''); // Add blank line separator
-        }
-        descriptionParts.add('Bus Assignment:');
-        descriptionParts.add(busInfo);
-      }
-    }
-    
-    // Combine all parts into final description
-    final description = descriptionParts.join('\n');
-    return description.isEmpty ? null : description;
+  // Compatibility bridge while existing event flows still consume maps.
+  Future<Map<String, dynamic>?> _getShiftTimes(
+    String zone,
+    String shiftNumber,
+    DateTime shiftDate, {
+    bool isOvertimeShift = false,
+  }) async {
+    final result = await DutyTimeLookupService.lookup(
+      zone: zone,
+      shiftNumber: shiftNumber,
+      shiftDate: shiftDate,
+      isOvertimeShift: isOvertimeShift,
+    );
+    return result?.toLegacyMap();
   }
 
-  // Helper to format bus assignment for Google Calendar description
-  Future<String?> _formatBusAssignmentForGoogleCalendar(Event event) async {
-    // Check if bustimes.org links should be included
-    final includeLinks = await StorageService.getBool(AppConstants.includeBustimesLinksInGoogleCalendarKey, defaultValue: true);
-    
-    // Check for workout shifts (single bus assignment)
-    if (event.title.toLowerCase().contains('workout')) {
-      // For workout shifts, check firstHalfBus or any bus assignment
-      final workoutBus = event.firstHalfBus ?? 
-                        (event.busAssignments?.values.isNotEmpty == true 
-                         ? event.busAssignments!.values.first 
-                         : null);
-      if (workoutBus != null && workoutBus.isNotEmpty) {
-        if (includeLinks) {
-          final busUrl = await BusTrackingService.getBusUrl(workoutBus);
-          if (busUrl != null) {
-            return 'Bus: $workoutBus ($busUrl)';
-          } else {
-            return 'Bus: $workoutBus';
-          }
-        } else {
-          return 'Bus: $workoutBus';
-        }
-      }
-    } else {
-      // For regular shifts, show first half and second half
-      List<String> busParts = [];
-      
-      if (event.firstHalfBus != null && event.firstHalfBus!.isNotEmpty) {
-        if (includeLinks) {
-          final busUrl = await BusTrackingService.getBusUrl(event.firstHalfBus!);
-          if (busUrl != null) {
-            busParts.add('First Half: ${event.firstHalfBus} ($busUrl)');
-          } else {
-            busParts.add('First Half: ${event.firstHalfBus}');
-          }
-        } else {
-          busParts.add('First Half: ${event.firstHalfBus}');
-        }
-      }
-      
-      if (event.secondHalfBus != null && event.secondHalfBus!.isNotEmpty) {
-        if (includeLinks) {
-          final busUrl = await BusTrackingService.getBusUrl(event.secondHalfBus!);
-          if (busUrl != null) {
-            busParts.add('Second Half: ${event.secondHalfBus} ($busUrl)');
-          } else {
-            busParts.add('Second Half: ${event.secondHalfBus}');
-          }
-        } else {
-          busParts.add('Second Half: ${event.secondHalfBus}');
-        }
-      }
-      
-      // Also check busAssignments for spare duties with specific duty codes
-      if (event.busAssignments != null && event.busAssignments!.isNotEmpty) {
-        for (final entry in event.busAssignments!.entries) {
-          final dutyCode = entry.key;
-          final busNumber = entry.value;
-          
-          if (busNumber.isNotEmpty) {
-            if (includeLinks) {
-              final busUrl = await BusTrackingService.getBusUrl(busNumber);
-              if (busUrl != null) {
-                busParts.add('$dutyCode: $busNumber ($busUrl)');
-              } else {
-                busParts.add('$dutyCode: $busNumber');
-              }
-            } else {
-              busParts.add('$dutyCode: $busNumber');
-            }
-          }
-        }
-      }
-      
-      if (busParts.isNotEmpty) {
-        final result = busParts.join('\n');
-        return result;
-      }
-    }
-    
-    return null; // No bus assignments to display
+  GoogleCalendarEventSyncService _googleCalendarSyncService() {
+    return GoogleCalendarEventSyncService(
+      buildDescription: _buildGoogleCalendarDescription,
+    );
   }
 
-  // Helper to check settings and sync to Google Calendar if enabled
+  Future<void> _syncBusAssignmentsToGoogleCalendar(Event event) {
+    return _googleCalendarSyncService().syncBusAssignments(event);
+  }
+
+  Future<String?> _buildGoogleCalendarDescription(Event event) {
+    return GoogleCalendarEventDescriptionBuilder.build(
+      event: event,
+      getBreakTime: ShiftService.getBreakTime,
+      isWorkingOnRestDay: (date) {
+        final result = getShiftResultForDate(date);
+        return result.shift == 'R' && !result.isSwappedWork;
+      },
+    );
+  }
+
   Future<void> _checkAndSyncToGoogleCalendar(Event event, BuildContext? context) async {
-    // Return early if context is null or widget is not mounted
     if (context == null || !mounted) return;
-    
-    // Capture context dependencies before any async operations
-    final scaffoldMessenger = ScaffoldMessenger.of(context);
-    
-    // Check if Google Calendar sync is enabled
-    final syncEnabled = await StorageService.getBool(AppConstants.syncToGoogleCalendarKey, defaultValue: false);
-    final isSignedIn = await GoogleCalendarService.isSignedIn();
-    
-    if (syncEnabled && isSignedIn) {
-      try {
-        // Convert to full DateTime objects for Google Calendar
-        final startDateTime = DateTime(
-          event.startDate.year, 
-          event.startDate.month, 
-          event.startDate.day,
-          event.startTime.hour,
-          event.startTime.minute,
-        );
-        
-        final endDateTime = DateTime(
-          event.endDate.year, 
-          event.endDate.month, 
-          event.endDate.day,
-          event.endTime.hour,
-          event.endTime.minute,
-        );
 
-        // Variables moved to _buildGoogleCalendarDescription method
-        
-        // Build description with all available information including bus assignments
-        final finalDescription = await _buildGoogleCalendarDescription(event);
-        
-        // Add to Google Calendar (check mounted again before async operation)
-        if (!mounted) return;
-        final success = await CalendarTestHelper.addWorkShiftToCalendar(
-          context: context,
-          title: event.title,
-          startTime: startDateTime,
-          endTime: endDateTime,
-          description: finalDescription, // Use the updated description
-        );
-        
-        // Use captured messenger to show result (check mounted after async)
-        if (success && mounted) {
-          scaffoldMessenger.showSnackBar(
-            const SnackBar(content: Text('Shift added to Google Calendar')),
-          );
-        }
-      } catch (e) {
-        // Don't show error - the local event was added successfully
-      }
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    final success = await _googleCalendarSyncService().syncNewEvent(
+      event: event,
+      context: context,
+      isMounted: () => mounted,
+    );
+
+    if (success && mounted) {
+      scaffoldMessenger.showSnackBar(
+        const SnackBar(content: Text('Shift added to Google Calendar')),
+      );
     }
   }
 
@@ -3419,15 +1004,12 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
   }
 
   void _editEvent(Event event) {
-    // If this is a refresh trigger (with any suffix), force a complete refresh
-    if (event.id == 'refresh_trigger' || event.id.startsWith('refresh_trigger_')) {
-      // Force reload events for the current selected day
+    final openAction = resolveEditEventOpenAction(event);
+    if (openAction == EditEventOpenAction.refreshMonth) {
       if (_selectedDay != null) {
         EventService.preloadMonth(_selectedDay!).then((_) {
           if (mounted) {
-            setState(() {
-              // The UI will automatically refresh since getEventsForDay is called in build
-            });
+            setState(() {});
           }
         });
       } else {
@@ -3435,1651 +1017,105 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
       }
       return;
     }
-    
-    // If this is an updated spare event (has assigned duties or had them), refresh the day's events
-    if (event.title.startsWith('SP') && (event.assignedDuties != null || event.title.contains('SP'))) {
-      // Force refresh of the current day's events
+
+    if (openAction == EditEventOpenAction.refreshSpareInPlace) {
       setState(() {});
       return;
     }
 
-    // --- Format Title for Dialog ---
-    String displayTitle = event.title;
-    if (event.title.startsWith('BusCheck')) {
-      final match = RegExp(r'^BusCheck(\d+)$').firstMatch(event.title);
-      if (match != null && match.groupCount >= 1) {
-        final numberPart = match.group(1);
-        if (numberPart != null) {
-           displayTitle = 'Bus Check $numberPart';
-        }
-      }
-    }
-    if (displayTitle.isEmpty) displayTitle = 'Untitled Event';
-    // --- End Format Title ---
+    final displayTitle = formatEditEventDisplayTitle(event.title);
 
-    // Show a dialog to edit or delete the event
-    showDialog(
+    showDialog<void>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Edit Event'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                displayTitle, // Use formatted title
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-              ),
-              const SizedBox(height: 4),
-              Text('${DateFormat('EEE, MMM d').format(event.startDate)} ${event.formattedStartTime} - ${event.formattedEndTime}'),
-              const SizedBox(height: 8),
-              const Text('What would you like to do with this event?'),
-              const SizedBox(height: 8),
-              // Action buttons — one per line, full-width column so each is centered in the dialog
-              SizedBox(
-                width: double.infinity,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    // View Board button (if board exists for this shift)
-                    FutureBuilder<UniversalBoard?>(
-                      future: UniversalBoardService.getBoardByShift(event.title),
-                      builder: (context, snapshot) {
-                        final board = snapshot.data;
-                        final hasBoard = board != null && board.sections.isNotEmpty;
-
-                        if (!hasBoard) {
-                          return const SizedBox.shrink();
-                        }
-
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 8),
-                          child: TextButton.icon(
-                            onPressed: () {
-                              Navigator.of(context).pop();
-                              _showBoard(board);
-                            },
-                            icon: const Icon(Icons.description, size: 18),
-                            label: const Text('View Board'),
-                          ),
-                        );
-                      },
-                    ),
-                    TextButton(
-                      onPressed: () {
-                        Navigator.of(context).pop();
-                        WidgetsBinding.instance.addPostFrameCallback((_) {
-                          if (!mounted) return;
-                          _showNotesDialog(event);
-                        });
-                      },
-                      child: const Text('Notes'),
-                    ),
-                    if (event.isCustomTraining) ...[
-                      const SizedBox(height: 8),
-                      TextButton(
-                        onPressed: () async {
-                          Navigator.of(context).pop();
-                          await _editCustomTrainingEvent(event);
-                        },
-                        child: const Text('Edit Training Details'),
-                      ),
-                    ],
-                    if (event.isEligibleForOvertimeTracking) ...[
-                      const SizedBox(height: 8),
-                      TextButton(
-                        onPressed: () {
-                          Navigator.of(context).pop();
-                          _showBreakStatusDialog(event);
-                        },
-                        child: const Text('Break & Finish'),
-                      ),
-                    ],
-                    if (event.isWorkShift) ...[
-                      const SizedBox(height: 8),
-                      TextButton(
-                        onPressed: () {
-                          Navigator.of(context).pop();
-                          _showSickDayStatusDialog(event);
-                        },
-                        child: const Text('Sick Day Status'),
-                      ),
-                    ],
-                    if (event.isWorkShift && getBankHoliday(event.startDate) != null) ...[
-                      const SizedBox(height: 12),
-                      StatefulBuilder(
-                        builder: (context, setDialogState) {
-                          final w = MediaQuery.sizeOf(context).width;
-                          return SwitchListTile(
-                            contentPadding: EdgeInsets.zero,
-                            title: Text(
-                              'Bank holiday — redundant',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w600,
-                                fontSize: w < 350 ? 13.0 : 14.0,
-                              ),
-                            ),
-                            subtitle: Text(
-                              'Rostered on the bank holiday but off (not working)',
-                              style: TextStyle(fontSize: w < 350 ? 11.0 : 12.0),
-                            ),
-                            value: event.bankHolidayRedundant,
-                            onChanged: (v) async {
-                              final oldEvent = event.copyWith();
-                              event.bankHolidayRedundant = v;
-                              await EventService.updateEvent(oldEvent, event);
-                              setDialogState(() {});
-                              if (mounted) {
-                                setState(() {});
-                              }
-                            },
-                          );
-                        },
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              // Add a divider before the bus selection section
-              if ((event.isWorkShift && !event.title.startsWith('BusCheck')) || _spareShiftHasFullDuties(event)) ...[
-                const Divider(),
-                const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).brightness == Brightness.dark
-                        ? Theme.of(context).cardColor
-                        : Colors.grey.shade100,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Theme.of(context).brightness == Brightness.dark
-                        ? Border.all(color: Theme.of(context).dividerColor)
-                        : null,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(Icons.directions_bus, size: 20, color: AppTheme.primaryColor),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              'Bus Assignment',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                                color: Theme.of(context).textTheme.bodyLarge?.color,
-                              ),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      if (event.firstHalfBus != null || event.secondHalfBus != null) ...[
-                        if (event.firstHalfBus != null)
-                          FutureBuilder<String?>(
-                            future: ShiftService.getBreakTime(event),
-                            builder: (context, snapshot) {
-                              final screenWidth = MediaQuery.of(context).size.width;
-                              final isSmallScreen = screenWidth < 350;
-                              final iconSize = isSmallScreen ? 16.0 : 18.0;
-                              final iconPadding = isSmallScreen ? 2.0 : 4.0;
-                              final textFontSize = isSmallScreen ? 12.0 : 14.0;
-                              final containerPadding = isSmallScreen ? 6.0 : 8.0;
-                              final checkIconSize = isSmallScreen ? 14.0 : 16.0;
-                              
-                              return Container(
-                                padding: EdgeInsets.symmetric(horizontal: containerPadding, vertical: containerPadding * 0.75),
-                                decoration: BoxDecoration(
-                                  color: Theme.of(context).brightness == Brightness.dark
-                                      ? Theme.of(context).cardColor.withValues(alpha: 0.5)
-                                      : Colors.white,
-                                  borderRadius: BorderRadius.circular(6),
-                                  border: Border.all(
-                                    color: Theme.of(context).brightness == Brightness.dark
-                                        ? Theme.of(context).dividerColor
-                                        : Colors.grey.shade300,
-                                  ),
-                                ),
-                                child: Row(
-                                  children: [
-                                    Icon(Icons.check_circle, size: checkIconSize, color: Colors.green),
-                                    SizedBox(width: isSmallScreen ? 4 : 8),
-                                    Expanded(
-                                      child: Text(
-                                        event.title.contains('(OT)') ? 'Assigned Bus: ${event.firstHalfBus}' : '1: ${event.firstHalfBus}',
-                                        style: TextStyle(
-                                          fontSize: textFontSize,
-                                          color: Theme.of(context).textTheme.bodyMedium?.color,
-                                        ),
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                    SizedBox(width: isSmallScreen ? 2 : 4),
-                                    // Group icons together tightly
-                                    Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        // Track button for first half bus
-                                        GestureDetector(
-                                          onTap: _busTrackingLoading['tracking_${event.firstHalfBus}'] == true
-                                              ? null
-                                              : () => _trackBus(event.firstHalfBus!),
-                                          child: Container(
-                                            padding: EdgeInsets.all(iconPadding),
-                                            child: _busTrackingLoading['tracking_${event.firstHalfBus}'] == true
-                                                ? SizedBox(
-                                                    width: iconSize - 2,
-                                                    height: iconSize - 2,
-                                                    child: const CircularProgressIndicator(strokeWidth: 2),
-                                                  )
-                                                : Icon(Icons.location_on, size: iconSize, color: Colors.blue),
-                                          ),
-                                        ),
-                                        // Change bus button (swap/recycle icon)
-                                        GestureDetector(
-                                          onTap: () async {
-                                            // Show the bus assignment dialog
-                                            final hasCurrentBus = event.firstHalfBus != null && event.firstHalfBus!.isNotEmpty;
-                                        final TextEditingController controller = TextEditingController(text: event.firstHalfBus ?? '');
-                                        final result = await showDialog<String>(
-                                          context: context,
-                                          builder: (context) => AlertDialog(
-                                            title: Text(hasCurrentBus ? 'Change First Half Bus' : 'Add First Half Bus'),
-                                            content: Column(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                if (hasCurrentBus)
-                                                  Padding(
-                                                    padding: const EdgeInsets.only(bottom: 8.0),
-                                                    child: Text(
-                                                      'Current: ${event.firstHalfBus}',
-                                                      style: TextStyle(
-                                                        fontWeight: FontWeight.w500,
-                                                        color: Colors.grey[700],
-                                                      ),
-                                                    ),
-                                                  ),
-                                                TextField(
-                                                  controller: controller,
-                                                  decoration: const InputDecoration(
-                                                    hintText: 'Enter bus number (e.g. PA155)',
-                                                    labelText: 'Bus Number',
-                                                  ),
-                                                  textCapitalization: TextCapitalization.characters,
-                                                  autofocus: true,
-                                                ),
-                                              ],
-                                            ),
-                                            actions: [
-                                              TextButton(
-                                                onPressed: () => Navigator.of(context).pop(),
-                                                child: const Text('Cancel'),
-                                              ),
-                                              TextButton(
-                                                onPressed: () {
-                                                  String busNumber = controller.text.trim().toUpperCase();
-                                                  busNumber = busNumber.replaceAll(' ', '');
-                                                  if (busNumber.isNotEmpty) {
-                                                    Navigator.of(context).pop(busNumber);
-                                                  }
-                                                },
-                                                child: Text(hasCurrentBus ? 'Change' : 'Add'),
-                                              ),
-                                            ],
-                                          ),
-                                        );
-                                        
-                                        if (result != null) {
-                                          // Create a copy of the old event
-                                          final oldEvent = Event(
-                                            id: event.id,
-                                            title: event.title,
-                                            startDate: event.startDate,
-                                            startTime: event.startTime,
-                                            endDate: event.endDate,
-                                            endTime: event.endTime,
-                                            workTime: event.workTime,
-                                            breakStartTime: event.breakStartTime,
-                                            breakEndTime: event.breakEndTime,
-                                            assignedDuties: event.assignedDuties,
-                                            firstHalfBus: event.firstHalfBus,
-                                            secondHalfBus: event.secondHalfBus,
-                                            busAssignments: event.busAssignments,
-                                            additionalBusesUsed: event.additionalBusesUsed?.map((b) => b).toList(),
-                                            firstHalfAdditionalBuses: event.firstHalfAdditionalBuses?.map((b) => b).toList(),
-                                            secondHalfAdditionalBuses: event.secondHalfAdditionalBuses?.map((b) => b).toList(),
-                                            additionalBusesByDuty: event.additionalBusesByDuty?.map((k, v) => MapEntry(k, List<String>.from(v))),
-                                            notes: event.notes,
-                                          );
-                                          
-                                          // Create updated event with all bus breakdown fields
-                                          final updatedEvent = Event(
-                                            id: event.id,
-                                            title: event.title,
-                                            startDate: event.startDate,
-                                            startTime: event.startTime,
-                                            endDate: event.endDate,
-                                            endTime: event.endTime,
-                                            workTime: event.workTime,
-                                            breakStartTime: event.breakStartTime,
-                                            breakEndTime: event.breakEndTime,
-                                            assignedDuties: event.assignedDuties,
-                                            busAssignments: event.busAssignments,
-                                            firstHalfBus: event.firstHalfBus,
-                                            secondHalfBus: event.secondHalfBus,
-                                            additionalBusesUsed: event.additionalBusesUsed?.map((b) => b).toList(),
-                                            firstHalfAdditionalBuses: event.firstHalfAdditionalBuses?.map((b) => b).toList(),
-                                            secondHalfAdditionalBuses: event.secondHalfAdditionalBuses?.map((b) => b).toList(),
-                                            additionalBusesByDuty: event.additionalBusesByDuty?.map((k, v) => MapEntry(k, List<String>.from(v))),
-                                            notes: event.notes,
-                                          );
-                                          
-                                          // Use change bus method to track breakdown buses
-                                          updatedEvent.changeBusForFirstHalf(result);
-                                          
-                                          // Save the updated event
-                                          await EventService.updateEvent(oldEvent, updatedEvent);
-                                          
-                                          // Sync bus assignments to Google Calendar
-                                          await _syncBusAssignmentsToGoogleCalendar(updatedEvent);
-                                          
-                                          // Refresh the UI
-                                          if (!mounted) return;
-                                          setState(() {});
-                                          // Close the current dialog
-                                          Navigator.of(context).pop();
-                                          // Reopen the dialog with the updated event
-                                          _editEvent(updatedEvent);
-                                        }
-                                      },
-                                      child: Container(
-                                        padding: EdgeInsets.all(iconPadding),
-                                        child: Icon(Icons.swap_horiz, size: iconSize, color: Colors.orange),
-                                      ),
-                                    ),
-                                      // Remove bus button
-                                      GestureDetector(
-                                        onTap: () async {
-                                            // Create a copy of the old event
-                                            final oldEvent = Event(
-                                              id: event.id,
-                                              title: event.title,
-                                              startDate: event.startDate,
-                                              startTime: event.startTime,
-                                              endDate: event.endDate,
-                                              endTime: event.endTime,
-                                              workTime: event.workTime,
-                                              breakStartTime: event.breakStartTime,
-                                              breakEndTime: event.breakEndTime,
-                                              assignedDuties: event.assignedDuties,
-                                              firstHalfBus: event.firstHalfBus,
-                                              secondHalfBus: event.secondHalfBus,
-                                              busAssignments: event.busAssignments,
-                                              additionalBusesUsed: event.additionalBusesUsed?.map((b) => b).toList(),
-                                              firstHalfAdditionalBuses: event.firstHalfAdditionalBuses?.map((b) => b).toList(),
-                                              secondHalfAdditionalBuses: event.secondHalfAdditionalBuses?.map((b) => b).toList(),
-                                              additionalBusesByDuty: event.additionalBusesByDuty?.map((k, v) => MapEntry(k, List<String>.from(v))),
-                                              notes: event.notes,
-                                            );
-                                            
-                                            // Create a new event and use remove method to clear primary bus and breakdown history
-                                            final updatedEvent = Event(
-                                              id: event.id,
-                                              title: event.title,
-                                              startDate: event.startDate,
-                                              startTime: event.startTime,
-                                              endDate: event.endDate,
-                                              endTime: event.endTime,
-                                              workTime: event.workTime,
-                                              breakStartTime: event.breakStartTime,
-                                              breakEndTime: event.breakEndTime,
-                                              assignedDuties: event.assignedDuties,
-                                              busAssignments: event.busAssignments,
-                                              firstHalfBus: event.firstHalfBus,
-                                              secondHalfBus: event.secondHalfBus,
-                                              additionalBusesUsed: event.additionalBusesUsed?.map((b) => b).toList(),
-                                              firstHalfAdditionalBuses: event.firstHalfAdditionalBuses?.map((b) => b).toList(),
-                                              secondHalfAdditionalBuses: event.secondHalfAdditionalBuses?.map((b) => b).toList(),
-                                              additionalBusesByDuty: event.additionalBusesByDuty?.map((k, v) => MapEntry(k, List<String>.from(v))),
-                                              notes: event.notes,
-                                            );
-                                            
-                                            // Use remove method to clear primary bus and breakdown history
-                                            updatedEvent.removeBusForFirstHalf();
-                                            
-                                            // Save the updated event
-                                            await EventService.updateEvent(oldEvent, updatedEvent);
-                                            
-                                            // Sync bus assignments to Google Calendar
-                                            await _syncBusAssignmentsToGoogleCalendar(updatedEvent);
-                                            
-                                            // Refresh the UI
-                                            if (!mounted) return;
-                                            setState(() {});
-                                            // Close the current dialog
-                                            Navigator.of(context).pop();
-                                            // Reopen the dialog with the updated event
-                                            _editEvent(updatedEvent);
-                                          },
-                                          child: Container(
-                                            padding: EdgeInsets.all(iconPadding),
-                                            child: Icon(Icons.remove_circle_outline, size: iconSize, color: Colors.red),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              );
-                            },
-                          ),
-                        if (event.firstHalfBus != null && event.secondHalfBus != null)
-                          const SizedBox(height: 4),
-                        if (event.secondHalfBus != null)
-                          FutureBuilder<String?>(
-                            future: ShiftService.getBreakTime(event),
-                            builder: (context, snapshot) {
-                              final screenWidth = MediaQuery.of(context).size.width;
-                              final isSmallScreen = screenWidth < 350;
-                              final iconSize = isSmallScreen ? 16.0 : 18.0;
-                              final iconPadding = isSmallScreen ? 2.0 : 4.0;
-                              final textFontSize = isSmallScreen ? 12.0 : 14.0;
-                              final containerPadding = isSmallScreen ? 6.0 : 8.0;
-                              final checkIconSize = isSmallScreen ? 14.0 : 16.0;
-                              
-                              return Container(
-                                padding: EdgeInsets.symmetric(horizontal: containerPadding, vertical: containerPadding * 0.75),
-                                decoration: BoxDecoration(
-                                  color: Theme.of(context).brightness == Brightness.dark
-                                      ? Theme.of(context).cardColor.withValues(alpha: 0.5)
-                                      : Colors.white,
-                                  borderRadius: BorderRadius.circular(6),
-                                  border: Border.all(
-                                    color: Theme.of(context).brightness == Brightness.dark
-                                        ? Theme.of(context).dividerColor
-                                        : Colors.grey.shade300,
-                                  ),
-                                ),
-                                child: Row(
-                                  children: [
-                                    Icon(Icons.check_circle, size: checkIconSize, color: Colors.green),
-                                    SizedBox(width: isSmallScreen ? 4 : 8),
-                                    Expanded(
-                                      child: Text(
-                                        event.title.contains('(OT)') ? 'Assigned Bus: ${event.secondHalfBus}' : '2: ${event.secondHalfBus}',
-                                        style: TextStyle(
-                                          fontSize: textFontSize,
-                                          color: Theme.of(context).textTheme.bodyMedium?.color,
-                                        ),
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                    SizedBox(width: isSmallScreen ? 2 : 4),
-                                    // Group icons together tightly
-                                    Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        // Track button for second half bus
-                                        GestureDetector(
-                                          onTap: _busTrackingLoading['tracking_${event.secondHalfBus}'] == true
-                                              ? null
-                                              : () => _trackBus(event.secondHalfBus!),
-                                          child: Container(
-                                            padding: EdgeInsets.all(iconPadding),
-                                            child: _busTrackingLoading['tracking_${event.secondHalfBus}'] == true
-                                                ? SizedBox(
-                                                    width: iconSize - 2,
-                                                    height: iconSize - 2,
-                                                    child: const CircularProgressIndicator(strokeWidth: 2),
-                                                  )
-                                                : Icon(Icons.location_on, size: iconSize, color: Colors.blue),
-                                          ),
-                                        ),
-                                        // Change bus button (swap/recycle icon)
-                                        GestureDetector(
-                                          onTap: () async {
-                                            // Show the bus assignment dialog
-                                            final hasCurrentBus = event.secondHalfBus != null && event.secondHalfBus!.isNotEmpty;
-                                        final TextEditingController controller = TextEditingController(text: event.secondHalfBus ?? '');
-                                        final result = await showDialog<String>(
-                                          context: context,
-                                          builder: (context) => AlertDialog(
-                                            title: Text(hasCurrentBus ? 'Change Second Half Bus' : 'Add Second Half Bus'),
-                                            content: Column(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                if (hasCurrentBus)
-                                                  Padding(
-                                                    padding: const EdgeInsets.only(bottom: 8.0),
-                                                    child: Text(
-                                                      'Current: ${event.secondHalfBus}',
-                                                      style: TextStyle(
-                                                        fontWeight: FontWeight.w500,
-                                                        color: Colors.grey[700],
-                                                      ),
-                                                    ),
-                                                  ),
-                                                TextField(
-                                                  controller: controller,
-                                                  decoration: const InputDecoration(
-                                                    hintText: 'Enter bus number (e.g. PA155)',
-                                                    labelText: 'Bus Number',
-                                                  ),
-                                                  textCapitalization: TextCapitalization.characters,
-                                                  autofocus: true,
-                                                ),
-                                              ],
-                                            ),
-                                            actions: [
-                                              TextButton(
-                                                onPressed: () => Navigator.of(context).pop(),
-                                                child: const Text('Cancel'),
-                                              ),
-                                              TextButton(
-                                                onPressed: () {
-                                                  String busNumber = controller.text.trim().toUpperCase();
-                                                  busNumber = busNumber.replaceAll(' ', '');
-                                                  if (busNumber.isNotEmpty) {
-                                                    Navigator.of(context).pop(busNumber);
-                                                  }
-                                                },
-                                                child: Text(hasCurrentBus ? 'Change' : 'Add'),
-                                              ),
-                                            ],
-                                          ),
-                                        );
-                                        
-                                        if (result != null) {
-                                          // Create a copy of the old event
-                                          final oldEvent = Event(
-                                            id: event.id,
-                                            title: event.title,
-                                            startDate: event.startDate,
-                                            startTime: event.startTime,
-                                            endDate: event.endDate,
-                                            endTime: event.endTime,
-                                            workTime: event.workTime,
-                                            breakStartTime: event.breakStartTime,
-                                            breakEndTime: event.breakEndTime,
-                                            assignedDuties: event.assignedDuties,
-                                            firstHalfBus: event.firstHalfBus,
-                                            secondHalfBus: event.secondHalfBus,
-                                            busAssignments: event.busAssignments,
-                                            additionalBusesUsed: event.additionalBusesUsed?.map((b) => b).toList(),
-                                            firstHalfAdditionalBuses: event.firstHalfAdditionalBuses?.map((b) => b).toList(),
-                                            secondHalfAdditionalBuses: event.secondHalfAdditionalBuses?.map((b) => b).toList(),
-                                            additionalBusesByDuty: event.additionalBusesByDuty?.map((k, v) => MapEntry(k, List<String>.from(v))),
-                                            notes: event.notes,
-                                          );
-                                          
-                                          // Create updated event with all bus breakdown fields
-                                          final updatedEvent = Event(
-                                            id: event.id,
-                                            title: event.title,
-                                            startDate: event.startDate,
-                                            startTime: event.startTime,
-                                            endDate: event.endDate,
-                                            endTime: event.endTime,
-                                            workTime: event.workTime,
-                                            breakStartTime: event.breakStartTime,
-                                            breakEndTime: event.breakEndTime,
-                                            assignedDuties: event.assignedDuties,
-                                            busAssignments: event.busAssignments,
-                                            firstHalfBus: event.firstHalfBus,
-                                            secondHalfBus: event.secondHalfBus,
-                                            additionalBusesUsed: event.additionalBusesUsed?.map((b) => b).toList(),
-                                            firstHalfAdditionalBuses: event.firstHalfAdditionalBuses?.map((b) => b).toList(),
-                                            secondHalfAdditionalBuses: event.secondHalfAdditionalBuses?.map((b) => b).toList(),
-                                            additionalBusesByDuty: event.additionalBusesByDuty?.map((k, v) => MapEntry(k, List<String>.from(v))),
-                                            notes: event.notes,
-                                          );
-                                          
-                                          // Use change bus method to track breakdown buses
-                                          updatedEvent.changeBusForSecondHalf(result);
-                                          
-                                          // Save the updated event
-                                          await EventService.updateEvent(oldEvent, updatedEvent);
-                                          
-                                          // Sync bus assignments to Google Calendar
-                                          await _syncBusAssignmentsToGoogleCalendar(updatedEvent);
-                                          
-                                          // Refresh the UI
-                                          if (!mounted) return;
-                                          setState(() {});
-                                          // Close the current dialog
-                                          Navigator.of(context).pop();
-                                          // Reopen the dialog with the updated event
-                                          _editEvent(updatedEvent);
-                                        }
-                                      },
-                                      child: Container(
-                                        padding: EdgeInsets.all(iconPadding),
-                                        child: Icon(Icons.swap_horiz, size: iconSize, color: Colors.orange),
-                                      ),
-                                    ),
-                                    // Remove bus button
-                                    GestureDetector(
-                                      onTap: () async {
-                                        // Create a copy of the old event
-                                        final oldEvent = Event(
-                                          id: event.id,
-                                          title: event.title,
-                                          startDate: event.startDate,
-                                          startTime: event.startTime,
-                                          endDate: event.endDate,
-                                          endTime: event.endTime,
-                                          workTime: event.workTime,
-                                          breakStartTime: event.breakStartTime,
-                                          breakEndTime: event.breakEndTime,
-                                          assignedDuties: event.assignedDuties,
-                                          firstHalfBus: event.firstHalfBus,
-                                          secondHalfBus: event.secondHalfBus,
-                                          busAssignments: event.busAssignments,
-                                          additionalBusesUsed: event.additionalBusesUsed?.map((b) => b).toList(),
-                                          firstHalfAdditionalBuses: event.firstHalfAdditionalBuses?.map((b) => b).toList(),
-                                          secondHalfAdditionalBuses: event.secondHalfAdditionalBuses?.map((b) => b).toList(),
-                                          additionalBusesByDuty: event.additionalBusesByDuty?.map((k, v) => MapEntry(k, List<String>.from(v))),
-                                          notes: event.notes,
-                                        );
-                                        
-                                        // Create a new event and use remove method to clear primary bus and breakdown history
-                                        final updatedEvent = Event(
-                                          id: event.id,
-                                          title: event.title,
-                                          startDate: event.startDate,
-                                          startTime: event.startTime,
-                                          endDate: event.endDate,
-                                          endTime: event.endTime,
-                                          workTime: event.workTime,
-                                          breakStartTime: event.breakStartTime,
-                                          breakEndTime: event.breakEndTime,
-                                          assignedDuties: event.assignedDuties,
-                                          busAssignments: event.busAssignments,
-                                          firstHalfBus: event.firstHalfBus,
-                                          secondHalfBus: event.secondHalfBus,
-                                          additionalBusesUsed: event.additionalBusesUsed?.map((b) => b).toList(),
-                                          firstHalfAdditionalBuses: event.firstHalfAdditionalBuses?.map((b) => b).toList(),
-                                          secondHalfAdditionalBuses: event.secondHalfAdditionalBuses?.map((b) => b).toList(),
-                                          additionalBusesByDuty: event.additionalBusesByDuty?.map((k, v) => MapEntry(k, List<String>.from(v))),
-                                          notes: event.notes,
-                                        );
-                                        
-                                        // Use remove method to clear primary bus and breakdown history
-                                        updatedEvent.removeBusForSecondHalf();
-                                        
-                                        // Save the updated event
-                                        await EventService.updateEvent(oldEvent, updatedEvent);
-                                        
-                                        // Sync bus assignments to Google Calendar
-                                        await _syncBusAssignmentsToGoogleCalendar(updatedEvent);
-                                        
-                                        // Refresh the UI
-                                        if (!mounted) return;
-                                        setState(() {});
-                                        // Close the current dialog
-                                        Navigator.of(context).pop();
-                                        // Reopen the dialog with the updated event
-                                        _editEvent(updatedEvent);
-                                      },
-                                      child: Container(
-                                        padding: EdgeInsets.all(iconPadding),
-                                        child: Icon(Icons.remove_circle_outline, size: iconSize, color: Colors.red),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          );
-                            },
-                          ),
-                        const SizedBox(height: 4),
-                      ],
-                      FutureBuilder<String?>(
-                        future: ShiftService.getBreakTime(event),
-                        builder: (context, snapshot) {
-                          final isWorkout = snapshot.data?.toLowerCase().contains('workout') ?? false;
-                          final isOvertimeShift = event.title.contains('(OT)');
-                          final isWorkoutOrOvertime = isWorkout || isOvertimeShift;
-                          // Removed unused variable isSpareWithFullDuties
-                          
-                          if (isWorkoutOrOvertime) {
-                            // Single button for workout and overtime shifts - show "Change Bus" if bus exists, "Add Bus" if not
-                            return ElevatedButton(
-                              onPressed: () async {
-                                // Show the bus assignment dialog
-                                final TextEditingController controller = TextEditingController(text: event.firstHalfBus ?? '');
-                                final hasCurrentBus = event.firstHalfBus != null && event.firstHalfBus!.isNotEmpty;
-                                final result = await showDialog<String>(
-                                  context: context,
-                                  builder: (context) => AlertDialog(
-                                    title: Text(hasCurrentBus ? 'Change Bus' : 'Add Bus'),
-                                    content: Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        if (hasCurrentBus)
-                                          Padding(
-                                            padding: const EdgeInsets.only(bottom: 8.0),
-                                            child: Text(
-                                              'Current: ${event.firstHalfBus}',
-                                              style: TextStyle(
-                                                fontWeight: FontWeight.w500,
-                                                color: Colors.grey[700],
-                                              ),
-                                            ),
-                                          ),
-                                        TextField(
-                                          controller: controller,
-                                          decoration: const InputDecoration(
-                                            hintText: 'Enter bus number (e.g. PA155)',
-                                            labelText: 'Bus Number',
-                                          ),
-                                          textCapitalization: TextCapitalization.characters,
-                                          autofocus: true,
-                                        ),
-                                      ],
-                                    ),
-                                    actions: [
-                                      TextButton(
-                                        onPressed: () => Navigator.of(context).pop(),
-                                        child: const Text('Cancel'),
-                                      ),
-                                      TextButton(
-                                        onPressed: () {
-                                          String busNumber = controller.text.trim().toUpperCase();
-                                          busNumber = busNumber.replaceAll(' ', '');
-                                          if (busNumber.isNotEmpty) {
-                                            Navigator.of(context).pop(busNumber);
-                                          }
-                                        },
-                                        child: Text(hasCurrentBus ? 'Change' : 'Add'),
-                                      ),
-                                    ],
-                                  ),
-                                );
-                                
-                                if (result != null) {
-                                  // Create a copy of the old event
-                                  final oldEvent = Event(
-                                    id: event.id,
-                                    title: event.title,
-                                    startDate: event.startDate,
-                                    startTime: event.startTime,
-                                    endDate: event.endDate,
-                                    endTime: event.endTime,
-                                    workTime: event.workTime,
-                                    breakStartTime: event.breakStartTime,
-                                    breakEndTime: event.breakEndTime,
-                                    assignedDuties: event.assignedDuties,
-                                    busAssignments: event.busAssignments,
-                                    firstHalfBus: event.firstHalfBus,
-                                    secondHalfBus: event.secondHalfBus,
-                                    additionalBusesUsed: event.additionalBusesUsed?.map((b) => b).toList(),
-                                    firstHalfAdditionalBuses: event.firstHalfAdditionalBuses?.map((b) => b).toList(),
-                                    secondHalfAdditionalBuses: event.secondHalfAdditionalBuses?.map((b) => b).toList(),
-                                    additionalBusesByDuty: event.additionalBusesByDuty?.map((k, v) => MapEntry(k, List<String>.from(v))),
-                                  );
-                                  
-                                  // Create updated event and use change bus method
-                                  final updatedEvent = Event(
-                                    id: event.id,
-                                    title: event.title,
-                                    startDate: event.startDate,
-                                    startTime: event.startTime,
-                                    endDate: event.endDate,
-                                    endTime: event.endTime,
-                                    workTime: event.workTime,
-                                    breakStartTime: event.breakStartTime,
-                                    breakEndTime: event.breakEndTime,
-                                    assignedDuties: event.assignedDuties,
-                                    busAssignments: event.busAssignments,
-                                    firstHalfBus: event.firstHalfBus,
-                                    secondHalfBus: event.secondHalfBus,
-                                    additionalBusesUsed: event.additionalBusesUsed?.map((b) => b).toList(),
-                                    firstHalfAdditionalBuses: event.firstHalfAdditionalBuses?.map((b) => b).toList(),
-                                    secondHalfAdditionalBuses: event.secondHalfAdditionalBuses?.map((b) => b).toList(),
-                                    additionalBusesByDuty: event.additionalBusesByDuty?.map((k, v) => MapEntry(k, List<String>.from(v))),
-                                  );
-                                  
-                                  // Use change bus method to track breakdown buses
-                                  updatedEvent.changeBusForSingleShift(result);
-                                  
-                                  // Save the updated event
-                                  await EventService.updateEvent(oldEvent, updatedEvent);
-                                  
-                                  // Sync bus assignments to Google Calendar
-                                  await _syncBusAssignmentsToGoogleCalendar(updatedEvent);
-                                  
-                                  // Refresh the UI
-                                  if (mounted) {
-                                    setState(() {});
-                                    // Close the current dialog
-                                    Navigator.of(context).pop();
-                                    // Reopen the dialog with the updated event
-                                    _editEvent(updatedEvent);
-                                  }
-                                }
-                              },
-                              style: ElevatedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(vertical: 12),
-                                backgroundColor: event.firstHalfBus == null ? AppTheme.primaryColor : Colors.orange,
-                                foregroundColor: Colors.white,
-                                elevation: 2,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                minimumSize: const Size(0, 48),
-                              ),
-                              child: SizedBox(
-                                width: double.infinity,
-                                child: Wrap(
-                                  alignment: WrapAlignment.center,
-                                  spacing: 8,
-                                  runSpacing: 4,
-                                  crossAxisAlignment: WrapCrossAlignment.center,
-                                  children: [
-                                    const Icon(Icons.directions_bus, size: 18),
-                                    Text(event.firstHalfBus == null ? 'Add Bus' : 'Change Bus'),
-                                  ],
-                                ),
-                              ),
-                            );
-                          } else {
-                            // Add bus buttons - only show when buses are not assigned
-                            // Bus changes are handled via swap icons in the bus cards when buses exist
-                            return Column(
-                              children: [
-                                if (event.firstHalfBus == null)
-                                  SizedBox(
-                                    width: double.infinity,
-                                    child: ElevatedButton(
-                                      onPressed: () async {
-                                        // Create a copy of the old event
-                                        final oldEvent = Event(
-                                          id: event.id,
-                                          title: event.title,
-                                          startDate: event.startDate,
-                                          startTime: event.startTime,
-                                          endDate: event.endDate,
-                                          endTime: event.endTime,
-                                          workTime: event.workTime,
-                                          breakStartTime: event.breakStartTime,
-                                          breakEndTime: event.breakEndTime,
-                                          assignedDuties: event.assignedDuties,
-                                          firstHalfBus: event.firstHalfBus,
-                                          secondHalfBus: event.secondHalfBus,
-                                          busAssignments: event.busAssignments,
-                                          additionalBusesUsed: event.additionalBusesUsed?.map((b) => b).toList(),
-                                          firstHalfAdditionalBuses: event.firstHalfAdditionalBuses?.map((b) => b).toList(),
-                                          secondHalfAdditionalBuses: event.secondHalfAdditionalBuses?.map((b) => b).toList(),
-                                          additionalBusesByDuty: event.additionalBusesByDuty?.map((k, v) => MapEntry(k, List<String>.from(v))),
-                                          notes: event.notes,
-                                        );
-                                        
-                                        // Show the bus assignment dialog
-                                        final TextEditingController controller = TextEditingController();
-                                        final result = await showDialog<String>(
-                                          context: context,
-                                          builder: (context) => AlertDialog(
-                                            title: const Text('Add First Half Bus'),
-                                            content: Column(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                TextField(
-                                                  controller: controller,
-                                                  decoration: const InputDecoration(
-                                                    hintText: 'Enter bus number (e.g. PA155)',
-                                                    labelText: 'Bus Number',
-                                                  ),
-                                                  textCapitalization: TextCapitalization.characters,
-                                                  autofocus: true,
-                                                ),
-                                              ],
-                                            ),
-                                            actions: [
-                                              TextButton(
-                                                onPressed: () => Navigator.of(context).pop(),
-                                                child: const Text('Cancel'),
-                                              ),
-                                              TextButton(
-                                                onPressed: () {
-                                                  String busNumber = controller.text.trim().toUpperCase();
-                                                  busNumber = busNumber.replaceAll(' ', '');
-                                                  if (busNumber.isNotEmpty) {
-                                                    Navigator.of(context).pop(busNumber);
-                                                  }
-                                                },
-                                                child: const Text('Add'),
-                                              ),
-                                            ],
-                                          ),
-                                        );
-                                        
-                                        if (result != null) {
-                                          // Create updated event
-                                          final updatedEvent = Event(
-                                            id: event.id,
-                                            title: event.title,
-                                            startDate: event.startDate,
-                                            startTime: event.startTime,
-                                            endDate: event.endDate,
-                                            endTime: event.endTime,
-                                            workTime: event.workTime,
-                                            breakStartTime: event.breakStartTime,
-                                            breakEndTime: event.breakEndTime,
-                                            assignedDuties: event.assignedDuties,
-                                            busAssignments: event.busAssignments,
-                                            firstHalfBus: result,
-                                            secondHalfBus: event.secondHalfBus,
-                                            additionalBusesUsed: event.additionalBusesUsed?.map((b) => b).toList(),
-                                            firstHalfAdditionalBuses: event.firstHalfAdditionalBuses?.map((b) => b).toList(),
-                                            secondHalfAdditionalBuses: event.secondHalfAdditionalBuses?.map((b) => b).toList(),
-                                            additionalBusesByDuty: event.additionalBusesByDuty?.map((k, v) => MapEntry(k, List<String>.from(v))),
-                                            notes: event.notes,
-                                          );
-                                          
-                                          // Save the updated event
-                                          await EventService.updateEvent(oldEvent, updatedEvent);
-                                          
-                                          // Sync bus assignments to Google Calendar
-                                          await _syncBusAssignmentsToGoogleCalendar(updatedEvent);
-                                          
-                                          // Refresh the UI
-                                          if (mounted) {
-                                            setState(() {});
-                                            // Close the current dialog
-                                            Navigator.of(context).pop();
-                                            // Reopen the dialog with the updated event
-                                            _editEvent(updatedEvent);
-                                          }
-                                        }
-                                      },
-                                      style: ElevatedButton.styleFrom(
-                                        padding: const EdgeInsets.symmetric(vertical: 12),
-                                        backgroundColor: AppTheme.primaryColor,
-                                        foregroundColor: Colors.white,
-                                        elevation: 2,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(8),
-                                        ),
-                                        minimumSize: const Size(0, 48),
-                                      ),
-                                      child: SizedBox(
-                                        width: double.infinity,
-                                        child: Wrap(
-                                          alignment: WrapAlignment.center,
-                                          spacing: 8,
-                                          runSpacing: 4,
-                                          crossAxisAlignment: WrapCrossAlignment.center,
-                                          children: [
-                                            const Icon(Icons.directions_bus, size: 18),
-                                            const Text('Add 1st Half Bus'),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                if (event.firstHalfBus == null && event.secondHalfBus == null)
-                                  const SizedBox(height: 8),
-                                if (event.secondHalfBus == null)
-                                  SizedBox(
-                                    width: double.infinity,
-                                    child: ElevatedButton(
-                                      onPressed: () async {
-                                        // Create a copy of the old event
-                                        final oldEvent = Event(
-                                          id: event.id,
-                                          title: event.title,
-                                          startDate: event.startDate,
-                                          startTime: event.startTime,
-                                          endDate: event.endDate,
-                                          endTime: event.endTime,
-                                          workTime: event.workTime,
-                                          breakStartTime: event.breakStartTime,
-                                          breakEndTime: event.breakEndTime,
-                                          assignedDuties: event.assignedDuties,
-                                          firstHalfBus: event.firstHalfBus,
-                                          secondHalfBus: event.secondHalfBus,
-                                          busAssignments: event.busAssignments,
-                                          additionalBusesUsed: event.additionalBusesUsed?.map((b) => b).toList(),
-                                          firstHalfAdditionalBuses: event.firstHalfAdditionalBuses?.map((b) => b).toList(),
-                                          secondHalfAdditionalBuses: event.secondHalfAdditionalBuses?.map((b) => b).toList(),
-                                          additionalBusesByDuty: event.additionalBusesByDuty?.map((k, v) => MapEntry(k, List<String>.from(v))),
-                                          notes: event.notes,
-                                        );
-                                        
-                                        // Show the bus assignment dialog
-                                        final TextEditingController controller = TextEditingController();
-                                        final result = await showDialog<String>(
-                                          context: context,
-                                          builder: (context) => AlertDialog(
-                                            title: const Text('Add Second Half Bus'),
-                                            content: Column(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                TextField(
-                                                  controller: controller,
-                                                  decoration: const InputDecoration(
-                                                    hintText: 'Enter bus number (e.g. PA155)',
-                                                    labelText: 'Bus Number',
-                                                  ),
-                                                  textCapitalization: TextCapitalization.characters,
-                                                  autofocus: true,
-                                                ),
-                                              ],
-                                            ),
-                                            actions: [
-                                              TextButton(
-                                                onPressed: () => Navigator.of(context).pop(),
-                                                child: const Text('Cancel'),
-                                              ),
-                                              TextButton(
-                                                onPressed: () {
-                                                  String busNumber = controller.text.trim().toUpperCase();
-                                                  busNumber = busNumber.replaceAll(' ', '');
-                                                  if (busNumber.isNotEmpty) {
-                                                    Navigator.of(context).pop(busNumber);
-                                                  }
-                                                },
-                                                child: const Text('Add'),
-                                              ),
-                                            ],
-                                          ),
-                                        );
-                                        
-                                        if (result != null) {
-                                          // Create updated event
-                                          final updatedEvent = Event(
-                                            id: event.id,
-                                            title: event.title,
-                                            startDate: event.startDate,
-                                            startTime: event.startTime,
-                                            endDate: event.endDate,
-                                            endTime: event.endTime,
-                                            workTime: event.workTime,
-                                            breakStartTime: event.breakStartTime,
-                                            breakEndTime: event.breakEndTime,
-                                            assignedDuties: event.assignedDuties,
-                                            busAssignments: event.busAssignments,
-                                            firstHalfBus: event.firstHalfBus,
-                                            secondHalfBus: result,
-                                            additionalBusesUsed: event.additionalBusesUsed?.map((b) => b).toList(),
-                                            firstHalfAdditionalBuses: event.firstHalfAdditionalBuses?.map((b) => b).toList(),
-                                            secondHalfAdditionalBuses: event.secondHalfAdditionalBuses?.map((b) => b).toList(),
-                                            additionalBusesByDuty: event.additionalBusesByDuty?.map((k, v) => MapEntry(k, List<String>.from(v))),
-                                            notes: event.notes,
-                                          );
-                                          
-                                          // Save the updated event
-                                          await EventService.updateEvent(oldEvent, updatedEvent);
-                                          
-                                          // Sync bus assignments to Google Calendar
-                                          await _syncBusAssignmentsToGoogleCalendar(updatedEvent);
-                                          
-                                          // Refresh the UI
-                                          if (mounted) {
-                                            setState(() {});
-                                            // Close the current dialog
-                                            Navigator.of(context).pop();
-                                            // Reopen the dialog with the updated event
-                                            _editEvent(updatedEvent);
-                                          }
-                                        }
-                                      },
-                                      style: ElevatedButton.styleFrom(
-                                        padding: const EdgeInsets.symmetric(vertical: 12),
-                                        backgroundColor: AppTheme.primaryColor,
-                                        foregroundColor: Colors.white,
-                                        elevation: 2,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(8),
-                                        ),
-                                        minimumSize: const Size(0, 48),
-                                      ),
-                                      child: SizedBox(
-                                        width: double.infinity,
-                                        child: Wrap(
-                                          alignment: WrapAlignment.center,
-                                          spacing: 8,
-                                          runSpacing: 4,
-                                          crossAxisAlignment: WrapCrossAlignment.center,
-                                          children: [
-                                            const Icon(Icons.directions_bus, size: 18),
-                                            const Text('Add 2nd Half Bus'),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                              ],
-                            );
-                          }
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 8),
-              ],
-              const SizedBox(height: 8),
-              // Add Divider before Cancel
-              const Divider(height: 1, thickness: 1),
-              const SizedBox(height: 8), 
-              // Cancel and Delete buttons at the bottom
-              Wrap(
-                alignment: WrapAlignment.center,
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  // Delete button (only for non-spare duty events)
-                  // Real spare duties start with "SP" and use their own dialog with delete button
-                  // Exception: spare shifts with full duties should use regular delete logic
-                  if (!(event.isWorkShift && event.title.startsWith('SP')) || _spareShiftHasFullDuties(event))
-                    TextButton(
-                      style: TextButton.styleFrom(
-                        foregroundColor: Colors.red,
-                      ),
-                      onPressed: () async {
-                        // First close the dialog to make the UI responsive
-                        Navigator.of(context).pop();
-
-                        // Capture ScaffoldMessenger BEFORE the async gap
-                        final scaffoldMessenger = ScaffoldMessenger.of(context);
-                        
-                        // Show a loading indicator that can be dismissed
-                        const snackBar = SnackBar(
-                          content: Row(
-                            children: [
-                              SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                                ),
-                              ),
-                              SizedBox(width: 12),
-                              Text('Deleting event...'),
-                            ],
-                          ),
-                          duration: Duration(seconds: 3),
-                        );
-                        
-                        // Show the loading snackbar using the captured messenger
-                        scaffoldMessenger.showSnackBar(snackBar);
-                        
-                        // Delete the event from local storage
-                        await EventService.deleteEvent(event);
-                        
-                        // Check if Google Calendar sync is enabled and delete from Google Calendar
-                        final syncEnabled = await StorageService.getBool(AppConstants.syncToGoogleCalendarKey, defaultValue: false);
-                        final isSignedIn = await GoogleCalendarService.isSignedIn();
-                        
-                        if (syncEnabled && isSignedIn) {
-                          try {
-                            // Create a full DateTime for the event's start time
-                            final startDateTime = DateTime(
-                              event.startDate.year,
-                              event.startDate.month,
-                              event.startDate.day,
-                              event.startTime.hour,
-                              event.startTime.minute,
-                            );
-                            
-                            // Delete from Google Calendar
-                            if (!mounted) return;
-                            await CalendarTestHelper.deleteEventFromCalendar(
-                              context: context,
-                              title: event.title,
-                              eventStartTime: startDateTime,
-                            );
-                          } catch (e) {
-                            // Don't show error - the local event was deleted successfully
-                          }
-                        }
-                        
-                        // PRELOAD month data after deletion
-                        if (_selectedDay != null) {
-                          await EventService.preloadMonth(_selectedDay!);
-                        }
-
-                        // Check if widget is still mounted AFTER async operations
-                        if (mounted) {
-                          // Update the UI state immediately after local deletion
-                          setState(() {});
-                          
-                          // Hide the loading indicator using the captured messenger
-                          scaffoldMessenger.hideCurrentSnackBar();
-                          
-                          // Show confirmation of successful local deletion using the captured messenger
-                          scaffoldMessenger.showSnackBar(
-                            const SnackBar(
-                              content: Text('Event deleted'),
-                              duration: Duration(seconds: 2),
-                            ),
-                          );
-                        }
-                      },
-                      child: const Text('Delete'),
-                    ),
-                  // Cancel button
-                  TextButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    child: const Text('Cancel'),
-                  ),
-                ],
-              ),
-            ],
-          ),
+      builder: (dialogContext) => EditEventDialog(
+        event: event,
+        displayTitle: displayTitle,
+        showBankHolidayRedundant:
+            event.isWorkShift && getBankHoliday(event.startDate) != null,
+        onViewBoard: _showBoard,
+        onNotes: () {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
+            _showNotesDialog(event);
+          });
+        },
+        onEditTraining: () => _editCustomTrainingEvent(event),
+        onBreakFinish: () => _showBreakStatusDialog(event),
+        onSickDayStatus: () => _showSickDayStatusDialog(event),
+        onBankHolidayRedundantChanged: (value) async {
+          final oldEvent = event.copyWith();
+          event.bankHolidayRedundant = value;
+          await EventService.updateEvent(oldEvent, event);
+          if (mounted) {
+            setState(() {});
+          }
+        },
+        busAssignmentSection: EditEventBusAssignmentSection(
+          event: event,
+          isTrackingBus: (busNumber) =>
+              _busTrackingLoading['tracking_$busNumber'] == true,
+          onTrackBus: _trackBus,
+          onBusAssignmentChanged: (oldEvent, updatedEvent) async {
+            await EventService.updateEvent(oldEvent, updatedEvent);
+            await _syncBusAssignmentsToGoogleCalendar(updatedEvent);
+            if (!mounted) return;
+            setState(() {});
+            if (dialogContext.mounted) {
+              Navigator.of(dialogContext).pop();
+            }
+            _editEvent(updatedEvent);
+          },
         ),
+        onDelete: () async {
+          Navigator.of(dialogContext).pop();
+
+          final scaffoldMessenger = ScaffoldMessenger.of(context);
+          const snackBar = SnackBar(
+            content: Row(
+              children: [
+                SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  ),
+                ),
+                SizedBox(width: 12),
+                Text('Deleting event...'),
+              ],
+            ),
+            duration: Duration(seconds: 3),
+          );
+          scaffoldMessenger.showSnackBar(snackBar);
+
+          await _eventDeletionService.deleteEvent(
+            event: event,
+            context: context,
+            isMounted: () => mounted,
+          );
+
+          if (_selectedDay != null) {
+            await EventService.preloadMonth(_selectedDay!);
+          }
+
+          if (!mounted) return;
+          setState(() {});
+          scaffoldMessenger.hideCurrentSnackBar();
+          scaffoldMessenger.showSnackBar(
+            const SnackBar(
+              content: Text('Event deleted'),
+            ),
+          );
+        },
       ),
     );
   }
 
   void _showBoard(UniversalBoard board) {
-    showDialog(
+    showDialog<void>(
       context: context,
-      builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Container(
-          constraints: BoxConstraints(
-            maxWidth: MediaQuery.of(context).size.width * 0.95,
-            maxHeight: MediaQuery.of(context).size.height * 0.85,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Header
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primary,
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(20),
-                    topRight: Radius.circular(20),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Board ${board.shift}',
-                            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                              color: Theme.of(context).colorScheme.onPrimary,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 0.5,
-                            ),
-                          ),
-                          if (board.duty != null) ...[
-                            const SizedBox(height: 4),
-                            Text(
-                              'Duty ${board.duty}',
-                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.9),
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                    IconButton(
-                      icon: Icon(
-                        Icons.close,
-                        color: Theme.of(context).colorScheme.onPrimary,
-                      ),
-                      onPressed: () => Navigator.of(context).pop(),
-                    ),
-                  ],
-                ),
-              ),
-              // Content
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: board.sections.map((section) {
-                      final sectionType = section.type;
-                      final isFirstHalf = sectionType == 'firstHalf';
-                      final sectionColor = isFirstHalf ? Colors.orange : Colors.blue;
-                      
-                      return Container(
-                        margin: const EdgeInsets.only(bottom: 28),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Section header with subtle background
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                              decoration: BoxDecoration(
-                                color: sectionColor.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    width: 4,
-                                    height: 24,
-                                    decoration: BoxDecoration(
-                                      color: sectionColor,
-                                      borderRadius: BorderRadius.circular(2),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Text(
-                                    isFirstHalf ? 'First Half' : 'Second Half',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 17,
-                                      color: sectionColor.shade800,
-                                      letterSpacing: 0.3,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            // Entries with subtle timeline
-                            ...section.entries.asMap().entries.map((entryEntry) {
-                              final entry = entryEntry.value;
-                              final isLast = entryEntry.key == section.entries.length - 1;
-                              
-                              // Calculate if this entry has content below the action
-                              final hasDetails = entry.location != null || 
-                                                 entry.notes != null || 
-                                                 (entry.action.toLowerCase() != 'route' && entry.route != null);
-                              
-                              // Check if action is Route (to combine with route badge)
-                              final isRouteAction = entry.action.toLowerCase() == 'route' && entry.route != null;
-                              
-                              return Padding(
-                                padding: EdgeInsets.only(bottom: isLast ? 0 : 12),
-                                child: Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    // Time column - fixed width and alignment
-                                    SizedBox(
-                                      width: 70,
-                                      child: Column(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          if (entry.time != null)
-                                            Container(
-                                              width: 70,
-                                              padding: const EdgeInsets.symmetric(
-                                                horizontal: 8,
-                                                vertical: 6,
-                                              ),
-                                              decoration: BoxDecoration(
-                                                color: sectionColor.shade50,
-                                                borderRadius: BorderRadius.circular(8),
-                                                border: Border.all(
-                                                  color: sectionColor.withValues(alpha: 0.3),
-                                                  width: 1,
-                                                ),
-                                              ),
-                                              child: Text(
-                                                entry.time!,
-                                                textAlign: TextAlign.center,
-                                                style: TextStyle(
-                                                  fontWeight: FontWeight.bold,
-                                                  fontSize: 14,
-                                                  color: sectionColor.shade800,
-                                                  height: 1.2,
-                                                ),
-                                              ),
-                                            )
-                                          else
-                                            SizedBox(
-                                              width: 70,
-                                              height: 30, // Match badge height
-                                            ),
-                                          if (!isLast) ...[
-                                            const SizedBox(height: 6),
-                                            Container(
-                                              width: 2,
-                                              height: hasDetails ? 35 : 15,
-                                              color: sectionColor.withValues(alpha: 0.2),
-                                            ),
-                                          ],
-                                        ],
-                                      ),
-                                    ),
-                                    const SizedBox(width: 16),
-                                    // Content column
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          // Action - aligned with time badge by matching height
-                                          SizedBox(
-                                            height: entry.time != null ? 30 : null,
-                                            child: Align(
-                                              alignment: Alignment.centerLeft,
-                                              child: isRouteAction
-                                                  ? Row(
-                                                      mainAxisSize: MainAxisSize.min,
-                                                      crossAxisAlignment: CrossAxisAlignment.center,
-                                                      children: [
-                                                        Text(
-                                                          'Route ',
-                                                          style: TextStyle(
-                                                            fontWeight: FontWeight.w600,
-                                                            fontSize: 16,
-                                                            color: Theme.of(context).colorScheme.onSurface,
-                                                          ),
-                                                        ),
-                                                        Container(
-                                                          padding: const EdgeInsets.symmetric(
-                                                            horizontal: 8,
-                                                            vertical: 4,
-                                                          ),
-                                                          decoration: BoxDecoration(
-                                                            color: Colors.blue.shade50,
-                                                            borderRadius: BorderRadius.circular(6),
-                                                          ),
-                                                          child: Text(
-                                                            entry.route!,
-                                                            style: TextStyle(
-                                                              fontSize: 16,
-                                                              color: Colors.blue.shade700,
-                                                              fontWeight: FontWeight.bold,
-                                                            ),
-                                                          ),
-                                                        ),
-                                                      ],
-                                                    )
-                                                  : Text(
-                                                      entry.action,
-                                                      style: TextStyle(
-                                                        fontWeight: FontWeight.w600,
-                                                        fontSize: 16,
-                                                        color: Theme.of(context).colorScheme.onSurface,
-                                                      ),
-                                                    ),
-                                            ),
-                                          ),
-                                          if (hasDetails) const SizedBox(height: 6),
-                                          // Route path information - just "From [location]"
-                                          if (isRouteAction && entry.location != null) ...[
-                                            Padding(
-                                              padding: const EdgeInsets.only(top: 2),
-                                              child: Row(
-                                                children: [
-                                                  Icon(
-                                                    Icons.location_on,
-                                                    size: 16,
-                                                    color: Theme.of(context)
-                                                        .colorScheme.onSurface
-                                                        .withValues(alpha: 0.5),
-                                                  ),
-                                                  const SizedBox(width: 6),
-                                                  Expanded(
-                                                    child: Text(
-                                                      'From ${entry.location}',
-                                                      style: TextStyle(
-                                                        fontSize: 14,
-                                                        color: Theme.of(context)
-                                                            .colorScheme.onSurface
-                                                            .withValues(alpha: 0.7),
-                                                      ),
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                            // Show notes if they exist (like "via Celbridge")
-                                            if (entry.notes != null) ...[
-                                              Padding(
-                                                padding: const EdgeInsets.only(top: 4),
-                                                child: Row(
-                                                  children: [
-                                                    Icon(
-                                                      Icons.info_outline,
-                                                      size: 16,
-                                                      color: Theme.of(context)
-                                                          .colorScheme.onSurface
-                                                          .withValues(alpha: 0.5),
-                                                    ),
-                                                    const SizedBox(width: 6),
-                                                    Expanded(
-                                                      child: Text(
-                                                        entry.notes!,
-                                                        style: TextStyle(
-                                                          fontSize: 13,
-                                                          fontStyle: FontStyle.italic,
-                                                          color: Theme.of(context)
-                                                              .colorScheme.onSurface
-                                                              .withValues(alpha: 0.7),
-                                                        ),
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-                                            ],
-                                          ] else ...[
-                                            // Route badge (only if action is not "Route")
-                                            if (entry.route != null) ...[
-                                              Container(
-                                                padding: const EdgeInsets.symmetric(
-                                                  horizontal: 10,
-                                                  vertical: 5,
-                                                ),
-                                                decoration: BoxDecoration(
-                                                  color: Colors.blue.shade50,
-                                                  borderRadius: BorderRadius.circular(6),
-                                                ),
-                                                child: Text(
-                                                  'Route ${entry.route}',
-                                                  style: TextStyle(
-                                                    fontSize: 13,
-                                                    color: Colors.blue.shade700,
-                                                    fontWeight: FontWeight.w600,
-                                                  ),
-                                                ),
-                                              ),
-                                              const SizedBox(height: 4),
-                                            ],
-                                            // Location (for non-Route entries)
-                                            if (entry.location != null) ...[
-                                              Padding(
-                                                padding: const EdgeInsets.only(top: 2),
-                                                child: Row(
-                                                  children: [
-                                                    Icon(
-                                                      Icons.location_on,
-                                                      size: 16,
-                                                      color: Theme.of(context)
-                                                          .colorScheme.onSurface
-                                                          .withValues(alpha: 0.5),
-                                                    ),
-                                                    const SizedBox(width: 6),
-                                                    Expanded(
-                                                      child: Text(
-                                                        entry.location!,
-                                                        style: TextStyle(
-                                                          fontSize: 14,
-                                                          color: Theme.of(context)
-                                                              .colorScheme.onSurface
-                                                              .withValues(alpha: 0.7),
-                                                        ),
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-                                            ],
-                                          ],
-                                          // Notes (exclude Route entries as they're handled above)
-                                          if (entry.notes != null && !isRouteAction) ...[
-                                            Padding(
-                                              padding: EdgeInsets.only(
-                                                top: entry.location != null ? 4 : 2,
-                                              ),
-                                              child: Container(
-                                                padding: const EdgeInsets.all(8),
-                                                decoration: BoxDecoration(
-                                                  color: Theme.of(context)
-                                                      .colorScheme.surfaceContainerHighest
-                                                      .withValues(alpha: 0.5),
-                                                  borderRadius: BorderRadius.circular(8),
-                                                ),
-                                                child: Row(
-                                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                                  children: [
-                                                    Icon(
-                                                      Icons.info_outline,
-                                                      size: 16,
-                                                      color: Theme.of(context)
-                                                          .colorScheme.onSurface
-                                                          .withValues(alpha: 0.5),
-                                                    ),
-                                                    const SizedBox(width: 8),
-                                                    Expanded(
-                                                      child: Text(
-                                                        entry.notes!,
-                                                        style: TextStyle(
-                                                          fontSize: 13,
-                                                          color: Theme.of(context)
-                                                              .colorScheme.onSurface
-                                                              .withValues(alpha: 0.7),
-                                                        ),
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-                                            ),
-                                          ],
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            }),
-                          ],
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+      builder: (context) => UniversalBoardDialog(board: board),
     );
   }
 
@@ -5089,10 +1125,14 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
     final scaffoldContext = context;
     showDialog<void>(
       context: context,
-      builder: (dialogContext) => _EventDutyNotesDialog(
+      builder: (dialogContext) => EventDutyNotesDialog(
         event: event,
         scaffoldContext: scaffoldContext,
-        onPersisted: () {
+        onSave: (notes, imagePaths) async {
+          final oldSnapshot = event.copyWith();
+          event.notes = notes;
+          event.noteImagePaths = imagePaths;
+          await EventService.updateEvent(oldSnapshot, event);
           if (mounted) setState(() {});
         },
       ),
@@ -5100,2278 +1140,528 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
   }
 
   void _showDayNotesDialog(DateTime date) {
-    final notesController = TextEditingController(text: DayNoteService.getDayNote(date));
-
-    showDialog(
+    showDialog<void>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Row(
-          children: [
-            const Icon(Icons.notes_rounded, color: AppTheme.primaryColor),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                'Notes for ${DateFormat('EEE, MMM d').format(date)}',
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
+      builder: (context) => DayNotesDialog(
+        date: date,
+        initialNotes: DayNoteService.getDayNote(date) ?? '',
+        onSave: (notes) async {
+          await DayNoteService.saveDayNote(date, notes);
+          if (!mounted) return;
+          setState(() {});
+        },
+      ),
+    );
+  }
+
+  Future<void> _applyBreakStatusChange(
+    BuildContext dialogContext,
+    Event event, {
+    required String confirmationMessage,
+    required void Function(Event event) applyChanges,
+  }) async {
+    await _eventStatusUpdateService.applyBreakStatusChange(
+      event,
+      applyChanges: applyChanges,
+    );
+
+    if (dialogContext.mounted) {
+      Navigator.of(dialogContext).pop();
+    }
+    if (!mounted) return;
+
+    setState(() {});
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(confirmationMessage),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+    _refreshEventCardsAfterStatusChange();
+  }
+
+  void _showBreakStatusDialog(Event event) {
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => BreakStatusDialog(
+        hasLateBreak: event.hasLateBreak,
+        tookFullBreak: event.tookFullBreak,
+        overtimeDurationMinutes: event.overtimeDuration,
+        hasLateFinish: event.hasLateFinish,
+        lateFinishDurationMinutes: event.lateFinishDuration,
+        onRemoveBreak: () => _applyBreakStatusChange(
+          dialogContext,
+          event,
+          confirmationMessage: 'Break status removed',
+          applyChanges: EventStatusUpdateService.clearBreakStatus,
         ),
-        contentPadding: const EdgeInsets.fromLTRB(24.0, 20.0, 24.0, 0),
-        content: StatefulBuilder(
-          builder: (BuildContext context, StateSetter setState) {
-          final screenWidth = MediaQuery.of(context).size.width;
-          final screenHeight = MediaQuery.of(context).size.height;
-          return SizedBox(
-            width: screenWidth * 0.9,
-            height: screenHeight * 0.4,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8.0),
-              child: TextField(
-                controller: notesController,
-                maxLines: null,
-                minLines: null,
-                expands: true,
-                textAlignVertical: TextAlignVertical.top,
-                decoration: InputDecoration(
-                  hintText: 'Add notes for this day...',
-                  border: const OutlineInputBorder(),
-                  fillColor: Theme.of(context).brightness == Brightness.dark
-                      ? Colors.grey.shade800
-                      : Colors.grey.shade100,
-                  filled: true,
-                ),
-              ),
+        onFullBreak: () => _applyBreakStatusChange(
+          dialogContext,
+          event,
+          confirmationMessage: 'Full Break status saved',
+          applyChanges: EventStatusUpdateService.applyFullBreak,
+        ),
+        onOvertime: () {
+          Navigator.of(dialogContext).pop();
+          _showOvertimeSelectionDialog(event);
+        },
+        onRemoveLateFinish: () => _applyBreakStatusChange(
+          dialogContext,
+          event,
+          confirmationMessage: 'Late finish status removed',
+          applyChanges: EventStatusUpdateService.clearLateFinish,
+        ),
+        onLateFinish: () {
+          Navigator.of(dialogContext).pop();
+          _showLateFinishSelectionDialog(event);
+        },
+      ),
+    );
+  }
+
+  void _refreshEventCardsAfterStatusChange() {
+    _editEvent(statusRefreshTriggerEvent());
+  }
+
+  Future<void> _applyOvertimeDuration(
+    BuildContext dialogContext,
+    Event event,
+    int durationMinutes, {
+    required String confirmationMessage,
+  }) async {
+    await _eventStatusUpdateService.applyOvertimeDuration(
+      event,
+      durationMinutes,
+    );
+
+    if (dialogContext.mounted) {
+      Navigator.of(dialogContext).pop();
+    }
+    if (!mounted) return;
+
+    setState(() {});
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(confirmationMessage),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+    _refreshEventCardsAfterStatusChange();
+  }
+
+  Future<void> _applyLateFinishDuration(
+    BuildContext dialogContext,
+    Event event,
+    int durationMinutes,
+  ) async {
+    await _eventStatusUpdateService.applyLateFinishDuration(
+      event,
+      durationMinutes,
+    );
+
+    if (dialogContext.mounted) {
+      Navigator.of(dialogContext).pop();
+    }
+    if (!mounted) return;
+
+    setState(() {});
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Late finish ($durationMinutes mins) saved'),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+    _refreshEventCardsAfterStatusChange();
+  }
+
+  void _showOvertimeSelectionDialog(Event event) {
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => OvertimeSelectionDialog(
+        initialDurationMinutes: event.overtimeDuration ?? 60,
+        onSaveOneHour: () => _applyOvertimeDuration(
+          dialogContext,
+          event,
+          60,
+          confirmationMessage: 'Overtime (1 hour) saved',
+        ),
+        onSave: (durationMinutes) => _applyOvertimeDuration(
+          dialogContext,
+          event,
+          durationMinutes,
+          confirmationMessage: 'Overtime ($durationMinutes mins) saved',
+        ),
+      ),
+    );
+  }
+
+  void _showLateFinishSelectionDialog(Event event) {
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => LateFinishSelectionDialog(
+        initialDurationMinutes: event.lateFinishDuration,
+        onInvalidDuration: () {
+          ScaffoldMessenger.of(dialogContext).showSnackBar(
+            const SnackBar(
+              content: Text('Please enter a valid number of minutes'),
+              backgroundColor: Colors.red,
+              duration: Duration(seconds: 2),
             ),
           );
         },
+        onSave: (durationMinutes) => _applyLateFinishDuration(
+          dialogContext,
+          event,
+          durationMinutes,
         ),
-        actionsPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              notesController.clear();
-            },
-            style: TextButton.styleFrom(
-              foregroundColor: Colors.red,
-            ),
-            child: const Text('Clear'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final updatedNotes = notesController.text.trim();
-              await DayNoteService.saveDayNote(date, updatedNotes.isEmpty ? null : updatedNotes);
-              if (!mounted) return;
-              setState(() {});
-              if (!mounted) return;
-              Navigator.of(context).pop();
-            },
-            child: const Text('Save'),
-          ),
-        ],
       ),
     );
   }
 
-  // --- Add the new _showBreakStatusDialog function below ---
-  void _showBreakStatusDialog(Event event) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Row(
-          children: [
-            const Icon(Icons.access_time, color: AppTheme.primaryColor),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                'Break & Finish Status',
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
+  Future<void> _applySickDayType(
+    BuildContext dialogContext,
+    Event event,
+    String? sickDayType, {
+    required String confirmationMessage,
+    Duration snackBarDuration = const Duration(seconds: 2),
+  }) async {
+    await _eventStatusUpdateService.applySickDayType(event, sickDayType);
+
+    if (dialogContext.mounted) {
+      Navigator.of(dialogContext).pop();
+    }
+    if (!mounted) return;
+
+    setState(() {});
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(confirmationMessage),
+        duration: snackBarDuration,
+      ),
+    );
+  }
+
+  Future<void> _handleSelfCertifiedSickDaySelection(
+    BuildContext dialogContext,
+    Event event,
+  ) async {
+    final check = await _selfCertifiedSickDayGuard.evaluate(
+      date: event.startDate,
+      currentSickDayType: event.sickDayType,
+    );
+
+    if (check.decision == SelfCertifiedSickDayDecision.alreadySelected) {
+      if (dialogContext.mounted) {
+        Navigator.of(dialogContext).pop();
+      }
+      return;
+    }
+
+    if (check.decision == SelfCertifiedSickDayDecision.limitReached) {
+      if (!dialogContext.mounted) return;
+      await showDialog<void>(
+        context: dialogContext,
+        builder: (context) => AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.warning_amber_rounded, color: Colors.orange),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text('Self-Certified Limit Reached'),
               ),
-            ),
-          ],
-        ),
-        content: SingleChildScrollView(
-          child: Column(
+            ],
+          ),
+          content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (event.hasLateBreak) ...[
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.35),
-                    ),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Current Status:', 
-                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Icon(
-                            event.tookFullBreak 
-                                ? Icons.free_breakfast
-                                : Icons.monetization_on,
-                            size: 16,
-                            color: Theme.of(context).colorScheme.onSurface,
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              event.tookFullBreak 
-                                  ? 'Full Break Taken'
-                                  : 'Overtime (${event.overtimeDuration} mins)', 
-                              style: Theme.of(context).textTheme.bodyMedium,
-                              maxLines: 4,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-                const Divider(height: 1),
-                const SizedBox(height: 16),
-              ],
-              if (event.hasLateFinish) ...[
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.35),
-                    ),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Current Late Finish Status:', 
-                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Icon(
-                            Icons.schedule,
-                            size: 16,
-                            color: Theme.of(context).colorScheme.onSurface,
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              'Late Finish: ${event.lateFinishDuration} mins',
-                              style: Theme.of(context).textTheme.bodyMedium,
-                              maxLines: 4,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-                const Divider(height: 1),
-                const SizedBox(height: 16),
-              ],
-              Text(
-                'Select an option:',
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Wrap(
-                  alignment: WrapAlignment.center,
-                  spacing: 4,
-                  runSpacing: 8,
-                  children: [
-                    TextButton(
-                      onPressed: () {
-                        Navigator.of(context).pop();
-                      },
-                      child: const Text('Cancel'),
-                    ),
-                    if (event.hasLateBreak)
-                      TextButton(
-                        onPressed: () async {
-                          final oldEvent = Event(
-                            id: event.id,
-                            title: event.title,
-                            startDate: event.startDate,
-                            startTime: event.startTime,
-                            endDate: event.endDate,
-                            endTime: event.endTime,
-                            workTime: event.workTime,
-                            breakStartTime: event.breakStartTime,
-                            breakEndTime: event.breakEndTime,
-                            assignedDuties: event.assignedDuties,
-                            firstHalfBus: event.firstHalfBus,
-                            secondHalfBus: event.secondHalfBus,
-                            busAssignments: event.busAssignments,
-                            notes: event.notes,
-                            hasLateBreak: event.hasLateBreak,
-                            tookFullBreak: event.tookFullBreak,
-                            overtimeDuration: event.overtimeDuration,
-                            hasLateFinish: event.hasLateFinish,
-                            lateFinishDuration: event.lateFinishDuration,
-                          );
-                          event.hasLateBreak = false;
-                          event.tookFullBreak = false;
-                          event.overtimeDuration = null;
-                          await EventService.updateEvent(oldEvent, event);
-                          if (!mounted) return;
-                          Navigator.of(context).pop();
-                          setState(() {});
-                          if (!mounted) return;
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Break status removed'),
-                              duration: Duration(seconds: 2),
-                            ),
-                          );
-                          _editEvent(Event(
-                            id: 'refresh_trigger',
-                            title: '',
-                            startDate: DateTime.now(),
-                            startTime: const TimeOfDay(hour: 0, minute: 0),
-                            endDate: DateTime.now(),
-                            endTime: const TimeOfDay(hour: 0, minute: 0),
-                            busAssignments: {},
-                          ));
-                        },
-                        style: TextButton.styleFrom(
-                          foregroundColor: Colors.red,
-                        ),
-                        child: const Text('Remove'),
-                      ),
-                    if (!event.hasLateBreak)
-                      TextButton(
-                        onPressed: () async {
-                          final oldEvent = Event(
-                            id: event.id,
-                            title: event.title,
-                            startDate: event.startDate,
-                            startTime: event.startTime,
-                            endDate: event.endDate,
-                            endTime: event.endTime,
-                            workTime: event.workTime,
-                            breakStartTime: event.breakStartTime,
-                            breakEndTime: event.breakEndTime,
-                            assignedDuties: event.assignedDuties,
-                            firstHalfBus: event.firstHalfBus,
-                            secondHalfBus: event.secondHalfBus,
-                            notes: event.notes,
-                            hasLateBreak: event.hasLateBreak,
-                            tookFullBreak: event.tookFullBreak,
-                            overtimeDuration: event.overtimeDuration,
-                            hasLateFinish: event.hasLateFinish,
-                            lateFinishDuration: event.lateFinishDuration,
-                          );
-                          event.hasLateBreak = true;
-                          event.tookFullBreak = true;
-                          event.overtimeDuration = null;
-                          await EventService.updateEvent(oldEvent, event);
-                          if (!mounted) return;
-                          Navigator.of(context).pop();
-                          setState(() {});
-                          if (!mounted) return;
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Full Break status saved'),
-                              duration: Duration(seconds: 2),
-                            ),
-                          );
-                          _editEvent(Event(
-                            id: 'refresh_trigger',
-                            title: '',
-                            startDate: DateTime.now(),
-                            startTime: const TimeOfDay(hour: 0, minute: 0),
-                            endDate: DateTime.now(),
-                            endTime: const TimeOfDay(hour: 0, minute: 0),
-                            busAssignments: {},
-                          ));
-                        },
-                        child: const Text('Full Break'),
-                      ),
-                    if (!event.hasLateBreak)
-                      TextButton(
-                        onPressed: () {
-                          Navigator.of(context).pop();
-                          _showOvertimeSelectionDialog(event);
-                        },
-                        child: const Text('Overtime'),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                const Divider(height: 1),
-                const SizedBox(height: 8),
-                Wrap(
-                  alignment: WrapAlignment.center,
-                  spacing: 4,
-                  runSpacing: 8,
-                  children: [
-                    if (event.hasLateFinish)
-                      TextButton(
-                        onPressed: () async {
-                          final oldEvent = Event(
-                            id: event.id,
-                            title: event.title,
-                            startDate: event.startDate,
-                            startTime: event.startTime,
-                            endDate: event.endDate,
-                            endTime: event.endTime,
-                            workTime: event.workTime,
-                            breakStartTime: event.breakStartTime,
-                            breakEndTime: event.breakEndTime,
-                            assignedDuties: event.assignedDuties,
-                            firstHalfBus: event.firstHalfBus,
-                            secondHalfBus: event.secondHalfBus,
-                            busAssignments: event.busAssignments,
-                            notes: event.notes,
-                            hasLateBreak: event.hasLateBreak,
-                            tookFullBreak: event.tookFullBreak,
-                            overtimeDuration: event.overtimeDuration,
-                            hasLateFinish: event.hasLateFinish,
-                            lateFinishDuration: event.lateFinishDuration,
-                          );
-                          event.hasLateFinish = false;
-                          event.lateFinishDuration = null;
-                          await EventService.updateEvent(oldEvent, event);
-                          if (!mounted) return;
-                          Navigator.of(context).pop();
-                          setState(() {});
-                          if (!mounted) return;
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Late finish status removed'),
-                              duration: Duration(seconds: 2),
-                            ),
-                          );
-                          _editEvent(Event(
-                            id: 'refresh_trigger',
-                            title: '',
-                            startDate: DateTime.now(),
-                            startTime: const TimeOfDay(hour: 0, minute: 0),
-                            endDate: DateTime.now(),
-                            endTime: const TimeOfDay(hour: 0, minute: 0),
-                            busAssignments: {},
-                          ));
-                        },
-                        style: TextButton.styleFrom(
-                          foregroundColor: Colors.red,
-                        ),
-                        child: const Text('Remove Late Finish'),
-                      ),
-                    if (!event.hasLateFinish)
-                      TextButton(
-                        onPressed: () {
-                          Navigator.of(context).pop();
-                          _showLateFinishSelectionDialog(event);
-                        },
-                        child: const Text('Late Finish'),
-                      ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // Show dialog for overtime duration selection
-  void _showOvertimeSelectionDialog(Event event) {
-    int selectedDuration = event.overtimeDuration ?? 60; // Default to 60 mins
-    
-    showDialog(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          title: Row(
-            children: [
-              const Icon(Icons.monetization_on, color: Colors.orange),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'Select Overtime',
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
-          ),
-          content: SingleChildScrollView(
-            child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Select overtime duration:',
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
+              Text(check.warningMessage ?? ''),
               const SizedBox(height: 16),
-              // Dropdown for overtime duration
-              DropdownButtonFormField<int>(
-                value: selectedDuration,
-                isExpanded: true,
-                decoration: const InputDecoration(
-                  labelText: 'Duration',
-                  border: OutlineInputBorder(),
-                ),
-                items: [10, 20, 30, 40, 50, 60].map((int value) {
-                  return DropdownMenuItem<int>(
-                    value: value,
-                    child: Text('$value mins'),
-                  );
-                }).toList(),
-                onChanged: (int? newValue) {
-                  if (newValue != null) {
-                    setState(() {
-                      selectedDuration = newValue;
-                    });
-                  }
-                },
+              const Text(
+                'Current usage:',
+                style: TextStyle(fontWeight: FontWeight.bold),
               ),
-              const SizedBox(height: 16),
-              // Quick 1 Hour button
-              Center(
-                child: TextButton(
-                  onPressed: () async {
-                    // Save the old event for update
-                    final oldEvent = Event(
-                      id: event.id,
-                      title: event.title,
-                      startDate: event.startDate,
-                      startTime: event.startTime,
-                      endDate: event.endDate,
-                      endTime: event.endTime,
-                      workTime: event.workTime,
-                      breakStartTime: event.breakStartTime,
-                      breakEndTime: event.breakEndTime,
-                      assignedDuties: event.assignedDuties,
-                      busAssignments: event.busAssignments, // CRITICAL: Preserve bus assignments
-                      firstHalfBus: event.firstHalfBus,
-                      secondHalfBus: event.secondHalfBus,
-                      notes: event.notes,
-                      hasLateBreak: event.hasLateBreak,
-                      tookFullBreak: event.tookFullBreak,
-                      overtimeDuration: event.overtimeDuration,
-                    );
-                    
-                    // Set to 1 hour overtime
-                    event.hasLateBreak = true;
-                    event.tookFullBreak = false;
-                    event.overtimeDuration = 60; // Always 1 hour (60 mins)
-                    
-                    // Save the updated event
-                    await EventService.updateEvent(oldEvent, event);
-                    
-                    // Close the dialog
-                    if (!mounted) return;
-                    Navigator.of(context).pop();
-                    
-                    // Update the UI
-                    this.setState(() {});
-                    
-                    // Show confirmation
-                    if (!mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Overtime (1 hour) saved'),
-                        duration: Duration(seconds: 2),
-                      ),
-                    );
-                    
-                    // Force refresh of the event cards
-                    _editEvent(Event(
-                      id: 'refresh_trigger',
-                      title: '',
-                      startDate: DateTime.now(),
-                      startTime: const TimeOfDay(hour: 0, minute: 0),
-                      endDate: DateTime.now(),
-                      endTime: const TimeOfDay(hour: 0, minute: 0),
-                      busAssignments: {},
-                    ));
-                  },
-                  child: const Text('1 Hour (Common)'),
-                ),
-              ),
+              const SizedBox(height: 8),
+              Text('${check.halfYearName}: ${check.halfYearCount}/2'),
+              Text('Year total: ${check.yearlyCount}/4'),
             ],
-          ),
           ),
           actions: [
             TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () async {
-                // Save the old event for update
-                final oldEvent = Event(
-                  id: event.id,
-                  title: event.title,
-                  startDate: event.startDate,
-                  startTime: event.startTime,
-                  endDate: event.endDate,
-                  endTime: event.endTime,
-                  workTime: event.workTime,
-                  breakStartTime: event.breakStartTime,
-                  breakEndTime: event.breakEndTime,
-                  assignedDuties: event.assignedDuties,
-                  busAssignments: event.busAssignments, // CRITICAL: Preserve bus assignments
-                  firstHalfBus: event.firstHalfBus,
-                  secondHalfBus: event.secondHalfBus,
-                  notes: event.notes,
-                  hasLateBreak: event.hasLateBreak,
-                  tookFullBreak: event.tookFullBreak,
-                  overtimeDuration: event.overtimeDuration,
-                  hasLateFinish: event.hasLateFinish,
-                  lateFinishDuration: event.lateFinishDuration,
-                );
-                
-                // Update event with Overtime option
-                event.hasLateBreak = true;
-                event.tookFullBreak = false;
-                event.overtimeDuration = selectedDuration;
-                
-                // Save the updated event
-                await EventService.updateEvent(oldEvent, event);
-                
-                // Close the dialog
-                Navigator.of(context).pop();
-                
-                // Update the UI
-                setState(() {});
-                
-                // Show confirmation
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Overtime ($selectedDuration mins) saved'),
-                    duration: const Duration(seconds: 2),
-                  ),
-                );
-                
-                // Force refresh of the event cards
-                _editEvent(Event(
-                  id: 'refresh_trigger',
-                  title: '',
-                  startDate: DateTime.now(),
-                  startTime: const TimeOfDay(hour: 0, minute: 0),
-                  endDate: DateTime.now(),
-                  endTime: const TimeOfDay(hour: 0, minute: 0),
-                  busAssignments: {},
-                ));
-              },
-              child: const Text('Save'),
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('OK'),
             ),
           ],
         ),
-      ),
-    );
-  }
+      );
+      return;
+    }
 
-  // Show dialog for late finish duration selection
-  void _showLateFinishSelectionDialog(Event event) {
-    int selectedDuration = event.lateFinishDuration ?? 15; // Default to 15 mins
-    final TextEditingController customMinutesController = TextEditingController(
-      text: event.lateFinishDuration?.toString() ?? '',
+    await _eventStatusUpdateService.applySickDayType(event, 'self-certified');
+
+    if (dialogContext.mounted) {
+      Navigator.of(dialogContext).pop();
+    }
+    if (!mounted) return;
+
+    setState(() {});
+    final remaining = await _selfCertifiedSickDayGuard.remainingAfterSave(
+      date: event.startDate,
     );
-    bool useCustom = false;
-    
-    showDialog(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          title: Row(
-            children: [
-              const Icon(Icons.schedule, color: Colors.orange),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'Select Late Finish',
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
-          ),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Select or enter how many minutes late you finished:',
-                  style: TextStyle(
-                    fontSize: 14,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                // Dropdown for late finish duration
-                DropdownButtonFormField<int?>(
-                  value: useCustom ? null : selectedDuration,
-                  isExpanded: true,
-                  decoration: const InputDecoration(
-                    labelText: 'Duration (Select)',
-                    border: OutlineInputBorder(),
-                  ),
-                  items: [5, 10, 15, 20, 30, 45, 60, 90, 120].map((int value) {
-                    return DropdownMenuItem<int?>(
-                      value: value,
-                      child: Text('$value mins'),
-                    );
-                  }).toList(),
-                  onChanged: (int? newValue) {
-                    if (newValue != null) {
-                      setState(() {
-                        selectedDuration = newValue;
-                        useCustom = false;
-                        customMinutesController.text = '';
-                      });
-                    }
-                  },
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  'Or enter custom minutes:',
-                  style: TextStyle(
-                    fontSize: 14,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                // Text input for custom minutes
-                TextField(
-                  controller: customMinutesController,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    labelText: 'Minutes',
-                    hintText: 'Enter minutes',
-                    border: OutlineInputBorder(),
-                    suffixText: 'mins',
-                  ),
-                  onChanged: (String value) {
-                    if (value.isNotEmpty) {
-                      final parsed = int.tryParse(value);
-                      if (parsed != null && parsed > 0) {
-                        setState(() {
-                          selectedDuration = parsed;
-                          useCustom = true;
-                        });
-                      } else {
-                        // Invalid input, but keep useCustom true so dropdown clears
-                        setState(() {
-                          useCustom = true;
-                        });
-                      }
-                    } else {
-                      setState(() {
-                        useCustom = false;
-                      });
-                    }
-                  },
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () async {
-                // Validate that we have a valid duration
-                int? finalDuration;
-                if (useCustom && customMinutesController.text.isNotEmpty) {
-                  final parsed = int.tryParse(customMinutesController.text);
-                  if (parsed != null && parsed > 0) {
-                    finalDuration = parsed;
-                  }
-                } else if (!useCustom) {
-                  finalDuration = selectedDuration;
-                }
-                
-                if (finalDuration == null || finalDuration <= 0) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Please enter a valid number of minutes'),
-                      backgroundColor: Colors.red,
-                      duration: Duration(seconds: 2),
-                    ),
-                  );
-                  return;
-                }
-                
-                // Save the old event for update
-                final oldEvent = Event(
-                  id: event.id,
-                  title: event.title,
-                  startDate: event.startDate,
-                  startTime: event.startTime,
-                  endDate: event.endDate,
-                  endTime: event.endTime,
-                  workTime: event.workTime,
-                  breakStartTime: event.breakStartTime,
-                  breakEndTime: event.breakEndTime,
-                  assignedDuties: event.assignedDuties,
-                  busAssignments: event.busAssignments,
-                  firstHalfBus: event.firstHalfBus,
-                  secondHalfBus: event.secondHalfBus,
-                  notes: event.notes,
-                  hasLateBreak: event.hasLateBreak,
-                  tookFullBreak: event.tookFullBreak,
-                  overtimeDuration: event.overtimeDuration,
-                  hasLateFinish: event.hasLateFinish,
-                  lateFinishDuration: event.lateFinishDuration,
-                );
-                
-                // Update event with Late Finish option
-                event.hasLateFinish = true;
-                event.lateFinishDuration = finalDuration;
-                
-                // Save the updated event
-                await EventService.updateEvent(oldEvent, event);
-                
-                // Close the dialog (controller will be disposed in .then() callback)
-                if (!mounted) return;
-                Navigator.of(context).pop();
-                
-                // Update the UI
-                setState(() {});
-                
-                // Show confirmation
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Late finish ($finalDuration mins) saved'),
-                    duration: const Duration(seconds: 2),
-                  ),
-                );
-                
-                // Force refresh of the event cards
-                _editEvent(Event(
-                  id: 'refresh_trigger',
-                  title: '',
-                  startDate: DateTime.now(),
-                  startTime: const TimeOfDay(hour: 0, minute: 0),
-                  endDate: DateTime.now(),
-                  endTime: const TimeOfDay(hour: 0, minute: 0),
-                  busAssignments: {},
-                ));
-              },
-              child: const Text('Save'),
-            ),
-          ],
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Self-Certified Sick Day saved. Remaining: ${remaining.remainingHalfYear} in ${remaining.halfYearName}, ${remaining.remainingYearly} for year.',
         ),
+        duration: const Duration(seconds: 3),
       ),
-    ).then((_) {
-      // Dispose controller after dialog is fully closed (with small delay to ensure rebuild is complete)
-      Future.delayed(const Duration(milliseconds: 100), () {
-        try {
-          customMinutesController.dispose();
-        } catch (e) {
-          // Controller already disposed or error, ignore
-        }
-      });
-    });
+    );
   }
 
   void _showSickDayStatusDialog(Event event) {
-    showDialog(
+    showDialog<void>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Row(
-          children: [
-            const Icon(Icons.medical_services, color: Colors.orange),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                'Sick Day Status',
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
+      builder: (dialogContext) => SickDayStatusDialog(
+        currentSickDayType: event.sickDayType,
+        onClear: () => _applySickDayType(
+          dialogContext,
+          event,
+          null,
+          confirmationMessage: 'Sick day status cleared',
         ),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (event.sickDayType != null) ...[
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.35),
-                    ),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Current Status:',
-                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Icon(
-                            Icons.medical_services,
-                            size: 16,
-                            color: Theme.of(context).colorScheme.tertiary,
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              _getSickDayTypeLabel(event.sickDayType!),
-                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-                const Divider(height: 1),
-                const SizedBox(height: 16),
-              ],
-              Text(
-                'Select sick day type:',
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-            ],
-          ),
+        onSelectNormal: () => _applySickDayType(
+          dialogContext,
+          event,
+          'normal',
+          confirmationMessage: 'Normal Sick Day saved',
         ),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Wrap(
-                  alignment: WrapAlignment.center,
-                  spacing: 4,
-                  runSpacing: 8,
-                  children: [
-                    TextButton(
-                      onPressed: () {
-                        Navigator.of(context).pop();
-                      },
-                      child: const Text('Cancel'),
-                    ),
-                    if (event.sickDayType != null)
-                      TextButton(
-                        onPressed: () async {
-                          // Save the old event for update
-                          final oldEvent = Event(
-                            id: event.id,
-                            title: event.title,
-                            startDate: event.startDate,
-                            startTime: event.startTime,
-                            endDate: event.endDate,
-                            endTime: event.endTime,
-                            workTime: event.workTime,
-                            breakStartTime: event.breakStartTime,
-                            breakEndTime: event.breakEndTime,
-                            assignedDuties: event.assignedDuties,
-                            firstHalfBus: event.firstHalfBus,
-                            secondHalfBus: event.secondHalfBus,
-                            busAssignments: event.busAssignments,
-                            notes: event.notes,
-                            hasLateBreak: event.hasLateBreak,
-                            tookFullBreak: event.tookFullBreak,
-                            overtimeDuration: event.overtimeDuration,
-                            sickDayType: event.sickDayType,
-                          );
-
-                          // Clear sick day status
-                          event.sickDayType = null;
-
-                          // Save the updated event
-                          await EventService.updateEvent(oldEvent, event);
-
-                          // Close the dialog
-                          Navigator.of(context).pop();
-
-                          // Update the UI
-                          setState(() {});
-
-                          // Show confirmation
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Sick day status cleared'),
-                              duration: Duration(seconds: 2),
-                            ),
-                          );
-                        },
-                        style: TextButton.styleFrom(
-                          foregroundColor: Colors.red,
-                        ),
-                        child: const Text('Clear'),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                const Divider(height: 1),
-                const SizedBox(height: 8),
-                Wrap(
-                  alignment: WrapAlignment.center,
-                  spacing: 4,
-                  runSpacing: 8,
-                  children: [
-                    TextButton(
-                      onPressed: () async {
-              // Save the old event for update
-              final oldEvent = Event(
-                id: event.id,
-                title: event.title,
-                startDate: event.startDate,
-                startTime: event.startTime,
-                endDate: event.endDate,
-                endTime: event.endTime,
-                workTime: event.workTime,
-                breakStartTime: event.breakStartTime,
-                breakEndTime: event.breakEndTime,
-                assignedDuties: event.assignedDuties,
-                firstHalfBus: event.firstHalfBus,
-                secondHalfBus: event.secondHalfBus,
-                busAssignments: event.busAssignments,
-                notes: event.notes,
-                hasLateBreak: event.hasLateBreak,
-                tookFullBreak: event.tookFullBreak,
-                overtimeDuration: event.overtimeDuration,
-                sickDayType: event.sickDayType,
-              );
-              
-              // Set as Normal Sick
-              event.sickDayType = 'normal';
-              
-              // Save the updated event
-              await EventService.updateEvent(oldEvent, event);
-              
-              // Close the dialog
-              Navigator.of(context).pop();
-              
-              // Update the UI
-              setState(() {});
-              
-              // Show confirmation
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Normal Sick Day saved'),
-                  duration: Duration(seconds: 2),
-                ),
-              );
-            },
-            child: const Text('Normal Sick'),
-          ),
-          TextButton(
-            onPressed: () async {
-              // Check if this is already self-certified (no need to check limits)
-              if (event.sickDayType == 'self-certified') {
-                Navigator.of(context).pop();
-                return;
-              }
-
-              // Get year and half-year info
-              final year = event.startDate.year;
-              final halfYear = SelfCertifiedSickDaysService.getHalfYear(event.startDate);
-                final halfYearName = halfYear == 'first' ? 'First Half (Jan-Jun)' : 'Second Half (Jul-Dec)';
-              
-              // Check limits before allowing self-certified
-              final canAddHalfYear = await SelfCertifiedSickDaysService.canAddSelfCertifiedDay(event.startDate);
-              final canAddYearly = await SelfCertifiedSickDaysService.canAddSelfCertifiedDayYearly(event.startDate);
-              
-              if (!canAddHalfYear || !canAddYearly) {
-                // Show warning dialog
-                final halfYearCount = await SelfCertifiedSickDaysService.getCountForHalfYear(year, halfYear);
-                final yearlyCount = await SelfCertifiedSickDaysService.getCountForYear(year);
-                
-                String warningMessage;
-                if (!canAddHalfYear && !canAddYearly) {
-                  warningMessage = 'You have already used your limit of 2 self-certified days in the $halfYearName and 4 for the year. You cannot add more self-certified days.';
-                } else if (!canAddHalfYear) {
-                  warningMessage = 'You have already used your limit of 2 self-certified days in the $halfYearName. You cannot add more self-certified days for this half-year.';
-                } else {
-                  warningMessage = 'You have already used your limit of 4 self-certified days for the year. You cannot add more self-certified days.';
-                }
-                
-                if (context.mounted) {
-                  showDialog(
-                    context: context,
-                    builder: (context) => AlertDialog(
-                      title: Row(
-                        children: [
-                          const Icon(Icons.warning_amber_rounded, color: Colors.orange),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: const Text('Self-Certified Limit Reached'),
-                          ),
-                        ],
-                      ),
-                      content: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(warningMessage),
-                          const SizedBox(height: 16),
-                          Text(
-                            'Current usage:',
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          const SizedBox(height: 8),
-                          Text('$halfYearName: $halfYearCount/2'),
-                          Text('Year total: $yearlyCount/4'),
-                        ],
-                      ),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.of(context).pop(),
-                          child: const Text('OK'),
-                        ),
-                      ],
-                    ),
-                  );
-                }
-                return;
-              }
-              
-              // Save the old event for update
-              final oldEvent = Event(
-                id: event.id,
-                title: event.title,
-                startDate: event.startDate,
-                startTime: event.startTime,
-                endDate: event.endDate,
-                endTime: event.endTime,
-                workTime: event.workTime,
-                breakStartTime: event.breakStartTime,
-                breakEndTime: event.breakEndTime,
-                assignedDuties: event.assignedDuties,
-                firstHalfBus: event.firstHalfBus,
-                secondHalfBus: event.secondHalfBus,
-                busAssignments: event.busAssignments,
-                notes: event.notes,
-                hasLateBreak: event.hasLateBreak,
-                tookFullBreak: event.tookFullBreak,
-                overtimeDuration: event.overtimeDuration,
-                sickDayType: event.sickDayType,
-              );
-              
-              // Set as Self-Certified
-              event.sickDayType = 'self-certified';
-              
-              // Save the updated event
-              await EventService.updateEvent(oldEvent, event);
-              
-              // Close the dialog
-              Navigator.of(context).pop();
-              
-              // Update the UI
-              setState(() {});
-              
-              // Show confirmation with remaining count
-              final remainingHalfYear = await SelfCertifiedSickDaysService.getRemainingForHalfYear(year, halfYear);
-              final remainingYearly = await SelfCertifiedSickDaysService.getRemainingForYear(year);
-              
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Self-Certified Sick Day saved. Remaining: $remainingHalfYear in $halfYearName, $remainingYearly for year.'),
-                  duration: const Duration(seconds: 3),
-                ),
-              );
-            },
-            child: const Text('Self-Certified'),
-          ),
-          TextButton(
-            onPressed: () async {
-              // Save the old event for update
-              final oldEvent = Event(
-                id: event.id,
-                title: event.title,
-                startDate: event.startDate,
-                startTime: event.startTime,
-                endDate: event.endDate,
-                endTime: event.endTime,
-                workTime: event.workTime,
-                breakStartTime: event.breakStartTime,
-                breakEndTime: event.breakEndTime,
-                assignedDuties: event.assignedDuties,
-                firstHalfBus: event.firstHalfBus,
-                secondHalfBus: event.secondHalfBus,
-                busAssignments: event.busAssignments,
-                notes: event.notes,
-                hasLateBreak: event.hasLateBreak,
-                tookFullBreak: event.tookFullBreak,
-                overtimeDuration: event.overtimeDuration,
-                sickDayType: event.sickDayType,
-              );
-              
-              // Set as Force Majeure
-              event.sickDayType = 'force-majeure';
-              
-              // Save the updated event
-              await EventService.updateEvent(oldEvent, event);
-              
-              // Close the dialog
-              Navigator.of(context).pop();
-              
-              // Update the UI
-              setState(() {});
-              
-              // Show confirmation
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Force Majeure saved'),
-                  duration: Duration(seconds: 2),
-                ),
-              );
-            },
-            child: const Text('Force Majeure'),
-          ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
+        onSelectSelfCertified: () =>
+            _handleSelfCertifiedSickDaySelection(dialogContext, event),
+        onSelectForceMajeure: () => _applySickDayType(
+          dialogContext,
+          event,
+          'force-majeure',
+          confirmationMessage: 'Force Majeure saved',
+        ),
       ),
     );
-  }
-
-  String _getSickDayTypeLabel(String type) {
-    switch (type) {
-      case 'normal':
-        return 'Normal Sick Day';
-      case 'self-certified':
-        return 'Self-Certified Sick Day';
-      case 'force-majeure':
-        return 'Force Majeure';
-      default:
-        return type;
-    }
-  }
-
-  /// Helper method to convert sick day type to display code for calendar
-  /// Returns: 'S' for normal, 'SC' for self-certified, 'FM' for force-majeure
-  String _getSickDayDisplayCode(String? sickDayType) {
-    if (sickDayType == null) return '';
-    switch (sickDayType) {
-      case 'normal':
-        return 'S';
-      case 'self-certified':
-        return 'SC';
-      case 'force-majeure':
-        return 'FM';
-      default:
-        return '';
-    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final textScaler = MediaQuery.textScalerOf(context);
-    final textScaleFactor = textScaler.scale(1.0);
-    // Full title + action icons overflow when accessibility text is large; shorten title.
-    final bool useShortAppBarTitle =
-        textScaleFactor > 1.12 || MediaQuery.sizeOf(context).width < 400;
-    final double? appBarToolbarHeight =
-        textScaleFactor > 1.2 ? kToolbarHeight + 10.0 : null;
-    
-    return Scaffold(
-      appBar: AppBar(
-        toolbarHeight: appBarToolbarHeight,
-        title: Text(
-          useShortAppBarTitle ? 'Calendar' : 'Spare Driver Calendar',
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.search),
-            tooltip: 'Search Shifts',
-            onPressed: _showSearchScreen,
-          ),
-          IconButton(
-            icon: const Icon(Icons.view_week),
-            tooltip: 'Week View',
-            onPressed: _showWeekView,
-          ),
-          PopupMenuButton(
-            icon: const Icon(Icons.settings),
-            itemBuilder: (context) => const [
-              PopupMenuItem(
-                value: 'bills',
-                child: Text('Bills'),
-              ),
-              PopupMenuItem(
-                value: 'timing_points',
-                child: Text('Timing Points'),
-              ),
-              PopupMenuItem(
-                value: 'toilet_codes',
-                child: Text('Toilet Codes'),
-              ),
-              PopupMenuItem(
-                value: 'statistics',
-                child: Text('Statistics'),
-              ),
-              PopupMenuItem(
-                value: 'add_holidays',
-                child: Text('Holidays'),
-              ),
-              PopupMenuItem(
-                value: 'contacts',
-                child: Text('Contacts'),
-              ),
-              PopupMenuItem(
-                value: 'notes', // Added notes value
-                child: Text('Notes'), // Added notes label
-              ),
-              PopupMenuItem(
-                value: 'payscale', // Added payscale value
-                child: Text('Pay Scale'), // Added payscale label
-              ),
-              PopupMenuItem(
-                value: 'settings',
-                child: Text('Settings'),
-              ),
-            ],
-            onSelected: (value) {
-              if (value == 'statistics') {
-                _showStatisticsPage();
-              } else if (value == 'bills') {
-                _showBillsPage();
-              } else if (value == 'timing_points') {
-                _showTimingPointsPage();
-              } else if (value == 'toilet_codes') {
-                _showToiletCodesPage();
-              } else if (value == 'settings') {
-                _showSettingsPage();
-              } else if (value == 'add_holidays') {
-                _showAddHolidaysDialog();
-              } else if (value == 'contacts') {
-                _showContactsPage();
-              } else if (value == 'notes') { // Added condition for notes
-                _navigateToAllNotesScreen(); // Call the new navigation method
-              } else if (value == 'payscale') { // Added condition for payscale
-                _showPayscalePage(); // Call the new navigation method
-              }
-            },
-          ),
-        ],
-      ),
-      body: StreamBuilder<List<LiveUpdate>>(
-        stream: LiveUpdatesService.getActiveUpdatesStream(),
-        builder: (context, bannerSnapshot) {
-          // Check if there are active updates
-          final updates = bannerSnapshot.data ?? [];
-          final hasActiveUpdates = updates.any((update) => update.isActive);
-          
-          return Stack(
-            children: [
-              // Main content with dynamic padding based on banner presence
-              Padding(
-                padding: EdgeInsets.only(top: hasActiveUpdates ? 90 : 0),
-                child: Scrollbar(
-                  controller: _scrollController,
-                  thumbVisibility: true,
-                  thickness: 6,
-                  radius: const Radius.circular(3),
-                  child: SingleChildScrollView(
-                    controller: _scrollController,
-                    child: SafeArea(
-                      top: false, // Don't add top padding since we handle it with the banner
-                      child: Column(
-                        children: [
-                          // TableCalendar is now scrollable with the rest of the content
-                          _buildCalendar(),
-                          // The rest of the content
-                          const SizedBox(height: 16),
-                          if (_selectedDay != null && _startDate != null)
-                            Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
-                              child: Builder(
-                                builder: (context) {
-                                  final d = _selectedDay!;
-                                  final bh = getBankHoliday(d);
-                                  final se = getEventsForDay(d);
-                                  final showRedundant = bh != null &&
-                                      (BankHolidayRedundantDayService.isMarked(d) ||
-                                          se.any((e) => e.isWorkShift && e.bankHolidayRedundant));
-                                  return ShiftDetailsCard(
-                                    date: d,
-                                    shift: getShiftForDate(d),
-                                    shiftInfoMap: _shiftInfoMap,
-                                    bankHoliday: bh,
-                                    hasDayNote: DayNoteService.hasNoteForDate(d),
-                                    onShowDayNotes: () => _showDayNotesDialog(d),
-                                    showBankHolidayRedundant: showRedundant,
-                                  );
-                                },
-                              ),
-                            ),
-                          if (_selectedDay != null)
-                            Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                              child: _buildEventsList(),
-                            ),
-                          // Edge-to-edge: padding.bottom is often 0; viewPadding includes gesture bar.
-                          SizedBox(
-                            height: MediaQuery.viewPaddingOf(context).bottom + 24,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              // Live Updates Banner - only show when there are active updates
-              if (hasActiveUpdates)
-                const Positioned(
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  child: _StaticLiveUpdatesBanner(),
-                ),
-            ],
-          );
-        },
-      ),
+    return ChangeNotifierProvider<CalendarController>.value(
+      value: _calendarController,
+      child: Builder(builder: _buildCalendarScaffold),
     );
+  }
+
+  Widget _buildCalendarScaffold(BuildContext context) {
+    return CalendarScaffold(
+      scrollController: _scrollController,
+      onSearch: _showSearchScreen,
+      onWeekView: _showWeekView,
+      onMenuSelected: _onCalendarMenuSelected,
+      calendar: Selector<CalendarController, (DateTime?, DateTime, bool)>(
+        selector: (_, controller) => (
+          controller.selectedDay,
+          controller.focusedDay,
+          controller.isVisibleMonthLoading,
+        ),
+        builder: (_, __, ___) => _buildCalendar(),
+      ),
+      dayDetailBuilder: _buildDayDetailSection,
+    );
+  }
+
+  void _onCalendarMenuSelected(String value) {
+    switch (value) {
+      case CalendarMenuAction.statistics:
+        _showStatisticsPage();
+      case CalendarMenuAction.bills:
+        _showBillsPage();
+      case CalendarMenuAction.timingPoints:
+        _showTimingPointsPage();
+      case CalendarMenuAction.toiletCodes:
+        _showToiletCodesPage();
+      case CalendarMenuAction.settings:
+        _showSettingsPage();
+      case CalendarMenuAction.addHolidays:
+        _showAddHolidaysDialog();
+      case CalendarMenuAction.contacts:
+        _showContactsPage();
+      case CalendarMenuAction.notes:
+        _navigateToAllNotesScreen();
+      case CalendarMenuAction.liveUpdates:
+        _showLiveUpdatesPage();
+      case CalendarMenuAction.payscale:
+        _showPayscalePage();
+    }
   }
 
   Widget _buildCalendar() {
-    // table_calendar defaults (daysOfWeekHeight: 16, rowHeight: 52) do not grow with
-    // system text scaling — weekday labels and cells clip when zoom / large text is on.
-    final textScaler = MediaQuery.textScalerOf(context);
-    final screenWidth = MediaQuery.sizeOf(context).width;
-    final scaledDaysOfWeekHeight = textScaler.scale(22.0) + 16.0;
-    // Allow date + up to two lines of duty text at the current text scale.
-    final scaledRowHeight = math.max(
-      textScaler.scale(52.0) + textScaler.scale(10.0),
-      textScaler.scale(_getResponsiveDateFontSize(screenWidth)) +
-          textScaler.scale(_getResponsiveDutyFontSize(screenWidth)) * 2 +
-          textScaler.scale(14.0),
-    );
-
-    return Column(
-      children: [
-        // Add custom header with clickable month/year title
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
-          child: Row(
-            children: [
-              IconButton(
-                icon: const Icon(Icons.chevron_left),
-                onPressed: () {
-                  setState(() {
-                    _focusedDay = _navigateToMonth(_focusedDay, -1);
-                  });
-                },
-              ),
-              Expanded(
-                child: GestureDetector(
-                  onTap: () {
-                    _showYearView(_focusedDay.year);
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
-                    decoration: BoxDecoration(
-                      border: Border.all(
-                        color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.5),
-                      ),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Center(
-                      child: Text(
-                        DateFormat('  MMMM yyyy').format(_focusedDay),
-                        style: TextStyle(
-                          fontSize: 18,
-                          color: Theme.of(context).colorScheme.onSurface,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              IconButton(
-                icon: const Icon(Icons.chevron_right),
-                onPressed: () {
-                  setState(() {
-                    _focusedDay = _navigateToMonth(_focusedDay, 1);
-                  });
-                },
-              ),
-            ],
-          ),
-        ),
-        // The TableCalendar with headerVisible: false to hide the default header
-        // Note: TableCalendar allows vertical scrolling when used in a ScrollView
-        TableCalendar(
-          key: ValueKey('calendar_${_markedInEnabled}_$_markedInStatus}_${_focusedDay.year}_${_focusedDay.month}'), // Force rebuild when marked in settings change or month changes
-          firstDay: DateTime.utc(2020, 1, 1),
-          lastDay: DateTime.utc(2030, 12, 31),
-          focusedDay: _focusedDay,
-          calendarFormat: CalendarFormat.month,
-          daysOfWeekHeight: scaledDaysOfWeekHeight,
-          rowHeight: scaledRowHeight,
-          headerVisible: false, // Hide default header since we're using our custom one above
-          // Enable horizontal swipe gestures for month navigation
-          // Vertical scrolling still works for page content
-          availableGestures: AvailableGestures.horizontalSwipe,
-          selectedDayPredicate: (day) {
-            return isSameDay(_selectedDay, day);
-          },
-          onDaySelected: (selectedDay, focusedDay) async {
-            // Check if we're returning to a day that might have missing events
-            if (_selectedDay != null && selectedDay != _selectedDay) {
-              // Force reload events for the selected day to ensure data is current
-              try {
-                await EventService.preloadMonth(selectedDay);
-                
-                // CRITICAL FIX: Additional validation for spare duty data integrity during navigation
-                final selectedDayEvents = EventService.getEventsForDay(selectedDay);
-                for (final event in selectedDayEvents) {
-                  if (event.title.startsWith('SP') && event.assignedDuties != null && event.assignedDuties!.isNotEmpty) {
-                    // Spare duty validation
-                  }
-                }
-              } catch (e) {
-                // Handle preload errors gracefully
+    return CalendarGrid(
+      tableKey: ValueKey(
+        'calendar_${_markedInEnabled}_$_markedInStatus}_${_focusedDay.year}_${_focusedDay.month}',
+      ),
+      focusedDay: _focusedDay,
+      selectedDay: _selectedDay,
+      onPreviousMonth: () {
+        _calendarController.setFocusedDay(
+          navigateCalendarMonth(_focusedDay, -1),
+        );
+      },
+      onNextMonth: () {
+        _calendarController.setFocusedDay(
+          navigateCalendarMonth(_focusedDay, 1),
+        );
+      },
+      onShowYear: () => _showYearView(_focusedDay.year),
+      onDaySelected: (selectedDay, focusedDay) async {
+        if (_selectedDay != null && selectedDay != _selectedDay) {
+          try {
+            await EventService.preloadMonth(selectedDay);
+            final selectedDayEvents = EventService.getEventsForDay(selectedDay);
+            for (final event in selectedDayEvents) {
+              if (event.title.startsWith('SP') &&
+                  event.assignedDuties != null &&
+                  event.assignedDuties!.isNotEmpty) {
+                // Spare duty validation is intentionally retained.
               }
             }
-            
-            setState(() {
-              _selectedDay = selectedDay;
-              _focusedDay = focusedDay;
-            });
-          },
-          onPageChanged: _onPageChanged,
-          eventLoader: getEventsForDay,
-          daysOfWeekStyle: DaysOfWeekStyle(
-            weekdayStyle: TextStyle(
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
-            weekendStyle: TextStyle(
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
-          ),
-          calendarStyle: CalendarStyle(
-            outsideDaysVisible: true,
-            markersMaxCount: 0,
-            markersAnchor: 1.0,
-            defaultTextStyle: TextStyle(
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
-            weekendTextStyle: TextStyle(
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
-          ),
-          calendarBuilders: CalendarBuilders(
-            defaultBuilder: (context, date, _) {
-              return _buildCalendarDay(date, isToday: false, isOutsideDay: false);
-            },
-            todayBuilder: (context, date, _) {
-              return _buildCalendarDay(date, isToday: true, isOutsideDay: false);
-            },
-            // Add outsideBuilder to handle days outside the current month
-            outsideBuilder: (context, date, _) {
-              return _buildCalendarDay(date, isToday: false, isOutsideDay: true);
-            },
-            // Custom builder for selected day - make it see-through with a border
-            selectedBuilder: (context, date, _) {
-              return _buildCalendarDay(date, isToday: false, isOutsideDay: false, isSelected: true);
-            },
-            markerBuilder: (context, date, events) {
-              return null;
-            },
-          ),
-        ),
-      ],
+          } catch (_) {
+            // Preserve graceful navigation when preloading fails.
+          }
+        }
+
+        if (mounted) {
+          _calendarController.selectDay(
+            selectedDay,
+            focusedDay: focusedDay,
+          );
+        }
+      },
+      onPageChanged: _onPageChanged,
+      eventLoader: (day) => getEventsForDay(day),
+      dayBuilder: (
+        date, {
+        required isToday,
+        required isOutsideDay,
+        isSelected = false,
+      }) {
+        return _buildCalendarDay(
+          date,
+          isToday: isToday,
+          isOutsideDay: isOutsideDay,
+          isSelected: isSelected,
+        );
+      },
     );
-  }
-
-  /// Helper method to format display text for calendar (shortens BusCheck to BUSC)
-  String _formatDisplayText(String text) {
-    // Shorten "BusCheck" to "BUSC" for calendar display
-    if (text.startsWith('BusCheck')) {
-      return text.replaceFirst('BusCheck', 'BUSC');
-    }
-    return text;
-  }
-
-  /// Helper method to determine what text to display on calendar day
-  /// Returns: duty code for regular work shifts, spare title for spare shifts, sick day code (S/SC/FM), or shift letter (E/L/M/R)
-  String _getCalendarDayDisplayText(DateTime date) {
-    final events = getEventsForDay(date);
-    final rosterShift = _startDate != null ? getShiftForDate(date) : '';
-    
-    // If duty codes display is disabled, always return shift letter
-    if (!_showDutyCodesOnCalendar) {
-      if (rosterShift == 'R' && RestDaySwapService.isSwappedRestDay(date)) {
-        return 'Rˢ';
-      }
-      if (RestDaySwapService.isSwappedWorkDay(date) && rosterShift.isNotEmpty) {
-        return '${rosterShift}ˢ';
-      }
-      return rosterShift;
-    }
-    
-    // First, check for all sick day codes (S, SC, FM) - these take priority over EVERYTHING
-    for (final event in events) {
-      if (event.sickDayType != null) {
-        final sickDayCode = _getSickDayDisplayCode(event.sickDayType);
-        if (sickDayCode.isNotEmpty) {
-          return sickDayCode; // Show S, SC, or FM - takes priority over everything
-        }
-      }
-    }
-    
-    // Second, check for spare shifts, Union, and Mentor - always show their title
-    for (final event in events) {
-      if (event.isWorkShift && 
-          (event.title.startsWith('SP') || event.title == '22B/01' || event.title == 'Union' || event.title == 'Mentor')) {
-        return event.title;
-      }
-    }
-    
-    // Third, check for regular work shifts (not spare, not OT)
-    // For regular work shifts, the title IS the duty code (e.g., "PZ1/74", "1/13X", "807/20")
-    // assignedDuties is only used for spare shifts
-    for (final event in events) {
-      if (event.isWorkShift && 
-          !event.title.startsWith('SP') && 
-          event.title != '22B/01' &&
-          event.title != 'Union' &&
-          event.title != 'Mentor' &&
-          !event.title.contains('(OT)')) {
-        // Check if this event has assigned duties (for spare shifts that were converted)
-        final dutyCodes = event.getCurrentDutyCodes();
-        if (dutyCodes.isNotEmpty) {
-          // Return the first assigned duty code (formatted for display)
-          return _formatDisplayText(dutyCodes.first);
-        }
-        // For regular work shifts, the title IS the duty code (formatted for display)
-        return _formatDisplayText(event.title);
-      }
-    }
-    
-    // Fallback to roster shift letter (E/L/M/R)
-    // Show swapped rest indicator (Rˢ) for days that are rest due to a swap
-    if (rosterShift == 'R' && RestDaySwapService.isSwappedRestDay(date)) {
-      return 'Rˢ';
-    }
-    // Show swapped work indicator (Eˢ/Lˢ/Mˢ) for days that are work due to a swap
-    if (RestDaySwapService.isSwappedWorkDay(date) && rosterShift.isNotEmpty) {
-      return '${rosterShift}ˢ';
-    }
-    return rosterShift;
   }
 
   Widget _buildCalendarDay(DateTime date, {required bool isToday, required bool isOutsideDay, bool isSelected = false}) {
     final shift = _startDate != null ? getShiftForDate(date) : '';
-    final shiftInfo = _shiftInfoMap[shift];
     final events = getEventsForDay(date);
-    final hasEvents = events.isNotEmpty;
     final bankHoliday = getBankHoliday(date);
     final isBankHoliday = bankHoliday != null;
-    final isHoliday = _holidays.any((h) => h.containsDate(date));
-    final dayInLieuHoliday = _holidays.firstWhere((h) => h.containsDate(date) && h.type == 'day_in_lieu', orElse: () => Holiday(id: '', startDate: DateTime.now(), endDate: DateTime.now(), type: ''));
-    final isDayInLieu = dayInLieuHoliday.id.isNotEmpty;
-    final unpaidLeaveHoliday = _holidays.firstWhere((h) => h.containsDate(date) && h.type == 'unpaid_leave', orElse: () => Holiday(id: '', startDate: DateTime.now(), endDate: DateTime.now(), type: ''));
-    final isUnpaidLeave = unpaidLeaveHoliday.id.isNotEmpty;
-    final isSaturdayService = RosterService.isSaturdayService(date);
-    
-    // Check if there's a WFO event on this day
-    final hasWfoEvent = events.any((event) => event.isWorkForOthers);
-    final wfoColor = _shiftInfoMap['WFO']?.color;
-    final dayInLieuColor = ColorCustomizationService.getColorForShift('DAY_IN_LIEU');
-    
-    // Check if this day has a workout (when highlight is enabled and data is loaded)
-    // Use O(1) Set.contains instead of O(n) any() to avoid lag with large workout date caches
-    final hasWorkoutOnDay = _highlightWorkoutDays && 
-        _workoutDates != null && 
-        _workoutDates!.contains(DateTime(date.year, date.month, date.day));
-    final workoutColor = ColorCustomizationService.getColorForShift('WORKOUT');
-    
-    // Check if any events have notes (text and/or images) or if there's a day note
-    final hasNotes = events.any((event) => event.hasNoteContent) ||
-        DayNoteService.hasNoteForDate(date);
 
-    // Bank holiday redundant: day-only mark and/or a work event flagged redundant
-    final hasBankHolidayRedundant = isBankHoliday &&
-        (BankHolidayRedundantDayService.isMarked(date) ||
-            events.any((e) => e.isWorkShift && e.bankHolidayRedundant));
-    
-    // Check for sick day events - priority over other colors
-    final sickDayEvent = events.firstWhere(
-      (event) => event.sickDayType != null,
-      orElse: () => Event(
-        id: '',
-        title: '',
-        startDate: date,
-        startTime: const TimeOfDay(hour: 0, minute: 0),
-        endDate: date,
-        endTime: const TimeOfDay(hour: 0, minute: 0),
-        isHoliday: false,
-        hasLateBreak: false,
-        tookFullBreak: false,
-        isWorkForOthers: false,
-      ),
+    final displayText = calendarDayDisplayText(
+      events: events,
+      rosterShift: shift,
+      showDutyCodesOnCalendar: _showDutyCodesOnCalendar,
+      isSwappedRestDay: RestDaySwapService.isSwappedRestDay(date),
+      isSwappedWorkDay: RestDaySwapService.isSwappedWorkDay(date),
     );
-    final hasSickDay = sickDayEvent.sickDayType != null;
-    final sickDayColor = hasSickDay ? ColorCustomizationService.getColorForSickType(sickDayEvent.sickDayType) : null;
-    
-    // Get the display text (duty code, spare title, or shift letter)
-    final displayText = _getCalendarDayDisplayText(date);
-    
-    // Calculate responsive badge sizes
-    final screenWidth = MediaQuery.of(context).size.width;
-    final badgeSizes = _getCalendarBadgeSizes(screenWidth);
 
-    // Rest day color takes precedence when holiday falls on a rest day
-    final isRestDay = shift == 'R';
-    final restDayColor = _shiftInfoMap['R']?.color;
-    final useRestDayColorForHoliday = isRestDay && restDayColor != null && (isDayInLieu || isUnpaidLeave || isHoliday);
-
-    final backgroundColor = hasSickDay && sickDayColor != null
-        ? sickDayColor.withValues(alpha: 0.3)
-        : useRestDayColorForHoliday
-            ? restDayColor.withValues(alpha: 0.3)
-            : isDayInLieu
-                ? dayInLieuColor.withValues(alpha: 0.3)
-                : isUnpaidLeave
-                    ? Colors.purple.withValues(alpha: 0.3)
-                    : isHoliday 
-                        ? holidayColor.withValues(alpha: 0.3)
-                        : hasWfoEvent && wfoColor != null
-                            ? wfoColor.withValues(alpha: 0.3)
-                            : hasWorkoutOnDay
-                                ? workoutColor.withValues(alpha: 0.3)
-                                : shiftInfo?.color.withValues(alpha: 0.3);
-    
-    // Calculate base cell color (without alpha) for note icon
-    final cellColor = hasSickDay && sickDayColor != null
-        ? sickDayColor
-        : useRestDayColorForHoliday
-            ? restDayColor
-            : isDayInLieu
-                ? dayInLieuColor
-                : isUnpaidLeave
-                    ? Colors.purple
-                    : isHoliday 
-                        ? holidayColor
-                        : hasWfoEvent && wfoColor != null
-                            ? wfoColor
-                            : hasWorkoutOnDay
-                                ? workoutColor
-                                : (shiftInfo?.color ?? Theme.of(context).primaryColor);
-    
-    final cellContent = _buildDayCellContent(
-      date,
-      displayText,
-      isDayInLieu,
-      isHoliday,
-      shift,
-      hasEvents,
-      hasSickDay,
-      sickDayColor,
-      dayInLieuColor,
-      isUnpaidLeave,
-      hasWfoEvent,
-      wfoColor,
-      shiftInfo,
-      isSaturdayService,
-      hasNotes,
-      hasBankHolidayRedundant,
-      cellColor,
-      badgeSizes,
-      screenWidth,
+    final appearance = resolveCalendarDayAppearance(
+      date: date,
+      events: events,
+      rosterShift: shift,
+      shiftInfoMap: _shiftInfoMap,
+      holidays: _holidays,
+      highlightWorkoutDays: _highlightWorkoutDays,
+      workoutDates: _workoutDates,
+      hasDayNote: DayNoteService.hasNoteForDate(date),
+      isBankHoliday: isBankHoliday,
+      isBankHolidayRedundantMarked:
+          BankHolidayRedundantDayService.isMarked(date),
+      dayInLieuColor: ColorCustomizationService.getColorForShift('DAY_IN_LIEU'),
+      workoutColor: ColorCustomizationService.getColorForShift('WORKOUT'),
+      sickDayColor: ColorCustomizationService.getColorForSickType,
+      themePrimaryColor: Theme.of(context).primaryColor,
+      schemePrimaryColor: Theme.of(context).colorScheme.primary,
+      holidayColor: holidayColor,
     );
-    
-    // Determine border color for selected days
-    final selectedBorderColor = isBankHoliday ? Colors.red : Theme.of(context).colorScheme.primary;
 
-    // Wrap the content in Opacity if it's an outside day
-    return Opacity(
-      opacity: isOutsideDay ? 0.4 : 1.0, // Changed from 0.6 to 0.4 for more transparency
-      child: isSelected
-          ? _animatedSelectedDay
-              ? _AnimatedSelectedDayCell(
-                  backgroundColor: backgroundColor,
-                  isToday: isToday,
-                  isBankHoliday: isBankHoliday,
-                  borderColor: selectedBorderColor,
-                  child: cellContent,
-                )
-              : Container(
-                  margin: const EdgeInsets.all(2.0), // Reduced margin to make circle bigger
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: isBankHoliday 
-                        ? Colors.red.withValues(alpha: 0.7) // Less bright red
-                        : const Color(0xFF1565C0), // Navy blue color
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: isBankHoliday ? Colors.red : const Color(0xFF0D47A1), // Darker navy border
-                      width: 2.0,
-                    ),
-                    // Add subtle shadow for depth
-                    boxShadow: [
-                      BoxShadow(
-                        color: (isBankHoliday ? Colors.red : const Color(0xFF1565C0)).withValues(alpha: 0.4),
-                        blurRadius: 6.0,
-                        spreadRadius: 1.0,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: _buildDayCellContentWithWhiteText(
-                    date,
-                    displayText,
-                    isDayInLieu,
-                    isHoliday,
-                    shift,
-                    hasEvents,
-                    hasSickDay,
-                    sickDayColor,
-                    dayInLieuColor,
-                    isUnpaidLeave,
-                    hasWfoEvent,
-                    wfoColor,
-                    shiftInfo,
-                    isSaturdayService,
-                    hasNotes,
-                    hasBankHolidayRedundant,
-                    cellColor,
-                    badgeSizes,
-                    screenWidth,
-                  ),
-                )
-          : Container(
-              margin: const EdgeInsets.all(4.0),
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: backgroundColor,
-                borderRadius: BorderRadius.circular(8.0),
-                border: isToday
-                    ? Border.all(
-                        color: isBankHoliday ? Colors.red : Colors.blue,
-                        width: 2,
-                      )
-                    : isBankHoliday
-                        ? Border.all(
-                            color: Colors.red,
-                            width: 1.5,
-                          )
-                        : null,
-              ),
-              child: cellContent,
-            ),
+    return CalendarDayCell(
+      date: date,
+      displayText: displayText,
+      shift: shift,
+      backgroundColor: appearance.backgroundColor,
+      cellColor: appearance.cellColor,
+      selectedBorderColor: appearance.selectedBorderColor,
+      isDayInLieu: appearance.isDayInLieu,
+      isHoliday: appearance.isHoliday,
+      hasEvents: appearance.hasEvents,
+      isSaturdayService: RosterService.isSaturdayService(date),
+      hasNotes: appearance.hasNotes,
+      hasBankHolidayRedundant: appearance.hasBankHolidayRedundant,
+      isToday: isToday,
+      isBankHoliday: appearance.isBankHoliday,
+      isOutsideDay: isOutsideDay,
+      isSelected: isSelected,
+      animatedSelection: _animatedSelectedDay,
     );
   }
 
-  Widget _buildDayCellContentWithWhiteText(
-    DateTime date,
-    String displayText,
-    bool isDayInLieu,
-    bool isHoliday,
-    String shift,
-    bool hasEvents,
-    bool hasSickDay,
-    Color? sickDayColor,
-    Color? dayInLieuColor,
-    bool isUnpaidLeave,
-    bool hasWfoEvent,
-    Color? wfoColor,
-    ShiftInfo? shiftInfo,
-    bool isSaturdayService,
-    bool hasNotes,
-    bool hasBankHolidayRedundant,
-    Color cellColor,
-    Map<String, double> badgeSizes,
-    double screenWidth,
-  ) {
-    return Stack(
-      children: [
-        // Main content centered
-        Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            mainAxisSize: MainAxisSize.min, // Important: minimize space
-            children: [
-              Text(
-                '${date.day}',
-                style: TextStyle(
-                  fontSize: _getResponsiveDateFontSize(screenWidth),
-                  color: Colors.white, // White text for filled circle
-                ),
-              ),
-              // Show display text if not empty AND (not holiday OR it's a rest day)
-              // This allows rest day "R" to show even when holidays are present
-              if (displayText.isNotEmpty && (!isHoliday || shift == 'R')) ...[
-                Builder(
-                  builder: (context) {
-                    return Text(
-                      displayText,
-                      style: TextStyle(
-                        fontSize: _getResponsiveDutyFontSize(screenWidth),
-                        fontWeight: FontWeight.bold,
-                        height: 1.0, // Reduce line height
-                        color: Colors.white, // White text for filled circle
-                      ),
-                      textAlign: TextAlign.center,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    );
-                  },
-                ),
-              ],
-              if (isDayInLieu)
-                Text(
-                  'Lieu',
-                  style: TextStyle(
-                    fontSize: _getResponsiveDutyFontSize(screenWidth),
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white, // White text for filled circle
-                    height: 1.0, // Reduce line height
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.clip,
-                )
-              // Only show "H" for holidays when it's NOT a rest day
-              else if (isHoliday && shift != 'R')
-                Text(
-                  'H',
-                  style: TextStyle(
-                    fontSize: _getResponsiveDutyFontSize(screenWidth),
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white, // White text for filled circle
-                    height: 1.0, // Reduce line height
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.clip,
-                ),
-            ],
-          ),
-        ),
-        // Saturday service indicator positioned in top-left corner
-        if (isSaturdayService)
-          Positioned(
-            top: badgeSizes['top']!,
-            left: badgeSizes['left']!,
-            child: Container(
-              padding: EdgeInsets.symmetric(
-                horizontal: badgeSizes['paddingH']!,
-                vertical: badgeSizes['paddingV']!,
-              ),
-              decoration: BoxDecoration(
-                color: Colors.orange.shade600,
-                borderRadius: BorderRadius.circular(badgeSizes['radius']!),
-              ),
-              child: Text(
-                'SAT',
-                style: TextStyle(
-                  fontSize: badgeSizes['fontSize']!,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                  height: 1.0,
-                ),
-              ),
-            ),
-          ),
-        // Notes indicator positioned in top-right corner
-        if (hasNotes)
-          Positioned(
-            top: badgeSizes['top']!,
-            right: badgeSizes['left']!,
-            child: Icon(
-              Icons.note,
-              size: badgeSizes['fontSize']! * 1.5,
-              color: cellColor,
-            ),
-          ),
-        if (hasBankHolidayRedundant)
-          Positioned(
-            bottom: badgeSizes['top']!,
-            left: badgeSizes['left']!,
-            child: Container(
-              width: 7,
-              height: 7,
-              decoration: BoxDecoration(
-                color: Colors.amber.shade800,
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.white, width: 0.5),
-              ),
-            ),
-          ),
-        // Event indicator positioned in bottom-right corner
-        // Hidden when day is selected (filled circle mode)
-      ],
-    );
-  }
+  Widget _buildDayDetailSection(DateTime selectedDate) {
+    final events = getEventsForDay(selectedDate);
+    final bankHoliday = getBankHoliday(selectedDate);
+    final showRedundant = bankHoliday != null &&
+        (BankHolidayRedundantDayService.isMarked(selectedDate) ||
+            events.any(
+              (event) => event.isWorkShift && event.bankHolidayRedundant,
+            ));
+    final eventItems = events.map((event) {
+      final eventDate = DateTime(
+        event.startDate.year,
+        event.startDate.month,
+        event.startDate.day,
+      );
+      final isWorkoutDay = _workoutDates != null &&
+          _workoutDates!.contains(eventDate);
+      return DayDetailEventItem(
+        event: event,
+        shiftType:
+            event.isWorkForOthers ? 'WFO' : getShiftForDate(event.startDate),
+        isBankHoliday: getBankHoliday(event.startDate) != null,
+        isRestDay: _isRosteredRestDay(event.startDate),
+        isWorkoutDay: isWorkoutDay,
+      );
+    }).toList(growable: false);
 
-  Widget _buildDayCellContent(
-    DateTime date,
-    String displayText,
-    bool isDayInLieu,
-    bool isHoliday,
-    String shift,
-    bool hasEvents,
-    bool hasSickDay,
-    Color? sickDayColor,
-    Color? dayInLieuColor,
-    bool isUnpaidLeave,
-    bool hasWfoEvent,
-    Color? wfoColor,
-    ShiftInfo? shiftInfo,
-    bool isSaturdayService,
-    bool hasNotes,
-    bool hasBankHolidayRedundant,
-    Color cellColor,
-    Map<String, double> badgeSizes,
-    double screenWidth,
-  ) {
-    return Stack(
-      children: [
-        // Main content centered
-        Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            mainAxisSize: MainAxisSize.min, // Important: minimize space
-            children: [
-              Text(
-                '${date.day}',
-                style: TextStyle(
-                  fontSize: _getResponsiveDateFontSize(screenWidth),
-                  color: Theme.of(context).colorScheme.onSurface,
-                ),
-              ),
-              // Show display text if not empty AND (not holiday OR it's a rest day)
-              // This allows rest day "R" to show even when holidays are present
-              if (displayText.isNotEmpty && (!isHoliday || shift == 'R')) ...[
-                Text(
-                  displayText,
-                  style: TextStyle(
-                    fontSize: _getResponsiveDutyFontSize(screenWidth),
-                    fontWeight: FontWeight.bold,
-                    height: 1.0, // Reduce line height
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-              if (isDayInLieu)
-                Text(
-                  'Lieu',
-                  style: TextStyle(
-                    fontSize: _getResponsiveDutyFontSize(screenWidth),
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.onSurface,
-                    height: 1.0, // Reduce line height
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.clip,
-                )
-              // Only show "H" for holidays when it's NOT a rest day
-              else if (isHoliday && shift != 'R')
-                Text(
-                  'H',
-                  style: TextStyle(
-                    fontSize: _getResponsiveDutyFontSize(screenWidth),
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.onSurface,
-                    height: 1.0, // Reduce line height
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.clip,
-                ),
-            ],
-          ),
-        ),
-        // Saturday service indicator positioned in top-left corner
-        if (isSaturdayService)
-          Positioned(
-            top: badgeSizes['top']!,
-            left: badgeSizes['left']!,
-            child: Container(
-              padding: EdgeInsets.symmetric(
-                horizontal: badgeSizes['paddingH']!,
-                vertical: badgeSizes['paddingV']!,
-              ),
-              decoration: BoxDecoration(
-                color: Colors.orange.shade600,
-                borderRadius: BorderRadius.circular(badgeSizes['radius']!),
-              ),
-              child: Text(
-                'SAT',
-                style: TextStyle(
-                  fontSize: badgeSizes['fontSize']!,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                  height: 1.0,
-                ),
-              ),
-            ),
-          ),
-        // Notes indicator positioned in top-right corner
-        if (hasNotes)
-          Positioned(
-            top: badgeSizes['top']!,
-            right: badgeSizes['left']!,
-            child: Icon(
-              Icons.note,
-              size: badgeSizes['fontSize']! * 1.5,
-              color: cellColor,
-            ),
-          ),
-        if (hasBankHolidayRedundant)
-          Positioned(
-            bottom: badgeSizes['top']!,
-            left: badgeSizes['left']!,
-            child: Container(
-              width: 7,
-              height: 7,
-              decoration: BoxDecoration(
-                color: Colors.amber.shade800,
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: Theme.of(context).colorScheme.onSurface,
-                  width: 0.5,
-                ),
-              ),
-            ),
-          ),
-        // Event indicator positioned in bottom-right corner
-        if (hasEvents)
-          Positioned(
-            bottom: 2,
-            right: 2,
-            child: Container(
-              width: 6, // Smaller dot
-              height: 6, // Smaller dot
-              decoration: BoxDecoration(
-                color: cellColor,
-                shape: BoxShape.circle,
-              ),
-            ),
-          ),
-      ],
-    );
-  }
-  
-  // Helper method to get responsive date font size
-  double _getResponsiveDateFontSize(double screenWidth) {
-    if (screenWidth < 350) {
-      return 11.0; // Very small screens
-    } else if (screenWidth < 450) {
-      return 12.0; // Small screens
-    } else if (screenWidth < 600) {
-      return 12.0; // Medium screens
-    } else {
-      return 13.0; // Large screens (reduced from 14)
-    }
-  }
-
-  // Helper method to get responsive duty code font size
-  double _getResponsiveDutyFontSize(double screenWidth) {
-    if (screenWidth < 350) {
-      return 8.0; // Very small screens
-    } else if (screenWidth < 450) {
-      return 9.0; // Small screens
-    } else if (screenWidth < 600) {
-      return 9.5; // Medium screens
-    } else {
-      return 10.0; // Large screens
-    }
-  }
-
-  // Helper method to calculate responsive badge sizes for calendar day
-  Map<String, double> _getCalendarBadgeSizes(double screenWidth) {
-    if (screenWidth < 350) {
-      return {
-        'fontSize': 6.0,
-        'paddingH': 2.0,
-        'paddingV': 0.5,
-        'radius': 3.0,
-        'top': 1.0,
-        'left': 1.0,
-      };
-    } else if (screenWidth < 450) {
-      return {
-        'fontSize': 7.0,
-        'paddingH': 3.0,
-        'paddingV': 1.0,
-        'radius': 4.0,
-        'top': 2.0,
-        'left': 2.0,
-      };
-    } else if (screenWidth < 600) {
-      return {
-        'fontSize': 8.0,
-        'paddingH': 3.5,
-        'paddingV': 1.0,
-        'radius': 4.0,
-        'top': 2.0,
-        'left': 2.0,
-      };
-    } else if (screenWidth < 900) {
-      return {
-        'fontSize': 9.0,
-        'paddingH': 4.0,
-        'paddingV': 1.5,
-        'radius': 5.0,
-        'top': 3.0,
-        'left': 3.0,
-      };
-    } else {
-      return {
-        'fontSize': 10.0,
-        'paddingH': 5.0,
-        'paddingV': 2.0,
-        'radius': 5.0,
-        'top': 3.0,
-        'left': 3.0,
-      };
-    }
-  }
-
-  Widget _buildEventsList() {
-    final events = getEventsForDay(_selectedDay!);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(top: 16.0),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Expanded(
-                child: Text(
-                  'Events (${events.length})',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              IconButton(
-                icon: const Icon(Icons.add_circle),
-                color: Colors.blue,
-                onPressed: _showAddEventDialog,
-                constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
-              ),
-            ],
-          ),
-        ),
-        events.isEmpty
-            ? Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Center(
-                  child: Text(
-                    'No events for ${DateFormat('EEEE, MMMM d').format(_selectedDay!)}',
-                    style: TextStyle(
-                      color: Colors.grey.shade600,
-                      fontSize: 16,
-                    ),
-                  ),
-                ),
-              )
-            : Column(
-                children: events.map((event) {
-                  // Use WFO shift type if this is a Work For Others event
-                  final String shiftType = event.isWorkForOthers ? 'WFO' : getShiftForDate(event.startDate);
-                  final eventDate = DateTime(event.startDate.year, event.startDate.month, event.startDate.day);
-                  final isWorkoutDay = _workoutDates != null &&
-                      _workoutDates!.contains(DateTime(eventDate.year, eventDate.month, eventDate.day));
-                  return EventCard(
-                    event: event,
-                    shiftType: shiftType,
-                    shiftInfoMap: _shiftInfoMap,
-                    isBankHoliday: getBankHoliday(event.startDate) != null,
-                    isRestDay: _isRosteredRestDay(event.startDate),
-                    onEdit: _editEvent, // Use _editEvent for all types, EventCard handles spare logic
-                    onShowNotes: _showNotesDialog, // Pass the function here
-                    onBusAssignmentUpdate: _syncBusAssignmentsToGoogleCalendar, // Pass the bus sync callback
-                    highlightWorkoutDays: _highlightWorkoutDays,
-                    isWorkoutDay: isWorkoutDay,
-                  );
-                }).toList(),
-              ),
-      ],
+    return DayDetailSection(
+      selectedDate: selectedDate,
+      shiftInfoMap: _shiftInfoMap,
+      events: eventItems,
+      onAddEvent: _showAddEventDialog,
+      onEditEvent: _editEvent,
+      onShowEventNotes: _showNotesDialog,
+      onBusAssignmentUpdate: _syncBusAssignmentsToGoogleCalendar,
+      highlightWorkoutDays: _highlightWorkoutDays,
+      showShiftSummary: _startDate != null,
+      shift: getShiftForDate(selectedDate),
+      bankHoliday: bankHoliday,
+      hasDayNote: DayNoteService.hasNoteForDate(selectedDate),
+      showBankHolidayRedundant: showRedundant,
+      onShowDayNotes: () => _showDayNotesDialog(selectedDate),
     );
   }
 
   void _showStatisticsPage() {
-    // Fetch all loaded events directly from the service and convert string keys to DateTime keys
-    final allEventsWithStringKeys = EventService.allLoadedEvents;
-    
-    // Convert string keys back to DateTime keys for StatisticsScreen
-    final Map<DateTime, List<Event>> allEvents = {};
-    for (final entry in allEventsWithStringKeys.entries) {
-      final dateKey = DateTime.parse(entry.key);
-      allEvents[dateKey] = entry.value;
-    }
-
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => StatisticsScreen(
-          events: allEvents, // Pass the converted events
-        ),
-      ),
-    );
+    final allEvents = mapEventsByDate(EventService.allLoadedEvents);
+    CalendarFeatureNavigation.openStatistics(context, events: allEvents);
   }
   
   void _showSettingsPage() {
@@ -7411,1013 +1701,40 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
   }
 
   // Responsive sizing helper for holidays section
-  Map<String, double> _getHolidayResponsiveSizes(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final screenHeight = MediaQuery.of(context).size.height;
-    
-    // Very small screens (narrow phones) - ULTRA conservative
-    if (screenWidth < 350) {
-      return {
-        'padding': 8.0,
-        'headerPadding': 10.0,
-        'itemPadding': 8.0,
-        'spacing': 8.0,
-        'headerFontSize': 14.0,
-        'subtitleFontSize': 11.0,
-        'yearFontSize': 14.0,
-        'itemTitleFontSize': 13.0,
-        'itemSubtitleFontSize': 11.0,
-        'iconSize': 18.0,
-        'headerIconSize': 18.0,
-        'badgeIconSize': 10.0,
-        'badgeFontSize': 10.0,
-        'maxHeight': screenHeight * 0.35,
-        'borderRadius': 10.0,
-      };
-    }
-    // Small phones (like older iPhones)
-    else if (screenWidth < 400) {
-      return {
-        'padding': 10.0,
-        'headerPadding': 12.0,
-        'itemPadding': 9.0,
-        'spacing': 10.0,
-        'headerFontSize': 15.0,
-        'subtitleFontSize': 11.5,
-        'yearFontSize': 15.0,
-        'itemTitleFontSize': 13.5,
-        'itemSubtitleFontSize': 11.5,
-        'iconSize': 19.0,
-        'headerIconSize': 19.0,
-        'badgeIconSize': 11.0,
-        'badgeFontSize': 10.5,
-        'maxHeight': screenHeight * 0.38,
-        'borderRadius': 11.0,
-      };
-    }
-    // Mid-range phones (like Galaxy S23)
-    else if (screenWidth < 450) {
-      return {
-        'padding': 11.0,
-        'headerPadding': 12.0,
-        'itemPadding': 10.0,
-        'spacing': 11.0,
-        'headerFontSize': 15.5,
-        'subtitleFontSize': 12.0,
-        'yearFontSize': 15.5,
-        'itemTitleFontSize': 14.0,
-        'itemSubtitleFontSize': 12.0,
-        'iconSize': 20.0,
-        'headerIconSize': 20.0,
-        'badgeIconSize': 11.5,
-        'badgeFontSize': 11.0,
-        'maxHeight': screenHeight * 0.4,
-        'borderRadius': 12.0,
-      };
-    }
-    // Regular phones
-    else if (screenWidth < 600) {
-      return {
-        'padding': 12.0,
-        'headerPadding': 12.0,
-        'itemPadding': 10.0,
-        'spacing': 12.0,
-        'headerFontSize': 16.0,
-        'subtitleFontSize': 12.0,
-        'yearFontSize': 16.0,
-        'itemTitleFontSize': 14.0,
-        'itemSubtitleFontSize': 12.0,
-        'iconSize': 20.0,
-        'headerIconSize': 20.0,
-        'badgeIconSize': 12.0,
-        'badgeFontSize': 11.0,
-        'maxHeight': screenHeight * 0.4,
-        'borderRadius': 12.0,
-      };
-    }
-    // Tablets
-    else if (screenWidth < 900) {
-      return {
-        'padding': 14.0,
-        'headerPadding': 14.0,
-        'itemPadding': 12.0,
-        'spacing': 14.0,
-        'headerFontSize': 17.0,
-        'subtitleFontSize': 13.0,
-        'yearFontSize': 17.0,
-        'itemTitleFontSize': 15.0,
-        'itemSubtitleFontSize': 13.0,
-        'iconSize': 22.0,
-        'headerIconSize': 22.0,
-        'badgeIconSize': 13.0,
-        'badgeFontSize': 12.0,
-        'maxHeight': screenHeight * 0.45,
-        'borderRadius': 14.0,
-      };
-    }
-    // Large tablets/desktop
-    else {
-      return {
-        'padding': 16.0,
-        'headerPadding': 16.0,
-        'itemPadding': 14.0,
-        'spacing': 16.0,
-        'headerFontSize': 18.0,
-        'subtitleFontSize': 14.0,
-        'yearFontSize': 18.0,
-        'itemTitleFontSize': 16.0,
-        'itemSubtitleFontSize': 14.0,
-        'iconSize': 24.0,
-        'headerIconSize': 24.0,
-        'badgeIconSize': 14.0,
-        'badgeFontSize': 13.0,
-        'maxHeight': screenHeight * 0.5,
-        'borderRadius': 16.0,
-      };
-    }
-  }
-
-  // Build enhanced holidays section with year grouping and scrollable list
-  Widget _buildHolidaysSection(BuildContext context) {
-    final sizes = _getHolidayResponsiveSizes(context);
-    
-    // Group holidays by year
-    final Map<int, List<Holiday>> holidaysByYear = {};
-    for (final holiday in _holidays) {
-      final year = holiday.startDate.year;
-      holidaysByYear.putIfAbsent(year, () => []).add(holiday);
-    }
-    
-    // Sort years descending (newest first)
-    final sortedYears = holidaysByYear.keys.toList()..sort((a, b) => b.compareTo(a));
-    
-    // Sort holidays within each year by start date
-    for (final year in sortedYears) {
-      holidaysByYear[year]!.sort((a, b) => a.startDate.compareTo(b.startDate));
-    }
-    
-    final totalHolidays = _holidays.length;
-    final totalYears = sortedYears.length;
-    
-    return StatefulBuilder(
-      builder: (context, setState) {
-        // Initialize expanded state for new years (default to collapsed)
-        for (final year in sortedYears) {
-          _holidayYearExpanded.putIfAbsent(year, () => false);
-        }
-        
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header with summary
-            Container(
-              padding: EdgeInsets.all(sizes['headerPadding']!),
-              decoration: BoxDecoration(
-                color: Theme.of(context).brightness == Brightness.dark
-                    ? holidayColor.withValues(alpha: 0.15)
-                    : holidayColor.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(sizes['borderRadius']!),
-                border: Border.all(
-                  color: Theme.of(context).brightness == Brightness.dark
-                      ? holidayColor.withValues(alpha: 0.4)
-                      : holidayColor.withValues(alpha: 0.3),
-                  width: 1,
-                ),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: EdgeInsets.all(sizes['padding']!),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).brightness == Brightness.dark
-                          ? holidayColor.withValues(alpha: 0.25)
-                          : holidayColor.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(sizes['borderRadius']! * 0.67),
-                    ),
-                    child: Icon(
-                      Icons.calendar_today,
-                      color: holidayColor,
-                      size: sizes['headerIconSize']!,
-                    ),
-                  ),
-                  SizedBox(width: sizes['spacing']!),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Existing Holidays',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: sizes['headerFontSize']!,
-                            color: Theme.of(context).textTheme.bodyLarge?.color,
-                          ),
-                        ),
-                        SizedBox(height: 2),
-                        Text(
-                          '$totalHolidays ${totalHolidays == 1 ? 'holiday' : 'holidays'} across $totalYears ${totalYears == 1 ? 'year' : 'years'}',
-                          style: TextStyle(
-                            fontSize: sizes['subtitleFontSize']!,
-                            color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            SizedBox(height: sizes['spacing']!),
-            // List of holidays grouped by year (scrolls with outer dialog)
-            // Using Column instead of ListView to avoid nested scrolling
-            Column(
-              children: List.generate(sortedYears.length, (index) {
-                if (index > 0) {
-                  return Column(
-                    children: [
-                      SizedBox(height: sizes['spacing']! * 0.67),
-                      _buildYearHolidaySection(
-                        context,
-                        sortedYears[index],
-                        holidaysByYear[sortedYears[index]]!,
-                        sizes,
-                        setState,
-                      ),
-                    ],
-                  );
-                }
-                return _buildYearHolidaySection(
-                  context,
-                  sortedYears[index],
-                  holidaysByYear[sortedYears[index]]!,
-                  sizes,
-                  setState,
-                );
-              }),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  // Build a single year's holiday section
-  Widget _buildYearHolidaySection(
-    BuildContext context,
-    int year,
-    List<Holiday> yearHolidays,
-    Map<String, double> sizes,
-    StateSetter setState,
-  ) {
-    final isExpanded = _holidayYearExpanded[year] ?? false;
-    
-    // Count holidays by type for this year
-    final winterCount = yearHolidays.where((h) => h.type == 'winter').length;
-    final summerCount = yearHolidays.where((h) => h.type == 'summer').length;
-    final unpaidLeaveCount = yearHolidays.where((h) => h.type == 'unpaid_leave').length;
-    final dayInLieuCount = yearHolidays.where((h) => h.type == 'day_in_lieu').length;
-    final otherCount = yearHolidays.where((h) => h.type == 'other').length;
-    
-    return Container(
-      decoration: BoxDecoration(
-        color: Theme.of(context).brightness == Brightness.dark
-            ? Theme.of(context).cardColor
-            : Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(sizes['borderRadius']!),
-        border: Border.all(
-          color: Theme.of(context).brightness == Brightness.dark
-              ? Theme.of(context).dividerColor
-              : Colors.grey.shade200,
-          width: 1,
-        ),
-      ),
-      child: Column(
-        children: [
-          // Year header (collapsible)
-          InkWell(
-            onTap: () {
-              setState(() {
-                _holidayYearExpanded[year] = !isExpanded;
-              });
-            },
-            borderRadius: BorderRadius.vertical(
-              top: Radius.circular(sizes['borderRadius']!),
-            ),
-            child: Container(
-              padding: EdgeInsets.symmetric(
-                horizontal: sizes['padding']!,
-                vertical: sizes['padding']! * 0.83,
-              ),
-              child: Row(
-                children: [
-                  Flexible(
-                    child: Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: sizes['padding']! * 0.83,
-                        vertical: sizes['padding']! * 0.5,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).brightness == Brightness.dark
-                            ? holidayColor.withValues(alpha: 0.2)
-                            : holidayColor.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(sizes['borderRadius']! * 0.67),
-                      ),
-                      child: Text(
-                        year.toString(),
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: sizes['yearFontSize']!,
-                          color: holidayColor,
-                        ),
-                      ),
-                    ),
-                  ),
-                  SizedBox(width: sizes['spacing']!),
-                  Expanded(
-                    child: Wrap(
-                      spacing: sizes['spacing']! * 0.5,
-                      runSpacing: sizes['spacing']! * 0.5,
-                      children: [
-                        if (winterCount > 0)
-                          _buildTypeBadge('Winter', winterCount, Colors.blue, sizes),
-                        if (summerCount > 0)
-                          _buildTypeBadge('Summer', summerCount, Colors.orange, sizes),
-                        if (unpaidLeaveCount > 0)
-                          _buildTypeBadge('Unpaid Leave', unpaidLeaveCount, Colors.purple, sizes),
-                        if (dayInLieuCount > 0)
-                          _buildTypeBadge('Day In Lieu', dayInLieuCount, ColorCustomizationService.getColorForShift('DAY_IN_LIEU'), sizes),
-                        if (otherCount > 0)
-                          _buildTypeBadge('Holiday', otherCount, Colors.grey, sizes),
-                      ],
-                    ),
-                  ),
-                  SizedBox(width: sizes['spacing']! * 0.5),
-                  Container(
-                    padding: EdgeInsets.all(sizes['padding']! * 0.33),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).brightness == Brightness.dark
-                          ? Theme.of(context).cardColor
-                          : Colors.white,
-                      borderRadius: BorderRadius.circular(sizes['borderRadius']! * 0.5),
-                    ),
-                    child: Icon(
-                      isExpanded
-                          ? Icons.keyboard_arrow_up
-                          : Icons.keyboard_arrow_down,
-                      size: sizes['iconSize']!,
-                      color: Theme.of(context).textTheme.bodyMedium?.color,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          // Holidays list (expandable)
-          if (isExpanded) ...[
-            Divider(height: 1),
-            ...yearHolidays.asMap().entries.map((entry) {
-              final index = entry.key;
-              final holiday = entry.value;
-              return Column(
-                children: [
-                  if (index > 0) SizedBox(height: sizes['spacing']! * 0.33),
-                  Padding(
-                    padding: EdgeInsets.all(sizes['padding']!),
-                    child: _buildHolidayItem(context, holiday, sizes),
-                  ),
-                ],
-              );
-            }),
-          ],
-        ],
-      ),
-    );
-  }
-
-  // Build type badge for holiday counts
-  Widget _buildTypeBadge(String type, int count, Color color, Map<String, double> sizes) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: sizes['padding']! * 0.5,
-        vertical: sizes['padding']! * 0.17,
-      ),
-      decoration: BoxDecoration(
-        color: isDark ? color.withValues(alpha: 0.2) : color.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(sizes['borderRadius']! * 0.5),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            type == 'Winter' ? Icons.ac_unit :
-            type == 'Summer' ? Icons.wb_sunny :
-            type == 'Unpaid Leave' ? Icons.money_off :
-            type == 'Day In Lieu' ? Icons.event_available :
-            Icons.event,
-            size: sizes['badgeIconSize']!,
-            color: color,
-          ),
-          SizedBox(width: sizes['padding']! * 0.33),
-          Text(
-            '$count',
-            style: TextStyle(
-              fontSize: sizes['badgeFontSize']!,
-              fontWeight: FontWeight.w600,
-              color: color,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // Build individual holiday item
-  Widget _buildHolidayItem(BuildContext context, Holiday holiday, Map<String, double> sizes) {
-    final dateText = holiday.startDate == holiday.endDate
-        ? DateFormat('MMM d, yyyy').format(holiday.startDate)
-        : '${DateFormat('MMM d, yyyy').format(holiday.startDate)} - ${DateFormat('MMM d, yyyy').format(holiday.endDate)}';
-    
-    final isWinter = holiday.type == 'winter';
-    final isSummer = holiday.type == 'summer';
-    final isUnpaidLeave = holiday.type == 'unpaid_leave';
-    final isDayInLieu = holiday.type == 'day_in_lieu';
-    final iconColor = isWinter 
-        ? Colors.blue 
-        : isSummer 
-            ? Colors.orange 
-            : isUnpaidLeave
-                ? Colors.purple
-                : isDayInLieu
-                    ? ColorCustomizationService.getColorForShift('DAY_IN_LIEU')
-                    : Colors.grey;
-    
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Container(
-      padding: EdgeInsets.all(sizes['itemPadding']!),
-      decoration: BoxDecoration(
-        color: isDark ? Theme.of(context).cardColor : Colors.white,
-        borderRadius: BorderRadius.circular(sizes['borderRadius']! * 0.67),
-        border: Border.all(
-          color: isDark ? Theme.of(context).dividerColor : Colors.grey.shade200,
-          width: 1,
-        ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: EdgeInsets.all(sizes['padding']! * 0.8),
-            decoration: BoxDecoration(
-              color: isDark ? iconColor.withValues(alpha: 0.2) : iconColor.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(sizes['borderRadius']! * 0.67),
-            ),
-            child: Icon(
-              isWinter ? Icons.ac_unit :
-              isSummer ? Icons.wb_sunny :
-              isUnpaidLeave ? Icons.money_off :
-              isDayInLieu ? Icons.event_available :
-              Icons.event,
-              color: iconColor,
-              size: sizes['iconSize']!,
-            ),
-          ),
-          SizedBox(width: sizes['spacing']!),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  isWinter ? 'Winter Holiday' :
-                  isSummer ? 'Summer Holiday' :
-                  isUnpaidLeave ? 'Unpaid Leave' :
-                  isDayInLieu ? 'Day In Lieu' :
-                  'Holiday',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: sizes['itemTitleFontSize']!,
-                    color: Theme.of(context).textTheme.bodyLarge?.color,
-                  ),
-                ),
-                SizedBox(height: 2),
-                Text(
-                  dateText,
-                  style: TextStyle(
-                    fontSize: sizes['itemSubtitleFontSize']!,
-                    color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          SizedBox(width: sizes['spacing']! * 0.67),
-          InkWell(
-            onTap: () async {
-              // Show confirmation dialog
-              final shouldDelete = await showDialog<bool>(
-                context: context,
-                builder: (context) => AlertDialog(
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  title: Row(
-                    children: [
-                      Icon(
-                        Icons.warning_amber_rounded,
-                        color: Colors.red.shade400,
-                        size: 24,
-                      ),
-                      const SizedBox(width: 8),
-                      const Text('Remove Holiday'),
-                    ],
-                  ),
-                  content: const Text('Are you sure you want to remove this holiday?'),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.of(context).pop(false),
-                      child: const Text('Cancel'),
-                    ),
-                    TextButton(
-                      onPressed: () => Navigator.of(context).pop(true),
-                      style: TextButton.styleFrom(
-                        foregroundColor: Colors.red,
-                      ),
-                      child: const Text('Remove'),
-                    ),
-                  ],
-                ),
-              );
-
-              if (shouldDelete == true) {
-                // Remove the holiday
-                await HolidayService.removeHoliday(holiday.id);
-                
-                // Update the holidays list
-                setState(() {
-                  _holidays.removeWhere((h) => h.id == holiday.id);
-                });
-                
-                // Show success message
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: const Row(
-                        children: [
-                          Icon(Icons.check_circle, color: Colors.white),
-                          SizedBox(width: 8),
-                          Text('Holiday removed successfully'),
-                        ],
-                      ),
-                      backgroundColor: Colors.green,
-                      behavior: SnackBarBehavior.floating,
-                    ),
-                  );
-                  
-                  // Force a rebuild of the calendar to update holiday indicators
-                  _updateAllEvents();
-                  
-                  // Close and reopen the dialog to refresh the view
-                  if (!mounted) return;
-                  Navigator.of(context).pop();
-                  if (!mounted) return;
-                  _showAddHolidaysDialog();
-                }
-              }
-            },
-            borderRadius: BorderRadius.circular(sizes['borderRadius']! * 0.67),
-            child: Container(
-              padding: EdgeInsets.all(sizes['padding']! * 0.5),
-              decoration: BoxDecoration(
-                color: Colors.red.shade50,
-                borderRadius: BorderRadius.circular(sizes['borderRadius']! * 0.67),
-              ),
-              child: Icon(
-                Icons.delete_outline,
-                color: Colors.red.shade400,
-                size: sizes['iconSize']! * 0.9,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<Map<String, int>> _getHolidayBalances() async {
-    // Annual leave: effective "Today" vs remaining vs future booked
-    final annualLeaveStoredBalance = await AnnualLeaveService.getEffectiveBalance();
-    final annualLeaveRemainingFutureOnly =
-        await AnnualLeaveService.getRemainingDaysFutureBookingsOnly();
-    final annualLeaveFutureBooked = await AnnualLeaveService.getFutureBookedAnnualLeaveDays();
-    final daysInLieuBalance = await DaysInLieuService.getBalance();
-    final daysInLieuRemaining = await DaysInLieuService.getRemainingDays();
-    final daysInLieuUsed = await DaysInLieuService.getUsedDays();
-    
-    return {
-      'annualLeaveToday': annualLeaveStoredBalance,
-      'annualLeaveRemaining': annualLeaveRemainingFutureOnly,
-      'annualLeaveBooked': annualLeaveFutureBooked,
-      'daysInLieuToday': daysInLieuBalance,
-      'daysInLieuRemaining': daysInLieuRemaining,
-      'daysInLieuBooked': daysInLieuUsed,
-    };
-  }
-
-  Widget _buildBalanceItem(String label, int value, Color color, {VoidCallback? onTap}) {
-    // Responsive sizing based on screen width
-    final screenWidth = MediaQuery.of(context).size.width;
-    final labelFontSize = screenWidth < 350 ? 9.0 : screenWidth < 400 ? 9.5 : screenWidth < 600 ? 10.0 : 11.0;
-    final valueFontSize = screenWidth < 350 ? 12.0 : screenWidth < 400 ? 13.0 : screenWidth < 600 ? 14.0 : 15.0;
-    
-    final column = Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: labelFontSize,
-            color: Theme.of(context).textTheme.bodySmall?.color,
-          ),
-        ),
-        const SizedBox(height: 2),
-        Text(
-          '$value',
-          style: TextStyle(
-            fontSize: valueFontSize,
-            fontWeight: FontWeight.bold,
-            color: color,
-          ),
-        ),
-      ],
-    );
-    
-    if (onTap != null) {
-      return InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(4),
-        child: column,
-      );
-    }
-    
-    return column;
+  Future<Map<String, int>> _getHolidayBalances() {
+    return HolidayBalanceLoader().loadBalances();
   }
 
   void _showBookedHolidaysDialog(BuildContext context, String holidayType) async {
     final holidays = await HolidayService.getHolidays();
+    final bookedHolidays = filterBookedHolidays(
+      holidays: holidays,
+      holidayType: holidayType,
+    );
 
-    List<Holiday> bookedHolidays = [];
-    
-    if (holidayType == 'annualLeave') {
-      // All winter/summer/other bookings (past and future) — counts toward allowance
-      bookedHolidays = holidays.where((holiday) {
-        return holiday.type == 'winter' ||
-            holiday.type == 'summer' ||
-            holiday.type == 'other';
-      }).toList();
-      
-      // Sort by start date
-      bookedHolidays.sort((a, b) => a.startDate.compareTo(b.startDate));
-    } else if (holidayType == 'daysInLieu') {
-      // For Days In Lieu: Show all day_in_lieu holidays
-      bookedHolidays = holidays.where((holiday) => holiday.type == 'day_in_lieu').toList();
-      
-      // Sort by start date
-      bookedHolidays.sort((a, b) => a.startDate.compareTo(b.startDate));
-    }
-    
+    if (!context.mounted) return;
+
     if (bookedHolidays.isEmpty) {
-      if (!context.mounted) return;
-      showDialog(
+      showDialog<void>(
         context: context,
-        builder: (context) => AlertDialog(
-          title: Text(
-            holidayType == 'annualLeave' ? 'Booked Annual Leave' : 'Booked Days In Lieu',
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          content: Text('No holidays booked yet.'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Close'),
-            ),
-          ],
-        ),
+        builder: (context) => EmptyBookedHolidaysDialog(holidayType: holidayType),
       );
       return;
     }
-    
-    if (!context.mounted) return;
-    // Capture holidayType for use in callbacks
-    final capturedHolidayType = holidayType;
-    showDialog(
+
+    showDialog<void>(
       context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) {
-          // Create a mutable list that can be updated
-          final currentHolidays = <Holiday>[...bookedHolidays];
-          
-          return Dialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Container(
-              constraints: BoxConstraints(
-                maxHeight: MediaQuery.of(context).size.height * 0.7,
-                maxWidth: MediaQuery.of(context).size.width < 600 
-                    ? MediaQuery.of(context).size.width * 0.95 
-                    : MediaQuery.of(context).size.width < 900 
-                        ? MediaQuery.of(context).size.width * 0.85 
-                        : 600.0,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Header
-                  Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Row(
-                      children: [
-                        Icon(
-                          capturedHolidayType == 'annualLeave' ? Icons.beach_access : Icons.event_available,
-                          color: capturedHolidayType == 'annualLeave' 
-                              ? Theme.of(context).colorScheme.primary
-                              : ColorCustomizationService.getColorForShift('DAY_IN_LIEU'),
-                          size: 24,
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            capturedHolidayType == 'annualLeave' ? 'Booked Annual Leave' : 'Booked Days In Lieu',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Theme.of(context).textTheme.titleLarge?.color,
-                            ),
-                          ),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.close),
-                          iconSize: 22,
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
-                          onPressed: () => Navigator.of(context).pop(),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const Divider(height: 0),
-                  // List of holidays
-                  Flexible(
-                    child: currentHolidays.isEmpty
-                        ? Padding(
-                            padding: const EdgeInsets.all(24),
-                            child: Center(
-                              child: Text(
-                                'No holidays booked yet.',
-                                style: TextStyle(
-                                  fontStyle: FontStyle.italic,
-                                  color: Colors.grey,
-                                ),
-                              ),
-                            ),
-                          )
-                        : ListView.builder(
-                            shrinkWrap: true,
-                            padding: const EdgeInsets.symmetric(vertical: 8),
-                            itemCount: currentHolidays.length,
-                            itemBuilder: (context, index) {
-                              // Return widget here
-                              final holiday = currentHolidays[index];
-                              final isWinter = holiday.type == 'winter';
-                              final isSummer = holiday.type == 'summer';
-                              final isDayInLieu = holiday.type == 'day_in_lieu';
-                              
-                              String holidayTypeLabel;
-                              Color holidayColor;
-                              IconData holidayIcon;
-                              
-                              if (isWinter) {
-                                holidayTypeLabel = 'Winter Holiday';
-                                holidayColor = Colors.blue;
-                                holidayIcon = Icons.ac_unit;
-                              } else if (isSummer) {
-                                holidayTypeLabel = 'Summer Holiday';
-                                holidayColor = Colors.orange;
-                                holidayIcon = Icons.wb_sunny;
-                              } else if (isDayInLieu) {
-                                holidayTypeLabel = 'Day In Lieu';
-                                holidayColor = ColorCustomizationService.getColorForShift('DAY_IN_LIEU');
-                                holidayIcon = Icons.event_available;
-                              } else {
-                                holidayTypeLabel = 'Holiday';
-                                holidayColor = Colors.grey;
-                                holidayIcon = Icons.event;
-                              }
-                              
-                              final dateText = holiday.startDate == holiday.endDate
-                                  ? DateFormat('MMM d, yyyy').format(holiday.startDate)
-                                  : '${DateFormat('MMM d, yyyy').format(holiday.startDate)} - ${DateFormat('MMM d, yyyy').format(holiday.endDate)}';
-                              
-                              final daysCount = holiday.endDate.difference(holiday.startDate).inDays + 1;
-                              
-                              return Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    color: Theme.of(context).brightness == Brightness.dark
-                                        ? Theme.of(context).cardColor
-                                        : Colors.grey.shade50,
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(
-                                      color: Theme.of(context).brightness == Brightness.dark
-                                          ? Theme.of(context).dividerColor
-                                          : Colors.grey.shade200,
-                                      width: 1,
-                                    ),
-                                  ),
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(12),
-                                    child: Row(
-                                      children: [
-                                        Container(
-                                          padding: const EdgeInsets.all(8),
-                                          decoration: BoxDecoration(
-                                            color: holidayColor.withValues(alpha: 0.15),
-                                            borderRadius: BorderRadius.circular(8),
-                                          ),
-                                          child: Icon(
-                                            holidayIcon,
-                                            color: holidayColor,
-                                            size: 20,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 12),
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                holidayTypeLabel,
-                                                style: TextStyle(
-                                                  fontWeight: FontWeight.bold,
-                                                  fontSize: 14,
-                                                  color: Theme.of(context).textTheme.bodyLarge?.color,
-                                                ),
-                                              ),
-                                              const SizedBox(height: 4),
-                                              Text(
-                                                dateText,
-                                                style: TextStyle(
-                                                  fontSize: 12,
-                                                  color: Theme.of(context).textTheme.bodySmall?.color,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                          decoration: BoxDecoration(
-                                            color: holidayColor.withValues(alpha: 0.15),
-                                            borderRadius: BorderRadius.circular(8),
-                                          ),
-                                          child: Text(
-                                            '$daysCount ${daysCount == 1 ? 'day' : 'days'}',
-                                            style: TextStyle(
-                                              color: holidayColor,
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 12,
-                                            ),
-                                          ),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        InkWell(
-                                          onTap: () async {
-                                            // Show confirmation dialog
-                                            final shouldDelete = await showDialog<bool>(
-                                              context: context,
-                                              builder: (context) => AlertDialog(
-                                                title: const Text('Delete Holiday'),
-                                                content: Text('Are you sure you want to delete this ${holidayTypeLabel.toLowerCase()}?'),
-                                                actions: [
-                                                  TextButton(
-                                                    onPressed: () => Navigator.of(context).pop(false),
-                                                    child: const Text('Cancel'),
-                                                  ),
-                                                  TextButton(
-                                                    onPressed: () => Navigator.of(context).pop(true),
-                                                    style: TextButton.styleFrom(
-                                                      foregroundColor: Colors.red,
-                                                    ),
-                                                    child: const Text('Delete'),
-                                                  ),
-                                                ],
-                                              ),
-                                            );
-                                            
-                                            if (shouldDelete == true && context.mounted) {
-                                              try {
-                                                // Remove the holiday
-                                                await HolidayService.removeHoliday(holiday.id);
-                                                
-                                                // Reload holidays
-                                                final updatedHolidays = await HolidayService.getHolidays();
-                                                final today = DateTime.now();
-                                                final todayNormalized = DateTime(today.year, today.month, today.day);
-                                                
-                                                List<Holiday> updatedBookedHolidays = [];
-                                                
-                                                if (capturedHolidayType == 'annualLeave') {
-                                                  updatedBookedHolidays = updatedHolidays.where((h) {
-                                                    if (h.type != 'winter' && h.type != 'summer' && h.type != 'other') {
-                                                      return false;
-                                                    }
-                                                    final startDateNormalized = DateTime(
-                                                      h.startDate.year,
-                                                      h.startDate.month,
-                                                      h.startDate.day,
-                                                    );
-                                                    return !startDateNormalized.isBefore(todayNormalized);
-                                                  }).toList();
-                                                  updatedBookedHolidays.sort((a, b) => a.startDate.compareTo(b.startDate));
-                                                } else if (capturedHolidayType == 'daysInLieu') {
-                                                  updatedBookedHolidays = updatedHolidays.where((h) => h.type == 'day_in_lieu').toList();
-                                                  updatedBookedHolidays.sort((a, b) => a.startDate.compareTo(b.startDate));
-                                                }
-                                                
-                                                // Update the dialog state
-                                                setDialogState(() {
-                                                  currentHolidays.clear();
-                                                  currentHolidays.addAll(updatedBookedHolidays);
-                                                });
-                                                
-                                                // Reload holidays in the main screen
-                                                await _reloadHolidays();
-                                                
-                                                // Update calendar events
-                                                _updateAllEvents();
-                                                
-                                                // Show success message
-                                                if (context.mounted) {
-                                                  ScaffoldMessenger.of(context).showSnackBar(
-                                                    SnackBar(
-                                                      content: const Row(
-                                                        children: [
-                                                          Icon(Icons.check_circle, color: Colors.white),
-                                                          SizedBox(width: 8),
-                                                          Text('Holiday removed successfully'),
-                                                        ],
-                                                      ),
-                                                      backgroundColor: Colors.green,
-                                                      behavior: SnackBarBehavior.floating,
-                                                    ),
-                                                  );
-                                                }
-                                                
-                                                // If no holidays left, close dialog
-                                                if (updatedBookedHolidays.isEmpty && context.mounted) {
-                                                  Navigator.of(context).pop();
-                                                }
-                                              } catch (e) {
-                                                if (context.mounted) {
-                                                  ScaffoldMessenger.of(context).showSnackBar(
-                                                    SnackBar(
-                                                      content: Text('Error removing holiday: $e'),
-                                                      backgroundColor: Colors.red,
-                                                      behavior: SnackBarBehavior.floating,
-                                                    ),
-                                                  );
-                                                }
-                                              }
-                                            }
-                                          },
-                                          borderRadius: BorderRadius.circular(8),
-                                          child: Container(
-                                            padding: const EdgeInsets.all(8),
-                                            decoration: BoxDecoration(
-                                              color: Colors.red.shade50,
-                                              borderRadius: BorderRadius.circular(8),
-                                            ),
-                                            child: Icon(
-                                              Icons.delete_outline,
-                                              color: Colors.red.shade400,
-                                              size: 20,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                  ),
-                ],
-              ),
-            ),
+      builder: (dialogContext) => BookedHolidaysDialog(
+        holidayType: holidayType,
+        initialHolidays: bookedHolidays,
+        onDeleteHoliday: (holiday) async {
+          await HolidayService.removeHoliday(holiday.id);
+          final updatedHolidays = await HolidayService.getHolidays();
+          await _reloadHolidays();
+          _updateAllEvents();
+          return filterBookedHolidaysAfterDelete(
+            holidays: updatedHolidays,
+            holidayType: holidayType,
           );
         },
       ),
@@ -8425,1620 +1742,154 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
   }
 
   void _showAddHolidaysDialog() {
-    final scrollController = ScrollController();
-    
-    showDialog(
+    showDialog<void>(
       context: context,
-      builder: (BuildContext context) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) => Dialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-          child: Container(
-            constraints: BoxConstraints(
-              maxHeight: MediaQuery.of(context).size.height * 0.8,
-              maxWidth: MediaQuery.of(context).size.width < 600 
-                  ? MediaQuery.of(context).size.width * 0.95 
-                  : MediaQuery.of(context).size.width < 900 
-                      ? MediaQuery.of(context).size.width * 0.85 
-                      : 600.0,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  child: Row(
-                    children: [
-                      Text(
-                        'Add Holidays',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Theme.of(context).textTheme.titleLarge?.color,
-                        ),
-                      ),
-                      const Spacer(),
-                      IconButton(
-                        icon: const Icon(Icons.close),
-                        iconSize: 22,
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
-                        onPressed: () {
-                          scrollController.dispose();
-                          Navigator.of(context).pop();
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-                const Divider(height: 0),
-                // Balance display (compact)
-                FutureBuilder<Map<String, int>>(
-                  future: _getHolidayBalances(),
-                  builder: (context, snapshot) {
-                    if (!snapshot.hasData) {
-                      return const SizedBox.shrink();
-                    }
-                    final balances = snapshot.data!;
-                    final primaryColor = Theme.of(context).colorScheme.primary;
-                    final dayInLieuColor = ColorCustomizationService.getColorForShift('DAY_IN_LIEU');
-                    
-                    return Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-                        border: Border(
-                          bottom: BorderSide(
-                            color: Theme.of(context).dividerColor.withValues(alpha: 0.3),
-                            width: 1,
-                          ),
-                        ),
-                      ),
-                      child: Column(
-                        children: [
-                          // Annual Leave
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(
-                                      'Annual Leave',
-                                      style: TextStyle(
-                                        fontSize: MediaQuery.of(context).size.width < 350 ? 11.0 : MediaQuery.of(context).size.width < 600 ? 12.0 : 13.0,
-                                        fontWeight: FontWeight.w600,
-                                        color: Theme.of(context).textTheme.bodyMedium?.color,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Row(
-                                      children: [
-                                        Expanded(
-                                          child: _buildBalanceItem('Today', balances['annualLeaveToday']!, primaryColor),
-                                        ),
-                                        Container(
-                                          width: 1,
-                                          height: 20,
-                                          color: Theme.of(context).dividerColor.withValues(alpha: 0.3),
-                                        ),
-                                        Expanded(
-                                          child: _buildBalanceItem('Remaining', balances['annualLeaveRemaining']!, primaryColor),
-                                        ),
-                                        Container(
-                                          width: 1,
-                                          height: 20,
-                                          color: Theme.of(context).dividerColor.withValues(alpha: 0.3),
-                                        ),
-                                        Expanded(
-                                          child: _buildBalanceItem(
-                                            'Booked', 
-                                            balances['annualLeaveBooked']!, 
-                                            Theme.of(context).textTheme.bodyMedium?.color ?? Colors.grey,
-                                            onTap: () => _showBookedHolidaysDialog(context, 'annualLeave'),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          Container(
-                            height: 1,
-                            color: Theme.of(context).dividerColor.withValues(alpha: 0.3),
-                          ),
-                          const SizedBox(height: 8),
-                          // Days In Lieu
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(
-                                      'Days In Lieu',
-                                      style: TextStyle(
-                                        fontSize: MediaQuery.of(context).size.width < 350 ? 11.0 : MediaQuery.of(context).size.width < 600 ? 12.0 : 13.0,
-                                        fontWeight: FontWeight.w600,
-                                        color: Theme.of(context).textTheme.bodyMedium?.color,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Row(
-                                      children: [
-                                        Expanded(
-                                          child: _buildBalanceItem('Today', balances['daysInLieuToday']!, dayInLieuColor),
-                                        ),
-                                        Container(
-                                          width: 1,
-                                          height: 20,
-                                          color: Theme.of(context).dividerColor.withValues(alpha: 0.3),
-                                        ),
-                                        Expanded(
-                                          child: _buildBalanceItem('Remaining', balances['daysInLieuRemaining']!, dayInLieuColor),
-                                        ),
-                                        Container(
-                                          width: 1,
-                                          height: 20,
-                                          color: Theme.of(context).dividerColor.withValues(alpha: 0.3),
-                                        ),
-                                        Expanded(
-                                          child: _buildBalanceItem(
-                                            'Booked', 
-                                            balances['daysInLieuBooked']!, 
-                                            Theme.of(context).textTheme.bodyMedium?.color ?? Colors.grey,
-                                            onTap: () => _showBookedHolidaysDialog(context, 'daysInLieu'),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
-                // Add new holiday section (static at top)
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Add New Holiday',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                          color: Theme.of(context).textTheme.bodyLarge?.color,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      InkWell(
-                        onTap: () {
-                          scrollController.dispose();
-                          Navigator.of(context).pop();
-                          _showSummerHolidayDateDialog();
-                        },
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                          child: Row(
-                            children: [
-                              const Icon(Icons.wb_sunny, size: 22),
-                              const SizedBox(width: 12),
-                              Text(
-                                'Summer Holiday',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: Theme.of(context).textTheme.bodyMedium?.color,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      InkWell(
-                        onTap: () {
-                          scrollController.dispose();
-                          Navigator.of(context).pop();
-                          _showWinterHolidayDateDialog();
-                        },
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                          child: Row(
-                            children: [
-                              const Icon(Icons.ac_unit, size: 22),
-                              const SizedBox(width: 12),
-                              Text(
-                                'Winter (1 Week)',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: Theme.of(context).textTheme.bodyMedium?.color,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      InkWell(
-                        onTap: () {
-                          scrollController.dispose();
-                          Navigator.of(context).pop();
-                          _showOtherHolidayDialog();
-                        },
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                          child: Row(
-                            children: [
-                              const Icon(Icons.event, size: 22),
-                              const SizedBox(width: 12),
-                              Text(
-                                'Holiday',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: Theme.of(context).textTheme.bodyMedium?.color,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      InkWell(
-                        onTap: () {
-                          scrollController.dispose();
-                          Navigator.of(context).pop();
-                          _showUnpaidLeaveDialog();
-                        },
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                          child: Row(
-                            children: [
-                              const Icon(Icons.money_off, size: 22, color: Colors.purple),
-                              const SizedBox(width: 12),
-                              Text(
-                                'Unpaid Leave',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: Theme.of(context).textTheme.bodyMedium?.color,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      InkWell(
-                        onTap: () {
-                          scrollController.dispose();
-                          Navigator.of(context).pop();
-                          _showDayInLieuDialog();
-                        },
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.event_available,
-                                size: 22,
-                                color: ColorCustomizationService.getColorForShift('DAY_IN_LIEU'),
-                              ),
-                              const SizedBox(width: 12),
-                              Text(
-                                'Day In Lieu',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: Theme.of(context).textTheme.bodyMedium?.color,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                // Divider before scrollable section
-                if (_holidays.isNotEmpty) const Divider(height: 1),
-                // Existing holidays section (scrollable)
-                if (_holidays.isNotEmpty)
-                  Flexible(
-                    child: Scrollbar(
-                      controller: scrollController,
-                      thumbVisibility: true,
-                      thickness: 6,
-                      radius: const Radius.circular(3),
-                      child: SingleChildScrollView(
-                        controller: scrollController,
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                          child: _buildHolidaysSection(context),
-                        ),
-                      ),
-                    ),
-                  ),
-                // Bottom divider and close button
-                const Divider(height: 1),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
-                  child: Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton(
-                      onPressed: () {
-                        scrollController.dispose();
-                        Navigator.of(context).pop();
-                      },
-                      style: TextButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                        minimumSize: Size.zero,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      ),
-                      child: const Text('Close'),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          ),
-        );
-      },
-    ).then((_) {
-      // Dispose controller when dialog is closed (handles cases where dialog closes without button press)
-      scrollController.dispose();
-    });
-  }
-
-  // Helper method to get all Sundays for a specific year
-  List<DateTime> _getSundaysForYear(int year) {
-    final firstDayOfYear = DateTime(year, 1, 1);
-    final lastDayOfYear = DateTime(year, 12, 31);
-    
-    // Find the first Sunday of the year
-    var firstSunday = firstDayOfYear;
-    while (firstSunday.weekday != DateTime.sunday) {
-      firstSunday = firstSunday.add(const Duration(days: 1));
-    }
-    
-    // Create a list of all Sundays in the year
-    final sundays = <DateTime>[];
-    var currentSunday = firstSunday;
-    
-    while (currentSunday.isBefore(lastDayOfYear) || currentSunday.isAtSameMomentAs(lastDayOfYear)) {
-      sundays.add(currentSunday);
-      currentSunday = currentSunday.add(const Duration(days: 7));
-    }
-    
-    return sundays;
-  }
-
-  // Helper method to check if a holiday already exists for a specific date and type
-  Future<bool> _hasHolidayForDate(DateTime date, String type) async {
-    final holidays = await HolidayService.getHolidays();
-    return holidays.any((h) => 
-      h.type == type && 
-      h.containsDate(date)
+      builder: (dialogContext) => AddHolidaysDialog(
+        loadBalances: _getHolidayBalances,
+        hasExistingHolidays: _holidays.isNotEmpty,
+        existingHolidaysSection: ExistingHolidaysSection(
+          holidays: _holidays,
+          holidayColor: holidayColor,
+          onDeleteHoliday: (holiday) async {
+            await HolidayService.removeHoliday(holiday.id);
+            setState(() {
+              _holidays.removeWhere((h) => h.id == holiday.id);
+            });
+            _updateAllEvents();
+          },
+          onAfterDelete: _showAddHolidaysDialog,
+        ),
+        onShowBookedAnnualLeave: () =>
+            _showBookedHolidaysDialog(dialogContext, 'annualLeave'),
+        onShowBookedDaysInLieu: () =>
+            _showBookedHolidaysDialog(dialogContext, 'daysInLieu'),
+        onSummerHoliday: _showSummerHolidayDateDialog,
+        onWinterHoliday: _showWinterHolidayDateDialog,
+        onOtherHoliday: _showOtherHolidayDialog,
+        onUnpaidLeave: _showUnpaidLeaveDialog,
+        onDayInLieu: _showDayInLieuDialog,
+      ),
     );
   }
 
   void _showWinterHolidayDateDialog() {
-    final now = DateTime.now();
-    final currentYear = now.year;
-    
-    // Show year selection first
+    final currentYear = DateTime.now().year;
+
     showDialog(
       context: context,
-      builder: (BuildContext context) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return FutureBuilder<Map<int, int>>(
-              future: _getHolidayCountsForYears(currentYear, 'winter'),
-              builder: (context, snapshot) {
-                final holidayCounts = snapshot.data ?? {};
-                final textScale = MediaQuery.textScalerOf(context).scale(1.0);
-                final yearGridAspectRatio =
-                    (1.2 / textScale.clamp(1.0, 3.0)).clamp(0.38, 1.2);
-                
-                return AlertDialog(
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  title: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).brightness == Brightness.dark
-                              ? Colors.blue.shade900.withValues(alpha: 0.3)
-                              : Colors.blue.shade50,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Icon(Icons.ac_unit, color: Colors.blue, size: 20),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          'Select Year for Winter Holiday',
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: Theme.of(context).textTheme.titleLarge?.color,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  contentPadding: const EdgeInsets.all(16),
-                  content: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      maxHeight: MediaQuery.sizeOf(context).height * 0.55,
-                    ),
-                    child: SingleChildScrollView(
-                      child: SizedBox(
-                        width: double.maxFinite,
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                        // Year selection grid
-                        GridView.builder(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 3,
-                            crossAxisSpacing: 12,
-                            mainAxisSpacing: 12,
-                            childAspectRatio: yearGridAspectRatio,
-                          ),
-                          itemCount: 5, // Current year + 4 future years
-                          itemBuilder: (context, index) {
-                            final year = currentYear + index;
-                            final count = holidayCounts[year] ?? 0;
-                            final hasHolidays = count > 0;
-                            
-                            return Material(
-                              color: Colors.transparent,
-                              child: InkWell(
-                                onTap: () {
-                                  Navigator.of(context).pop();
-                                  _showWinterHolidayDateDialogForYear(year);
-                                },
-                                borderRadius: BorderRadius.circular(12),
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    color: Theme.of(context).brightness == Brightness.dark
-                                        ? (hasHolidays 
-                                            ? Colors.blue.shade900.withValues(alpha: 0.3)
-                                            : Theme.of(context).cardColor)
-                                        : (hasHolidays 
-                                            ? Colors.blue.shade50 
-                                            : Colors.grey.shade50),
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(
-                                      color: Theme.of(context).brightness == Brightness.dark
-                                          ? (hasHolidays 
-                                              ? Colors.blue.shade700 
-                                              : Theme.of(context).dividerColor)
-                                          : (hasHolidays 
-                                              ? Colors.blue.shade200 
-                                              : Colors.grey.shade300),
-                                      width: hasHolidays ? 2 : 1,
-                                    ),
-                                    boxShadow: hasHolidays ? [
-                                      BoxShadow(
-                                        color: Colors.blue.withValues(alpha: 0.1),
-                                        blurRadius: 4,
-                                        offset: const Offset(0, 2),
-                                      ),
-                                    ] : null,
-                                  ),
-                                  child: Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Text(
-                                        year.toString(),
-                                        style: TextStyle(
-                                          fontSize: 18,
-                                          fontWeight: FontWeight.bold,
-                                          color: Theme.of(context).brightness == Brightness.dark
-                                              ? Theme.of(context).textTheme.bodyLarge?.color
-                                              : (hasHolidays 
-                                                  ? Colors.blue.shade700 
-                                                  : Colors.grey.shade700),
-                                        ),
-                                      ),
-                                      if (hasHolidays) ...[
-                                        const SizedBox(height: 4),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 6,
-                                            vertical: 2,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: Theme.of(context).brightness == Brightness.dark
-                                                ? Colors.blue.shade800.withValues(alpha: 0.5)
-                                                : Colors.blue.shade100,
-                                            borderRadius: BorderRadius.circular(8),
-                                          ),
-                                          child: Text(
-                                            '$count ${count == 1 ? 'holiday' : 'holidays'}',
-                                            style: TextStyle(
-                                              fontSize: 10,
-                                              color: Theme.of(context).brightness == Brightness.dark
-                                                  ? Colors.blue.shade300
-                                                  : Colors.blue.shade700,
-                                              fontWeight: FontWeight.w600,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                        const SizedBox(height: 16),
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).brightness == Brightness.dark
-                                ? Colors.blue.shade900.withValues(alpha: 0.3)
-                                : Colors.blue.shade50,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.info_outline, 
-                                size: 16, 
-                                color: Theme.of(context).brightness == Brightness.dark
-                                    ? Colors.blue.shade300
-                                    : Colors.blue.shade700,
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  'Select a year to choose your winter holiday start date',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Theme.of(context).brightness == Brightness.dark
-                                        ? Colors.blue.shade300
-                                        : Colors.blue.shade700,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  actions: [
-                    TextButton.icon(
-                      onPressed: () => Navigator.of(context).pop(),
-                      icon: const Icon(Icons.close),
-                      label: const Text('Cancel'),
-                      style: TextButton.styleFrom(
-                        foregroundColor: Theme.of(context).textTheme.bodyMedium?.color,
-                      ),
-                    ),
-                  ],
-                );
-              },
-            );
-          },
-        );
-      },
+      builder: (context) => HolidayYearPickerDialog(
+        title: 'Select Year for Winter Holiday',
+        infoText: 'Select a year to choose your winter holiday start date',
+        icon: Icons.ac_unit,
+        accent: Colors.blue,
+        startYear: currentYear,
+        loadHolidayCounts: () => HolidayLookupService.getHolidayCountsForYears(currentYear, 'winter'),
+        onYearSelected: _showWinterHolidayDateDialogForYear,
+      ),
     );
   }
 
-  // Helper to get holiday counts for multiple years
-  Future<Map<int, int>> _getHolidayCountsForYears(int startYear, String type) async {
-    final holidays = await HolidayService.getHolidays();
-    final counts = <int, int>{};
-    
-    for (int i = 0; i < 5; i++) {
-      final year = startYear + i;
-      counts[year] = holidays.where((h) => 
-        h.type == type && 
-        h.startDate.year == year
-      ).length;
-    }
-    
-    return counts;
-  }
-
-  // Show winter holiday date selection for a specific year
   void _showWinterHolidayDateDialogForYear(int year) {
-    final sundays = _getSundaysForYear(year);
-    
-    showDialog(
+    final sundays = getSundaysForYear(year);
+
+    showDialog<bool>(
       context: context,
-      builder: (BuildContext context) {
-        final screenHeight = MediaQuery.of(context).size.height;
-        final listHeight = (screenHeight * 0.5).clamp(250.0, 400.0);
-        
-        return FutureBuilder<List<bool>>(
-          future: Future.wait(
-            sundays.map((date) => _hasHolidayForDate(date, 'winter'))
-          ),
-          builder: (context, snapshot) {
-            final hasHolidayFlags = snapshot.data ?? List.filled(sundays.length, false);
-            
-            return AlertDialog(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              title: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).brightness == Brightness.dark
-                          ? Colors.blue.shade900.withValues(alpha: 0.3)
-                          : Colors.blue.shade50,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(Icons.ac_unit, color: Colors.blue, size: 20),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          'Select Winter Holiday Start Date',
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: Theme.of(context).textTheme.titleLarge?.color,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          'Year: $year',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Theme.of(context).textTheme.bodySmall?.color,
-                            fontWeight: FontWeight.normal,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.arrow_back, size: 20),
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                      _showWinterHolidayDateDialog();
-                    },
-                    tooltip: 'Change year',
-                  ),
-                ],
-              ),
-              contentPadding: const EdgeInsets.only(top: 8, bottom: 0),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).brightness == Brightness.dark
-                          ? Theme.of(context).cardColor
-                          : Colors.grey.shade50,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: Theme.of(context).brightness == Brightness.dark
-                            ? Theme.of(context).dividerColor
-                            : Colors.grey.shade200,
-                      ),
-                    ),
-                    child: SizedBox(
-                      width: double.maxFinite,
-                      height: listHeight,
-                      child: ListView.builder(
-                        shrinkWrap: true,
-                        itemCount: sundays.length,
-                        itemBuilder: (context, index) {
-                          final date = sundays[index];
-                          final alreadyHasHoliday = hasHolidayFlags[index];
-                          
-                          return Container(
-                            margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: Theme.of(context).brightness == Brightness.dark
-                                  ? (alreadyHasHoliday 
-                                      ? Theme.of(context).cardColor.withValues(alpha: 0.5)
-                                      : Theme.of(context).cardColor)
-                                  : (alreadyHasHoliday 
-                                      ? Colors.grey.shade100 
-                                      : Colors.white),
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(
-                                color: Theme.of(context).brightness == Brightness.dark
-                                    ? (alreadyHasHoliday 
-                                        ? Theme.of(context).dividerColor
-                                        : Colors.blue.shade700)
-                                    : (alreadyHasHoliday 
-                                        ? Colors.grey.shade300 
-                                        : Colors.blue.shade100),
-                                width: 1,
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.05),
-                                  blurRadius: 4,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
-                            ),
-                            child: Material(
-                              color: Colors.transparent,
-                              child: InkWell(
-                                onTap: alreadyHasHoliday ? null : () async {
-                                  // Create a new holiday starting on the selected Sunday
-                                  final holiday = Holiday(
-                                    id: DateTime.now().millisecondsSinceEpoch.toString(),
-                                    startDate: date,
-                                    endDate: date.add(const Duration(days: 6)), // End on Saturday
-                                    type: 'winter',
-                                  );
-                                  
-                                  // Add the holiday
-                                  await HolidayService.addHoliday(holiday);
-                                  
-                                  // Reload holidays from storage to ensure consistency
-                                  await _reloadHolidays();
-                                  
-                                  // Close the dialog
-                                  if (!mounted) return;
-                                  Navigator.of(context).pop();
-                                  
-                                  // Show success message
-                                  if (!mounted) return;
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text('Winter holiday for $year added successfully'),
-                                      backgroundColor: Colors.green,
-                                    ),
-                                  );
-                                },
-                                borderRadius: BorderRadius.circular(8),
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                  child: Row(
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                                        decoration: BoxDecoration(
-                                          color: Theme.of(context).brightness == Brightness.dark
-                                              ? (alreadyHasHoliday 
-                                                  ? Theme.of(context).dividerColor
-                                                  : Colors.blue.shade900.withValues(alpha: 0.3))
-                                              : (alreadyHasHoliday 
-                                                  ? Colors.grey.shade300 
-                                                  : Colors.blue.shade50),
-                                          borderRadius: BorderRadius.circular(4),
-                                        ),
-                                        child: Text(
-                                          'Sun',
-                                          style: TextStyle(
-                                            color: Theme.of(context).brightness == Brightness.dark
-                                                ? (alreadyHasHoliday 
-                                                    ? Theme.of(context).textTheme.bodySmall?.color
-                                                    : Colors.blue.shade300)
-                                                : (alreadyHasHoliday 
-                                                    ? Colors.grey.shade600 
-                                                    : Colors.blue.shade700),
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 12,
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 10),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              DateFormat('MMM d, yyyy').format(date),
-                                              style: TextStyle(
-                                                fontSize: 13,
-                                                color: Theme.of(context).brightness == Brightness.dark
-                                                    ? Theme.of(context).textTheme.bodyLarge?.color
-                                                    : (alreadyHasHoliday 
-                                                        ? Colors.grey.shade600 
-                                                        : Colors.black87),
-                                              ),
-                                            ),
-                                            if (alreadyHasHoliday)
-                                              Text(
-                                                'Already added',
-                                                style: TextStyle(
-                                                  fontSize: 11,
-                                                  color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
-                                                  fontStyle: FontStyle.italic,
-                                                ),
-                                              ),
-                                          ],
-                                        ),
-                                      ),
-                                      if (!alreadyHasHoliday)
-                                        Icon(
-                                          Icons.arrow_forward_ios,
-                                          size: 14,
-                                          color: Colors.blue.shade300,
-                                        )
-                                      else
-                                        Icon(
-                                          Icons.check_circle,
-                                          size: 16,
-                                          color: Colors.grey.shade400,
-                                        ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.swipe,
-                        size: 16,
-                        color: Colors.grey.shade400,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Scroll to see more dates',
-                        style: TextStyle(
-                          color: Colors.grey.shade600,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              actionsPadding: const EdgeInsets.only(bottom: 8),
-              actions: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    TextButton.icon(
-                      onPressed: () {
-                        Navigator.of(context).pop();
-                        _showWinterHolidayDateDialog();
-                      },
-                      icon: const Icon(Icons.arrow_back, size: 16),
-                      label: const Text('Change Year'),
-                      style: TextButton.styleFrom(
-                        foregroundColor: Theme.of(context).brightness == Brightness.dark
-                            ? Colors.blue.shade300
-                            : Colors.blue.shade700,
-                      ),
-                    ),
-                    TextButton.icon(
-                      onPressed: () => Navigator.of(context).pop(),
-                      icon: const Icon(Icons.close),
-                      label: const Text('Cancel'),
-                      style: TextButton.styleFrom(
-                        foregroundColor: Theme.of(context).textTheme.bodyMedium?.color,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
+      builder: (context) => HolidaySundayDatePickerDialog(
+        title: 'Select Winter Holiday Start Date',
+        subtitle: 'Year: $year',
+        icon: Icons.ac_unit,
+        accent: Colors.blue,
+        sundays: sundays,
+        loadHasHolidayFlags: () => Future.wait(
+          sundays.map((date) => HolidayLookupService.hasHolidayForDate(date, 'winter')),
+        ),
+        onBack: _showWinterHolidayDateDialog,
+        onConfirm: (date) async {
+          await _holidayBookingService.addWinterHoliday(date);
+          await _reloadHolidays();
+        },
+      ),
+    ).then((added) {
+      if (!mounted || added != true) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Winter holiday for $year added successfully'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    });
   }
 
   void _showSummerHolidayDateDialog() {
-    // Show duration choice first
     showDialog(
       context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          title: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).brightness == Brightness.dark
-                      ? Colors.orange.shade900.withValues(alpha: 0.3)
-                      : Colors.orange.shade50,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(Icons.wb_sunny, color: Colors.orange, size: 20),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  'Select Duration',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          content: SingleChildScrollView(
-            child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: () {
-                    Navigator.of(context).pop();
-                    _showSummerHolidayYearDialog(durationWeeks: 1);
-                  },
-                  borderRadius: BorderRadius.circular(12),
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).brightness == Brightness.dark
-                          ? Theme.of(context).cardColor
-                          : Colors.orange.shade50,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: Colors.orange.shade300,
-                        width: 2,
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).brightness == Brightness.dark
-                                ? Colors.orange.shade900.withValues(alpha: 0.5)
-                                : Colors.orange.shade100,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Icon(Icons.calendar_view_week, color: Colors.orange),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                '1 Week',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: Theme.of(context).colorScheme.onSurface,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Sunday to Saturday (7 days)',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: () {
-                    Navigator.of(context).pop();
-                    _showSummerHolidayYearDialog(durationWeeks: 2);
-                  },
-                  borderRadius: BorderRadius.circular(12),
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).brightness == Brightness.dark
-                          ? Theme.of(context).cardColor
-                          : Colors.orange.shade50,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: Colors.orange.shade300,
-                        width: 2,
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).brightness == Brightness.dark
-                                ? Colors.orange.shade900.withValues(alpha: 0.5)
-                                : Colors.orange.shade100,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Icon(Icons.calendar_view_month, color: Colors.orange),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                '2 Weeks',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: Theme.of(context).colorScheme.onSurface,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Sunday to Saturday (14 days)',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
-            ),
-          ],
-        );
-      },
+      builder: (context) => SummerHolidayDurationDialog(
+        onDurationSelected: (durationWeeks) {
+          _showSummerHolidayYearDialog(durationWeeks: durationWeeks);
+        },
+      ),
     );
   }
 
   void _showSummerHolidayYearDialog({required int durationWeeks}) {
-    final now = DateTime.now();
-    final currentYear = now.year;
-    
-    // Show year selection
+    final currentYear = DateTime.now().year;
+
     showDialog(
       context: context,
-      builder: (BuildContext context) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return FutureBuilder<Map<int, int>>(
-              future: _getHolidayCountsForYears(currentYear, 'summer'),
-              builder: (context, snapshot) {
-                final holidayCounts = snapshot.data ?? {};
-                final textScale = MediaQuery.textScalerOf(context).scale(1.0);
-                final yearGridAspectRatio =
-                    (1.2 / textScale.clamp(1.0, 3.0)).clamp(0.38, 1.2);
-                
-                return AlertDialog(
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  title: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).brightness == Brightness.dark
-                              ? Colors.orange.shade900.withValues(alpha: 0.3)
-                              : Colors.orange.shade50,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Icon(Icons.wb_sunny, color: Colors.orange, size: 20),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          'Select Year for Summer Holiday',
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: Theme.of(context).textTheme.titleLarge?.color,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  contentPadding: const EdgeInsets.all(16),
-                  content: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      maxHeight: MediaQuery.sizeOf(context).height * 0.55,
-                    ),
-                    child: SingleChildScrollView(
-                      child: SizedBox(
-                        width: double.maxFinite,
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                        // Year selection grid
-                        GridView.builder(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 3,
-                            crossAxisSpacing: 12,
-                            mainAxisSpacing: 12,
-                            childAspectRatio: yearGridAspectRatio,
-                          ),
-                          itemCount: 5, // Current year + 4 future years
-                          itemBuilder: (context, index) {
-                            final year = currentYear + index;
-                            final count = holidayCounts[year] ?? 0;
-                            final hasHolidays = count > 0;
-                            
-                            return Material(
-                              color: Colors.transparent,
-                              child: InkWell(
-                                onTap: () {
-                                  Navigator.of(context).pop();
-                                  _showSummerHolidayDateDialogForYear(year, durationWeeks: durationWeeks);
-                                },
-                                borderRadius: BorderRadius.circular(12),
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    color: Theme.of(context).brightness == Brightness.dark
-                                        ? (hasHolidays 
-                                            ? Colors.orange.shade900.withValues(alpha: 0.3)
-                                            : Theme.of(context).cardColor)
-                                        : (hasHolidays 
-                                            ? Colors.orange.shade50 
-                                            : Colors.grey.shade50),
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(
-                                      color: Theme.of(context).brightness == Brightness.dark
-                                          ? (hasHolidays 
-                                              ? Colors.orange.shade700 
-                                              : Theme.of(context).dividerColor)
-                                          : (hasHolidays 
-                                              ? Colors.orange.shade200 
-                                              : Colors.grey.shade300),
-                                      width: hasHolidays ? 2 : 1,
-                                    ),
-                                    boxShadow: hasHolidays ? [
-                                      BoxShadow(
-                                        color: Colors.orange.withValues(alpha: 0.1),
-                                        blurRadius: 4,
-                                        offset: const Offset(0, 2),
-                                      ),
-                                    ] : null,
-                                  ),
-                                  child: Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Text(
-                                        year.toString(),
-                                        style: TextStyle(
-                                          fontSize: 18,
-                                          fontWeight: FontWeight.bold,
-                                          color: Theme.of(context).brightness == Brightness.dark
-                                              ? Theme.of(context).textTheme.bodyLarge?.color
-                                              : (hasHolidays 
-                                                  ? Colors.orange.shade700 
-                                                  : Colors.grey.shade700),
-                                        ),
-                                      ),
-                                      if (hasHolidays) ...[
-                                        const SizedBox(height: 4),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 6,
-                                            vertical: 2,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: Theme.of(context).brightness == Brightness.dark
-                                                ? Colors.orange.shade800.withValues(alpha: 0.5)
-                                                : Colors.orange.shade100,
-                                            borderRadius: BorderRadius.circular(8),
-                                          ),
-                                          child: Text(
-                                            '$count ${count == 1 ? 'holiday' : 'holidays'}',
-                                            style: TextStyle(
-                                              fontSize: 10,
-                                              color: Theme.of(context).brightness == Brightness.dark
-                                                  ? Colors.orange.shade300
-                                                  : Colors.orange.shade700,
-                                              fontWeight: FontWeight.w600,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                        const SizedBox(height: 16),
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).brightness == Brightness.dark
-                                ? Colors.orange.shade900.withValues(alpha: 0.3)
-                                : Colors.orange.shade50,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.info_outline, 
-                                size: 16, 
-                                color: Theme.of(context).brightness == Brightness.dark
-                                    ? Colors.orange.shade300
-                                    : Colors.orange.shade700,
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  'Select a year to choose your summer holiday start date',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Theme.of(context).brightness == Brightness.dark
-                                        ? Colors.orange.shade300
-                                        : Colors.orange.shade700,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  actions: [
-                    TextButton.icon(
-                      onPressed: () => Navigator.of(context).pop(),
-                      icon: const Icon(Icons.close),
-                      label: const Text('Cancel'),
-                      style: TextButton.styleFrom(
-                        foregroundColor: Theme.of(context).textTheme.bodyMedium?.color,
-                      ),
-                    ),
-                  ],
-                );
-              },
-            );
-          },
-        );
-      },
+      builder: (context) => HolidayYearPickerDialog(
+        title: 'Select Year for Summer Holiday',
+        infoText: 'Select a year to choose your summer holiday start date',
+        icon: Icons.wb_sunny,
+        accent: Colors.orange,
+        startYear: currentYear,
+        loadHolidayCounts: () => HolidayLookupService.getHolidayCountsForYears(currentYear, 'summer'),
+        onYearSelected: (year) {
+          _showSummerHolidayDateDialogForYear(
+            year,
+            durationWeeks: durationWeeks,
+          );
+        },
+      ),
     );
   }
 
-  // Show summer holiday date selection for a specific year
   void _showSummerHolidayDateDialogForYear(int year, {required int durationWeeks}) {
-    final sundays = _getSundaysForYear(year);
-    
-    showDialog(
+    final sundays = getSundaysForYear(year);
+
+    showDialog<bool>(
       context: context,
-      builder: (BuildContext context) {
-        final screenHeight = MediaQuery.of(context).size.height;
-        final listHeight = (screenHeight * 0.5).clamp(250.0, 400.0);
-        
-        return FutureBuilder<List<bool>>(
-          future: Future.wait(
-            sundays.map((date) => _hasHolidayForDate(date, 'summer'))
+      builder: (context) => HolidaySundayDatePickerDialog(
+        title: 'Select Summer Holiday Start Date',
+        subtitle: 'Year: $year • ${durationWeeks == 1 ? '1 Week' : '2 Weeks'}',
+        icon: Icons.wb_sunny,
+        accent: Colors.orange,
+        sundays: sundays,
+        loadHasHolidayFlags: () => Future.wait(
+          sundays.map((date) => HolidayLookupService.hasHolidayForDate(date, 'summer')),
+        ),
+        onBack: _showSummerHolidayDateDialog,
+        // Preserve prior UI quirk: end preview always shows +13 days.
+        endPreviewFor: (date) => date.add(const Duration(days: 13)),
+        onConfirm: (date) async {
+          await _holidayBookingService.addSummerHoliday(
+            startSunday: date,
+            durationWeeks: durationWeeks,
+          );
+          await _reloadHolidays();
+        },
+      ),
+    ).then((added) {
+      if (!mounted || added != true) return;
+      final durationText = durationWeeks == 1 ? '1 week' : '2 weeks';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Summer holiday ($durationText) for $year added successfully',
           ),
-          builder: (context, snapshot) {
-            final hasHolidayFlags = snapshot.data ?? List.filled(sundays.length, false);
-            
-            return AlertDialog(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              title: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).brightness == Brightness.dark
-                          ? Colors.orange.shade900.withValues(alpha: 0.3)
-                          : Colors.orange.shade50,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(Icons.wb_sunny, color: Colors.orange, size: 20),
-                  ),
-                  const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                'Select Summer Holiday Start Date',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  color: Theme.of(context).textTheme.titleLarge?.color,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                'Year: $year • ${durationWeeks == 1 ? '1 Week' : '2 Weeks'}',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Theme.of(context).textTheme.bodySmall?.color,
-                                  fontWeight: FontWeight.normal,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                  IconButton(
-                    icon: const Icon(Icons.arrow_back, size: 20),
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                      _showSummerHolidayDateDialog();
-                    },
-                    tooltip: 'Change year',
-                  ),
-                ],
-              ),
-              contentPadding: const EdgeInsets.only(top: 8, bottom: 0),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).brightness == Brightness.dark
-                          ? Theme.of(context).cardColor
-                          : Colors.grey.shade50,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: Theme.of(context).brightness == Brightness.dark
-                            ? Theme.of(context).dividerColor
-                            : Colors.grey.shade200,
-                      ),
-                    ),
-                    child: SizedBox(
-                      width: double.maxFinite,
-                      height: listHeight,
-                      child: ListView.builder(
-                        shrinkWrap: true,
-                        itemCount: sundays.length,
-                        itemBuilder: (context, index) {
-                          final date = sundays[index];
-                          final alreadyHasHoliday = hasHolidayFlags[index];
-                          
-                          return Container(
-                            margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: Theme.of(context).brightness == Brightness.dark
-                                  ? (alreadyHasHoliday 
-                                      ? Theme.of(context).cardColor.withValues(alpha: 0.5)
-                                      : Theme.of(context).cardColor)
-                                  : (alreadyHasHoliday 
-                                      ? Colors.grey.shade100 
-                                      : Colors.white),
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(
-                                color: Theme.of(context).brightness == Brightness.dark
-                                    ? (alreadyHasHoliday 
-                                        ? Theme.of(context).dividerColor
-                                        : Colors.orange.shade700)
-                                    : (alreadyHasHoliday 
-                                        ? Colors.grey.shade300 
-                                        : Colors.orange.shade100),
-                                width: 1,
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.05),
-                                  blurRadius: 4,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
-                            ),
-                            child: Material(
-                              color: Colors.transparent,
-                              child: InkWell(
-                                onTap: alreadyHasHoliday ? null : () async {
-                                  // Create a new holiday starting on the selected Sunday
-                                  // Duration: 1 week = 6 days (Sun-Sat), 2 weeks = 13 days (Sun-Sat)
-                                  final daysToAdd = durationWeeks == 1 ? 6 : 13;
-                                  final holiday = Holiday(
-                                    id: DateTime.now().millisecondsSinceEpoch.toString(),
-                                    startDate: date,
-                                    endDate: date.add(Duration(days: daysToAdd)),
-                                    type: 'summer',
-                                  );
-                                  
-                                  // Add the holiday
-                                  await HolidayService.addHoliday(holiday);
-                                  
-                                  // Reload holidays from storage to ensure consistency
-                                  await _reloadHolidays();
-                                  
-                                  // Close the dialog
-                                  if (!mounted) return;
-                                  Navigator.of(context).pop();
-                                  
-                                  // Show success message
-                                  if (!mounted) return;
-                                  final durationText = durationWeeks == 1 ? '1 week' : '2 weeks';
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text('Summer holiday ($durationText) for $year added successfully'),
-                                      backgroundColor: Colors.green,
-                                    ),
-                                  );
-                                },
-                                borderRadius: BorderRadius.circular(8),
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                  child: Row(
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                                        decoration: BoxDecoration(
-                                          color: Theme.of(context).brightness == Brightness.dark
-                                              ? (alreadyHasHoliday 
-                                                  ? Theme.of(context).dividerColor
-                                                  : Colors.orange.shade900.withValues(alpha: 0.3))
-                                              : (alreadyHasHoliday 
-                                                  ? Colors.grey.shade300 
-                                                  : Colors.orange.shade50),
-                                          borderRadius: BorderRadius.circular(4),
-                                        ),
-                                        child: Text(
-                                          'Sun',
-                                          style: TextStyle(
-                                            color: Theme.of(context).brightness == Brightness.dark
-                                                ? (alreadyHasHoliday 
-                                                    ? Theme.of(context).textTheme.bodySmall?.color
-                                                    : Colors.orange.shade300)
-                                                : (alreadyHasHoliday 
-                                                    ? Colors.grey.shade600 
-                                                    : Colors.orange.shade700),
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 12,
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 10),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              DateFormat('MMM d, yyyy').format(date),
-                                              style: TextStyle(
-                                                fontSize: 13,
-                                                color: Theme.of(context).brightness == Brightness.dark
-                                                    ? Theme.of(context).textTheme.bodyLarge?.color
-                                                    : (alreadyHasHoliday 
-                                                        ? Colors.grey.shade600 
-                                                        : Colors.black87),
-                                              ),
-                                            ),
-                                            Text(
-                                              'Ends: ${DateFormat('MMM d, yyyy').format(date.add(const Duration(days: 13)))}',
-                                              style: TextStyle(
-                                                fontSize: 11,
-                                                color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
-                                              ),
-                                            ),
-                                            if (alreadyHasHoliday)
-                                              Text(
-                                                'Already added',
-                                                style: TextStyle(
-                                                  fontSize: 11,
-                                                  color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
-                                                  fontStyle: FontStyle.italic,
-                                                ),
-                                              ),
-                                          ],
-                                        ),
-                                      ),
-                                      if (!alreadyHasHoliday)
-                                        Icon(
-                                          Icons.arrow_forward_ios,
-                                          size: 14,
-                                          color: Colors.orange.shade300,
-                                        )
-                                      else
-                                        Icon(
-                                          Icons.check_circle,
-                                          size: 16,
-                                          color: Colors.grey.shade400,
-                                        ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.swipe,
-                        size: 16,
-                        color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.6),
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Scroll to see more dates',
-                        style: TextStyle(
-                          color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              actionsPadding: const EdgeInsets.only(bottom: 8),
-              actions: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    TextButton.icon(
-                      onPressed: () {
-                        Navigator.of(context).pop();
-                        _showSummerHolidayDateDialog();
-                      },
-                      icon: const Icon(Icons.arrow_back, size: 16),
-                      label: const Text('Change Year'),
-                      style: TextButton.styleFrom(
-                        foregroundColor: Theme.of(context).brightness == Brightness.dark
-                            ? Colors.orange.shade300
-                            : Colors.orange.shade700,
-                      ),
-                    ),
-                    TextButton.icon(
-                      onPressed: () => Navigator.of(context).pop(),
-                      icon: const Icon(Icons.close),
-                      label: const Text('Cancel'),
-                      style: TextButton.styleFrom(
-                        foregroundColor: Theme.of(context).textTheme.bodyMedium?.color,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
+          backgroundColor: Colors.green,
+        ),
+      );
+    });
   }
 
   // Add this new function to update all events
@@ -10050,1028 +1901,194 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
 
 
 
+
   void _showOtherHolidayDialog() {
-    final Set<DateTime> selectedDates = {};
-    DateTime currentMonth = DateTime.now();
-    
-    showDialog(
+    showDialog<int>(
       context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) => Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Container(
-            constraints: BoxConstraints(
-              maxHeight: MediaQuery.of(context).size.height * 0.8,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).brightness == Brightness.dark
-                              ? Colors.green.shade900.withValues(alpha: 0.4)
-                              : Colors.green.shade50,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Icon(Icons.event, color: Colors.green.shade400),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          'Select Holiday Dates',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: Theme.of(context).colorScheme.onSurface,
-                          ),
-                        ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.close),
-                        onPressed: () => Navigator.of(context).pop(),
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
-                      ),
-                    ],
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.chevron_left),
-                        onPressed: () {
-                          setState(() {
-                            currentMonth = DateTime(currentMonth.year, currentMonth.month - 1);
-                          });
-                        },
-                      ),
-                      Text(
-                        DateFormat('MMMM yyyy').format(currentMonth),
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w500,
-                          color: Theme.of(context).colorScheme.onSurface,
-                        ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.chevron_right),
-                        onPressed: () {
-                          setState(() {
-                            currentMonth = DateTime(currentMonth.year, currentMonth.month + 1);
-                          });
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-                const Divider(height: 0),
-                Flexible(
-                  child: SingleChildScrollView(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: _buildMultiSelectCalendar(
-                        currentMonth: currentMonth,
-                        selectedDates: selectedDates,
-                        onDateTapped: (date) {
-                          setState(() {
-                            // Normalize date to midnight for comparison
-                            final normalizedDate = DateTime(date.year, date.month, date.day);
-                            if (selectedDates.contains(normalizedDate)) {
-                              selectedDates.remove(normalizedDate);
-                            } else {
-                              selectedDates.add(normalizedDate);
-                            }
-                          });
-                        },
-                      ),
-                    ),
-                  ),
-                ),
-                if (selectedDates.isNotEmpty) ...[
-                  const Divider(height: 0),
-                  Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).brightness == Brightness.dark
-                            ? Colors.green.shade900.withValues(alpha: 0.4)
-                            : Colors.green.shade50,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.info_outline,
-                            color: Theme.of(context).brightness == Brightness.dark
-                                ? Colors.green.shade300
-                                : Colors.green.shade700,
-                            size: 20,
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              '${selectedDates.length} day${selectedDates.length == 1 ? '' : 's'} selected',
-                              style: TextStyle(
-                                color: Theme.of(context).brightness == Brightness.dark
-                                    ? Colors.green.shade300
-                                    : Colors.green.shade700,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-                const Divider(height: 0),
-                _dialogFooterActions(
-                  context,
-                  children: [
-                    TextButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      child: const Text('Cancel'),
-                    ),
-                    ElevatedButton(
-                      onPressed: selectedDates.isEmpty ? null : () async {
-                          // Create a separate holiday for each selected date
-                          final sortedDates = selectedDates.toList()..sort();
-                          int successCount = 0;
-                          
-                          for (final date in sortedDates) {
-                            try {
-                              final holiday = Holiday(
-                                id: 'other_${date.millisecondsSinceEpoch}',
-                                startDate: date,
-                                endDate: date,
-                                type: 'other',
-                              );
-                              
-                              await HolidayService.addHoliday(holiday);
-                              successCount++;
-                            } catch (e) {
-                              // Continue with other dates even if one fails
-                            }
-                          }
-                          
-                          // Reload holidays from storage to ensure consistency
-                          await _reloadHolidays();
-                          
-                          // Close the dialog
-                          if (!mounted) return;
-                          Navigator.of(context).pop();
-                          
-                          // Show success message
-                          if (!mounted) return;
-                          final message = successCount == 1
-                              ? 'Holiday added successfully'
-                              : '$successCount holidays added successfully';
-                          
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(message),
-                              backgroundColor: Colors.green,
-                            ),
-                          );
-                        },
-                      style: _dialogAccentElevatedStyle(context, AppTheme.successColor),
-                      child: Text(selectedDates.length == 1 ? 'Add Holiday' : 'Add Holidays'),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
+      builder: (context) => MultiDateHolidayPickerDialog<int>(
+        title: 'Select Holiday Dates',
+        icon: Icons.event,
+        accent: MultiDateHolidayPickerAccent.materialGreen(),
+        confirmLabelSingular: 'Add Holiday',
+        confirmLabelPlural: 'Add Holidays',
+        onConfirm: (sortedDates) async {
+          final successCount = await _holidayBookingService.addSingleDayHolidays(
+            sortedDates: sortedDates,
+            type: 'other',
+            idPrefix: 'other',
+          );
+          await _reloadHolidays();
+          return successCount;
+        },
       ),
-    );
-  }
-  
-  /// Strong fill + label contrast for accent [ElevatedButton]s in dialogs.
-  ///
-  /// Material 3 applies a [surfaceTint] on [ElevatedButton]; on custom greens/purples that
-  /// reads as a pale grey fill in dark mode with poor text contrast. Disabling the tint and
-  /// using [ColorScheme] disabled colors avoids light-on-light disabled states.
-  ButtonStyle _dialogAccentElevatedStyle(BuildContext context, Color backgroundColor) {
-    final cs = Theme.of(context).colorScheme;
-    return ElevatedButton.styleFrom(
-      backgroundColor: backgroundColor,
-      foregroundColor: Colors.white,
-      disabledBackgroundColor: cs.surfaceContainerHighest,
-      disabledForegroundColor: cs.onSurface.withValues(alpha: 0.38),
-      surfaceTintColor: Colors.transparent,
-      shadowColor: Colors.black26,
-      elevation: 2,
-    );
-  }
-
-  /// Footer actions laid out with [Wrap] so long labels at large text scale do not overflow.
-  Widget _dialogFooterActions(BuildContext context, {required List<Widget> children}) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: SizedBox(
-        width: double.infinity,
-        child: Wrap(
-          alignment: WrapAlignment.end,
-          spacing: 8,
-          runSpacing: 8,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          children: children,
+    ).then((successCount) {
+      if (!mounted || successCount == null) return;
+      final message = successCount == 1
+          ? 'Holiday added successfully'
+          : '$successCount holidays added successfully';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: Colors.green,
         ),
-      ),
-    );
-  }
-  
-  Widget _buildMultiSelectCalendar({
-    required DateTime currentMonth,
-    required Set<DateTime> selectedDates,
-    required Function(DateTime) onDateTapped,
-  }) {
-    final firstDayOfMonth = DateTime(currentMonth.year, currentMonth.month, 1);
-    final lastDayOfMonth = DateTime(currentMonth.year, currentMonth.month + 1, 0);
-    final firstDayOfWeek = firstDayOfMonth.weekday % 7; // 0 = Sunday, 6 = Saturday
-    final daysInMonth = lastDayOfMonth.day;
-    
-    // Get all dates in the month
-    final List<DateTime> dates = [];
-    for (int day = 1; day <= daysInMonth; day++) {
-      dates.add(DateTime(currentMonth.year, currentMonth.month, day));
-    }
-    
-    // Get previous month's dates for padding
-    final List<DateTime> previousMonthDates = [];
-    if (firstDayOfWeek > 0) {
-      final previousMonth = DateTime(currentMonth.year, currentMonth.month - 1);
-      final lastDayOfPreviousMonth = DateTime(previousMonth.year, previousMonth.month + 1, 0);
-      for (int i = firstDayOfWeek - 1; i >= 0; i--) {
-        previousMonthDates.add(DateTime(previousMonth.year, previousMonth.month, lastDayOfPreviousMonth.day - i));
-      }
-    }
-    
-    // Get next month's dates for padding
-    final List<DateTime> nextMonthDates = [];
-    final totalCells = previousMonthDates.length + dates.length;
-    final remainingCells = 42 - totalCells; // 6 weeks * 7 days
-    if (remainingCells > 0) {
-      for (int day = 1; day <= remainingCells; day++) {
-        nextMonthDates.add(DateTime(currentMonth.year, currentMonth.month + 1, day));
-      }
-    }
-    
-    final allDates = [...previousMonthDates, ...dates, ...nextMonthDates];
-    final textScaler = MediaQuery.textScalerOf(context);
-    final textScale = textScaler.scale(1.0);
-    // Long names wrap in narrow columns at max font — use short labels when scaled up.
-    final weekdayLabels = textScale > 1.1
-        ? <String>['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
-        : <String>['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    final weekdayStyle = Theme.of(context).textTheme.labelSmall?.copyWith(
-          fontWeight: FontWeight.bold,
-          color: Theme.of(context).colorScheme.onSurface,
-        ) ??
-        TextStyle(
-          fontWeight: FontWeight.bold,
-          fontSize: 12,
-          color: Theme.of(context).colorScheme.onSurface,
-        );
-    // Taller cells when text is large so day numbers are not clipped.
-    final double cellAspectRatio = textScale > 1.2
-        ? 0.62
-        : (textScale > 1.05 ? 0.78 : 0.92);
-    
-    return Column(
-      children: [
-        // Weekday headers
-        Row(
-          children: weekdayLabels
-              .map((day) => Expanded(
-                    child: Center(
-                      child: Text(
-                        day,
-                        style: weekdayStyle,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                  ))
-              .toList(),
-        ),
-        const SizedBox(height: 8),
-        // Calendar grid
-        GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 7,
-            mainAxisSpacing: 4,
-            crossAxisSpacing: 4,
-            childAspectRatio: cellAspectRatio,
-          ),
-          itemCount: allDates.length,
-          itemBuilder: (context, index) {
-            final date = allDates[index];
-            final isCurrentMonth = date.month == currentMonth.month;
-            final normalizedDate = DateTime(date.year, date.month, date.day);
-            final isSelected = selectedDates.contains(normalizedDate);
-            final isToday = normalizedDate.year == DateTime.now().year &&
-                normalizedDate.month == DateTime.now().month &&
-                normalizedDate.day == DateTime.now().day;
-            
-            final minDate = DateTime.now().subtract(const Duration(days: 365));
-            final maxDate = DateTime.now().add(const Duration(days: 365));
-            final isWithinRange = !date.isBefore(minDate) && !date.isAfter(maxDate);
-            
-            final isDark = Theme.of(context).brightness == Brightness.dark;
-            final defaultTextColor = Theme.of(context).colorScheme.onSurface;
-            final mutedTextColor = isDark
-                ? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5)
-                : Colors.grey.shade600;
-
-            return GestureDetector(
-              onTap: isWithinRange && isCurrentMonth
-                  ? () => onDateTapped(date)
-                  : null,
-              child: Container(
-                decoration: BoxDecoration(
-                  color: isSelected
-                      ? Colors.green
-                      : isToday
-                          ? (isDark ? Colors.green.shade900.withValues(alpha: 0.5) : Colors.green.shade100)
-                          : Colors.transparent,
-                  shape: BoxShape.circle,
-                  border: isToday && !isSelected
-                      ? Border.all(color: Colors.green, width: 2)
-                      : null,
-                ),
-                child: Center(
-                  child: Text(
-                    '${date.day}',
-                    style: TextStyle(
-                      color: isSelected
-                          ? Colors.white
-                          : !isCurrentMonth
-                              ? mutedTextColor
-                              : !isWithinRange
-                                  ? mutedTextColor
-                                  : defaultTextColor,
-                      fontWeight: isSelected || isToday
-                          ? FontWeight.bold
-                          : FontWeight.normal,
-                      fontSize: 14,
-                    ),
-                  ),
-                ),
-              ),
-            );
-          },
-        ),
-      ],
-    );
+      );
+    });
   }
 
   void _showUnpaidLeaveDialog() {
-    Set<DateTime> selectedDates = {};
-    DateTime currentMonth = DateTime.now();
-    
-    showDialog(
+    showDialog<int>(
       context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) => Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Container(
-            constraints: BoxConstraints(
-              maxHeight: MediaQuery.of(context).size.height * 0.8,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).brightness == Brightness.dark
-                              ? Colors.purple.shade900.withValues(alpha: 0.4)
-                              : Colors.purple.shade50,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Icon(Icons.money_off, color: Colors.purple.shade400),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          'Select Unpaid Leave Dates',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: Theme.of(context).colorScheme.onSurface,
-                          ),
-                        ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.close),
-                        onPressed: () => Navigator.of(context).pop(),
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
-                      ),
-                    ],
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.chevron_left),
-                        onPressed: () {
-                          setState(() {
-                            currentMonth = DateTime(currentMonth.year, currentMonth.month - 1);
-                          });
-                        },
-                      ),
-                      Text(
-                        DateFormat('MMMM yyyy').format(currentMonth),
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w500,
-                          color: Theme.of(context).colorScheme.onSurface,
-                        ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.chevron_right),
-                        onPressed: () {
-                          setState(() {
-                            currentMonth = DateTime(currentMonth.year, currentMonth.month + 1);
-                          });
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-                const Divider(height: 0),
-                Flexible(
-                  child: SingleChildScrollView(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: _buildMultiSelectCalendar(
-                        currentMonth: currentMonth,
-                        selectedDates: selectedDates,
-                        onDateTapped: (date) {
-                          setState(() {
-                            // Normalize date to midnight for comparison
-                            final normalizedDate = DateTime(date.year, date.month, date.day);
-                            if (selectedDates.contains(normalizedDate)) {
-                              selectedDates.remove(normalizedDate);
-                            } else {
-                              selectedDates.add(normalizedDate);
-                            }
-                          });
-                        },
-                      ),
-                    ),
-                  ),
-                ),
-                if (selectedDates.isNotEmpty) ...[
-                  const Divider(height: 0),
-                  Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).brightness == Brightness.dark
-                            ? Colors.purple.shade900.withValues(alpha: 0.4)
-                            : Colors.purple.shade50,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.info_outline,
-                            color: Theme.of(context).brightness == Brightness.dark
-                                ? Colors.purple.shade300
-                                : Colors.purple.shade700,
-                            size: 20,
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              '${selectedDates.length} day${selectedDates.length == 1 ? '' : 's'} selected',
-                              style: TextStyle(
-                                color: Theme.of(context).brightness == Brightness.dark
-                                    ? Colors.purple.shade300
-                                    : Colors.purple.shade700,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-                const Divider(height: 0),
-                _dialogFooterActions(
-                  context,
-                  children: [
-                    TextButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      child: const Text('Cancel'),
-                    ),
-                    ElevatedButton(
-                      onPressed: selectedDates.isEmpty ? null : () async {
-                          // Create a separate holiday for each selected date
-                          final sortedDates = selectedDates.toList()..sort();
-                          int successCount = 0;
-                          
-                          for (final date in sortedDates) {
-                            try {
-                              final holiday = Holiday(
-                                id: 'unpaid_leave_${date.millisecondsSinceEpoch}',
-                                startDate: date,
-                                endDate: date,
-                                type: 'unpaid_leave',
-                              );
-                              
-                              await HolidayService.addHoliday(holiday);
-                              successCount++;
-                            } catch (e) {
-                              // Continue with other dates even if one fails
-                            }
-                          }
-                          
-                          // Reload holidays from storage to ensure consistency
-                          await _reloadHolidays();
-                          
-                          // Close the dialog
-                          if (!mounted) return;
-                          Navigator.of(context).pop();
-                          
-                          // Force calendar rebuild to show the new unpaid leave
-                          if (!mounted) return;
-                          setState(() {});
-                          
-                          // Show success message
-                          if (!mounted) return;
-                          final message = successCount == 1
-                              ? 'Unpaid leave added successfully'
-                              : '$successCount unpaid leave days added successfully';
-                          
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(message),
-                              backgroundColor: Colors.purple,
-                            ),
-                          );
-                        },
-                      style: _dialogAccentElevatedStyle(context, const Color(0xFF8E24AA)),
-                      child: Text(selectedDates.length == 1 ? 'Add Unpaid Leave' : 'Add Unpaid Leave Days'),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
+      builder: (context) => MultiDateHolidayPickerDialog<int>(
+        title: 'Select Unpaid Leave Dates',
+        icon: Icons.money_off,
+        accent: MultiDateHolidayPickerAccent.materialPurple(),
+        confirmLabelSingular: 'Add Unpaid Leave',
+        confirmLabelPlural: 'Add Unpaid Leave Days',
+        onConfirm: (sortedDates) async {
+          final successCount = await _holidayBookingService.addSingleDayHolidays(
+            sortedDates: sortedDates,
+            type: 'unpaid_leave',
+            idPrefix: 'unpaid_leave',
+          );
+          await _reloadHolidays();
+          return successCount;
+        },
       ),
-    );
+    ).then((successCount) {
+      if (!mounted || successCount == null) return;
+      setState(() {});
+      final message = successCount == 1
+          ? 'Unpaid leave added successfully'
+          : '$successCount unpaid leave days added successfully';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: Colors.purple,
+        ),
+      );
+    });
   }
 
-  void _showDayInLieuDialog() async {
-    Set<DateTime> selectedDates = {};
-    DateTime currentMonth = DateTime.now();
-    final dayInLieuColor = ColorCustomizationService.getColorForShift('DAY_IN_LIEU');
-    
-    // Load balance information
+  Future<void> _showDayInLieuDialog() async {
+    final dayInLieuColor =
+        ColorCustomizationService.getColorForShift('DAY_IN_LIEU');
     final used = await DaysInLieuService.getUsedDays();
     final remaining = await DaysInLieuService.getRemainingDays();
-    final hasZeroBalance = remaining == 0;
-    
+
     if (!mounted) return;
-    showDialog(
+    final successCount = await showDialog<int>(
       context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) => Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Container(
-            constraints: BoxConstraints(
-              maxHeight: MediaQuery.of(context).size.height * 0.8,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: dayInLieuColor.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Icon(Icons.event_available, color: dayInLieuColor),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          'Select Day In Lieu Dates',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: Theme.of(context).colorScheme.onSurface,
-                          ),
-                        ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.close),
-                        onPressed: () => Navigator.of(context).pop(),
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
-                      ),
-                    ],
-                  ),
-                ),
-                // Balance information section
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: [
-                        Column(
-                          children: [
-                            Text(
-                              'Remaining',
-                              style: Theme.of(context).textTheme.bodySmall,
-                            ),
-                            Text(
-                              '$remaining',
-                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.bold,
-                                color: hasZeroBalance ? Colors.orange : null,
-                              ),
-                            ),
-                          ],
-                        ),
-                        Column(
-                          children: [
-                            Text(
-                              'Used',
-                              style: Theme.of(context).textTheme.bodySmall,
-                            ),
-                            Text(
-                              '$used',
-                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                // Warning if balance is 0
-                if (hasZeroBalance)
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-                    child: Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.orange.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.warning_amber_rounded,
-                            color: Colors.orange,
-                            size: 20,
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              'Warning: You have no days in lieu remaining. Make sure to add days when you earn them in Settings.',
-                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: Colors.orange.shade700,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.chevron_left),
-                        onPressed: () {
-                          setState(() {
-                            currentMonth = DateTime(currentMonth.year, currentMonth.month - 1);
-                          });
-                        },
-                      ),
-                      Text(
-                        DateFormat('MMMM yyyy').format(currentMonth),
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w500,
-                          color: Theme.of(context).colorScheme.onSurface,
-                        ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.chevron_right),
-                        onPressed: () {
-                          setState(() {
-                            currentMonth = DateTime(currentMonth.year, currentMonth.month + 1);
-                          });
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-                const Divider(height: 0),
-                Flexible(
-                  child: SingleChildScrollView(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: _buildMultiSelectCalendar(
-                        currentMonth: currentMonth,
-                        selectedDates: selectedDates,
-                        onDateTapped: (date) {
-                          setState(() {
-                            // Normalize date to midnight for comparison
-                            final normalizedDate = DateTime(date.year, date.month, date.day);
-                            if (selectedDates.contains(normalizedDate)) {
-                              selectedDates.remove(normalizedDate);
-                            } else {
-                              selectedDates.add(normalizedDate);
-                            }
-                          });
-                        },
-                      ),
-                    ),
-                  ),
-                ),
-                if (selectedDates.isNotEmpty) ...[
-                  const Divider(height: 0),
-                  Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: dayInLieuColor.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(Icons.info_outline, color: dayInLieuColor, size: 20),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              '${selectedDates.length} day${selectedDates.length == 1 ? '' : 's'} selected',
-                              style: TextStyle(
-                                color: dayInLieuColor,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-                const Divider(height: 0),
-                _dialogFooterActions(
-                  context,
-                  children: [
-                    TextButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      child: const Text('Cancel'),
-                    ),
-                    ElevatedButton(
-                      onPressed: selectedDates.isEmpty ? null : () async {
-                          // Create a separate holiday for each selected date
-                          final sortedDates = selectedDates.toList()..sort();
-                          int successCount = 0;
-                          
-                          for (final date in sortedDates) {
-                            try {
-                              final holiday = Holiday(
-                                id: 'day_in_lieu_${date.millisecondsSinceEpoch}',
-                                startDate: date,
-                                endDate: date,
-                                type: 'day_in_lieu',
-                              );
-                              
-                              // Add the holiday
-                              await HolidayService.addHoliday(holiday);
-                              
-                              // Auto-decrement balance for each day
-                              await DaysInLieuService.onDayInLieuAdded();
-                              
-                              successCount++;
-                            } catch (e) {
-                              // Continue with other dates even if one fails
-                            }
-                          }
-                          
-                          // Reload holidays from storage to ensure consistency
-                          await _reloadHolidays();
-                          
-                          // Close the dialog
-                          if (!mounted) return;
-                          Navigator.of(context).pop();
-                          
-                          // Force calendar rebuild to show the new day in lieu entries
-                          if (!mounted) return;
-                          setState(() {});
-                          
-                          // Show success message
-                          if (!mounted) return;
-                          final message = successCount == 1
-                              ? 'Day In Lieu added successfully'
-                              : '$successCount days in lieu added successfully';
-                          
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(message),
-                              backgroundColor: dayInLieuColor,
-                            ),
-                          );
-                        },
-                      style: _dialogAccentElevatedStyle(context, dayInLieuColor),
-                      child: Text(selectedDates.length == 1 ? 'Add Day In Lieu' : 'Add Days In Lieu'),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
+      builder: (context) => MultiDateHolidayPickerDialog<int>(
+        title: 'Select Day In Lieu Dates',
+        icon: Icons.event_available,
+        accent: MultiDateHolidayPickerAccent.solid(dayInLieuColor),
+        confirmLabelSingular: 'Add Day In Lieu',
+        confirmLabelPlural: 'Add Days In Lieu',
+        topContent: DayInLieuBalanceHeader(
+          used: used,
+          remaining: remaining,
         ),
+        onConfirm: (sortedDates) async {
+          final successCount = await _holidayBookingService.addSingleDayHolidays(
+            sortedDates: sortedDates,
+            type: 'day_in_lieu',
+            idPrefix: 'day_in_lieu',
+            notifyDayInLieu: true,
+          );
+          await _reloadHolidays();
+          return successCount;
+        },
+      ),
+    );
+
+    if (!mounted || successCount == null) return;
+    setState(() {});
+    final message = successCount == 1
+        ? 'Day In Lieu added successfully'
+        : '$successCount days in lieu added successfully';
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: dayInLieuColor,
       ),
     );
   }
 
-
-
-
-
-
-
-
-
-  void _showContactsPage() { // Add this method
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => const ContactsPage(),
-      ),
-    );
+  void _showContactsPage() {
+    CalendarFeatureNavigation.openContacts(context);
   }
 
-  // New method to navigate to the Notes screen
   void _navigateToAllNotesScreen() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const AllNotesScreen()),
-    ); // Removed the erroneous .then block
+    CalendarFeatureNavigation.openNotes(context);
   }
 
-
-
-  // Method to navigate to Bills page
   void _showBillsPage() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const BillsScreen()), // Navigate to BillsScreen
-    );
+    CalendarFeatureNavigation.openBills(context);
   }
 
-  // --- ADD NEW FUNCTION TO NAVIGATE TO PAYSCALE SCREEN ---
   void _showPayscalePage() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const PayscaleScreen()),
-    );
+    CalendarFeatureNavigation.openPayscale(context);
   }
-  // --- END NEW PAYSCALE FUNCTION ---
 
-  // --- ADD NEW FUNCTION TO NAVIGATE TO TIMING POINTS SCREEN ---
   void _showTimingPointsPage() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const TimingPointsScreen()),
-    );
+    CalendarFeatureNavigation.openTimingPoints(context);
   }
-  // --- END NEW TIMING POINTS FUNCTION ---
 
   void _showToiletCodesPage() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const ToiletCodesScreen()),
-    );
+    CalendarFeatureNavigation.openToiletCodes(context);
+  }
+
+  void _showLiveUpdatesPage() {
+    CalendarFeatureNavigation.openLiveUpdates(context);
   }
 
   void _showSearchScreen() async {
-    final DateTime? selectedDate = await Navigator.of(context).push<DateTime>(
-      MaterialPageRoute(
-        builder: (context) => const SearchScreen(),
-      ),
-    );
-    
-    // If a date was returned from search, navigate to that date
+    final selectedDate = await CalendarFeatureNavigation.openSearch(context);
     if (selectedDate != null && mounted) {
-      setState(() {
-        _selectedDay = selectedDate;
-        _focusedDay = selectedDate;
-      });
+      _calendarController.selectDay(
+        selectedDate,
+        focusedDay: selectedDate,
+      );
     }
   }
 
   void _showWeekView() {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => WeekViewScreen(
-          selectedDate: _selectedDay ?? DateTime.now(),
-          shiftInfoMap: _shiftInfoMap,
-          startDate: _startDate,
-          startWeek: _startWeek,
-          bankHolidays: _bankHolidays,
-        ),
-      ),
+    CalendarFeatureNavigation.openWeekView(
+      context,
+      selectedDate: _selectedDay ?? DateTime.now(),
+      shiftInfoMap: _shiftInfoMap,
+      startDate: _startDate,
+      startWeek: _startWeek,
+      bankHolidays: _bankHolidays,
     );
   }
 
   void _showYearView(int year) async {
-    final selectedMonth = await Navigator.of(context).push<DateTime>(
-      MaterialPageRoute(
-        builder: (context) => YearViewScreen(
-          key: ValueKey('year_view_$year'),
-          year: year,
-          shiftInfoMap: _shiftInfoMap,
-          startDate: _startDate,
-          startWeek: _startWeek,
-          holidays: _holidays,
-          bankHolidays: _bankHolidays,
-          markedInEnabled: _markedInEnabled,
-          markedInStatus: _markedInStatus,
-        ),
-      ),
+    final selectedMonth = await CalendarFeatureNavigation.openYearView(
+      context,
+      year: year,
+      shiftInfoMap: _shiftInfoMap,
+      startDate: _startDate,
+      startWeek: _startWeek,
+      holidays: _holidays,
+      bankHolidays: _bankHolidays,
+      markedInEnabled: _markedInEnabled,
+      markedInStatus: _markedInStatus,
     );
-    
-    // If a month was selected, navigate to that month
+
     if (selectedMonth != null && mounted) {
-      // Extract year and month explicitly
-      final selectedYear = selectedMonth.year;
-      final selectedMonthNum = selectedMonth.month;
-      
-      // Create a fresh date with explicit values
-      final targetDate = DateTime(selectedYear, selectedMonthNum, 1);
-      
-      // Preload events for the selected month before updating UI
+      final targetDate = firstDayOfMonth(selectedMonth);
       try {
         await EventService.preloadMonth(targetDate);
-      } catch (e) {
+      } catch (_) {
         // Handle preload errors gracefully
       }
-      
-      // Update the focused day and selected day - this should trigger TableCalendar to navigate
+
       if (mounted) {
-        setState(() {
-          _focusedDay = targetDate;
-          _selectedDay = targetDate;
-        });
-        
-        // Force a rebuild of the calendar by calling onPageChanged
-        // This ensures TableCalendar actually navigates to the new month
+        _calendarController.selectDay(
+          targetDate,
+          focusedDay: targetDate,
+        );
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) {
             _onPageChanged(targetDate);
@@ -11083,39 +2100,11 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
 
 
 
-  // Helper method to safely navigate to next/previous month
-  // Clamps the day to the last valid day of the target month to prevent overflow
-  DateTime _navigateToMonth(DateTime currentDate, int monthOffset) {
-    int targetYear = currentDate.year;
-    int targetMonth = currentDate.month + monthOffset;
-    
-    // Handle year overflow/underflow
-    if (targetMonth > 12) {
-      targetMonth = 1;
-      targetYear++;
-    } else if (targetMonth < 1) {
-      targetMonth = 12;
-      targetYear--;
-    }
-    
-    // Get the last valid day of the target month
-    final lastDayOfTargetMonth = DateTime(targetYear, targetMonth + 1, 0).day;
-    
-    // Clamp the day to be within valid range (1 to lastDayOfTargetMonth)
-    final targetDay = currentDate.day > lastDayOfTargetMonth 
-        ? lastDayOfTargetMonth 
-        : currentDate.day;
-    
-    return DateTime(targetYear, targetMonth, targetDay);
-  }
-
   // Add this method to handle calendar page changes
   void _onPageChanged(DateTime focusedDay) async {
     if (!mounted) return; // Prevent setState after dispose
 
-    setState(() {
-      _focusedDay = focusedDay;
-    });
+    _calendarController.beginVisibleMonthLoad(focusedDay);
 
     // Preload the new month's events and wait for completion to ensure UI updates
     try {
@@ -11128,895 +2117,152 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
         _workoutDates = {};
       }
 
-      // Trigger UI refresh after events are loaded to show indicator dots
-      if (mounted) {
-        setState(() {});
-      }
     } catch (e) {
       // Handle preload errors gracefully
+    } finally {
+      if (mounted) {
+        _calendarController.setVisibleMonthLoading(false);
+      }
     }
   }
 
   // Method to prompt user for overtime half type (A or B)
   void _promptForOvertimeHalfType() {
-    showDialog(
+    showDialog<void>(
       context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Select Overtime Half'),
-          content: const Text('Is this for the first or second half of a shift?'),
-          actions: [
-            TextButton(
-              child: const Text('First Half'),
-              onPressed: () {
-                Navigator.of(context).pop();
-                _showOvertimeDutyDetailsDialogInternal('A');
-              },
-            ),
-            TextButton(
-              child: const Text('Second Half'),
-              onPressed: () {
-                Navigator.of(context).pop();
-                _showOvertimeDutyDetailsDialogInternal('B');
-              },
-            ),
-          ],
-        );
-      },
+      builder: (dialogContext) => OvertimeHalfTypeDialog(
+        onFirstHalf: () {
+          Navigator.of(dialogContext).pop();
+          _showOvertimeDutyDetailsDialogInternal('A');
+        },
+        onSecondHalf: () {
+          Navigator.of(dialogContext).pop();
+          _showOvertimeDutyDetailsDialogInternal('B');
+        },
+      ),
     );
   }
 
   // Method to show overtime duty selection dialog with filtered duties by half type
   void _showOvertimeDutyDetailsDialogInternal(String overtimeHalfType) {
-    final now = DateTime.now();
-    final shiftDate = _selectedDay ?? now;
-    String selectedZone = 'Zone 1';
-    String selectedShiftNumber = '';
-    List<String> shiftNumbers = [];
-    bool isLoading = true;
+    final shiftDate = _selectedDay ?? DateTime.now();
+    final shiftLoader = OvertimeDutyShiftLoader();
 
-    // Show dialog with loading state initially
-    showDialog(
+    showDialog<void>(
       context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (context, setState) {
-          // Function to load shift numbers for selected zone
-          void loadShiftNumbers() async {
-            setState(() {
-              isLoading = true;
-            });
-
-            try {
-              final dayOfWeek = RosterService.getDayOfWeek(shiftDate);
-              final zoneNumber = selectedZone.replaceAll('Zone ', '');
-              
-              // Convert full day name to abbreviated format for file loading
-              String dayOfWeekForFilename;
-              if (dayOfWeek == 'Saturday') {
-                dayOfWeekForFilename = 'SAT';
-              } else if (dayOfWeek == 'Sunday') {
-                dayOfWeekForFilename = 'SUN';
-              } else {
-                dayOfWeekForFilename = 'M-F';
-              }
-              
-              // Handle different zones differently
-              if (selectedZone == 'Spare') {
-                // For Spare, create shift options using just the time
-                shiftNumbers = [];
-                
-                // Generate time options for spare shifts (04:00 to 16:00 in 15 min increments)
-                for (int hour = 4; hour <= 16; hour++) {
-                  for (int minute = 0; minute < 60; minute += 15) {
-                    // Stop at 16:00 exactly (don't include 16:15, 16:30, etc.)
-                    if (hour == 16 && minute > 0) continue;
-                    
-                    final hourStr = hour.toString().padLeft(2, '0');
-                    final minuteStr = minute.toString().padLeft(2, '0');
-                    final timeStr = '$hourStr:$minuteStr';
-                    shiftNumbers.add(timeStr);
-                  }
-                }
-              } else if (selectedZone == 'Uni/Euro') {
-                // Uni/Euro shifts - use both files on weekdays, only 7DAYs on weekends
-                List<String> combinedShifts = [];
-                
-                // Always load from UNI_7DAYs.csv first
-                try {
-                  final csv = await rootBundle.loadString('assets/UNI_7DAYs.csv');
-                  final lines = csv.split('\n');
-                  
-                  // Skip header line and load duty codes
-                  for (var i = 1; i < lines.length; i++) {
-                    if (lines[i].trim().isEmpty) continue;
-                    final parts = lines[i].split(',');
-                    if (parts.isNotEmpty) {
-                      // For regular work shifts, include ALL duties (including workouts)
-                      combinedShifts.add(parts[0]);
-                    }
-                  }
-                } catch (e) {
-                  // Silently handle CSV parsing errors - file may not exist or be malformed
-                }
-                
-                // On weekdays, also load from UNI_M-F.csv
-                if (dayOfWeek != 'Saturday' && dayOfWeek != 'Sunday') {
-                  try {
-                    final csv = await rootBundle.loadString('assets/UNI_M-F.csv');
-                    final lines = csv.split('\n');
-                    
-                    // Skip header line and load duty codes
-                    for (var i = 1; i < lines.length; i++) {
-                      if (lines[i].trim().isEmpty) continue;
-                      final parts = lines[i].split(',');
-                      if (parts.isNotEmpty) {
-                        // For regular work shifts, include ALL duties (including workouts)
-                        combinedShifts.add(parts[0]);
-                      }
-                    }
-                  } catch (e) {
-                    // Silently handle CSV parsing errors - file may not exist or be malformed
-                  }
-                }
-                
-                // Keep only unique shifts while preserving order (first occurrence wins)
-                shiftNumbers = [];
-                final seenShifts = <String>{};
-                for (final shift in combinedShifts) {
-                  if (!seenShifts.contains(shift)) {
-                    seenShifts.add(shift);
-                    shiftNumbers.add(shift);
-                  }
-                }
-              } else if (selectedZone == 'Bus Check') { 
-                try {
-                  final csv = await rootBundle.loadString('assets/buscheck.csv');
-                  final lines = csv.split('\n');
-                  shiftNumbers = [];
-                  final seenShifts = <String>{};
-                  String currentDayType = ''; 
-
-                  // Determine day type string for CSV matching
-                  if (dayOfWeek == 'Saturday') {
-                    currentDayType = 'SAT';
-                  } else if (dayOfWeek == 'Sunday') {
-                    currentDayType = 'SUN';
-                  } else { // Monday - Friday
-                    currentDayType = 'MF'; 
-                  }
-
-                  // Skip the header line
-                  for (int i = 1; i < lines.length; i++) {
-                    final line = lines[i].trim().replaceAll('\r', '');
-                    if (line.isEmpty) continue;
-                    final parts = line.split(',');
-                    // Expecting format: duty,day,start,finish
-                    if (parts.length >= 2) {
-                      final shiftName = parts[0].trim();
-                      final shiftDayType = parts[1].trim();
-
-                      // Add shift if day type matches and it's not already added
-                      if (shiftDayType == currentDayType && shiftName.isNotEmpty && !seenShifts.contains(shiftName)) {
-                        seenShifts.add(shiftName);
-                        shiftNumbers.add(shiftName);
-                      }
-                    }
-                  }
-                } catch (e) {
-                  shiftNumbers = [];
-                }
-              } else {
-                // Regular zone shifts (Zone 1, Zone 3, Zone 4)
-                final filename = RosterService.getShiftFilename(zoneNumber, dayOfWeekForFilename, shiftDate);
-                
-                try {
-                  final csv = await rootBundle.loadString('assets/$filename');
-                  final lines = csv.split('\n');
-                  shiftNumbers = [];
-                  final seenShifts = <String>{};
-                  
-                  // Skip the header line
-                  for (int i = 1; i < lines.length; i++) {
-                    final line = lines[i].trim();
-                    if (line.isEmpty) continue;
-                    final parts = line.split(',');
-                    if (parts.isNotEmpty && parts[0].trim().isNotEmpty) {
-                      final shift = parts[0].trim();
-                      
-                      // For overtime shifts, exclude workout duties
-                      // Check if this is a workout duty by examining the break time column
-                      if (parts.length >= 6) {
-                        final startBreak = parts[5].trim().toLowerCase();
-                        if (startBreak == 'workout' || startBreak == 'nan') {
-                          continue; // Skip workout duties for overtime
-                        }
-                      }
-                      
-                  // For regular work shifts, include ALL duties (including workouts)
-                      if (!seenShifts.contains(shift) && shift != "shift") {
-                        seenShifts.add(shift);
-                        shiftNumbers.add(shift);
-                      }
-                    }
-                  }
-                } catch (e) {
-                  shiftNumbers = [];
-                }
-                // Preload Zone 1 M-F roster for 12-week checkbox visibility
-                if (selectedZone == 'Zone 1') {
-                  await RosterService.loadZone1MFRoster();
-                }
-              }
-              
-              // If no selected shift number yet but shifts are available, select the first one
-              if (selectedShiftNumber.isEmpty && shiftNumbers.isNotEmpty) {
-                selectedShiftNumber = shiftNumbers[0];
-              }
-            } catch (e) {
-              shiftNumbers = [];
-            } finally {
-            setState(() {
-              isLoading = false;
-            });
-            }
-          }
-          
-          // Load shift numbers initially
-          if (isLoading) {
-            loadShiftNumbers();
-          }
-
-          return AlertDialog(
-            title: Text('Add Overtime Duty for ${DateFormat('dd/MM/yyyy').format(shiftDate)}'),
-            content: SingleChildScrollView( 
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Zone:'),
-                    const SizedBox(height: 8),
-                  DropdownButton<String>(
-                    value: selectedZone,
-                    isExpanded: true,
-                    items: [
-                      'Zone 1',
-                      'Zone 2',
-                      'Zone 3',
-                      'Zone 4',
-                      'Uni/Euro',
-                    ].map((zone) {
-                      return DropdownMenuItem(
-                        value: zone,
-                        child: Text(zone),
-                      );
-                    }).toList(),
-                    onChanged: (value) {
-                      if (value != null) {
-                        setState(() {
-                          selectedZone = value;
-                          selectedShiftNumber = '';
-                        });
-                        loadShiftNumbers();
-                      }
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  const Text('Shift Number:'),
-                  const SizedBox(height: 8),
-                  isLoading
-                      ? const Center(child: CircularProgressIndicator())
-                      : shiftNumbers.isEmpty
-                          ? const Text('No shifts available for selected zone and date.')
-                          : DropdownButton<String>(
-                              value: selectedShiftNumber.isEmpty && shiftNumbers.isNotEmpty ? shiftNumbers[0] : selectedShiftNumber,
-                              isExpanded: true,
-                              items: shiftNumbers.map((shift) {
-                                // EA Type Training doesn't have A/B halves
-                                final isEATypeTraining = shift.contains('EA Type Training');
-                                return DropdownMenuItem(
-                                  value: shift,
-                                  child: Text((overtimeHalfType.isNotEmpty && !isEATypeTraining)
-                                      ? '$shift$overtimeHalfType' // Add A/B suffix for display (not for EA Type Training)
-                                      : shift),
-                                );
-                              }).toList(),
-                              onChanged: (value) {
-                                if (value != null) {
-                                  setState(() {
-                                    selectedShiftNumber = value;
-                                  });
-                                }
-                              },
-                            ),
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(
-                child: const Text('Cancel'),
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
-              ),
-              TextButton(
-                onPressed: shiftNumbers.isEmpty || isLoading
-                    ? null
-                    : () async {
-                        // EA Type Training shifts don't have A/B halves
-                        final isEATypeTraining = selectedShiftNumber.contains('EA Type Training');
-                        final title = isEATypeTraining 
-                            ? '$selectedShiftNumber (OT)'
-                            : '$selectedShiftNumber$overtimeHalfType (OT)';
-                        
-                        // Get the shift times
-                        Map<String, dynamic>? shiftTimes;
-                        if (selectedZone == 'Spare') {
-                          // For Spare shifts, parse time from the selectedShiftNumber which is in format "HH:MM"
-                          final parts = selectedShiftNumber.split(':');
-                          final hour = int.parse(parts[0]);
-                          final minute = int.parse(parts[1]);
-                          
-                          // Default spare shift to 4 hours
-                          final startTime = TimeOfDay(hour: hour, minute: minute);
-                          final endHour = (hour + 4) % 24; // Wrap around at 24 hours
-                          final endTime = TimeOfDay(hour: endHour, minute: minute);
-                          
-                          shiftTimes = {
-                            'startTime': startTime,
-                            'endTime': endTime,
-                          };
-                        } else {
-                          // For regular shifts, look up times from CSV
-                          shiftTimes = await _getShiftTimes(
-                            selectedZone.replaceAll('Zone ', ''),
-                            selectedShiftNumber,
-                            shiftDate,
-                            isOvertimeShift: true, // Pass overtime flag
-                          );
-                        }
-                        
-                        if (shiftTimes != null && mounted) {
-                          final startTime = shiftTimes['startTime'] as TimeOfDay;
-                          TimeOfDay endTime = shiftTimes['endTime'] as TimeOfDay;
-                          
-                          // EA Type Training uses times directly, no A/B half adjustments
-                          TimeOfDay adjustedStartTime;
-                          TimeOfDay adjustedEndTime;
-                          
-                          if (isEATypeTraining) {
-                            // Use CSV times directly for EA Type Training
-                            adjustedStartTime = startTime;
-                            adjustedEndTime = endTime;
-                          } else {
-                            // Calculate actual start and end times based on overtime half type
-                            final shiftDuration = (endTime.hour * 60 + endTime.minute) - 
-                                                (startTime.hour * 60 + startTime.minute);
-                          
-                            // Get the day of the week
-                            final dayOfWeek = RosterService.getDayOfWeek(shiftDate);
-
-                            // Try to get break times from CSV
-                            final csvFilename = selectedZone == 'Uni/Euro' 
-                                ? 'UNI_7DAYs.csv'  // UNI shifts - first try 7DAYs
-                                : RosterService.getShiftFilename(selectedZone.replaceAll('Zone ', ''), 
-                                    dayOfWeek == 'Saturday' ? 'SAT' : 
-                                    dayOfWeek == 'Sunday' ? 'SUN' : 'M-F', 
-                                    shiftDate);
-                            
-                            // Variables to hold break times if found
-                            TimeOfDay? breakStartTime;
-                            TimeOfDay? breakEndTime;
-                            
-                            try {
-                              final csv = await rootBundle.loadString('assets/$csvFilename');
-                              final lines = csv.split('\n');
-                              
-                              // Find the shift in the CSV file
-                              for (final line in lines) {
-                                if (line.trim().isEmpty) continue;
-                                final parts = line.split(',');
-                                
-                                // Standard PZ files have shift code at index 0
-                                // UNI files also have shift code at index 0
-                                if (parts.isNotEmpty && parts[0].trim() == selectedShiftNumber) {
-                                  
-                                  // Different CSV structures for PZ vs UNI files
-                                  if (selectedZone == 'Uni/Euro') {
-                                    // UNI files: ShiftCode,StartTime,BreakStart,BreakEnd,FinishTime
-                                    if (parts.length >= 5) {
-                                      final breakStartStr = parts[2].trim();
-                                      final breakEndStr = parts[3].trim();
-                                      
-                                      if (breakStartStr.toLowerCase() != 'nan' && breakEndStr.toLowerCase() != 'nan') {
-                                        breakStartTime = _parseTimeOfDay(breakStartStr);
-                                        breakEndTime = _parseTimeOfDay(breakEndStr);
-                                      }
-                                    }
-                                  } else {
-                                    // PZ files: Column 5 is breakStart, column 8 is breakEnd
-                                    if (parts.length >= 9) {
-                                      final breakStartStr = parts[5].trim();
-                                      final breakEndStr = parts[8].trim();
-                                      
-                                      if (breakStartStr.toLowerCase() != 'nan' && 
-                                          breakStartStr.toLowerCase() != 'workout' &&
-                                          breakEndStr.toLowerCase() != 'nan' && 
-                                          breakEndStr.toLowerCase() != 'workout') {
-                                        breakStartTime = _parseTimeOfDay(breakStartStr);
-                                        breakEndTime = _parseTimeOfDay(breakEndStr);
-                                      }
-                                    }
-                                  }
-                                  break;
-                                }
-                              }
-                              
-                              // For UNI/EURO, if not found in 7DAYs.csv and it's a weekday, check M-F.csv
-                              if (selectedZone == 'Uni/Euro' && breakStartTime == null && 
-                                  dayOfWeek != 'Saturday' && dayOfWeek != 'Sunday') {
-                                final csvMF = await rootBundle.loadString('assets/UNI_M-F.csv');
-                                final linesMF = csvMF.split('\n');
-                                
-                                for (final line in linesMF) {
-                                  if (line.trim().isEmpty) continue;
-                                  final parts = line.split(',');
-                                  
-                                  if (parts.isNotEmpty && parts[0].trim() == selectedShiftNumber) {
-                                    if (parts.length >= 5) {
-                                      final breakStartStr = parts[2].trim();
-                                      final breakEndStr = parts[3].trim();
-                                      
-                                      if (breakStartStr.toLowerCase() != 'nan' && breakEndStr.toLowerCase() != 'nan') {
-                                        breakStartTime = _parseTimeOfDay(breakStartStr);
-                                        breakEndTime = _parseTimeOfDay(breakEndStr);
-                                      }
-                                    }
-                                    break;
-                                  }
-                                }
-                              }
-                            } catch (e) {
-                              // Silently handle CSV parsing errors - file may not exist or be malformed
-                            }
-                            
-                            // Adjust times based on first half (A) or second half (B)
-                            if (overtimeHalfType == 'A') { 
-                              // First half - use start time and end at break start time if available
-                              adjustedStartTime = startTime;
-                              
-                              if (breakStartTime != null) {
-                                // Use actual break start time
-                                adjustedEndTime = breakStartTime;
-                              } else {
-                                // Fall back to midpoint calculation
-                                final halfDurationMinutes = shiftDuration ~/ 2;
-                                final endHour = (startTime.hour + (halfDurationMinutes ~/ 60)) % 24;
-                                final endMinute = (startTime.minute + (halfDurationMinutes % 60)) % 60;
-                                adjustedEndTime = TimeOfDay(hour: endHour, minute: endMinute);
-                              }
-                            } else {
-                              // Second half - start at break end time if available and use end time
-                              if (breakEndTime != null) {
-                                // Use actual break end time
-                                adjustedStartTime = breakEndTime;
-                              } else {
-                                // Fall back to midpoint calculation
-                                final halfDurationMinutes = shiftDuration ~/ 2;
-                                final startHour = (startTime.hour + (halfDurationMinutes ~/ 60)) % 24;
-                                final startMinute = (startTime.minute + (halfDurationMinutes % 60)) % 60;
-                                adjustedStartTime = TimeOfDay(hour: startHour, minute: startMinute);
-                              }
-                              adjustedEndTime = endTime;
-                            }
-                          }
-                          
-                          // Create the overtime event
-                          final event = Event(
-                            id: const Uuid().v4(),
-                            title: title,
-                            startDate: shiftDate,
-                            startTime: adjustedStartTime,
-                            endDate: shiftDate,
-                            endTime: adjustedEndTime,
-                            workTime: Duration(
-                              hours: (adjustedEndTime.hour - adjustedStartTime.hour) % 24,
-                              minutes: (adjustedEndTime.minute - adjustedStartTime.minute) % 60,
-                            ),
-                          );
-                          
-                          try {
-                            // Add the event
-                            await EventService.addEvent(event);
-                            
-                            // Check if the widget is still mounted
-                            if (mounted) {
-                              // Close the dialog first
-                              Navigator.of(context).pop();
-                              
-                              // Show a loading indicator while we refresh
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Adding overtime duty...'),
-                                  duration: Duration(seconds: 1),
-                                ),
-                              );
-                              
-                              // Force reload events for current month
-                              await EventService.preloadMonth(_focusedDay);
-                              
-                              // Force rebuild
-                              if (!mounted) return;
-                              setState(() {
-                                // Trigger a rebuild with explicit re-selection of day
-                                _selectedDay = null;
-                              });
-                              
-                              // Small delay
-                              await Future.delayed(const Duration(milliseconds: 100));
-                              
-                              // Set selected day back to event date and rebuild again
-                              if (!mounted) return;
-                              setState(() {
-                                _selectedDay = event.startDate;
-                              });
-                              
-                              // Show confirmation after everything is done
-                              if (!mounted) return;
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text('Overtime duty $title added'),
-                                  backgroundColor: Colors.green,
-                                  duration: const Duration(seconds: 2),
-                                ),
-                              );
-                              
-                              // The trick: Manually call _editEvent with a special refresh event
-                              // This will trigger the event list to rebuild again
-                              _editEvent(Event(
-                                id: 'refresh_trigger',
-                                title: '',
-                                startDate: DateTime.now(),
-                                startTime: const TimeOfDay(hour: 0, minute: 0),
-                                endDate: DateTime.now(),
-                                endTime: const TimeOfDay(hour: 0, minute: 0),
-                                busAssignments: {},
-                              ));
-                            }
-                          } catch (e) {
-                            if (mounted) {
-                              Navigator.of(context).pop();
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text('Error adding overtime: $e'),
-                                  backgroundColor: Colors.red,
-                                ),
-                              );
-                            }
-                          }
-                        }
-                      },
-                child: const Text('Add Overtime Shift'),
-              ),
-            ],
+      builder: (dialogContext) => OvertimeDutyDetailsDialog(
+        shiftDate: shiftDate,
+        overtimeHalfType: overtimeHalfType,
+        loadShiftNumbers: (selectedZone) => shiftLoader.loadShiftNumbers(
+          selectedZone: selectedZone,
+          shiftDate: shiftDate,
+        ),
+        onAddShift: ({
+          required selectedZone,
+          required selectedShiftNumber,
+        }) async {
+          await _addOvertimeDutyFromSelection(
+            dialogContext: dialogContext,
+            overtimeHalfType: overtimeHalfType,
+            shiftDate: shiftDate,
+            selectedZone: selectedZone,
+            selectedShiftNumber: selectedShiftNumber,
           );
         },
       ),
     );
   }
 
-  // Helper method to build day toggle button
-  Widget _buildDayToggle(BuildContext context, StateSetter setState, int dayIndex, String label, bool isSelected, Map<int, bool> selectedDays, bool isDisabled) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    // Responsive sizing: smaller on very small screens
-    final toggleSize = screenWidth < 350 ? 32.0 : 36.0;
-    final fontSize = screenWidth < 350 ? 12.0 : 14.0;
-    
-    return GestureDetector(
-      onTap: isDisabled ? null : () {
-        setState(() {
-          selectedDays[dayIndex] = !isSelected;
-        });
-      },
-      child: Opacity(
-        opacity: isDisabled ? 0.4 : 1.0,
-        child: Container(
-          width: toggleSize,
-          height: toggleSize,
-          decoration: BoxDecoration(
-            color: isDisabled
-                ? Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5)
-                : (isSelected 
-                    ? Theme.of(context).colorScheme.primary 
-                    : Theme.of(context).colorScheme.surfaceContainerHighest),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: isDisabled
-                  ? Theme.of(context).dividerColor.withValues(alpha: 0.5)
-                  : (isSelected 
-                      ? Theme.of(context).colorScheme.primary 
-                      : Theme.of(context).dividerColor),
-            ),
+  Future<void> _addOvertimeDutyFromSelection({
+    required BuildContext dialogContext,
+    required String overtimeHalfType,
+    required DateTime shiftDate,
+    required String selectedZone,
+    required String selectedShiftNumber,
+  }) async {
+    final persister = OvertimeDutyEventPersister(
+      lookupShiftTimes: (
+        zone,
+        shiftNumber,
+        date, {
+        bool isOvertimeShift = false,
+      }) =>
+          _getShiftTimes(
+            zone,
+            shiftNumber,
+            date,
+            isOvertimeShift: isOvertimeShift,
           ),
-          child: Center(
-            child: Text(
-              label,
-              style: TextStyle(
-                color: isDisabled
-                    ? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5)
-                    : (isSelected 
-                        ? Theme.of(context).colorScheme.onPrimary 
-                        : Theme.of(context).colorScheme.onSurface),
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                fontSize: fontSize,
-              ),
-            ),
-          ),
-        ),
-      ),
     );
-  }
 
-  // Helper method to check if spare shift has full duties (should use firstHalfBus/secondHalfBus)
-  bool _spareShiftHasFullDuties(Event event) {
-    if (!event.title.startsWith('SP') || 
-        event.assignedDuties == null || 
-        event.assignedDuties!.isEmpty) {
-      return false;
+    final result = await persister.persist(
+      overtimeHalfType: overtimeHalfType,
+      shiftDate: shiftDate,
+      selectedZone: selectedZone,
+      selectedShiftNumber: selectedShiftNumber,
+    );
+
+    final title = result.title ?? selectedShiftNumber;
+
+    if (result.status == OvertimeDutyPersistStatus.shiftTimesUnavailable) {
+      return;
     }
-    
-    // Check if any duty is a full duty (doesn't end with A or B)
-    for (String duty in event.assignedDuties!) {
-      String dutyCode = duty.startsWith('UNI:') ? duty.substring(4) : duty;
-      if (!dutyCode.endsWith('A') && !dutyCode.endsWith('B')) {
-        return true; // Found a full duty
+
+    if (result.status == OvertimeDutyPersistStatus.error) {
+      if (dialogContext.mounted) {
+        Navigator.of(dialogContext).pop();
       }
-    }
-    return false;
-  }
-}
-
-/// Duty notes modal: keeps [TextEditingController] in [State] so it is disposed
-/// after the dialog route removes its subtree (avoids "used after disposed" on pop).
-class _EventDutyNotesDialog extends StatefulWidget {
-  const _EventDutyNotesDialog({
-    required this.event,
-    required this.scaffoldContext,
-    required this.onPersisted,
-  });
-
-  final Event event;
-  final BuildContext scaffoldContext;
-  final VoidCallback onPersisted;
-
-  @override
-  State<_EventDutyNotesDialog> createState() => _EventDutyNotesDialogState();
-}
-
-class _EventDutyNotesDialogState extends State<_EventDutyNotesDialog> {
-  late final TextEditingController _notesController;
-  final GlobalKey<DutyNotesEditorState> _editorKey = GlobalKey<DutyNotesEditorState>();
-
-  @override
-  void initState() {
-    super.initState();
-    _notesController = TextEditingController(text: widget.event.notes);
-  }
-
-  @override
-  void dispose() {
-    _notesController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final dialogBg =
-        theme.dialogTheme.backgroundColor ?? theme.colorScheme.surfaceContainerHigh;
-    final viewSize = MediaQuery.sizeOf(context);
-    final screenWidth = viewSize.width;
-    final screenHeight = viewSize.height;
-    final horizontalPadding = screenWidth < 350 ? 12.0 : 16.0;
-    final verticalPadding = screenWidth < 350 ? 10.0 : 12.0;
-    final dialogWidth = math.min(screenWidth * 0.92, 560.0);
-    final dialogHeight = math.min(
-      screenHeight * 0.88,
-      screenHeight * (screenWidth < 350 ? 0.65 : 0.58),
-    );
-
-    return Dialog(
-      backgroundColor: dialogBg,
-      surfaceTintColor: Colors.transparent,
-      insetPadding: EdgeInsets.symmetric(
-        horizontal: screenWidth < 350 ? 16.0 : 24.0,
-        vertical: screenWidth < 350 ? 16.0 : 24.0,
-      ),
-      child: SizedBox(
-        width: dialogWidth,
-        height: dialogHeight,
-        child: Padding(
-          padding: EdgeInsets.fromLTRB(
-            horizontalPadding,
-            verticalPadding,
-            horizontalPadding,
-            verticalPadding * 0.75,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Row(
-                children: [
-                  const Icon(Icons.notes_rounded, color: AppTheme.primaryColor),
-                  SizedBox(width: screenWidth < 350 ? 6 : 8),
-                  Text('Notes', style: theme.textTheme.titleLarge),
-                ],
-              ),
-              SizedBox(height: screenWidth < 350 ? 10 : 12),
-              Expanded(
-                child: DutyNotesEditor(
-                  key: _editorKey,
-                  event: widget.event,
-                  textController: _notesController,
-                ),
-              ),
-              SizedBox(height: screenWidth < 350 ? 8 : 10),
-              Align(
-                alignment: Alignment.centerRight,
-                child: Wrap(
-                  alignment: WrapAlignment.end,
-                  spacing: 4,
-                  runSpacing: 6,
-                  children: [
-                    TextButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      child: const Text('Cancel'),
-                    ),
-                    TextButton(
-                      onPressed: () {
-                        _notesController.clear();
-                        _editorKey.currentState?.clearImages();
-                      },
-                      style: TextButton.styleFrom(foregroundColor: Colors.red),
-                      child: const Text('Clear'),
-                    ),
-                    ElevatedButton(
-                      onPressed: () async {
-                        final text = _notesController.text.trim();
-                        List<String>? newPaths;
-                        try {
-                          newPaths = await _editorKey.currentState?.persistAttachments();
-                        } catch (e) {
-                          if (widget.scaffoldContext.mounted) {
-                            ScaffoldMessenger.of(widget.scaffoldContext).showSnackBar(
-                              SnackBar(content: Text('Could not save photos: $e')),
-                            );
-                          }
-                          return;
-                        }
-
-                        final ev = widget.event;
-                        final oldSnapshot = ev.copyWith();
-                        final sameText = text == (oldSnapshot.notes ?? '');
-                        final sameImg = const ListEquality<String>().equals(
-                          newPaths ?? <String>[],
-                          oldSnapshot.noteImagePaths ?? <String>[],
-                        );
-                        if (!sameText || !sameImg) {
-                          ev.notes = text.isEmpty ? null : text;
-                          ev.noteImagePaths = newPaths;
-                          await EventService.updateEvent(oldSnapshot, ev);
-                          widget.onPersisted();
-                        }
-                        if (context.mounted) Navigator.of(context).pop();
-                      },
-                      child: const Text('Save'),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error adding overtime: ${result.error}'),
+          backgroundColor: Colors.red,
         ),
+      );
+      return;
+    }
+
+    if (dialogContext.mounted) {
+      Navigator.of(dialogContext).pop();
+    }
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Adding overtime duty...'),
+        duration: Duration(seconds: 1),
       ),
     );
-  }
-}
 
-// Static banner widget that doesn't rebuild
-class _StaticLiveUpdatesBanner extends StatelessWidget {
-  const _StaticLiveUpdatesBanner();
+    await EventService.preloadMonth(_focusedDay);
 
-  @override
-  Widget build(BuildContext context) {
-    return LiveUpdatesBanner(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => const LiveUpdatesDetailsScreen(),
-          ),
-        );
-      },
+    if (!mounted) return;
+    _calendarController.selectDay(null);
+
+    await Future.delayed(const Duration(milliseconds: 100));
+
+    if (!mounted) return;
+    final event = result.event!;
+    _calendarController.selectDay(event.startDate);
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Overtime duty $title added'),
+        backgroundColor: Colors.green,
+        duration: const Duration(seconds: 2),
+      ),
     );
-  }
-}
 
-// Animated cell widget for selected day with animated border
-class _AnimatedSelectedDayCell extends StatefulWidget {
-  final Color? backgroundColor;
-  final bool isToday;
-  final bool isBankHoliday;
-  final Color borderColor;
-  final Widget child;
-
-  const _AnimatedSelectedDayCell({
-    required this.backgroundColor,
-    required this.isToday,
-    required this.isBankHoliday,
-    required this.borderColor,
-    required this.child,
-  });
-
-  @override
-  State<_AnimatedSelectedDayCell> createState() => _AnimatedSelectedDayCellState();
-}
-
-class _AnimatedSelectedDayCellState extends State<_AnimatedSelectedDayCell> with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _animation;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      duration: const Duration(milliseconds: 1200), // Slower, more relaxed animation
-      vsync: this,
-    )..repeat(reverse: true);
-    
-    _animation = Tween<double>(
-      begin: 2.0, // Thicker minimum
-      end: 3.5,   // Thicker maximum
-    ).animate(CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeInOut,
+    _editEvent(Event(
+      id: 'refresh_trigger',
+      title: '',
+      startDate: DateTime.now(),
+      startTime: const TimeOfDay(hour: 0, minute: 0),
+      endDate: DateTime.now(),
+      endTime: const TimeOfDay(hour: 0, minute: 0),
+      busAssignments: {},
     ));
   }
 
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _animation,
-      builder: (context, child) {
-        // Determine border color: red for bank holidays, primary color otherwise
-        final borderColor = widget.isBankHoliday ? Colors.red : widget.borderColor;
-        final borderWidth = _animation.value;
-        
-        return Container(
-          margin: const EdgeInsets.all(4.0),
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: widget.backgroundColor,
-            borderRadius: BorderRadius.circular(8.0),
-            border: widget.isToday
-                ? Border.all(
-                    color: widget.isBankHoliday ? Colors.red : Colors.blue,
-                    width: 2,
-                  )
-                : Border.all(
-                    // Show animated border - red for bank holidays, primary color otherwise
-                    color: borderColor,
-                    width: borderWidth,
-                  ),
-          ),
-          child: widget.child,
-        );
-      },
-    );
-  }
 }

@@ -47,8 +47,7 @@ class RouteService {
       dayOfWeekForFilename = 'M-F';
     }
     
-    // Use RosterService to get the correct filename
-    // This automatically handles Zone 4 Route 23/24 changeover on Oct 19, 2025
+    // Use RosterService to get the correct filename (Zone 4 bill eras included).
     return RosterService.getShiftFilename(zoneNumber, dayOfWeekForFilename, eventDate);
   }
 
@@ -211,7 +210,8 @@ class RouteService {
 
       // Every Zone 4 duty in the current Route 23/24 schedule can operate
       // either route, so the card should always show the combined label.
-      if (fileName.endsWith('_ROUTE2324.csv')) {
+      // Matches both *_ROUTE2324.csv and *_ROUTE2324_20260823.csv eras.
+      if (fileName.contains('_ROUTE2324')) {
         return RouteInfo(
           isWorkout: false,
           fixedDisplayLabel: '23/24',

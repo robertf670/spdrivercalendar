@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/live_update.dart';
 import 'user_preferences_service.dart';
 import 'poll_service.dart';
+import 'live_update_image_service.dart';
 
 class LiveUpdatesService {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -148,6 +149,10 @@ class LiveUpdatesService {
     try {
       final data = update.toFirestore();
       data['updatedAt'] = Timestamp.fromDate(DateTime.now());
+      // Clear removed images from Firestore (toFirestore omits a null imageUrl).
+      if (!update.hasImage) {
+        data['imageUrl'] = FieldValue.delete();
+      }
       await _firestore.collection(_collection).doc(update.id).update(data);
     } catch (e) {
       throw Exception('Failed to update: $e');
@@ -157,6 +162,16 @@ class LiveUpdatesService {
   /// Delete a live update
   static Future<void> deleteUpdate(String updateId) async {
     try {
+      // Best-effort: remove attached Storage image first (only if one exists).
+      try {
+        final existing = await getUpdateById(updateId);
+        if (existing != null && existing.hasImage) {
+          await LiveUpdateImageService.deleteImage(
+            updateId: updateId,
+            imageUrl: existing.imageUrl,
+          );
+        }
+      } catch (_) {}
       await _firestore.collection(_collection).doc(updateId).delete();
     } catch (e) {
       throw Exception('Failed to delete update: $e');

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/live_update.dart';
+import '../services/live_update_banner_dismiss_service.dart';
 import '../services/live_updates_service.dart';
 import 'dart:async';
 
@@ -48,26 +49,27 @@ class LiveUpdatesBannerState extends State<LiveUpdatesBanner> {
           );
         }
 
-        final updates = snapshot.data ?? [];
-        // Filter: active updates + active polls + ended polls in results window
-        final visibleItems = updates.where((update) {
-          if (update.isUpdate) {
-            return update.isActive;
-          } else if (update.isPoll) {
-            return update.shouldShowPoll;
-          }
-          return false;
-        }).toList();
-        
-        // Return empty widget when no updates/polls - this will collapse the space
-        if (visibleItems.isEmpty) {
-          return const SizedBox.shrink();
-        }
+        return FutureBuilder<void>(
+          future: LiveUpdateBannerDismissService.ensureLoaded(),
+          builder: (context, _) {
+            return ValueListenableBuilder<Set<String>>(
+              valueListenable: LiveUpdateBannerDismissService.dismissedIds,
+              builder: (context, _, __) {
+                final visibleItems = LiveUpdateBannerDismissService.visibleForBanner(
+                  snapshot.data ?? const <LiveUpdate>[],
+                );
 
-        // Pass the updates/polls to a separate display widget
-        return LiveUpdatesBannerDisplay(
-          updates: visibleItems,
-          onTap: widget.onTap,
+                if (visibleItems.isEmpty) {
+                  return const SizedBox.shrink();
+                }
+
+                return LiveUpdatesBannerDisplay(
+                  updates: visibleItems,
+                  onTap: widget.onTap,
+                );
+              },
+            );
+          },
         );
       },
     );
@@ -457,6 +459,28 @@ class LiveUpdatesBannerDisplayState extends State<LiveUpdatesBannerDisplay> {
                     ),
                   ],
                 ),
+              ),
+              SizedBox(width: sizes['spacing']! * 0.25),
+              // Dismiss from banner only (still available via Live Updates menu).
+              IconButton(
+                visualDensity: VisualDensity.compact,
+                padding: EdgeInsets.zero,
+                constraints: BoxConstraints(
+                  minWidth: sizes['iconSize']! + 12,
+                  minHeight: sizes['iconSize']! + 12,
+                ),
+                tooltip: 'Dismiss',
+                icon: Icon(
+                  Icons.close,
+                  size: sizes['iconSize'],
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.6),
+                ),
+                onPressed: () {
+                  LiveUpdateBannerDismissService.dismiss(update.id);
+                },
               ),
             ],
           ),

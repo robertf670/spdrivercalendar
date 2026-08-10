@@ -174,12 +174,24 @@ class RosterService {
     // Special dates like Dec 29-31 run Saturday service even if they're bank holidays
     final isSaturdayServiceDate = isSaturdayService(date);
     
-    // Zone 4 Route 23/24 changeover date: October 19, 2025
+    // Zone 4 schedule eras (date on the event selects the bill):
+    // - before 19 Oct 2025: legacy PZ4 (9/122)
+    // - 19 Oct 2025 – 22 Aug 2026: Route 23/24 bill (*_ROUTE2324.csv)
+    // - from 23 Aug 2026: updated Route 23/24 bill (*_ROUTE2324_20260823.csv)
     final route2324ChangeoverDate = DateTime(2025, 10, 19);
-    final isZone4NewSchedule = zoneNumber == '4' && !date.isBefore(route2324ChangeoverDate);
-    
-    // For Zone 4 on or after October 19, 2025, use Route 23/24 files
-    if (isZone4NewSchedule) {
+    final route2324Aug2026BillDate = DateTime(2026, 8, 23);
+
+    if (zoneNumber == '4' && !date.isBefore(route2324Aug2026BillDate)) {
+      if (isSaturdayServiceDate || dayOfWeek == 'SAT') {
+        return 'SAT_ROUTE2324_20260823.csv';
+      } else if (isBankHoliday || dayOfWeek == 'SUN') {
+        return 'SUN_ROUTE2324_20260823.csv';
+      } else {
+        return 'M-F_ROUTE2324_20260823.csv';
+      }
+    }
+
+    if (zoneNumber == '4' && !date.isBefore(route2324ChangeoverDate)) {
       if (isSaturdayServiceDate || dayOfWeek == 'SAT') {
         return 'SAT_ROUTE2324.csv';
       } else if (isBankHoliday || dayOfWeek == 'SUN') {

@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:spdrivercalendar/features/calendar/services/roster_service.dart';
 import 'package:spdrivercalendar/theme/app_theme.dart';
 
 class BillsScreen extends StatefulWidget {
@@ -110,28 +111,20 @@ class BillsScreenState extends State<BillsScreen> {
           lines = csv7Days.split('\n');
         }
       } else {
-        // Construct the filename based on selected values
-        String filename;
-        if (_selectedZone == 'Zone 4') {
-          // Handle Zone 4 (Route 23/24 files)
-          String dayTypeForFilename = _selectedDayType;
-          if (_selectedDayType == 'Sat') {
-            dayTypeForFilename = 'SAT';
-          } else if (_selectedDayType == 'Sun') {
-            dayTypeForFilename = 'SUN';
-          }
-          filename = '${dayTypeForFilename}_ROUTE2324.csv';
-        } else {
-          // Handle existing zone files (Zone 1 and Zone 3)
-          final zoneNumber = _selectedZone.replaceAll('Zone ', '');
-          String dayTypeForFilename = _selectedDayType;
-          if (_selectedDayType == 'Sat') {
-            dayTypeForFilename = 'SAT';
-          } else if (_selectedDayType == 'Sun') {
-            dayTypeForFilename = 'SUN';
-          }
-          filename = '${dayTypeForFilename}_DUTIES_PZ$zoneNumber.csv';
+        // Zone 1–4: use RosterService so Zone 4 bill eras follow today's date
+        // (legacy PZ4 → ROUTE2324 → ROUTE2324_20260823 from 23 Aug 2026).
+        final zoneNumber = _selectedZone.replaceAll('Zone ', '');
+        String dayTypeForFilename = _selectedDayType;
+        if (_selectedDayType == 'Sat') {
+          dayTypeForFilename = 'SAT';
+        } else if (_selectedDayType == 'Sun') {
+          dayTypeForFilename = 'SUN';
         }
+        final filename = RosterService.getShiftFilename(
+          zoneNumber,
+          dayTypeForFilename,
+          DateTime.now(),
+        );
         final path = 'assets/$filename';
         final String csvData = await rootBundle.loadString(path);
         lines = csvData.split('\n');

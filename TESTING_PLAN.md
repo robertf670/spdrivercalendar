@@ -3,7 +3,7 @@
 > **Purpose:** A practical testing strategy that supports refactoring and multi-depot rollout — not a blanket “100% coverage” goal.
 >
 > **Companion doc:** `MODERNISATION_PLAN.md` (phases define *when* to add tests)  
-> **Current version:** 3.2.8  
+> **Current version:** 3.2.9  
 > **Last updated:** July 2026  
 > **Status:** Living document
 
@@ -34,13 +34,22 @@
 | Metric | Value |
 |--------|------:|
 | Production Dart (`lib/`) | ~59,671 lines |
-| Test Dart (`test/`) | 71 lines |
-| Test files | 1 |
-| Test-to-code ratio | ~0.1% |
+| Test Dart (`test/`) | Growing focused unit suite |
+| Test files | 8 |
+| Test cases | 36 |
+| Test-to-code ratio | < 0.5% |
 
-**Existing tests:** `test/unit/services/storage_service_test.dart`  
-- 5 tests covering `StorageService` get/save/clear for strings and bools  
-- Uses `SharedPreferences.setMockInitialValues({})` — good pattern to reuse
+**Existing tests:**  
+- `test/unit/services/storage_service_test.dart` — 5 tests
+- `test/unit/services/roster_schedule_service_test.dart` — 3 tests
+- `test/unit/services/donnybrook_feature_service_test.dart` — 3 tests
+- `test/unit/services/dev_menu_access_service_test.dart` — 5 tests
+- `test/unit/services/roster_service_test.dart` — 9 tests
+- `test/unit/models/event_test.dart` — 5 tests
+- `test/unit/constants/training_constants_test.dart` — 4 tests
+- `test/widget/settings/admin_panel_dialog_responsive_test.dart` — 2 tests
+
+The service tests use `SharedPreferences.setMockInitialValues({})`, which is a good pattern to reuse.
 
 **Gap:** Almost all business logic (rosters, events, statistics, CSV resolution) is untested. Refactors to `calendar_screen.dart`, remote CSVs, and multi-depot are high-risk without a growing test suite.
 
@@ -363,9 +372,9 @@ Start here in **Phase 0** — all unit tests, no new dependencies:
 | 9 | Version compare: patch bump is newer | `update_service_test.dart` |
 | 10 | Version compare: same version is not newer | `update_service_test.dart` |
 
-**Existing #1–5:** StorageService tests already cover items in that file — roster/event tests are the immediate gap.
+**Existing coverage:** Storage, dated roster changes, Donnybrook resolution, and development-menu access have tests. Direct roster/date math and event serialisation are the immediate gaps.
 
-**Target after Phase 0:** ~15–20 unit tests, all green, `flutter test` < 10 seconds.
+**Target after Phase 0:** ~25–35 focused unit tests, all green, with the suite remaining fast.
 
 ---
 
@@ -524,7 +533,7 @@ Realistic goals — not mandates:
 
 | Milestone | Unit test count | Approx. lib coverage |
 |-----------|----------------:|---------------------|
-| Phase 0 complete | 15–20 | ~5% (logic-heavy files) |
+| Phase 0 complete | 25–35 | ~5% (logic-heavy files) |
 | Phase 1 complete | 40–60 | ~10–15% |
 | Phase 2a complete | 60–80 | ~15–20% |
 | Phase 3 complete | 80–120 | ~20–25% |
@@ -548,9 +557,13 @@ Update this table as tests land:
 | Test file | Tests | Status |
 |-----------|------:|--------|
 | `storage_service_test.dart` | 5 | ✅ Done |
-| `roster_service_test.dart` | 0 | ⬜ Phase 0 |
-| `event_test.dart` | 0 | ⬜ Phase 0 |
-| `training_constants_test.dart` | 0 | ⬜ Phase 0 |
+| `roster_schedule_service_test.dart` | 3 | ✅ Done |
+| `donnybrook_feature_service_test.dart` | 3 | ✅ Done |
+| `dev_menu_access_service_test.dart` | 5 | ✅ Done |
+| `roster_service_test.dart` | 9 | ✅ Done |
+| `event_test.dart` | 5 | ✅ Done |
+| `training_constants_test.dart` | 4 | ✅ Done |
+| `admin_panel_dialog_responsive_test.dart` | 2 | ✅ Done |
 | `update_service_test.dart` | 0 | ⬜ Phase 0 |
 | `calendar_controller_test.dart` | 0 | ⬜ Phase 1 |
 | `csv_content_service_test.dart` | 0 | ⬜ Phase 2a |
