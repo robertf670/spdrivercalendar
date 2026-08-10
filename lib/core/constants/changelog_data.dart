@@ -1,4 +1,11 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '4.0.1': [
+    {
+      'title': 'Live Update Dialog Keyboard Layout',
+      'description':
+          'Fixed the Add/Edit Live Update dialog so fields stay usable when the keyboard is open on phones.',
+    },
+  ],
   '4.0.0': [
     {
       'title': 'Calendar Rebuild',

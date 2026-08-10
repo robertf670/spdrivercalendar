@@ -40,4 +40,23 @@ void main() {
     expect(dialogSize.height, lessThanOrEqualTo(800));
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('UpdateDialog fits above an open keyboard', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(360, 800);
+    tester.view.viewInsets = const FakeViewPadding(bottom: 320);
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: UpdateDialog(onSave: (_) async {}),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final dialogSize = tester.getSize(find.byType(Dialog));
+    // Must fit in the space above the keyboard (800 - 320 = 480).
+    expect(dialogSize.height, lessThanOrEqualTo(480));
+    expect(tester.takeException(), isNull);
+  });
 }

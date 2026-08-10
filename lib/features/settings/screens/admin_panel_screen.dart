@@ -698,26 +698,34 @@ class UpdateDialogState extends State<UpdateDialog> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final mq = MediaQuery.of(context);
-    // Keep dialog size stable when the keyboard opens (size shrinks by
-    // viewInsets on mobile — that remount/rebuild was breaking cursor selection).
     final screenWidth = mq.size.width;
-    final screenHeight = mq.size.height + mq.viewInsets.bottom;
+    final keyboardInset = mq.viewInsets.bottom;
+    // Size to the space ABOVE the keyboard. Previously we used full-screen
+    // height *and* padded by viewInsets, which overflowed and clipped fields.
+    final availableHeight = mq.size.height - keyboardInset;
+    final verticalInset = keyboardInset > 0
+        ? (screenWidth < 350 ? 4.0 : 8.0)
+        : 16.0;
+    final maxDialogHeight =
+        (availableHeight - verticalInset * 2).clamp(200.0, 600.0).toDouble();
     final dialogWidth = (screenWidth * 0.95).clamp(0.0, 500.0).toDouble();
-    final dialogHeight = (screenHeight * 0.9).clamp(0.0, 600.0).toDouble();
     final contentPadding = screenWidth < 350 ? 12.0 : 16.0;
+    final actionPadding = keyboardInset > 0 ? 8.0 : 16.0;
 
     return AnimatedPadding(
-      padding: EdgeInsets.only(bottom: mq.viewInsets.bottom),
+      padding: EdgeInsets.only(bottom: keyboardInset),
       duration: const Duration(milliseconds: 100),
       curve: Curves.decelerate,
       child: Dialog(
       insetPadding: EdgeInsets.symmetric(
         horizontal: screenWidth < 350 ? 8.0 : 16.0,
-        vertical: 16.0,
+        vertical: verticalInset,
       ),
-      child: SizedBox(
-        width: dialogWidth,
-        height: dialogHeight,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: dialogWidth,
+          maxHeight: maxDialogHeight,
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -756,7 +764,7 @@ class UpdateDialogState extends State<UpdateDialog> {
               ),
             ),
             // Form
-            Expanded(
+            Flexible(
               child: SingleChildScrollView(
                 keyboardDismissBehavior:
                     ScrollViewKeyboardDismissBehavior.onDrag,
@@ -792,7 +800,7 @@ class UpdateDialogState extends State<UpdateDialog> {
                         focusNode: _titleFocus,
                         textCapitalization: TextCapitalization.sentences,
                         textInputAction: TextInputAction.next,
-                        scrollPadding: const EdgeInsets.all(80),
+                        scrollPadding: const EdgeInsets.fromLTRB(20, 20, 20, 120),
                         onFieldSubmitted: (_) =>
                             _descriptionFocus.requestFocus(),
                         decoration: const InputDecoration(
@@ -817,7 +825,7 @@ class UpdateDialogState extends State<UpdateDialog> {
                         textCapitalization: TextCapitalization.sentences,
                         minLines: 3,
                         maxLines: 8,
-                        scrollPadding: const EdgeInsets.all(120),
+                        scrollPadding: const EdgeInsets.fromLTRB(20, 20, 20, 160),
                         decoration: const InputDecoration(
                           labelText: 'Description',
                           hintText: 'e.g., Diverted via Nassau St due to gas leak',
@@ -1000,7 +1008,7 @@ class UpdateDialogState extends State<UpdateDialog> {
             ),
             // Actions
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.all(actionPadding),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
@@ -1581,22 +1589,30 @@ class PollDialogState extends State<PollDialog> {
   Widget build(BuildContext context) {
     final mq = MediaQuery.of(context);
     final screenWidth = mq.size.width;
-    final screenHeight = mq.size.height + mq.viewInsets.bottom;
+    final keyboardInset = mq.viewInsets.bottom;
+    final availableHeight = mq.size.height - keyboardInset;
+    final verticalInset = keyboardInset > 0
+        ? (screenWidth < 350 ? 4.0 : 8.0)
+        : 16.0;
+    final maxDialogHeight =
+        (availableHeight - verticalInset * 2).clamp(200.0, 700.0).toDouble();
     final dialogWidth = (screenWidth * 0.95).clamp(0.0, 500.0).toDouble();
-    final dialogHeight = (screenHeight * 0.9).clamp(0.0, 700.0).toDouble();
     final contentPadding = screenWidth < 350 ? 12.0 : 16.0;
+    final actionPadding = keyboardInset > 0 ? 8.0 : 16.0;
     return AnimatedPadding(
-      padding: EdgeInsets.only(bottom: mq.viewInsets.bottom),
+      padding: EdgeInsets.only(bottom: keyboardInset),
       duration: const Duration(milliseconds: 100),
       curve: Curves.decelerate,
       child: Dialog(
       insetPadding: EdgeInsets.symmetric(
         horizontal: screenWidth < 350 ? 8.0 : 16.0,
-        vertical: 16.0,
+        vertical: verticalInset,
       ),
-      child: SizedBox(
-        width: dialogWidth,
-        height: dialogHeight,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: dialogWidth,
+          maxHeight: maxDialogHeight,
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -1649,7 +1665,7 @@ class PollDialogState extends State<PollDialog> {
               ),
             ),
             // Form
-            Expanded(
+            Flexible(
               child: SingleChildScrollView(
                 keyboardDismissBehavior:
                     ScrollViewKeyboardDismissBehavior.onDrag,
@@ -1821,7 +1837,7 @@ class PollDialogState extends State<PollDialog> {
             ),
             // Actions
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.all(actionPadding),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
