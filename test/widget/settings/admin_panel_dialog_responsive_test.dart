@@ -19,9 +19,9 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    final dialogSize = tester.getSize(find.byType(Dialog));
-    expect(dialogSize.width, lessThanOrEqualTo(320));
-    expect(dialogSize.height, lessThanOrEqualTo(800));
+    expect(find.byType(Scaffold), findsWidgets);
+    expect(find.text('Add New Update'), findsOneWidget);
+    expect(find.byType(ListView), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -41,7 +41,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('UpdateDialog fits above an open keyboard', (tester) async {
+  testWidgets('UpdateDialog stays usable with keyboard open', (tester) async {
     tester.view.devicePixelRatio = 1;
     tester.view.physicalSize = const Size(360, 800);
     tester.view.viewInsets = const FakeViewPadding(bottom: 320);
@@ -54,9 +54,20 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    final dialogSize = tester.getSize(find.byType(Dialog));
-    // Must fit in the space above the keyboard (800 - 320 = 480).
-    expect(dialogSize.height, lessThanOrEqualTo(480));
+    expect(find.text('Title'), findsOneWidget);
+    expect(find.text('Description'), findsOneWidget);
+    expect(find.text('Create'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+
+    await tester.tap(find.byKey(const ValueKey('live_update_title')));
+    await tester.pump();
+    await tester.enterText(
+      find.byKey(const ValueKey('live_update_title')),
+      'Route 39 diversion',
+    );
+    await tester.pump();
+
+    expect(find.text('Route 39 diversion'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }

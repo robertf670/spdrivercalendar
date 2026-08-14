@@ -492,45 +492,48 @@ class AdminPanelScreenState extends State<AdminPanelScreen> {
 
   void _showUpdateDialog({LiveUpdate? existingUpdate}) {
     final scaffoldMessenger = ScaffoldMessenger.of(context);
-    showDialog(
-      context: context,
-      builder: (context) => UpdateDialog(
-        existingUpdate: existingUpdate,
-        onSave: (update) async {
-          try {
-            if (existingUpdate != null) {
-              await LiveUpdatesService.updateUpdate(update);
+    // Full-screen route: Dialog + keyboard is unreliable on real phones.
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        fullscreenDialog: true,
+        builder: (context) => UpdateDialog(
+          existingUpdate: existingUpdate,
+          onSave: (update) async {
+            try {
+              if (existingUpdate != null) {
+                await LiveUpdatesService.updateUpdate(update);
+                if (mounted) {
+                  scaffoldMessenger.showSnackBar(
+                    const SnackBar(
+                      content: Text('Update saved successfully'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                }
+              } else {
+                await LiveUpdatesService.addUpdate(update);
+                if (mounted) {
+                  scaffoldMessenger.showSnackBar(
+                    const SnackBar(
+                      content: Text('Update created successfully'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                }
+              }
+            } catch (e) {
               if (mounted) {
                 scaffoldMessenger.showSnackBar(
-                  const SnackBar(
-                    content: Text('Update saved successfully'),
-                    backgroundColor: Colors.green,
+                  SnackBar(
+                    content: Text('Error: $e'),
+                    backgroundColor: Colors.red,
                   ),
                 );
               }
-            } else {
-              await LiveUpdatesService.addUpdate(update);
-              if (mounted) {
-                scaffoldMessenger.showSnackBar(
-                  const SnackBar(
-                    content: Text('Update created successfully'),
-                    backgroundColor: Colors.green,
-                  ),
-                );
-              }
+              rethrow;
             }
-          } catch (e) {
-            if (mounted) {
-              scaffoldMessenger.showSnackBar(
-                SnackBar(
-                  content: Text('Error: $e'),
-                  backgroundColor: Colors.red,
-                ),
-              );
-            }
-            rethrow;
-          }
-        },
+          },
+        ),
       ),
     );
   }
@@ -697,350 +700,289 @@ class UpdateDialogState extends State<UpdateDialog> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final mq = MediaQuery.of(context);
-    final screenWidth = mq.size.width;
-    final keyboardInset = mq.viewInsets.bottom;
-    // Size to the space ABOVE the keyboard. Previously we used full-screen
-    // height *and* padded by viewInsets, which overflowed and clipped fields.
-    final availableHeight = mq.size.height - keyboardInset;
-    final verticalInset = keyboardInset > 0
-        ? (screenWidth < 350 ? 4.0 : 8.0)
-        : 16.0;
-    final maxDialogHeight =
-        (availableHeight - verticalInset * 2).clamp(200.0, 600.0).toDouble();
-    final dialogWidth = (screenWidth * 0.95).clamp(0.0, 500.0).toDouble();
+    final screenWidth = MediaQuery.sizeOf(context).width;
     final contentPadding = screenWidth < 350 ? 12.0 : 16.0;
-    final actionPadding = keyboardInset > 0 ? 8.0 : 16.0;
+    final isEditing = widget.existingUpdate != null;
 
-    return AnimatedPadding(
-      padding: EdgeInsets.only(bottom: keyboardInset),
-      duration: const Duration(milliseconds: 100),
-      curve: Curves.decelerate,
-      child: Dialog(
-      insetPadding: EdgeInsets.symmetric(
-        horizontal: screenWidth < 350 ? 8.0 : 16.0,
-        vertical: verticalInset,
-      ),
-      child: ConstrainedBox(
-        constraints: BoxConstraints(
-          maxWidth: dialogWidth,
-          maxHeight: maxDialogHeight,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Header
-            Container(
-              width: double.infinity,
-              padding: EdgeInsets.all(contentPadding),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.primary,
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(12),
-                  topRight: Radius.circular(12),
-                ),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.edit, color: theme.colorScheme.onPrimary),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child:
-                  Text(
-                    widget.existingUpdate != null ? 'Edit Update' : 'Add New Update',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+    return Scaffold(
+      resizeToAvoidBottomInset: true,
+      appBar: AppBar(
+        title: Text(isEditing ? 'Edit Update' : 'Add New Update'),
+        backgroundColor: theme.colorScheme.primary,
+        foregroundColor: theme.colorScheme.onPrimary,
+        actions: [
+          TextButton(
+            onPressed: _saving ? null : _saveUpdate,
+            child: _saving
+                ? SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: theme.colorScheme.onPrimary,
+                    ),
+                  )
+                : Text(
+                    isEditing ? 'Save' : 'Create',
                     style: TextStyle(
                       color: theme.colorScheme.onPrimary,
                       fontWeight: FontWeight.bold,
-                      fontSize: screenWidth < 350 ? 14.0 : 16.0,
-                      ),
-                    ),),
-                  IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    icon: Icon(Icons.close, color: theme.colorScheme.onPrimary),
+                    ),
                   ),
-                ],
-              ),
-            ),
-            // Form
-            Flexible(
-              child: SingleChildScrollView(
-                keyboardDismissBehavior:
-                    ScrollViewKeyboardDismissBehavior.onDrag,
-                padding: EdgeInsets.all(contentPadding),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    children: [
-                      // URL Field for auto-filling (parse only via button —
-                      // auto-parse on every keystroke caused focus/cursor bugs).
-                      TextFormField(
-                        key: const ValueKey('live_update_url'),
-                        controller: _urlController,
-                        focusNode: _urlFocus,
-                        keyboardType: TextInputType.url,
-                        textInputAction: TextInputAction.done,
-                        scrollPadding: const EdgeInsets.all(80),
-                        decoration: InputDecoration(
-                          labelText: 'Paste URL (Optional)',
-                          hintText: 'Paste Dublin Bus or news URL, then tap parse',
-                          border: const OutlineInputBorder(),
-                          suffixIcon: IconButton(
-                            onPressed: _parseUrl,
-                            icon: const Icon(Icons.auto_fix_high),
-                            tooltip: 'Parse URL',
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      TextFormField(
-                        key: const ValueKey('live_update_title'),
-                        controller: _titleController,
-                        focusNode: _titleFocus,
-                        textCapitalization: TextCapitalization.sentences,
-                        textInputAction: TextInputAction.next,
-                        scrollPadding: const EdgeInsets.fromLTRB(20, 20, 20, 120),
-                        onFieldSubmitted: (_) =>
-                            _descriptionFocus.requestFocus(),
-                        decoration: const InputDecoration(
-                          labelText: 'Title',
-                          hintText: 'e.g., Route 9 Diversion',
-                          border: OutlineInputBorder(),
-                        ),
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return 'Title is required';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      TextFormField(
-                        key: const ValueKey('live_update_description'),
-                        controller: _descriptionController,
-                        focusNode: _descriptionFocus,
-                        keyboardType: TextInputType.multiline,
-                        textInputAction: TextInputAction.newline,
-                        textCapitalization: TextCapitalization.sentences,
-                        minLines: 3,
-                        maxLines: 8,
-                        scrollPadding: const EdgeInsets.fromLTRB(20, 20, 20, 160),
-                        decoration: const InputDecoration(
-                          labelText: 'Description',
-                          hintText: 'e.g., Diverted via Nassau St due to gas leak',
-                          border: OutlineInputBorder(),
-                          alignLabelWithHint: true,
-                        ),
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return 'Description is required';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      _buildImageSection(theme, screenWidth),
-                      const SizedBox(height: 16),
-                      DropdownButtonFormField<String>(
-                        value: _priority,
-                        decoration: const InputDecoration(
-                          labelText: 'Priority',
-                          border: OutlineInputBorder(),
-                        ),
-                        items: const [
-                          DropdownMenuItem(value: 'info', child: Text('Info')),
-                          DropdownMenuItem(value: 'warning', child: Text('Warning')),
-                          DropdownMenuItem(value: 'critical', child: Text('Critical')),
-                        ],
-                        onChanged: (value) => setState(() => _priority = value!),
-                      ),
-                      const SizedBox(height: 16),
-                      TextFormField(
-                        key: const ValueKey('live_update_routes'),
-                        controller: _routesController,
-                        focusNode: _routesFocus,
-                        textInputAction: TextInputAction.done,
-                        scrollPadding: const EdgeInsets.all(80),
-                        decoration: const InputDecoration(
-                          labelText: 'Routes Affected (optional)',
-                          hintText: 'e.g., Route 9, Route 122',
-                          border: OutlineInputBorder(),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      // Force Visible Toggle
-                      Container(
-                        decoration: BoxDecoration(
-                          border: Border.all(color: theme.colorScheme.outline),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: SwitchListTile(
-                          title: const Text('Force Visible'),
-                          subtitle: const Text(
-                            'Show immediately regardless of start time (still respects end time)',
-                            style: TextStyle(fontSize: 12),
-                          ),
-                          value: _forceVisible,
-                          onChanged: (bool value) {
-                            setState(() {
-                              _forceVisible = value;
-                              // Disable scheduled visibility if force visible is enabled
-                              if (value) {
-                                _enableScheduledVisibility = false;
-                              }
-                            });
-                          },
-                          secondary: Icon(
-                            _forceVisible ? Icons.visibility : Icons.visibility_off,
-                            color: _forceVisible ? Colors.green : theme.colorScheme.onSurface.withValues(alpha: 0.6),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      // Scheduled Visibility Toggle
-                      Container(
-                        decoration: BoxDecoration(
-                          border: Border.all(color: theme.colorScheme.outline),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Column(
-                          children: [
-                            SwitchListTile(
-                              title: const Text('Scheduled Visibility'),
-                              subtitle: Text(
-                                _enableScheduledVisibility
-                                    ? 'Update will become visible $_hoursBeforeStart hour${_hoursBeforeStart == 1 ? '' : 's'} before start time'
-                                    : 'Display update at a scheduled time before start time',
-                                style: const TextStyle(fontSize: 12),
-                              ),
-                              value: _enableScheduledVisibility,
-                              onChanged: _forceVisible ? null : (bool value) {
-                                setState(() {
-                                  _enableScheduledVisibility = value;
-                                });
-                              },
-                              secondary: Icon(
-                                _enableScheduledVisibility ? Icons.schedule : Icons.schedule_outlined,
-                                color: _enableScheduledVisibility && !_forceVisible ? Colors.blue : theme.colorScheme.onSurface.withValues(alpha: 0.6),
-                              ),
-                            ),
-                            if (_enableScheduledVisibility && !_forceVisible) ...[
-                              const Divider(height: 1),
-                              Padding(
-                                padding: const EdgeInsets.all(16.0),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const Text(
-                                      'Hours before start time:',
-                                      style: TextStyle(fontWeight: FontWeight.w500),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Wrap(
-                                      spacing: 8,
-                                      children: [
-                                        for (int hours in [1, 2, 4, 8])
-                                          ChoiceChip(
-                                            label: Text('${hours}h'),
-                                            selected: _hoursBeforeStart == hours,
-                                            onSelected: (selected) {
-                                              if (selected) {
-                                                setState(() {
-                                                  _hoursBeforeStart = hours;
-                                                });
-                                              }
-                                            },
-                                          ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 8),
-                                    if (_enableScheduledVisibility) ...[
-                                      Container(
-                                        padding: const EdgeInsets.all(8),
-                                        decoration: BoxDecoration(
-                                          color: Colors.blue.shade50,
-                                          borderRadius: BorderRadius.circular(6),
-                                        ),
-                                        child: Row(
-                                          children: [
-                                            Icon(Icons.info_outline, size: 16, color: Colors.blue.shade600),
-                                            const SizedBox(width: 8),
-                                            Expanded(
-                                              child: Text(
-                                                'Will become visible at ${DateFormat('MMM d, HH:mm').format(_startTime.subtract(Duration(hours: _hoursBeforeStart)))}',
-                                                style: TextStyle(
-                                                  fontSize: 12,
-                                                  color: Colors.blue.shade700,
-                                                ),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      // Start time
-                      ListTile(
-                        title: const Text('Start Time'),
-                        subtitle: Text(DateFormat('MMM d, yyyy HH:mm').format(_startTime)),
-                        trailing: const Icon(Icons.schedule),
-                        onTap: () => _selectDateTime(true),
-                      ),
-                      // End time
-                      ListTile(
-                        title: const Text('End Time'),
-                        subtitle: Text(DateFormat('MMM d, yyyy HH:mm').format(_endTime)),
-                        trailing: const Icon(Icons.schedule),
-                        onTap: () => _selectDateTime(false),
-                      ),
-                    ],
-                  ),
+          ),
+        ],
+      ),
+      body: Form(
+        key: _formKey,
+        child: ListView(
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+          padding: EdgeInsets.fromLTRB(
+            contentPadding,
+            contentPadding,
+            contentPadding,
+            contentPadding + MediaQuery.viewInsetsOf(context).bottom,
+          ),
+          children: [
+            TextFormField(
+              key: const ValueKey('live_update_url'),
+              controller: _urlController,
+              focusNode: _urlFocus,
+              keyboardType: TextInputType.url,
+              textInputAction: TextInputAction.done,
+              scrollPadding: const EdgeInsets.all(120),
+              decoration: InputDecoration(
+                labelText: 'Paste URL (Optional)',
+                hintText: 'Paste Dublin Bus or news URL, then tap parse',
+                border: const OutlineInputBorder(),
+                suffixIcon: IconButton(
+                  onPressed: _parseUrl,
+                  icon: const Icon(Icons.auto_fix_high),
+                  tooltip: 'Parse URL',
                 ),
               ),
             ),
-            // Actions
+            const SizedBox(height: 16),
+            TextFormField(
+              key: const ValueKey('live_update_title'),
+              controller: _titleController,
+              focusNode: _titleFocus,
+              textCapitalization: TextCapitalization.sentences,
+              textInputAction: TextInputAction.next,
+              scrollPadding: const EdgeInsets.all(120),
+              onFieldSubmitted: (_) => _descriptionFocus.requestFocus(),
+              decoration: const InputDecoration(
+                labelText: 'Title',
+                hintText: 'e.g., Route 9 Diversion',
+                border: OutlineInputBorder(),
+              ),
+              validator: (value) {
+                if (value == null || value.trim().isEmpty) {
+                  return 'Title is required';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              key: const ValueKey('live_update_description'),
+              controller: _descriptionController,
+              focusNode: _descriptionFocus,
+              keyboardType: TextInputType.multiline,
+              textInputAction: TextInputAction.newline,
+              textCapitalization: TextCapitalization.sentences,
+              minLines: 3,
+              maxLines: 8,
+              scrollPadding: const EdgeInsets.all(160),
+              decoration: const InputDecoration(
+                labelText: 'Description',
+                hintText: 'e.g., Diverted via Nassau St due to gas leak',
+                border: OutlineInputBorder(),
+                alignLabelWithHint: true,
+              ),
+              validator: (value) {
+                if (value == null || value.trim().isEmpty) {
+                  return 'Description is required';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 16),
+            _buildImageSection(theme, screenWidth),
+            const SizedBox(height: 16),
+            DropdownButtonFormField<String>(
+              value: _priority,
+              decoration: const InputDecoration(
+                labelText: 'Priority',
+                border: OutlineInputBorder(),
+              ),
+              items: const [
+                DropdownMenuItem(value: 'info', child: Text('Info')),
+                DropdownMenuItem(value: 'warning', child: Text('Warning')),
+                DropdownMenuItem(value: 'critical', child: Text('Critical')),
+              ],
+              onChanged: (value) => setState(() => _priority = value!),
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              key: const ValueKey('live_update_routes'),
+              controller: _routesController,
+              focusNode: _routesFocus,
+              textInputAction: TextInputAction.done,
+              scrollPadding: const EdgeInsets.all(120),
+              decoration: const InputDecoration(
+                labelText: 'Routes Affected (optional)',
+                hintText: 'e.g., Route 9, Route 122',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 16),
             Container(
-              padding: EdgeInsets.all(actionPadding),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
+              decoration: BoxDecoration(
+                border: Border.all(color: theme.colorScheme.outline),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: SwitchListTile(
+                title: const Text('Force Visible'),
+                subtitle: const Text(
+                  'Show immediately regardless of start time (still respects end time)',
+                  style: TextStyle(fontSize: 12),
+                ),
+                value: _forceVisible,
+                onChanged: (bool value) {
+                  setState(() {
+                    _forceVisible = value;
+                    if (value) {
+                      _enableScheduledVisibility = false;
+                    }
+                  });
+                },
+                secondary: Icon(
+                  _forceVisible ? Icons.visibility : Icons.visibility_off,
+                  color: _forceVisible
+                      ? Colors.green
+                      : theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              decoration: BoxDecoration(
+                border: Border.all(color: theme.colorScheme.outline),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Column(
                 children: [
-                  TextButton(
-                    onPressed: _saving ? null : () => Navigator.pop(context),
-                    child: const Text('Cancel'),
-                  ),
-                  const SizedBox(width: 8),
-                  ElevatedButton(
-                    onPressed: _saving ? null : _saveUpdate,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: theme.colorScheme.primary,
-                      foregroundColor: Colors.white,
+                  SwitchListTile(
+                    title: const Text('Scheduled Visibility'),
+                    subtitle: Text(
+                      _enableScheduledVisibility
+                          ? 'Update will become visible $_hoursBeforeStart hour${_hoursBeforeStart == 1 ? '' : 's'} before start time'
+                          : 'Display update at a scheduled time before start time',
+                      style: const TextStyle(fontSize: 12),
                     ),
-                    child: _saving
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : Text(widget.existingUpdate != null ? 'Update' : 'Create'),
+                    value: _enableScheduledVisibility,
+                    onChanged: _forceVisible
+                        ? null
+                        : (bool value) {
+                            setState(() {
+                              _enableScheduledVisibility = value;
+                            });
+                          },
+                    secondary: Icon(
+                      _enableScheduledVisibility
+                          ? Icons.schedule
+                          : Icons.schedule_outlined,
+                      color: _enableScheduledVisibility && !_forceVisible
+                          ? Colors.blue
+                          : theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                    ),
                   ),
+                  if (_enableScheduledVisibility && !_forceVisible) ...[
+                    const Divider(height: 1),
+                    Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Hours before start time:',
+                            style: TextStyle(fontWeight: FontWeight.w500),
+                          ),
+                          const SizedBox(height: 8),
+                          Wrap(
+                            spacing: 8,
+                            children: [
+                              for (int hours in [1, 2, 4, 8])
+                                ChoiceChip(
+                                  label: Text('${hours}h'),
+                                  selected: _hoursBeforeStart == hours,
+                                  onSelected: (selected) {
+                                    if (selected) {
+                                      setState(() {
+                                        _hoursBeforeStart = hours;
+                                      });
+                                    }
+                                  },
+                                ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.blue.shade50,
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.info_outline,
+                                  size: 16,
+                                  color: Colors.blue.shade600,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    'Will become visible at ${DateFormat('MMM d, HH:mm').format(_startTime.subtract(Duration(hours: _hoursBeforeStart)))}',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.blue.shade700,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
+            const SizedBox(height: 8),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Start Time'),
+              subtitle: Text(
+                DateFormat('MMM d, yyyy HH:mm').format(_startTime),
+              ),
+              trailing: const Icon(Icons.schedule),
+              onTap: () => _selectDateTime(true),
+            ),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('End Time'),
+              subtitle: Text(
+                DateFormat('MMM d, yyyy HH:mm').format(_endTime),
+              ),
+              trailing: const Icon(Icons.schedule),
+              onTap: () => _selectDateTime(false),
+            ),
+            const SizedBox(height: 24),
           ],
         ),
       ),
-    ),
     );
   }
 
