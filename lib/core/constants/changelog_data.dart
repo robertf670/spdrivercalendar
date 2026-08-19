@@ -1,4 +1,11 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '4.0.3': [
+    {
+      'title': 'Rest Time Between Duties',
+      'description':
+          'Duty cards now show the rest time from sign-off to the next day\'s report. If there is no duty the following day, the line is hidden.',
+    },
+  ],
   '4.0.1': [
     {
       'title': 'Live Update Dialog Keyboard Layout',

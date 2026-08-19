@@ -7,18 +7,41 @@ void main() {
       expect(ZoneBoardMapper.normalizeDutyCode('PZ1/01'), 'PZ1/01');
       expect(ZoneBoardMapper.normalizeDutyCode('PZ3/1X'), 'PZ3/1X');
       expect(ZoneBoardMapper.normalizeDutyCode('PZ4/12'), 'PZ4/12');
+      expect(ZoneBoardMapper.normalizeDutyCode('811/36'), '811/36');
     });
 
     test('strips OT suffixes', () {
       expect(ZoneBoardMapper.normalizeDutyCode('PZ1/01 (OT)'), 'PZ1/01');
       expect(ZoneBoardMapper.normalizeDutyCode('PZ1/01A (OT)'), 'PZ1/01');
       expect(ZoneBoardMapper.normalizeDutyCode('PZ1/10XB (OT)'), 'PZ1/10X');
+      expect(ZoneBoardMapper.normalizeDutyCode('811/36A (OT)'), '811/36');
     });
 
     test('rejects unsupported titles', () {
       expect(ZoneBoardMapper.normalizeDutyCode('307/01'), isNull);
       expect(ZoneBoardMapper.normalizeDutyCode('PZ2/01'), isNull);
       expect(ZoneBoardMapper.normalizeDutyCode('SP0800'), isNull);
+    });
+  });
+
+  group('ZoneBoardMapper.assetPathForDuty', () {
+    test('maps zone and Jamestown codes to board assets', () {
+      expect(
+        ZoneBoardMapper.assetPathForDuty('PZ1/01'),
+        'assets/Zone1_Boards.json',
+      );
+      expect(
+        ZoneBoardMapper.assetPathForDuty('PZ3/01'),
+        'assets/Zone3_Boards.json',
+      );
+      expect(
+        ZoneBoardMapper.assetPathForDuty('PZ4/01'),
+        'assets/Zone4_Boards.json',
+      );
+      expect(
+        ZoneBoardMapper.assetPathForDuty('811/36'),
+        'assets/Jamestown_Boards.json',
+      );
     });
   });
 

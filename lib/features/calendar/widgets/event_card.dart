@@ -20,6 +20,7 @@ import 'package:spdrivercalendar/core/constants/app_constants.dart';
 import 'package:spdrivercalendar/services/self_certified_sick_days_service.dart';
 import 'package:spdrivercalendar/services/donnybrook_feature_service.dart';
 import 'package:spdrivercalendar/services/jamestown_feature_service.dart';
+import 'package:spdrivercalendar/features/calendar/utils/shift_rest_gap.dart';
 
 class EventCard extends StatefulWidget {
   final Event event;
@@ -76,6 +77,7 @@ class _EventCardState extends State<EventCard> {
 
   /// Prevents repeated load/save of location data (fixes loop when clicking a duty)
   String? _loadedLocationForEventId;
+  String? _restUntilNextLabel;
 
   final GlobalKey _shareCardRepaintKey = GlobalKey();
 
@@ -172,6 +174,7 @@ class _EventCardState extends State<EventCard> {
     _loadBreakTime();
     _loadLocationData();
     _loadRouteInfo();
+    _loadRestUntilNext();
     if (widget.event.assignedDuties != null && widget.event.assignedDuties!.isNotEmpty) {
       _loadAssignedDutyDetails();
     }
@@ -225,6 +228,7 @@ class _EventCardState extends State<EventCard> {
       _loadBreakTime();
       _loadLocationData();
       _loadRouteInfo();
+      _loadRestUntilNext();
       if (widget.event.assignedDuties != null && widget.event.assignedDuties!.isNotEmpty) {
         _loadAssignedDutyDetails();
       } else {
@@ -233,6 +237,43 @@ class _EventCardState extends State<EventCard> {
           _allDutyDetails = [];
         });
       }
+    }
+  }
+
+  Future<void> _loadRestUntilNext() async {
+    if (!widget.event.isWorkShift || _isEATraining) {
+      if (mounted && _restUntilNextLabel != null) {
+        setState(() => _restUntilNextLabel = null);
+      }
+      return;
+    }
+
+    void apply(List<Event> events) {
+      final gap = ShiftRestGap.fromSignOffToNextReport(
+        current: widget.event,
+        events: events,
+      );
+      final label = gap == null ? null : ShiftRestGap.format(gap);
+      if (!mounted || _restUntilNextLabel == label) return;
+      setState(() => _restUntilNextLabel = label);
+    }
+
+    final seen = <String>{};
+    final loaded = <Event>[];
+    for (final dayEvents in EventService.allLoadedEvents.values) {
+      for (final event in dayEvents) {
+        if (seen.add(event.id)) {
+          loaded.add(event);
+        }
+      }
+    }
+    apply(loaded);
+
+    try {
+      final all = await EventService.getAllEvents();
+      apply(all);
+    } catch (_) {
+      // Keep whatever we already computed from loaded events.
     }
   }
 
@@ -2292,7 +2333,41 @@ class _EventCardState extends State<EventCard> {
                   ],
                   ),
                 ),
-                const SizedBox(height: 8.0), // Consistent gap after break times
+                SizedBox(height: _restUntilNextLabel != null ? 3.0 : 8.0),
+              ],
+              // Rest until the next duty's report. Hidden when none is on the calendar.
+              if (_restUntilNextLabel != null) ...[
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 2.0),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(
+                        Icons.hourglass_empty,
+                        size: 16,
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.white
+                            : Colors.black,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: RichText(
+                          textScaler: MediaQuery.textScalerOf(context),
+                          strutStyle: _detailIconRowStrut,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          text: TextSpan(
+                            style: _detailIconRowTextStyle(context).copyWith(
+                              fontWeight: FontWeight.w500,
+                            ),
+                            text: 'Rest $_restUntilNextLabel',
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 8.0),
               ],
               // Show assigned duty details if available
               if (widget.event.assignedDuties != null && widget.event.assignedDuties!.isNotEmpty) ...[

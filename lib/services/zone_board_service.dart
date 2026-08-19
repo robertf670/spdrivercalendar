@@ -6,8 +6,8 @@ import 'package:spdrivercalendar/features/calendar/services/shift_service.dart';
 import 'package:spdrivercalendar/features/calendar/utils/zone_board_mapper.dart';
 import 'package:spdrivercalendar/models/universal_board.dart';
 
-/// Loads Zone 1/3/4 duty boards from bundled JSON and maps them to
-/// [UniversalBoard] for the shared board dialog.
+/// Loads Zone 1/3/4 and Jamestown duty boards from bundled JSON and maps
+/// them to [UniversalBoard] for the shared board dialog.
 class ZoneBoardService {
   ZoneBoardService._();
 
@@ -36,6 +36,16 @@ class ZoneBoardService {
     final dutyData = zoneData[dutyCode];
     if (dutyData is! Map) return null;
 
+    final dutyMap = Map<String, dynamic>.from(dutyData);
+
+    // Jamestown boards are stored as ready UniversalBoard sections.
+    if (dutyMap.containsKey('sections')) {
+      return UniversalBoard.fromJson({
+        'shift': dutyCode,
+        ...dutyMap,
+      });
+    }
+
     final dayKey = ZoneBoardMapper.dayKeyForDate(
       date,
       isSaturdayService: RosterService.isSaturdayService(date),
@@ -43,7 +53,7 @@ class ZoneBoardService {
           ShiftService.getBankHoliday(date, ShiftService.bankHolidays) != null,
     );
 
-    final dayData = dutyData[dayKey];
+    final dayData = dutyMap[dayKey];
     if (dayData is! Map) return null;
 
     return ZoneBoardMapper.fromDayData(

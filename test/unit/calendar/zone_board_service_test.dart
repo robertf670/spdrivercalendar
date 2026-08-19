@@ -39,6 +39,62 @@ void main() {
     expect(board!.shift, 'PZ1/01');
   });
 
+  test('loads 811/36 Jamestown board from assets', () async {
+    final board = await ZoneBoardService.getBoardForDuty(
+      dutyTitle: '811/36',
+      date: DateTime(2026, 8, 10),
+    );
+
+    expect(board, isNotNull);
+    expect(board!.shift, '811/36');
+    expect(board.duty, '586');
+    expect(board.sections, hasLength(1));
+
+    final entries = board.sections.first.entries;
+    expect(entries.first.action, 'Report');
+    expect(entries.first.time, '04:42');
+    expect(entries.first.location, 'Jamestown Road Garage');
+    expect(entries[2].action, 'Route');
+    expect(entries[2].route, '39A');
+    expect(entries[2].location, 'Ongar');
+    expect(entries[3].action, 'Call Controller');
+    expect(entries.last.action, 'Finish');
+    expect(entries.last.time, '10:20');
+  });
+
+  test('loads 811/39 split Jamestown board from assets', () async {
+    final board = await ZoneBoardService.getBoardForDuty(
+      dutyTitle: '811/39',
+      date: DateTime(2026, 8, 10),
+    );
+
+    expect(board, isNotNull);
+    expect(board!.shift, '811/39');
+    expect(board.duty, '589');
+    expect(board.sections, hasLength(2));
+    expect(board.sections[0].type, 'firstHalf');
+    expect(board.sections[1].type, 'secondHalf');
+    expect(board.sections[0].entries.first.time, '06:52');
+    expect(board.sections[1].entries.first.time, '15:38');
+    expect(board.sections[1].entries.last.action, 'Finish');
+    expect(board.sections[1].entries.last.time, '19:08');
+  });
+
+  test('loads remaining 30hr Jamestown boards', () async {
+    final date = DateTime(2026, 8, 10);
+    final codes = ['811/37', '811/38', '811/40'];
+
+    for (final code in codes) {
+      final board = await ZoneBoardService.getBoardForDuty(
+        dutyTitle: code,
+        date: date,
+      );
+      expect(board, isNotNull, reason: code);
+      expect(board!.shift, code);
+      expect(board.sections, isNotEmpty);
+    }
+  });
+
   test('returns null for unsupported zone', () async {
     final board = await ZoneBoardService.getBoardForDuty(
       dutyTitle: 'PZ2/01',

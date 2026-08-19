@@ -1,0 +1,246 @@
+{
+  "811/36": {
+    "duty": "586",
+    "sections": [
+      {
+        "type": "firstHalf",
+        "entries": [
+          {
+            "action": "Report",
+            "time": "04:42",
+            "location": "Jamestown Road Garage"
+          },
+          {
+            "action": "Depart Garage",
+            "time": "04:50",
+            "location": "Jamestown Road Garage"
+          },
+          {
+            "action": "Route",
+            "time": "05:30",
+            "route": "39A",
+            "location": "Ongar"
+          },
+          {
+            "action": "Call Controller",
+            "time": "06:45",
+            "location": "UCD"
+          },
+          {
+            "action": "Route",
+            "time": "07:00",
+            "route": "39A",
+            "location": "UCD"
+          },
+          {
+            "action": "Arrive",
+            "time": "09:00",
+            "location": "Ongar"
+          },
+          {
+            "action": "Finish",
+            "time": "10:20",
+            "location": "Garage"
+          }
+        ]
+      }
+    ]
+  },
+  "811/37": {
+    "duty": "587",
+    "sections": [
+      {
+        "type": "firstHalf",
+        "entries": [
+          {
+            "action": "Report",
+            "time": "05:42"
+          },
+          {
+            "action": "Depart Garage",
+            "time": "05:50"
+          },
+          {
+            "action": "Route",
+            "time": "06:40",
+            "route": "X27",
+            "location": "Salesian College via Aghards Rd"
+          },
+          {
+            "action": "Arrive",
+            "time": "08:25",
+            "location": "UCD - Belfield"
+          },
+          {
+            "action": "Call Controller"
+          },
+          {
+            "action": "Finish",
+            "time": "11:20",
+            "location": "Garage"
+          }
+        ]
+      }
+    ]
+  },
+  "811/38": {
+    "duty": "588",
+    "sections": [
+      {
+        "type": "firstHalf",
+        "entries": [
+          {
+            "action": "Report",
+            "time": "14:22",
+            "location": "Jamestown Garage"
+          },
+          {
+            "action": "Depart Garage",
+            "time": "14:30",
+            "location": "Jamestown Garage"
+          },
+          {
+            "action": "Call Control",
+            "notes": "39A from Navan Road Train Station"
+          },
+          {
+            "action": "Route",
+            "time": "17:01",
+            "route": "X27",
+            "location": "UCD"
+          },
+          {
+            "action": "Depart",
+            "time": "17:36"
+          },
+          {
+            "action": "SPL",
+            "time": "19:10",
+            "location": "Salesian College"
+          },
+          {
+            "action": "Finish",
+            "time": "20:00",
+            "location": "Jamestown Garage"
+          }
+        ]
+      }
+    ]
+  },
+  "811/39": {
+    "duty": "589",
+    "sections": [
+      {
+        "type": "firstHalf",
+        "entries": [
+          {
+            "action": "Report",
+            "time": "06:52",
+            "location": "Jamestown Road Garage"
+          },
+          {
+            "action": "Depart Garage",
+            "time": "07:00",
+            "location": "Jamestown Road Garage"
+          },
+          {
+            "action": "Route",
+            "time": "08:00",
+            "route": "X30",
+            "location": "Adamstown"
+          },
+          {
+            "action": "Arrive",
+            "time": "09:55",
+            "location": "UCD"
+          },
+          {
+            "action": "Call Controller"
+          },
+          {
+            "action": "Break",
+            "time": "11:00",
+            "location": "Jamestown Road Garage"
+          }
+        ]
+      },
+      {
+        "type": "secondHalf",
+        "entries": [
+          {
+            "action": "Report",
+            "time": "15:38",
+            "location": "Jamestown Road Garage"
+          },
+          {
+            "action": "Depart Garage",
+            "time": "15:41",
+            "location": "Jamestown Road Garage"
+          },
+          {
+            "action": "Route",
+            "time": "16:36",
+            "route": "38A",
+            "location": "Damastown"
+          },
+          {
+            "action": "SPL",
+            "time": "18:26",
+            "location": "Burlington Road"
+          },
+          {
+            "action": "Finish",
+            "time": "19:08",
+            "location": "Jamestown Road Garage"
+          }
+        ]
+      }
+    ]
+  },
+  "811/40": {
+    "duty": "590",
+    "sections": [
+      {
+        "type": "firstHalf",
+        "entries": [
+          {
+            "action": "Report",
+            "time": "05:12",
+            "location": "Jamestown Road Garage"
+          },
+          {
+            "action": "Depart Garage",
+            "time": "05:20",
+            "location": "Jamestown Road Garage"
+          },
+          {
+            "action": "Route",
+            "time": "06:00",
+            "route": "38B",
+            "location": "Damastown"
+          },
+          {
+            "action": "SPL",
+            "notes": "City Center then special to Admastown"
+          },
+          {
+            "action": "Route",
+            "time": "07:45",
+            "route": "X30",
+            "location": "Adamstown"
+          },
+          {
+            "action": "SPL",
+            "time": "09:45",
+            "location": "UCD"
+          },
+          {
+            "action": "Finish",
+            "time": "10:50",
+            "location": "Jamestown Road"
+          }
+        ]
+      }
+    ]
+  }
+}

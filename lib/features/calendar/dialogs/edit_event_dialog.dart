@@ -44,7 +44,7 @@ class EditEventDialog extends StatelessWidget {
       !(event.isWorkShift && event.title.startsWith('SP')) ||
       SpareShiftDuties.hasFullDuties(event);
 
-  /// Zone boards (PZ1/3/4 by day type), then Uni/Euro boards.
+  /// Zone boards (PZ1/3/4 by day type), Jamestown (811/xx), then Uni/Euro.
   static Future<UniversalBoard?> _defaultLoadBoard(Event event) async {
     final zoneBoard = await ZoneBoardService.getBoardForDuty(
       dutyTitle: event.title,

@@ -28,15 +28,21 @@ class ZoneBoardMapper {
     code = code.replaceAll(RegExp(r'\s*\(OT\)\s*$'), '');
 
     // Strip OT half suffix A/B, but keep X duties (e.g. PZ1/10X).
-    final halfMatch = RegExp(r'^(PZ[134]/\d+X?)[AB]$').firstMatch(code);
-    if (halfMatch != null) {
-      code = halfMatch.group(1)!;
+    final pzHalfMatch = RegExp(r'^(PZ[134]/\d+X?)[AB]$').firstMatch(code);
+    if (pzHalfMatch != null) {
+      code = pzHalfMatch.group(1)!;
     }
 
-    if (!RegExp(r'^PZ[134]/\S+$').hasMatch(code)) {
-      return null;
+    final jamestownHalfMatch = RegExp(r'^(811/\d+)[AB]$').firstMatch(code);
+    if (jamestownHalfMatch != null) {
+      code = jamestownHalfMatch.group(1)!;
     }
-    return code;
+
+    if (RegExp(r'^PZ[134]/\S+$').hasMatch(code) ||
+        RegExp(r'^811/\d+$').hasMatch(code)) {
+      return code;
+    }
+    return null;
   }
 
   /// Asset path for a normalized duty code, or null if unsupported.
@@ -49,6 +55,9 @@ class ZoneBoardMapper {
     }
     if (dutyCode.startsWith('PZ4/')) {
       return 'assets/Zone4_Boards.json';
+    }
+    if (dutyCode.startsWith('811/')) {
+      return 'assets/Jamestown_Boards.json';
     }
     return null;
   }
