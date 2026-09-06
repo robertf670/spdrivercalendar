@@ -45,8 +45,11 @@ class ZoneBoardMapper {
     return null;
   }
 
+  /// Zone 4 23/24 boards switch to the 23 Aug 2026 sheet from this date.
+  static final DateTime zone4NewBoardsFrom = DateTime(2026, 8, 23);
+
   /// Asset path for a normalized duty code, or null if unsupported.
-  static String? assetPathForDuty(String dutyCode) {
+  static String? assetPathForDuty(String dutyCode, {DateTime? date}) {
     if (dutyCode.startsWith('PZ1/')) {
       return 'assets/Zone1_Boards.json';
     }
@@ -54,6 +57,9 @@ class ZoneBoardMapper {
       return 'assets/Zone3_Boards.json';
     }
     if (dutyCode.startsWith('PZ4/')) {
+      if (date != null && !date.isBefore(zone4NewBoardsFrom)) {
+        return 'assets/Zone4_Boards_20260823.json';
+      }
       return 'assets/Zone4_Boards.json';
     }
     if (dutyCode.startsWith('811/')) {

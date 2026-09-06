@@ -13,9 +13,8 @@ class ZoneBoardService {
 
   static final Map<String, Map<String, dynamic>> _cachedByAsset = {};
 
-  /// Zone 4 View Board is unavailable from the Aug 2026 bill changeover —
-  /// new board sheets are not ready yet. Earlier dates still use Zone4_Boards.json.
-  static final DateTime zone4BoardsDisabledFrom = DateTime(2026, 8, 23);
+  /// Zone 4 uses Zone4_Boards_20260823.json from this date (all day types).
+  static final DateTime zone4NewBoardsFrom = ZoneBoardMapper.zone4NewBoardsFrom;
 
   static Future<UniversalBoard?> getBoardForDuty({
     required String dutyTitle,
@@ -24,12 +23,14 @@ class ZoneBoardService {
     final dutyCode = ZoneBoardMapper.normalizeDutyCode(dutyTitle);
     if (dutyCode == null) return null;
 
-    if (dutyCode.startsWith('PZ4/') &&
-        !date.isBefore(zone4BoardsDisabledFrom)) {
-      return null;
-    }
+    final dayKey = ZoneBoardMapper.dayKeyForDate(
+      date,
+      isSaturdayService: RosterService.isSaturdayService(date),
+      isBankHoliday:
+          ShiftService.getBankHoliday(date, ShiftService.bankHolidays) != null,
+    );
 
-    final assetPath = ZoneBoardMapper.assetPathForDuty(dutyCode);
+    final assetPath = ZoneBoardMapper.assetPathForDuty(dutyCode, date: date);
     if (assetPath == null) return null;
 
     final zoneData = await _loadAsset(assetPath);
@@ -45,13 +46,6 @@ class ZoneBoardService {
         ...dutyMap,
       });
     }
-
-    final dayKey = ZoneBoardMapper.dayKeyForDate(
-      date,
-      isSaturdayService: RosterService.isSaturdayService(date),
-      isBankHoliday:
-          ShiftService.getBankHoliday(date, ShiftService.bankHolidays) != null,
-    );
 
     final dayData = dutyMap[dayKey];
     if (dayData is! Map) return null;

@@ -39,6 +39,13 @@ void main() {
         'assets/Zone4_Boards.json',
       );
       expect(
+        ZoneBoardMapper.assetPathForDuty(
+          'PZ4/01',
+          date: DateTime(2026, 8, 24),
+        ),
+        'assets/Zone4_Boards_20260823.json',
+      );
+      expect(
         ZoneBoardMapper.assetPathForDuty('811/36'),
         'assets/Jamestown_Boards.json',
       );

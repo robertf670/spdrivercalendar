@@ -1,4 +1,21 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '4.0.4': [
+    {
+      'title': 'Zone 4 Boards From 23 Aug',
+      'description':
+          'View Board is available again for Zone 4 duties from 23 August 2026.',
+    },
+    {
+      'title': 'Sunday 1/29 Break Location',
+      'description':
+          'Fixed Sunday 1/29 break location.',
+    },
+    {
+      'title': '1/46 Second Half Board',
+      'description':
+          'Fixed Monday–Friday 1/46 second half board. It now takes up on Aston Quay at 17:15 instead of the garage.',
+    },
+  ],
   '4.0.3': [
     {
       'title': 'Rest Time Between Duties',

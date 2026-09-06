@@ -103,17 +103,65 @@ void main() {
     expect(board, isNull);
   });
 
-  test('disables Zone 4 boards from 23 Aug 2026', () async {
+  test('uses legacy Zone 4 boards before 23 Aug 2026', () async {
     final before = await ZoneBoardService.getBoardForDuty(
       dutyTitle: 'PZ4/01',
-      date: DateTime(2026, 8, 22),
-    );
-    final after = await ZoneBoardService.getBoardForDuty(
-      dutyTitle: 'PZ4/01',
-      date: DateTime(2026, 8, 23),
+      date: DateTime(2026, 8, 21), // Friday
     );
 
     expect(before, isNotNull);
-    expect(after, isNull);
+    expect(before!.shift, 'PZ4/01');
+    expect(before.sections.first.entries.last.time, '09:20');
+  });
+
+  test('uses new Zone 4 Monday-Friday boards from 23 Aug 2026', () async {
+    final after = await ZoneBoardService.getBoardForDuty(
+      dutyTitle: 'PZ4/01',
+      date: DateTime(2026, 8, 24), // Monday
+    );
+
+    expect(after, isNotNull);
+    expect(after!.shift, 'PZ4/01');
+    expect(after.sections.first.entries.last.action, 'Finish');
+    expect(after.sections.first.entries.last.time, '09:50');
+  });
+
+  test('uses new Zone 4 Saturday boards from 23 Aug 2026', () async {
+    final saturday = await ZoneBoardService.getBoardForDuty(
+      dutyTitle: 'PZ4/01',
+      date: DateTime(2026, 8, 29), // Saturday
+    );
+
+    expect(saturday, isNotNull);
+    expect(saturday!.sections.first.entries.first.time, '04:07');
+    expect(saturday.sections.first.entries.last.action, 'Finish');
+    expect(saturday.sections.first.entries.last.time, '09:05');
+  });
+
+  test('uses new Zone 4 Sunday boards from 23 Aug 2026', () async {
+    final sunday = await ZoneBoardService.getBoardForDuty(
+      dutyTitle: 'PZ4/01',
+      date: DateTime(2026, 8, 30), // Sunday
+    );
+
+    expect(sunday, isNotNull);
+    expect(sunday!.sections.first.entries.first.time, '04:17');
+    expect(sunday.sections.first.entries.last.action, 'Finish');
+    expect(sunday.sections.first.entries.last.time, '09:05');
+  });
+
+  test('loads new Zone 4 split board for PZ4/31 from 23 Aug 2026', () async {
+    final board = await ZoneBoardService.getBoardForDuty(
+      dutyTitle: 'PZ4/31',
+      date: DateTime(2026, 8, 24),
+    );
+
+    expect(board, isNotNull);
+    expect(board!.sections, hasLength(2));
+    expect(board.sections[0].entries.first.action, 'Takes up 15:20');
+    expect(board.sections[1].entries.first.action, 'Report');
+    expect(board.sections[1].entries.first.time, '19:07');
+    expect(board.sections[1].entries.last.action, 'Finish');
+    expect(board.sections[1].entries.last.time, '23:10');
   });
 }
