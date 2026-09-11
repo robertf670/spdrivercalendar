@@ -164,4 +164,25 @@ void main() {
     expect(board.sections[1].entries.last.action, 'Finish');
     expect(board.sections[1].entries.last.time, '23:10');
   });
+
+  test('dayKey override loads Saturday board on a Monday date', () async {
+    final board = await ZoneBoardService.getBoardForDuty(
+      dutyTitle: 'PZ1/01',
+      date: DateTime(2026, 8, 10), // Monday
+      dayKey: 'SAT',
+    );
+
+    expect(board, isNotNull);
+    expect(board!.sections.first.entries.first.time, '04:20');
+  });
+
+  test('lists Zone 1 Monday-Friday duty codes from assets', () async {
+    final codes = await ZoneBoardService.listDutyCodes(
+      zoneNumber: '1',
+      dayKey: 'MON-FRI',
+      date: DateTime(2026, 9, 11),
+    );
+
+    expect(codes, containsAll(['PZ1/01', 'PZ1/67']));
+  });
 }

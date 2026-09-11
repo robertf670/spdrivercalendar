@@ -1,592 +1,252 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:spdrivercalendar/features/bills/models/bill_duty.dart';
+import 'package:spdrivercalendar/features/bills/services/bills_csv_service.dart';
+import 'package:spdrivercalendar/features/bills/services/board_lookup.dart';
+import 'package:spdrivercalendar/features/bills/widgets/bill_duty_index_list.dart';
 import 'package:spdrivercalendar/features/calendar/services/roster_service.dart';
+import 'package:spdrivercalendar/features/calendar/widgets/universal_board_timeline.dart';
+import 'package:spdrivercalendar/models/universal_board.dart';
 import 'package:spdrivercalendar/theme/app_theme.dart';
 
+enum _BillsHubTab { bills, boards }
+
 class BillsScreen extends StatefulWidget {
-  const BillsScreen({super.key});
+  const BillsScreen({
+    super.key,
+    this.now,
+    this.initialZone,
+    this.initialDayType,
+  });
+
+  /// Used to default the day type from "today". Tests can inject a fixed date.
+  final DateTime? now;
+  final String? initialZone;
+  final String? initialDayType;
 
   @override
   BillsScreenState createState() => BillsScreenState();
 }
 
 class BillsScreenState extends State<BillsScreen> {
-  String _selectedDayType = 'M-F';
-  String _selectedZone = 'Zone 1';
+  static const _zones = ['Zone 1', 'Zone 2', 'Zone 3', 'Zone 4', 'Uni/Euro'];
+  static const _dayTypes = ['M-F', 'Sat', 'Sun'];
+
+  late String _selectedDayType;
+  late String _selectedZone;
+  _BillsHubTab _tab = _BillsHubTab.bills;
+
   bool _isLoading = false;
-  List<String> _headers = [];
-  List<List<String>> _rows = [];
+  List<BillDuty> _duties = [];
+  Set<String> _boardCodes = {};
   String? _errorMessage;
-  
-  // For fixed column implementation
-  String _shiftColumnHeader = "";
-  List<String> _shiftColumnData = [];
-  List<String> _scrollableHeaders = [];
-  List<List<String>> _scrollableRows = [];
-  
-  // Horizontal scroll controllers
-  final ScrollController _headerScrollController = ScrollController();
-  final ScrollController _dataScrollController = ScrollController();
-  
-  // Vertical scroll controllers with improved sync
-  final ScrollController _leftVerticalController = ScrollController();
-  final ScrollController _rightVerticalController = ScrollController();
+  bool _isComingSoon = false;
+
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+  bool _searchOpen = false;
+  String? _focusedShift;
+  String? _expandedShift;
+  final GlobalKey<BillDutyIndexListState> _indexKey = GlobalKey();
+  BillDuty? _selectedBoardDuty;
+  UniversalBoard? _selectedBoard;
+  bool _loadingBoard = false;
+  String? _boardError;
+
+  DateTime get _now => widget.now ?? DateTime.now();
 
   @override
   void initState() {
     super.initState();
-    _loadCsvData();
-    
-    // Horizontal sync: data to header
-    _dataScrollController.addListener(() {
-      if (_headerScrollController.offset != _dataScrollController.offset) {
-        _headerScrollController.jumpTo(_dataScrollController.offset);
-      }
+    _selectedZone = widget.initialZone ?? 'Zone 1';
+    _selectedDayType = widget.initialDayType ?? _dayTypeForDate(_now);
+    _searchController.addListener(() {
+      final query = _searchController.text;
+      if (query == _searchQuery) return;
+      setState(() => _searchQuery = query);
     });
-    
-    // Horizontal sync: header to data
-    _headerScrollController.addListener(() {
-      if (_dataScrollController.offset != _headerScrollController.offset) {
-        _dataScrollController.jumpTo(_headerScrollController.offset);
-      }
-    });
-    
-    // Vertical sync: left to right with exact matching
-    _leftVerticalController.addListener(() {
-      if (_rightVerticalController.offset != _leftVerticalController.offset) {
-        _rightVerticalController.jumpTo(_leftVerticalController.offset);
-      }
-    });
-    
-    // Vertical sync: right to left with exact matching
-    _rightVerticalController.addListener(() {
-      if (_leftVerticalController.offset != _rightVerticalController.offset) {
-        _leftVerticalController.jumpTo(_rightVerticalController.offset);
-      }
-    });
+    _loadData();
   }
-  
+
   @override
   void dispose() {
-    _headerScrollController.dispose();
-    _dataScrollController.dispose();
-    _leftVerticalController.dispose();
-    _rightVerticalController.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
-  Future<void> _loadCsvData() async {
+  static String _dayTypeForDate(DateTime date) {
+    if (RosterService.isSaturdayService(date) ||
+        date.weekday == DateTime.saturday) {
+      return 'Sat';
+    }
+    if (date.weekday == DateTime.sunday) return 'Sun';
+    return 'M-F';
+  }
+
+  Future<void> _loadData() async {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
+      _isComingSoon = false;
     });
 
-    // Zone 2 (Route 13) - no bill yet, show coming soon instead of loading
-    if (_selectedZone == 'Zone 2') {
-      setState(() {
-        _isLoading = false;
-        _errorMessage = null;
-        _headers = [];
-        _rows = [];
-        _shiftColumnHeader = '';
-        _shiftColumnData = [];
-        _scrollableHeaders = [];
-        _scrollableRows = [];
-      });
-      return;
-    }
+    final result = await BillsCsvService.load(
+      zone: _selectedZone,
+      dayType: _selectedDayType,
+      eraDate: _now,
+    );
+    final boardCodes = await BoardLookup.dutyCodesFor(
+      zone: _selectedZone,
+      dayType: _selectedDayType,
+      date: _now,
+    );
 
-    try {
-      List<String> lines;
+    if (!mounted) return;
 
-      if (_selectedZone == 'Uni/Euro') {
-        // Uni/Euro: M-F uses both 7DAYs and M-F files; Sat/Sun use 7DAYs only
-        final csv7Days = await rootBundle.loadString('assets/UNI_7DAYs.csv');
-        if (_selectedDayType == 'M-F') {
-          final csvMF = await rootBundle.loadString('assets/UNI_M-F.csv');
-          lines = _mergeUniEuroCsvLines(csv7Days, csvMF);
-        } else {
-          lines = csv7Days.split('\n');
-        }
-      } else {
-        // Zone 1–4: use RosterService so Zone 4 bill eras follow today's date
-        // (legacy PZ4 → ROUTE2324 → ROUTE2324_20260823 from 23 Aug 2026).
-        final zoneNumber = _selectedZone.replaceAll('Zone ', '');
-        String dayTypeForFilename = _selectedDayType;
-        if (_selectedDayType == 'Sat') {
-          dayTypeForFilename = 'SAT';
-        } else if (_selectedDayType == 'Sun') {
-          dayTypeForFilename = 'SUN';
-        }
-        final filename = RosterService.getShiftFilename(
-          zoneNumber,
-          dayTypeForFilename,
-          DateTime.now(),
-        );
-        final path = 'assets/$filename';
-        final String csvData = await rootBundle.loadString(path);
-        lines = csvData.split('\n');
-      }
-
-      if (lines.isEmpty) {
-        setState(() {
-          _isLoading = false;
-          _errorMessage = 'CSV file is empty';
-        });
-        return;
-      }
-
-      // Parse headers (first line) and format them
-      final originalHeaders = _parseCsvLine(lines[0]);
-      // Format headers for better display
-      final headers = originalHeaders.map((header) => _formatHeaderText(header)).toList();
-      
-      // Find the index of the "duty" column to remove it
-      int dutyColumnIndex = -1;
-      for (int i = 0; i < originalHeaders.length; i++) {
-        if (originalHeaders[i].toLowerCase() == 'duty') {
-          dutyColumnIndex = i;
+    final selectedShift = _selectedBoardDuty?.shift;
+    BillDuty? selectedMatch;
+    if (selectedShift != null) {
+      for (final duty in result.duties) {
+        if (duty.shift == selectedShift) {
+          selectedMatch = duty;
           break;
         }
       }
-      
-      // Remove duty column from headers if found
-      if (dutyColumnIndex != -1) {
-        headers.removeAt(dutyColumnIndex);
-      }
-      
-      // Parse data rows (remaining lines)
-      final rows = <List<String>>[];
-      for (int i = 1; i < lines.length; i++) {
-        if (lines[i].trim().isNotEmpty) {
-          final rowData = _parseCsvLine(lines[i]);
-          
-          // Remove duty column from this row if applicable
-          if (dutyColumnIndex != -1 && dutyColumnIndex < rowData.length) {
-            rowData.removeAt(dutyColumnIndex);
-          }
-          
-          rows.add(rowData);
-        }
-      }
+    }
 
-      // Extract fixed shift column (assuming it's the first column after removing duty)
-      String shiftHeader = "";
-      final shiftColumnData = <String>[];
-      final scrollableHeaders = <String>[];
-      final scrollableRows = <List<String>>[];
-      
-      if (headers.isNotEmpty) {
-        // Get the shift column header (first column)
-        shiftHeader = headers[0];
-        
-        // Check for empty or missing columns
-        List<int> emptyColumnIndices = [];
-        for (int i = 1; i < headers.length; i++) {
-          bool isEmpty = true;
-          
-          // Check if this column is empty or has only "nan" values
-          for (final row in rows) {
-            if (i < row.length && 
-                row[i].trim().isNotEmpty && 
-                row[i].toLowerCase() != "nan") {
-              isEmpty = false;
-              break;
-            }
-          }
-          
-          if (isEmpty) {
-            emptyColumnIndices.add(i);
-          }
-        }
-        
-        // Add non-empty headers to scrollable headers
-        for (int i = 1; i < headers.length; i++) {
-          if (!emptyColumnIndices.contains(i)) {
-            scrollableHeaders.add(headers[i]);
-          }
-        }
-        
-        // Extract shift column data and remaining data
-        for (final row in rows) {
-          if (row.isNotEmpty) {
-            shiftColumnData.add(row[0]);
-            
-            if (row.length > 1) {
-              // Add only non-empty columns to scrollable rows
-              List<String> filteredRow = [];
-              for (int i = 1; i < row.length; i++) {
-                if (!emptyColumnIndices.contains(i)) {
-                  filteredRow.add(row[i]);
-                }
-              }
-              scrollableRows.add(filteredRow);
-            } else {
-              scrollableRows.add([]);
-            }
-          } else {
-            shiftColumnData.add('');
-            scrollableRows.add([]);
-          }
-        }
+    setState(() {
+      _duties = result.duties;
+      _boardCodes = boardCodes;
+      _isComingSoon = result.isComingSoon;
+      _errorMessage = result.error;
+      _isLoading = false;
+      if (selectedShift != null && selectedMatch == null) {
+        _selectedBoardDuty = null;
+        _selectedBoard = null;
+        _boardError = null;
       }
+    });
 
-      setState(() {
-        _headers = headers;
-        _rows = rows;
-        _shiftColumnHeader = shiftHeader;
-        _shiftColumnData = shiftColumnData;
-        _scrollableHeaders = scrollableHeaders;
-        _scrollableRows = scrollableRows;
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() {
-        _isLoading = false;
-        _errorMessage = 'Error loading data: ${e.toString()}';
-      });
+    if (selectedMatch != null) {
+      await _openBoard(selectedMatch, switchTab: false);
     }
   }
 
-  /// Merges UNI_7DAYs and UNI_M-F CSV content. Headers from first file;
-  /// data rows deduplicated by shift (first column), first occurrence wins.
-  List<String> _mergeUniEuroCsvLines(String csv7Days, String csvMF) {
-    final lines7Days = csv7Days.split('\n');
-    final linesMF = csvMF.split('\n');
-    if (lines7Days.isEmpty) return linesMF;
-    if (linesMF.isEmpty) return lines7Days;
-
-    final result = <String>[lines7Days[0]]; // header from 7DAYs
-    final seenShifts = <String>{};
-
-    void addRows(List<String> fileLines) {
-      for (var i = 1; i < fileLines.length; i++) {
-        if (fileLines[i].trim().isEmpty) continue;
-        final parts = _parseCsvLine(fileLines[i]);
-        if (parts.isEmpty) continue;
-        final shift = parts[0];
-        if (!seenShifts.add(shift)) continue; // skip duplicate
-        result.add(fileLines[i]);
-      }
-    }
-
-    addRows(lines7Days);
-    addRows(linesMF);
-    return result;
+  List<BillDuty> get _filteredDuties {
+    return _duties.where((duty) => duty.matchesQuery(_searchQuery)).toList();
   }
 
-  // Simple CSV line parser
-  List<String> _parseCsvLine(String line) {
-    // This handles basic CSV parsing - you might need a more robust parser for complex CSVs
-    return line.split(',').map((cell) => cell.trim()).toList();
-  }
+  Future<void> _openBoard(BillDuty duty, {bool switchTab = true}) async {
+    setState(() {
+      if (switchTab) _tab = _BillsHubTab.boards;
+      _focusedShift = duty.shift;
+      _selectedBoardDuty = duty;
+      _loadingBoard = true;
+      _boardError = null;
+      _selectedBoard = null;
+    });
 
-  // Helper method to format header text
-  String _formatHeaderText(String header) {
-    if (header.isEmpty) return '';
-    
-    // Convert to lowercase first to handle all-caps headers
-    String formattedHeader = header.toLowerCase();
-    
-    // Replace underscores with spaces
-    formattedHeader = formattedHeader.replaceAll('_', ' ');
-    
-    // First split by known compound word segments
-    // The order matters - we need to check longer patterns first
-    final wordMappings = {
-      'breaklocation': 'break location',
-      'startbreak': 'start break',
-      'finishbreak': 'finish break',
-      'breakreport': 'break report',
-      'signoff': 'sign off',
-      'finishlocation': 'finish location',
-      'startlocation': 'start location',
-      'location': 'location',    // Handle any remaining "location"
-      'break': 'break',          // Handle any remaining "break"
-      'report': 'report',        // Handle any remaining "report"
-      'finish': 'finish',        // Handle any remaining "finish"
-      'start': 'start',          // Handle any remaining "start"
-      'sign': 'sign',            // Handle any remaining "sign"
-      'off': 'off',              // Handle any remaining "off"
-    };
-    
-    // Process replacements from longest to shortest to avoid partial replacements
-    final sortedKeys = wordMappings.keys.toList()
-      ..sort((a, b) => b.length.compareTo(a.length));
-    
-    for (final key in sortedKeys) {
-      formattedHeader = formattedHeader.replaceAll(key, wordMappings[key]!);
-    }
-    
-    // Cleanup: handle any double spaces that might have been created
-    formattedHeader = formattedHeader.replaceAll(RegExp(r'\s+'), ' ').trim();
-    
-    // Generic camelCase or PascalCase splitting (for other potential headers)
-    formattedHeader = formattedHeader.replaceAllMapped(
-      RegExp(r'([a-z])([A-Z])'),
-      (match) => '${match.group(1)} ${match.group(2)}'
+    final board = await BoardLookup.load(
+      shift: duty.shift,
+      dayType: _selectedDayType,
+      date: _now,
     );
-    
-    // Capitalize each word
-    List<String> words = formattedHeader.split(' ');
-    words = words.map((word) {
-      if (word.isEmpty) return '';
-      return word[0].toUpperCase() + (word.length > 1 ? word.substring(1) : '');
-    }).toList();
-    
-    return words.join(' ');
+
+    if (!mounted) return;
+    setState(() {
+      _loadingBoard = false;
+      _selectedBoard = board;
+      if (board == null) {
+        _boardError = 'No running board for ${duty.shift} on this day type.';
+      }
+    });
   }
-  
-  // Responsive sizing helper method
-  Map<String, double> _getResponsiveSizes(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    
-    // Very small screens (narrow phones) - ULTRA conservative to prevent overflow
-    if (screenWidth < 350) {
-      return {
-        'fixedColumnWidth': 60.0,   // Reduced from 80
-        'dataColumnWidth': 90.0,    // Reduced from 110
-        'headerHeight': 50.0,       // Reduced from 60
-        'rowHeight': 36.0,          // Reduced from 40
-        'padding': 8.0,              // Reduced from 12
-        'dropdownPadding': 8.0,     // Reduced from 12
-        'headerFontSize': 10.0,     // Reduced from 12
-        'cellFontSize': 10.0,       // Reduced from 11/12
-        'cellPadding': 3.0,         // Reduced from 4
-      };
+
+  void _showBill(BillDuty duty) {
+    setState(() {
+      _tab = _BillsHubTab.bills;
+      _searchOpen = false;
+      _searchController.clear();
+      _focusedShift = duty.shift;
+      _expandedShift = duty.shift;
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _indexKey.currentState?.jumpToDuty(duty.shift);
+    });
+  }
+
+  void _onIndexDutyTap(BillDuty duty) {
+    if (_tab == _BillsHubTab.boards) {
+      _openBoard(duty, switchTab: false);
+      return;
     }
-    // Small phones (like older iPhones)
-    else if (screenWidth < 400) {
-      return {
-        'fixedColumnWidth': 65.0,
-        'dataColumnWidth': 95.0,
-        'headerHeight': 52.0,
-        'rowHeight': 38.0,
-        'padding': 10.0,
-        'dropdownPadding': 10.0,
-        'headerFontSize': 11.0,
-        'cellFontSize': 10.5,
-        'cellPadding': 3.5,
-      };
+    setState(() {
+      _expandedShift = _expandedShift == duty.shift ? null : duty.shift;
+      _focusedShift = duty.shift;
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _indexKey.currentState?.jumpToDuty(duty.shift);
+    });
+  }
+
+  void _clearBoardSelection() {
+    setState(() {
+      _selectedBoardDuty = null;
+      _selectedBoard = null;
+      _boardError = null;
+    });
+  }
+
+  Map<String, double> _sizes(BuildContext context) {
+    final width = MediaQuery.sizeOf(context).width;
+    if (width < 350) {
+      return {'padding': 8.0, 'gap': 8.0, 'fontSize': 12.0};
     }
-    // Mid-range phones (like Galaxy S23)
-    else if (screenWidth < 450) {
-      return {
-        'fixedColumnWidth': 70.0,
-        'dataColumnWidth': 100.0,
-        'headerHeight': 54.0,
-        'rowHeight': 39.0,
-        'padding': 11.0,
-        'dropdownPadding': 11.0,
-        'headerFontSize': 11.5,
-        'cellFontSize': 11.0,
-        'cellPadding': 4.0,
-      };
+    if (width < 400) {
+      return {'padding': 10.0, 'gap': 10.0, 'fontSize': 13.0};
     }
-    // Regular phones
-    else if (screenWidth < 600) {
-      return {
-        'fixedColumnWidth': 75.0,
-        'dataColumnWidth': 105.0,
-        'headerHeight': 56.0,
-        'rowHeight': 39.5,
-        'padding': 12.0,            // Original size
-        'dropdownPadding': 12.0,     // Original size
-        'headerFontSize': 12.0,      // Original size
-        'cellFontSize': 11.0,
-        'cellPadding': 4.0,         // Original size
-      };
+    if (width < 450) {
+      return {'padding': 12.0, 'gap': 12.0, 'fontSize': 13.0};
     }
-    // Tablets
-    else if (screenWidth < 900) {
-      return {
-        'fixedColumnWidth': 78.0,
-        'dataColumnWidth': 108.0,
-        'headerHeight': 58.0,
-        'rowHeight': 40.0,          // Original size
-        'padding': 12.0,
-        'dropdownPadding': 12.0,
-        'headerFontSize': 12.0,
-        'cellFontSize': 11.0,
-        'cellPadding': 4.0,
-      };
-    }
-    // Large tablets/desktop
-    else {
-      return {
-        'fixedColumnWidth': 80.0,   // Original size
-        'dataColumnWidth': 110.0,   // Original size
-        'headerHeight': 60.0,       // Original size
-        'rowHeight': 40.0,          // Original size
-        'padding': 12.0,            // Original size
-        'dropdownPadding': 12.0,     // Original size
-        'headerFontSize': 12.0,      // Original size
-        'cellFontSize': 11.0,
-        'cellPadding': 4.0,         // Original size
-      };
-    }
+    return {'padding': 16.0, 'gap': 12.0, 'fontSize': 14.0};
   }
 
   @override
   Widget build(BuildContext context) {
-    final sizes = _getResponsiveSizes(context);
-    
+    final sizes = _sizes(context);
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Bills'),
+        title: const Text('Bills & Boards'),
         elevation: 0,
+        actions: [
+          IconButton(
+            tooltip: _searchOpen ? 'Close search' : 'Search',
+            icon: Icon(_searchOpen ? Icons.close : Icons.search),
+            onPressed: () {
+              setState(() {
+                _searchOpen = !_searchOpen;
+                if (!_searchOpen) {
+                  _searchController.clear();
+                }
+              });
+            },
+          ),
+        ],
       ),
       body: SafeArea(
-        child: Container(
-          padding: EdgeInsets.all(sizes['padding']!),
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(
+            sizes['padding']!,
+            sizes['padding']!,
+            sizes['padding']!,
+            0,
+          ),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Dropdowns Container
-              Container(
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surface,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.06),
-                      spreadRadius: 1,
-                      blurRadius: 6,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                padding: EdgeInsets.all(sizes['dropdownPadding']!),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Day Type Dropdown
-                    Text(
-                      'Day Type',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: Theme.of(context).colorScheme.onSurface,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: Theme.of(context).colorScheme.outline),
-                      ),
-                      child: DropdownButtonHideUnderline(
-                        child: DropdownButton<String>(
-                          value: _selectedDayType,
-                          isExpanded: true,
-                          icon: const Padding(
-                            padding: EdgeInsets.only(right: 16.0),
-                            child: Icon(Icons.arrow_drop_down_circle, color: AppTheme.primaryColor),
-                          ),
-                          items: ['M-F', 'Sat', 'Sun'].map((String value) {
-                            return DropdownMenuItem<String>(
-                              value: value,
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
-                                child: Row(
-                                  children: [
-                                    const Icon(
-                                      Icons.work,
-                                      color: AppTheme.primaryColor,
-                                      size: 18,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      value,
-                                      style: const TextStyle(fontSize: 14),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            );
-                          }).toList(),
-                          onChanged: (String? newValue) {
-                            if (newValue != null && newValue != _selectedDayType) {
-                              setState(() {
-                                _selectedDayType = newValue;
-                              });
-                              _loadCsvData();
-                            }
-                          },
-                        ),
-                      ),
-                    ),
-                    
-                    const SizedBox(height: 16),
-                    
-                    // Zone Dropdown
-                    Text(
-                      'Zone',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: Theme.of(context).colorScheme.onSurface,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: Theme.of(context).colorScheme.outline),
-                      ),
-                      child: DropdownButtonHideUnderline(
-                        child: DropdownButton<String>(
-                          value: _selectedZone,
-                          isExpanded: true,
-                          icon: const Padding(
-                            padding: EdgeInsets.only(right: 16.0),
-                            child: Icon(Icons.arrow_drop_down_circle, color: AppTheme.primaryColor),
-                          ),
-                          items: ['Zone 1', 'Zone 2', 'Zone 3', 'Zone 4', 'Uni/Euro'].map((String value) {
-                            return DropdownMenuItem<String>(
-                              value: value,
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
-                                child: Row(
-                                  children: [
-                                    const Icon(
-                                      Icons.map,
-                                      color: AppTheme.primaryColor,
-                                      size: 18,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      value,
-                                      style: const TextStyle(fontSize: 14),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            );
-                          }).toList(),
-                          onChanged: (String? newValue) {
-                            if (newValue != null && newValue != _selectedZone) {
-                              setState(() {
-                                _selectedZone = newValue;
-                              });
-                              _loadCsvData();
-                            }
-                          },
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              
-              SizedBox(height: sizes['padding']!),
-              
-              // CSV Data Display Section
-              Expanded(
-                child: _buildCsvDataDisplay(),
-              ),
+              _buildFilterCard(context, sizes),
+              SizedBox(height: sizes['gap']!),
+              Expanded(child: _buildBody()),
             ],
           ),
         ),
@@ -594,329 +254,467 @@ class BillsScreenState extends State<BillsScreen> {
     );
   }
 
-  Widget _buildCsvDataDisplay() {
+  Widget _buildFilterCard(
+    BuildContext context,
+    Map<String, double> sizes,
+  ) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.6)),
+      ),
+      padding: EdgeInsets.all(sizes['padding']!),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Expanded(
+                flex: 3,
+                child: _menuField(
+                  value: _selectedZone,
+                  options: _zones,
+                  menuKey: const ValueKey('bills-zone-menu'),
+                  onSelected: (zone) {
+                    if (zone == _selectedZone) return;
+                    setState(() {
+                      _selectedZone = zone;
+                      _focusedShift = null;
+                      _expandedShift = null;
+                      _selectedBoardDuty = null;
+                      _selectedBoard = null;
+                      _boardError = null;
+                    });
+                    _loadData();
+                  },
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                flex: 2,
+                child: _menuField(
+                  value: _selectedDayType,
+                  options: _dayTypes,
+                  onSelected: (dayType) {
+                    if (dayType == _selectedDayType) return;
+                    setState(() {
+                      _selectedDayType = dayType;
+                      _expandedShift = null;
+                    });
+                    _loadData();
+                  },
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: sizes['gap']!),
+          _viewToggle(),
+          if (_searchOpen) ...[
+            SizedBox(height: sizes['gap']!),
+            TextField(
+              controller: _searchController,
+              autofocus: true,
+              textInputAction: TextInputAction.search,
+              decoration: InputDecoration(
+                hintText: 'Duty, time, or location',
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: _searchQuery.isEmpty
+                    ? null
+                    : IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: _searchController.clear,
+                      ),
+                isDense: true,
+                filled: true,
+                fillColor:
+                    scheme.surfaceContainerHighest.withValues(alpha: 0.45),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _menuField({
+    required String value,
+    required List<String> options,
+    required ValueChanged<String> onSelected,
+    Key? menuKey,
+  }) {
+    final scheme = Theme.of(context).colorScheme;
+    final width = MediaQuery.sizeOf(context).width;
+    return PopupMenuButton<String>(
+      key: menuKey,
+      initialValue: value,
+      tooltip: value,
+      position: PopupMenuPosition.under,
+      onSelected: onSelected,
+      itemBuilder: (context) => [
+        for (final option in options)
+          PopupMenuItem<String>(
+            value: option,
+            child: Text(option),
+          ),
+      ],
+      child: Container(
+        width: double.infinity,
+        padding: EdgeInsets.symmetric(
+          horizontal: width < 350 ? 10 : 12,
+          vertical: width < 350 ? 10 : 12,
+        ),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: scheme.outline.withValues(alpha: 0.45)),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                value,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: width < 350 ? 13 : 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            Icon(
+              Icons.expand_more,
+              size: 20,
+              color: scheme.onSurface.withValues(alpha: 0.55),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _viewToggle() {
+    final scheme = Theme.of(context).colorScheme;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: scheme.outline.withValues(alpha: 0.45)),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(11),
+        child: Row(
+          children: [
+            Expanded(
+              child: _viewToggleCell(
+                label: 'Bills',
+                selected: _tab == _BillsHubTab.bills,
+                onTap: () => setState(() => _tab = _BillsHubTab.bills),
+              ),
+            ),
+            Expanded(
+              child: _viewToggleCell(
+                label: 'Boards',
+                selected: _tab == _BillsHubTab.boards,
+                onTap: () => setState(() => _tab = _BillsHubTab.boards),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _viewToggleCell({
+    required String label,
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
+    final width = MediaQuery.sizeOf(context).width;
+    return Material(
+      color: selected ? AppTheme.primaryColor : Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: EdgeInsets.symmetric(
+            vertical: width < 350 ? 10 : 12,
+          ),
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: width < 350 ? 13 : 14,
+              fontWeight: FontWeight.w700,
+              color: selected
+                  ? Colors.white
+                  : Theme.of(context).colorScheme.onSurface,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBody() {
     if (_isLoading) {
-      return Center(
+      return const Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const CircularProgressIndicator(
-              color: AppTheme.primaryColor,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Loading data...',
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                fontSize: 16,
-              ),
-            ),
+            CircularProgressIndicator(color: AppTheme.primaryColor),
+            SizedBox(height: 16),
+            Text('Loading duties…'),
           ],
         ),
       );
     }
 
     if (_errorMessage != null) {
-      final sizes = _getResponsiveSizes(context);
-      
-      return Center(
-        child: Container(
-          padding: EdgeInsets.all(sizes['padding']! * 1.33),
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.errorContainer,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Theme.of(context).colorScheme.error),
+      return _messageState(
+        icon: Icons.error_outline,
+        title: _errorMessage!,
+        actionLabel: 'Retry',
+        onAction: _loadData,
+        isError: true,
+      );
+    }
+
+    if (_isComingSoon) {
+      return _messageState(
+        icon: Icons.directions_bus_outlined,
+        title: 'Zone 2 coming soon',
+        subtitle:
+            'Route 13 bills and boards will show here when they are published.',
+      );
+    }
+
+    if (_tab == _BillsHubTab.boards) {
+      return _buildBoardsTab();
+    }
+    return _buildBillsTab();
+  }
+
+  Widget _buildBillsTab() {
+    final duties = _filteredDuties;
+    if (_duties.isEmpty) {
+      return _messageState(
+        icon: Icons.receipt_long_outlined,
+        title: 'No duties on this bill',
+      );
+    }
+    if (duties.isEmpty) {
+      return _messageState(
+        icon: Icons.search_off,
+        title: 'No duties match “$_searchQuery”',
+      );
+    }
+
+    return Column(
+      children: [
+        Align(
+          alignment: Alignment.centerLeft,
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: 4),
+            child: Text(
+              '${duties.length} ${duties.length == 1 ? 'duty' : 'duties'}',
+              style: TextStyle(
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.6),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
+        ),
+        Expanded(
+          child: BillDutyIndexList(
+            key: _indexKey,
+            duties: duties,
+            boardCodes: _boardCodes,
+            expandedShift: _expandedShift,
+            focusedShift: _focusedShift,
+            onDutyTap: _onIndexDutyTap,
+            onViewBoard: _openBoard,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBoardsTab() {
+    if (_selectedBoardDuty != null) {
+      return _buildBoardViewer();
+    }
+
+    final duties = _filteredDuties
+        .where((duty) => _boardCodes.contains(duty.shift))
+        .toList();
+
+    if (_duties.isEmpty) {
+      return _messageState(
+        icon: Icons.view_timeline_outlined,
+        title: 'No boards on this bill',
+      );
+    }
+    if (duties.isEmpty) {
+      return _messageState(
+        icon: Icons.search_off,
+        title: _searchQuery.isEmpty
+            ? 'No boards for this zone and day type'
+            : 'No boards match “$_searchQuery”',
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(bottom: 4),
+          child: Text(
+            'Pick a duty',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+          ),
+        ),
+        Expanded(
+          child: BillDutyIndexList(
+            key: _indexKey,
+            duties: duties,
+            boardCodes: _boardCodes,
+            focusedShift: _focusedShift,
+            expandOnTap: false,
+            onDutyTap: _onIndexDutyTap,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBoardViewer() {
+    final duty = _selectedBoardDuty!;
+    final scheme = Theme.of(context).colorScheme;
+
+    return Column(
+      children: [
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.fromLTRB(4, 4, 8, 10),
+          decoration: BoxDecoration(
+            color: scheme.surfaceContainerHighest.withValues(alpha: 0.45),
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Row(
             children: [
-              Icon(
-                Icons.error_outline,
-                color: Theme.of(context).colorScheme.error,
-                size: 40,
+              IconButton(
+                tooltip: 'All boards',
+                icon: const Icon(Icons.arrow_back),
+                onPressed: _clearBoardSelection,
               ),
-              const SizedBox(height: 16),
-              Text(
-                _errorMessage!,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.onErrorContainer,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      duty.shift,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 18,
+                      ),
+                    ),
+                    Text(
+                      [
+                        if (duty.displayReport.isNotEmpty &&
+                            duty.displaySignOff.isNotEmpty)
+                          '${duty.displayReport}  →  ${duty.displaySignOff}',
+                        '$_selectedDayType · $_selectedZone',
+                      ].join('  ·  '),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: scheme.onSurface.withValues(alpha: 0.65),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: _loadCsvData,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Theme.of(context).colorScheme.error,
-                  foregroundColor: Theme.of(context).colorScheme.onError,
-                ),
-                child: const Text('Retry'),
+              TextButton(
+                onPressed: () => _showBill(duty),
+                child: const Text('See bill'),
               ),
             ],
           ),
         ),
+        const SizedBox(height: 8),
+        Expanded(child: _boardContent()),
+      ],
+    );
+  }
+
+  Widget _boardContent() {
+    if (_loadingBoard) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_boardError != null || _selectedBoard == null) {
+      return _messageState(
+        icon: Icons.view_timeline_outlined,
+        title: _boardError ?? 'No running board for this duty',
       );
     }
+    return UniversalBoardTimeline(
+      board: _selectedBoard!,
+      padding: const EdgeInsets.fromLTRB(4, 8, 4, 16),
+    );
+  }
 
-    if (_headers.isEmpty || _rows.isEmpty) {
-      return Center(
-        child: Text(
-          _selectedZone == 'Zone 2' ? 'Coming soon' : 'No data available',
-          style: TextStyle(
-            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-            fontSize: 16,
-          ),
+  Widget _messageState({
+    required IconData icon,
+    required String title,
+    String? subtitle,
+    String? actionLabel,
+    VoidCallback? onAction,
+    bool isError = false,
+  }) {
+    final scheme = Theme.of(context).colorScheme;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 48,
+              color: isError ? scheme.error : scheme.primary.withValues(alpha: 0.7),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+            ),
+            if (subtitle != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                subtitle,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: scheme.onSurface.withValues(alpha: 0.65),
+                ),
+              ),
+            ],
+            if (actionLabel != null && onAction != null) ...[
+              const SizedBox(height: 16),
+              FilledButton(onPressed: onAction, child: Text(actionLabel)),
+            ],
+          ],
         ),
-      );
-    }
-
-    final sizes = _getResponsiveSizes(context);
-    final textScale = MediaQuery.textScalerOf(context).scale(1.0);
-    final t = textScale.clamp(1.0, 3.2);
-    // Scale widths/heights with accessibility text size (previous caps left rows too short).
-    final fixedColumnWidth = math.max(72.0, sizes['fixedColumnWidth']! * math.min(2.4, 0.8 + 0.55 * t));
-    final dataColumnWidth = sizes['dataColumnWidth']! * math.min(2.2, 0.65 + 0.45 * t);
-    final headerHeight = sizes['headerHeight']! * math.min(4.0, 0.45 + 0.7 * t);
-    final rowHeight = sizes['rowHeight']! * math.min(5.0, 0.5 + 0.72 * t);
-    final cellMaxLines = t >= 1.35 ? 5 : 3;
-
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        children: [
-          // Table title
-          Container(
-            padding: EdgeInsets.symmetric(
-              vertical: sizes['padding']!,
-              horizontal: sizes['padding']! * 1.33,
-            ),
-            decoration: BoxDecoration(
-              color: AppTheme.primaryColor.withValues(alpha: 0.1),
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(16),
-                topRight: Radius.circular(16),
-              ),
-            ),
-            child: Row(
-              children: [
-                const Icon(
-                  Icons.description,
-                  color: AppTheme.primaryColor,
-                  size: 20,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  '$_selectedDayType $_selectedZone',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.primaryColor,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          
-          // Divider
-          const Divider(height: 1, thickness: 1),
-          
-          // Headers row with fixed and scrollable sections
-          SizedBox(
-            height: headerHeight,
-            child: Row(
-              children: [
-                // Fixed shift column header
-                Container(
-                  width: fixedColumnWidth,
-                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                  padding: EdgeInsets.symmetric(
-                    vertical: sizes['cellPadding']! * 1.25,
-                    horizontal: sizes['cellPadding']!,
-                  ),
-                  child: Center(
-                    child: Text(
-                      _shiftColumnHeader,
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: sizes['headerFontSize']!,
-                        color: Theme.of(context).colorScheme.onSurface,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                ),
-                // Divider between fixed and scrollable columns
-                Container(
-                  width: 1,
-                  height: headerHeight,
-                  color: Theme.of(context).colorScheme.outline,
-                ),
-                // Scrollable headers
-                Expanded(
-                  child: Container(
-                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                    child: SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      controller: _headerScrollController,
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: _scrollableHeaders.map((header) {
-                          return Container(
-                            width: dataColumnWidth,
-                            height: headerHeight,
-                            padding: EdgeInsets.all(sizes['cellPadding']!),
-                            child: Center(
-                              child: Text(
-                                header,
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: sizes['headerFontSize']! * 0.83,  // Slightly smaller than header
-                                  color: Theme.of(context).colorScheme.onSurface,
-                                ),
-                                textAlign: TextAlign.center,
-                                maxLines: t >= 1.35 ? 6 : 4,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          );
-                        }).toList(),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          
-          // Table data - split into fixed and scrollable sections
-          Expanded(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Fixed column (shift numbers)
-                SingleChildScrollView(
-                  controller: _leftVerticalController,
-                  child: Column(
-                    children: List.generate(_shiftColumnData.length, (index) {
-                      final isEvenRow = index % 2 == 0;
-                      return Container(
-                        width: fixedColumnWidth,
-                        height: rowHeight,  // Fixed height for alignment
-                        color: isEvenRow ? Theme.of(context).colorScheme.surface : Theme.of(context).colorScheme.surfaceContainerLow,
-                        padding: EdgeInsets.symmetric(
-                          vertical: sizes['cellPadding']! * 2,
-                          horizontal: sizes['cellPadding']!,
-                        ),
-                        child: Center(
-                          child: Text(
-                            _shiftColumnData[index].toLowerCase() == "nan" ? "W/O" : _shiftColumnData[index],
-                            style: TextStyle(
-                              fontWeight: FontWeight.w500, // Make shift column slightly bolder
-                              color: Theme.of(context).colorScheme.onSurface,
-                              fontSize: sizes['cellFontSize']!,
-                            ),
-                            textAlign: TextAlign.center,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      );
-                    }),
-                  ),
-                ),
-                
-                // Divider between fixed and scrollable columns
-                Container(
-                  width: 1,
-                  color: Theme.of(context).colorScheme.outline,
-                ),
-                
-                // Scrollable data section
-                Expanded(
-                  child: SingleChildScrollView(
-                    controller: _rightVerticalController,
-                    child: SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      controller: _dataScrollController,
-                      child: SizedBox(
-                        width: _scrollableHeaders.length * dataColumnWidth,
-                        child: ListView.builder(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          itemCount: _scrollableRows.length,
-                          itemBuilder: (context, rowIndex) {
-                            final isEvenRow = rowIndex % 2 == 0;
-                            final row = _scrollableRows[rowIndex];
-                            
-                            return Container(
-                              height: rowHeight,  // Fixed height for alignment
-                              color: isEvenRow ? Theme.of(context).colorScheme.surface : Theme.of(context).colorScheme.surfaceContainerLow,
-                              child: Row(
-                                children: List.generate(
-                                  _scrollableHeaders.length,
-                                  (colIndex) => Container(
-                                    width: dataColumnWidth,
-                                    height: rowHeight,  // Fixed height for alignment
-                                    padding: EdgeInsets.symmetric(
-                                      vertical: sizes['cellPadding']! * 2,
-                                      horizontal: sizes['cellPadding']!,
-                                    ),
-                                    child: Center(
-                                      child: Text(
-                                        colIndex < row.length ? (row[colIndex].toLowerCase() == "nan" ? "W/O" : row[colIndex]) : '',
-                                        style: TextStyle(
-                                          color: Theme.of(context).colorScheme.onSurface,
-                                          fontSize: sizes['cellFontSize']!,
-                                        ),
-                                        textAlign: TextAlign.center,
-                                        maxLines: cellMaxLines,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          
-          // Table footer with row count
-          Container(
-            padding: EdgeInsets.symmetric(
-              vertical: sizes['cellPadding']! * 2,
-              horizontal: sizes['padding']!,
-            ),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surfaceContainerLow,
-              borderRadius: const BorderRadius.only(
-                bottomLeft: Radius.circular(16),
-                bottomRight: Radius.circular(16),
-              ),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                Text(
-                  '${_rows.length} rows',
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }
-} 
+}

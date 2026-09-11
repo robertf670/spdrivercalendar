@@ -114,6 +114,14 @@ void main() {
     });
   });
 
+  group('ZoneBoardMapper.dayKeyForBrowseType', () {
+    test('maps Bills screen day types to board JSON keys', () {
+      expect(ZoneBoardMapper.dayKeyForBrowseType('M-F'), 'MON-FRI');
+      expect(ZoneBoardMapper.dayKeyForBrowseType('Sat'), 'SAT');
+      expect(ZoneBoardMapper.dayKeyForBrowseType('Sun'), 'SUN');
+    });
+  });
+
   group('ZoneBoardMapper.fromDayData', () {
     test('maps PZ1/01-style board into UniversalBoard sections', () {
       final board = ZoneBoardMapper.fromDayData('PZ1/01', {

@@ -19,16 +19,19 @@ class ZoneBoardService {
   static Future<UniversalBoard?> getBoardForDuty({
     required String dutyTitle,
     required DateTime date,
+    String? dayKey,
   }) async {
     final dutyCode = ZoneBoardMapper.normalizeDutyCode(dutyTitle);
     if (dutyCode == null) return null;
 
-    final dayKey = ZoneBoardMapper.dayKeyForDate(
-      date,
-      isSaturdayService: RosterService.isSaturdayService(date),
-      isBankHoliday:
-          ShiftService.getBankHoliday(date, ShiftService.bankHolidays) != null,
-    );
+    final resolvedDayKey = dayKey ??
+        ZoneBoardMapper.dayKeyForDate(
+          date,
+          isSaturdayService: RosterService.isSaturdayService(date),
+          isBankHoliday:
+              ShiftService.getBankHoliday(date, ShiftService.bankHolidays) !=
+                  null,
+        );
 
     final assetPath = ZoneBoardMapper.assetPathForDuty(dutyCode, date: date);
     if (assetPath == null) return null;
@@ -47,7 +50,7 @@ class ZoneBoardService {
       });
     }
 
-    final dayData = dutyMap[dayKey];
+    final dayData = dutyMap[resolvedDayKey];
     if (dayData is! Map) return null;
 
     return ZoneBoardMapper.fromDayData(
@@ -74,6 +77,30 @@ class ZoneBoardService {
       _cachedByAsset[assetPath] = {};
       return _cachedByAsset[assetPath]!;
     }
+  }
+
+  /// Duty codes in a zone board file that have a board for [dayKey].
+  static Future<List<String>> listDutyCodes({
+    required String zoneNumber,
+    required String dayKey,
+    required DateTime date,
+  }) async {
+    final assetPath = ZoneBoardMapper.assetPathForDuty(
+      'PZ$zoneNumber/01',
+      date: date,
+    );
+    if (assetPath == null) return const [];
+
+    final zoneData = await _loadAsset(assetPath);
+    final codes = <String>[];
+    for (final entry in zoneData.entries) {
+      final value = entry.value;
+      if (value is! Map) continue;
+      if (value.containsKey(dayKey)) {
+        codes.add(entry.key);
+      }
+    }
+    return codes;
   }
 
   /// Test helper to clear in-memory cache.

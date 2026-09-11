@@ -137,4 +137,28 @@ void main() {
       );
     });
   });
+
+  group('RosterService browse filenames', () {
+    test('keeps M-F bills when era date is a Saturday', () {
+      expect(
+        RosterService.getBrowseShiftFilename(
+          '1',
+          'M-F',
+          DateTime(2026, 9, 12), // Saturday
+        ),
+        'M-F_DUTIES_PZ1.csv',
+      );
+    });
+
+    test('uses current Zone 4 era for the selected day type', () {
+      expect(
+        RosterService.getBrowseShiftFilename(
+          '4',
+          'Sat',
+          DateTime(2026, 9, 11),
+        ),
+        'SAT_ROUTE2324_20260823.csv',
+      );
+    });
+  });
 }

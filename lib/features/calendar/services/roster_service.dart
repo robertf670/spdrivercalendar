@@ -222,6 +222,42 @@ class RosterService {
       return 'M-F_DUTIES_$pzFileSuffix.csv';
     }
   }
+
+  /// Filename for browsing bills by zone and day type.
+  ///
+  /// [eraDate] only selects the Zone 4 bill era. Unlike [getShiftFilename],
+  /// Saturday-service dates and bank holidays do not override [dayType].
+  static String getBrowseShiftFilename(
+    String zoneNumber,
+    String dayType,
+    DateTime eraDate,
+  ) {
+    final dayOfWeek = switch (dayType) {
+      'Sat' || 'SAT' => 'SAT',
+      'Sun' || 'SUN' => 'SUN',
+      _ => 'M-F',
+    };
+
+    final route2324ChangeoverDate = DateTime(2025, 10, 19);
+    final route2324Aug2026BillDate = DateTime(2026, 8, 23);
+
+    if (zoneNumber == '4' && !eraDate.isBefore(route2324Aug2026BillDate)) {
+      if (dayOfWeek == 'SAT') return 'SAT_ROUTE2324_20260823.csv';
+      if (dayOfWeek == 'SUN') return 'SUN_ROUTE2324_20260823.csv';
+      return 'M-F_ROUTE2324_20260823.csv';
+    }
+
+    if (zoneNumber == '4' && !eraDate.isBefore(route2324ChangeoverDate)) {
+      if (dayOfWeek == 'SAT') return 'SAT_ROUTE2324.csv';
+      if (dayOfWeek == 'SUN') return 'SUN_ROUTE2324.csv';
+      return 'M-F_ROUTE2324.csv';
+    }
+
+    final pzFileSuffix = 'PZ$zoneNumber';
+    if (dayOfWeek == 'SAT') return 'SAT_DUTIES_$pzFileSuffix.csv';
+    if (dayOfWeek == 'SUN') return 'SUN_DUTIES_$pzFileSuffix.csv';
+    return 'M-F_DUTIES_$pzFileSuffix.csv';
+  }
   
   // Get Sunday of current week
   static DateTime getSundayOfCurrentWeek() {

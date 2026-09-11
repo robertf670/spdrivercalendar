@@ -406,10 +406,10 @@ class ContactsPageState extends State<ContactsPage> {
             ),
             _buildContactCard(
               title: 'CMO',
-              subtitle: '01 703 1308',
+              subtitle: '01 703 1338',
               icon: Icons.medical_services,
               iconColor: Colors.purple,
-              onTap: () => _launchPhoneCall('017031308', context),
+              onTap: () => _launchPhoneCall('017031338', context),
               context: context,
               actionIcon: Icons.phone,
             ),

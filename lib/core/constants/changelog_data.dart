@@ -1,4 +1,20 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '4.1.0': [
+    {
+      'title': 'Bills and Boards',
+      'description':
+          'Redesigned the Bills screen. Duties are a compact list with range shortcuts, and you can browse running boards by zone and day type.',
+    },
+    {
+      'title': 'CMO Phone Number',
+      'description': 'Updated the CMO number in Contacts.',
+    },
+    {
+      'title': '1/67 Second Half Board',
+      'description':
+          'Fixed Monday–Friday 1/67 second half board.',
+    },
+  ],
   '4.0.4': [
     {
       'title': 'Zone 4 Boards From 23 Aug',

@@ -20,6 +20,20 @@ class ZoneBoardMapper {
     return 'MON-FRI';
   }
 
+  /// Day-type key for the Bills & Boards browser (not tied to today's weekday).
+  static String dayKeyForBrowseType(String dayType) {
+    switch (dayType) {
+      case 'Sat':
+      case 'SAT':
+        return 'SAT';
+      case 'Sun':
+      case 'SUN':
+        return 'SUN';
+      default:
+        return 'MON-FRI';
+    }
+  }
+
   /// Normalizes event titles like `PZ1/01A (OT)` → `PZ1/01`.
   static String? normalizeDutyCode(String title) {
     var code = title.trim();

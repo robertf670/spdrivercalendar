@@ -94,7 +94,7 @@ class CalendarScaffold extends StatelessWidget {
                 itemBuilder: (context) => [
                   const PopupMenuItem(
                     value: CalendarMenuAction.bills,
-                    child: Text('Bills'),
+                    child: Text('Bills & Boards'),
                   ),
                   const PopupMenuItem(
                     value: CalendarMenuAction.timingPoints,
