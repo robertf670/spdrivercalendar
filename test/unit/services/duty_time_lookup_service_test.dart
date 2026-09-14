@@ -118,6 +118,32 @@ void main() {
 
       expect(result, isNull);
     });
+
+    test('wraps bill hours past midnight for 807/19', () async {
+      final result = await lookup(
+        'Uni/Euro',
+        '807/19',
+        DateTime(2026, 7, 20),
+      );
+
+      expect(result, isNotNull);
+      expectTime(result!.startTime, 16, 42);
+      expectTime(result.endTime, 0, 27);
+      expect(result.isNextDay, isTrue);
+    });
+
+    test('wraps bill hours past midnight for 807/500', () async {
+      final result = await lookup(
+        'Uni/Euro',
+        '807/500',
+        DateTime(2026, 7, 20),
+      );
+
+      expect(result, isNotNull);
+      expectTime(result!.startTime, 20, 22);
+      expectTime(result.endTime, 4, 45);
+      expect(result.isNextDay, isTrue);
+    });
   });
 
   group('special duty formats', () {
@@ -227,6 +253,14 @@ void main() {
     expect(
       DutyTimeLookupService.parseTimeOfDay('04:08:00'),
       const TimeOfDay(hour: 4, minute: 8),
+    );
+    expect(
+      DutyTimeLookupService.parseTimeOfDay('24:27:00'),
+      const TimeOfDay(hour: 0, minute: 27),
+    );
+    expect(
+      DutyTimeLookupService.parseTimeOfDay('28:45:00'),
+      const TimeOfDay(hour: 4, minute: 45),
     );
   });
 }

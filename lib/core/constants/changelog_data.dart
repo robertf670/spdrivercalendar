@@ -1,4 +1,11 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '4.1.1': [
+    {
+      'title': 'Overnight Duties',
+      'description':
+          'Fixed an issue when adding overnight duties.',
+    },
+  ],
   '4.1.0': [
     {
       'title': 'Bills and Boards',

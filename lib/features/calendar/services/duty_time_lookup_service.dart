@@ -227,8 +227,8 @@ class DutyTimeLookupService {
   }) {
     if (parts.length < 15 || parts[0].trim() != shiftNumber) return null;
 
-    final startTime = parseTimeOfDay(parts[2].trim());
-    final endTime = parseTimeOfDay(parts[10].trim());
+    final startTime = _parseClock(parts[2].trim());
+    final endTime = _parseClock(parts[10].trim());
     if (startTime == null || endTime == null) return null;
 
     final breakTimes = _parseBreakTimes(
@@ -239,9 +239,13 @@ class DutyTimeLookupService {
     final route = _part(parts, 16);
 
     return DutyTimeLookupResult(
-      startTime: startTime,
-      endTime: endTime,
-      isNextDay: _isNextDay(startTime, endTime),
+      startTime: startTime.time,
+      endTime: endTime.time,
+      isNextDay: _isNextDay(
+        startTime.time,
+        endTime.time,
+        rawEndHour: endTime.rawHour,
+      ),
       breakStartTime: breakTimes.$1,
       breakEndTime: breakTimes.$2,
       workTime: _parseDuration(_part(parts, 14)),
@@ -256,10 +260,10 @@ class DutyTimeLookupService {
   }) {
     if (parts.length < 17 || parts[0].trim() != shiftNumber) return null;
 
-    final startTime = parseTimeOfDay(
+    final startTime = _parseClock(
       parts[isOvertimeShift ? 3 : 2].trim(),
     );
-    final endTime = parseTimeOfDay(parts[10].trim());
+    final endTime = _parseClock(parts[10].trim());
     if (startTime == null || endTime == null) return null;
 
     final breakTimes = _parseBreakTimes(
@@ -270,9 +274,13 @@ class DutyTimeLookupService {
     final route = _part(parts, 16);
 
     return DutyTimeLookupResult(
-      startTime: startTime,
-      endTime: endTime,
-      isNextDay: _isNextDay(startTime, endTime),
+      startTime: startTime.time,
+      endTime: endTime.time,
+      isNextDay: _isNextDay(
+        startTime.time,
+        endTime.time,
+        rawEndHour: endTime.rawHour,
+      ),
       breakStartTime: breakTimes.$1,
       breakEndTime: breakTimes.$2,
       workTime: _parseDuration(_part(parts, 14)),
@@ -287,10 +295,10 @@ class DutyTimeLookupService {
   }) {
     if (parts.length < 15 || parts[0].trim() != shiftNumber) return null;
 
-    final startTime = parseTimeOfDay(
+    final startTime = _parseClock(
       parts[isOvertimeShift ? 3 : 2].trim(),
     );
-    final endTime = parseTimeOfDay(parts[12].trim());
+    final endTime = _parseClock(parts[12].trim());
     if (startTime == null || endTime == null) return null;
 
     final startBreak = _part(parts, 5);
@@ -302,9 +310,13 @@ class DutyTimeLookupService {
     );
 
     return DutyTimeLookupResult(
-      startTime: startTime,
-      endTime: endTime,
-      isNextDay: _isNextDay(startTime, endTime),
+      startTime: startTime.time,
+      endTime: endTime.time,
+      isNextDay: _isNextDay(
+        startTime.time,
+        endTime.time,
+        rawEndHour: endTime.rawHour,
+      ),
       breakStartTime: isWorkout ? null : parseTimeOfDay(startBreak),
       breakEndTime: isWorkout ? null : parseTimeOfDay(finishBreak),
       workTime: _parseDuration(_part(parts, 14)),
@@ -391,7 +403,12 @@ class DutyTimeLookupService {
     };
   }
 
-  static bool _isNextDay(TimeOfDay startTime, TimeOfDay endTime) {
+  static bool _isNextDay(
+    TimeOfDay startTime,
+    TimeOfDay endTime, {
+    int rawEndHour = 0,
+  }) {
+    if (rawEndHour >= 24) return true;
     return endTime.hour < startTime.hour ||
         (endTime.hour == startTime.hour && endTime.minute < startTime.minute);
   }
@@ -418,7 +435,12 @@ class DutyTimeLookupService {
     return Duration(hours: hours, minutes: minutes);
   }
 
+  /// Parses bill times, including hours past midnight (`24:27` → `00:27`).
   static TimeOfDay? parseTimeOfDay(String? value) {
+    return _parseClock(value)?.time;
+  }
+
+  static ({TimeOfDay time, int rawHour})? _parseClock(String? value) {
     if (value == null || value.isEmpty) return null;
     try {
       final parts = value.split(':');
@@ -426,8 +448,11 @@ class DutyTimeLookupService {
       final hour = int.tryParse(parts[0]);
       final minute = int.tryParse(parts[1]);
       if (hour == null || minute == null) return null;
-      if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return null;
-      return TimeOfDay(hour: hour, minute: minute);
+      if (hour < 0 || minute < 0 || minute > 59) return null;
+      return (
+        time: TimeOfDay(hour: hour % 24, minute: minute),
+        rawHour: hour,
+      );
     } catch (_) {
       return null;
     }
