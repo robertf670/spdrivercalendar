@@ -21,6 +21,7 @@ import 'package:spdrivercalendar/services/self_certified_sick_days_service.dart'
 import 'package:spdrivercalendar/services/donnybrook_feature_service.dart';
 import 'package:spdrivercalendar/services/jamestown_feature_service.dart';
 import 'package:spdrivercalendar/features/calendar/utils/shift_rest_gap.dart';
+import 'package:spdrivercalendar/features/calendar/utils/work_duration_display.dart';
 
 class EventCard extends StatefulWidget {
   final Event event;
@@ -1592,18 +1593,7 @@ class _EventCardState extends State<EventCard> {
   
   /// CSV column 14 uses duration as H:MM:SS; UNI paths use "7h 5m". Unify for display.
   String? _formatWorkDurationForDisplay(String? raw) {
-    if (raw == null) return null;
-    final s = raw.trim();
-    if (s.isEmpty || s.toLowerCase() == 'nan') return null;
-    if (!s.contains(':')) {
-      return s;
-    }
-    final parts = s.split(':');
-    if (parts.length < 2) return s;
-    final h = int.tryParse(parts[0].trim());
-    final m = int.tryParse(parts[1].trim());
-    if (h == null || m == null) return s;
-    return '${h}h ${m}m';
+    return formatWorkDurationForDisplay(raw);
   }
 
   // Helper method to parse time strings

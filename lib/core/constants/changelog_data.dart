@@ -1,4 +1,21 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '4.1.2': [
+    {
+      'title': '5-Week Cycle',
+      'description':
+          'Removed the 5-week cycle statistic due to an issue with the calculation.',
+    },
+    {
+      'title': 'Universal Work Time',
+      'description':
+          'Fixed the work time label for Universal duties.',
+    },
+    {
+      'title': '3/09 Monday–Friday Board',
+      'description':
+          'Fixed the first half of Zone 3 duty 3/09 (Mon–Fri).',
+    },
+  ],
   '4.1.1': [
     {
       'title': 'Overnight Duties',
