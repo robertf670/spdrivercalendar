@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:spdrivercalendar/features/calendar/utils/assigned_duty_board_lookup.dart';
 import 'package:spdrivercalendar/features/calendar/utils/spare_shift_duties.dart';
 import 'package:spdrivercalendar/models/event.dart';
 import 'package:spdrivercalendar/models/universal_board.dart';
-import 'package:spdrivercalendar/services/universal_board_service.dart';
-import 'package:spdrivercalendar/services/zone_board_service.dart';
 
 /// Presentation dialog for editing/deleting a calendar event.
 ///
@@ -44,14 +43,9 @@ class EditEventDialog extends StatelessWidget {
       !(event.isWorkShift && event.title.startsWith('SP')) ||
       SpareShiftDuties.hasFullDuties(event);
 
-  /// Zone boards (PZ1/3/4 by day type), Jamestown (811/xx), then Uni/Euro.
-  static Future<UniversalBoard?> _defaultLoadBoard(Event event) async {
-    final zoneBoard = await ZoneBoardService.getBoardForDuty(
-      dutyTitle: event.title,
-      date: event.startDate,
-    );
-    if (zoneBoard != null) return zoneBoard;
-    return UniversalBoardService.getBoardByShift(event.title);
+  /// Zone/Jamestown/Uni from the event title, then spare assigned duties.
+  static Future<UniversalBoard?> _defaultLoadBoard(Event event) {
+    return AssignedDutyBoardLookup.loadForEvent(event);
   }
 
   void _close(BuildContext context) {

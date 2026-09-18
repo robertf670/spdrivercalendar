@@ -1,34 +1,69 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:spdrivercalendar/core/constants/app_constants.dart';
+import 'package:spdrivercalendar/core/services/storage_service.dart';
+import 'package:spdrivercalendar/core/widgets/correction_note.dart';
+import 'package:spdrivercalendar/features/payscale/payscale_catalog.dart';
+import 'package:spdrivercalendar/services/pay_scale_service.dart';
 import 'package:spdrivercalendar/theme/app_theme.dart';
 
 class PayscaleScreen extends StatefulWidget {
-  const PayscaleScreen({super.key});
+  const PayscaleScreen({
+    super.key,
+    this.initialYearLevel,
+    this.catalog,
+  });
+
+  final String? initialYearLevel;
+  final PayScaleCatalog? catalog;
 
   @override
   PayscaleScreenState createState() => PayscaleScreenState();
 }
 
 class PayscaleScreenState extends State<PayscaleScreen> {
-  List<Map<String, dynamic>>? _payscaleData;
+  static const String _coreHrUrl =
+      'https://my.corehr.com/pls/coreportal_dbp/cp_por_public_main_page.display_login_page';
+
+  late String _selectedYear;
+  PayScaleCatalog? _catalog;
   bool _isLoading = true;
   String? _errorMessage;
 
   @override
   void initState() {
     super.initState();
-    _loadPayscaleData();
+    _selectedYear = PayScaleService.normalizeYearLevel(widget.initialYearLevel);
+    _bootstrap();
   }
 
-  static const String _coreHrUrl =
-      'https://my.corehr.com/pls/coreportal_dbp/cp_por_public_main_page.display_login_page';
+  Future<void> _bootstrap() async {
+    try {
+      final savedYear = widget.initialYearLevel ??
+          await StorageService.getString(AppConstants.spreadPayRateKey);
+      final catalog = widget.catalog ??
+          PayScaleCatalog.parse(
+            await rootBundle.loadString('pay/payscale.csv'),
+          );
+      if (!mounted) return;
+      setState(() {
+        _selectedYear = PayScaleService.normalizeYearLevel(savedYear);
+        _catalog = catalog;
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = 'Error loading pay scales: $e';
+        _isLoading = false;
+      });
+    }
+  }
 
   Future<void> _launchCoreHr(BuildContext context) async {
     final scaffoldMessenger = ScaffoldMessenger.of(context);
-    final Uri uri = Uri.parse(_coreHrUrl);
+    final uri = Uri.parse(_coreHrUrl);
     try {
       if (await canLaunchUrl(uri)) {
         await launchUrl(uri, mode: LaunchMode.externalApplication);
@@ -50,164 +85,129 @@ class PayscaleScreenState extends State<PayscaleScreen> {
     }
   }
 
-  Future<void> _loadPayscaleData() async {
-    try {
-      // Load the CSV data
-      final String csvData = await rootBundle.loadString('pay/payscale.csv');
-      
-      // Parse the CSV
-      List<Map<String, dynamic>> parsedData = [];
-      
-      // Split by lines and get headers
-      List<String> lines = csvData.split('\n');
-      List<String> headers = lines[0].split(',');
-      
-      // Process each data row
-      for (int i = 1; i < lines.length; i++) {
-        if (lines[i].trim().isEmpty) continue;
-        
-        List<String> values = lines[i].split(',');
-        Map<String, dynamic> row = {};
-        
-        for (int j = 0; j < headers.length && j < values.length; j++) {
-          row[headers[j].trim()] = values[j].trim();
-        }
-        
-        if (row.isNotEmpty) {
-          parsedData.add(row);
-        }
-      }
-      
-      setState(() {
-        _payscaleData = parsedData;
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() {
-        _errorMessage = 'Error loading pay scales: $e';
-        _isLoading = false;
-      });
+  Map<String, double> _sizes(BuildContext context) {
+    final width = MediaQuery.sizeOf(context).width;
+    if (width < 350) {
+      return {'padding': 8.0, 'gap': 8.0, 'fontSize': 13.0};
     }
+    if (width < 400) {
+      return {'padding': 10.0, 'gap': 10.0, 'fontSize': 13.5};
+    }
+    if (width < 450) {
+      return {'padding': 12.0, 'gap': 12.0, 'fontSize': 14.0};
+    }
+    return {'padding': 16.0, 'gap': 12.0, 'fontSize': 14.0};
   }
 
   @override
   Widget build(BuildContext context) {
+    final sizes = _sizes(context);
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Pay Scales'),
-        elevation: 1,
+        title: const Text('Pay Scale'),
+        elevation: 0,
       ),
       body: SafeArea(
-        child: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _errorMessage != null
-              ? Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(
-                          Icons.error_outline,
-                          size: 48,
-                          color: Colors.red,
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'Error Loading Data',
-                          style: Theme.of(context).textTheme.headlineSmall,
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          _errorMessage!,
-                          style: Theme.of(context).textTheme.bodyMedium,
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
-                    ),
-                  ),
-                )
-              : _buildPayscaleTable(),
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(
+            sizes['padding']!,
+            sizes['padding']!,
+            sizes['padding']!,
+            0,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const CorrectionNote(
+                pageLabel: 'the Pay Scale page',
+                padding: EdgeInsets.only(bottom: 8),
+              ),
+              _buildCoreHrLink(context, sizes),
+              SizedBox(height: sizes['gap']!),
+              _yearToggle(),
+              SizedBox(height: sizes['gap']!),
+              Expanded(child: _buildBody(sizes)),
+            ],
+          ),
+        ),
       ),
     );
   }
 
-  // Responsive sizing helper method
-  Map<String, double> _getResponsiveSizes(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    
-    // Very small screens (narrow phones) - ULTRA conservative to prevent overflow
-    if (screenWidth < 350) {
-      return {
-        'fixedColumnWidth': 120.0,  // Reduced from 190
-        'dataColumnWidth': 90.0,    // Reduced from 120
-        'headerHeight': 48.0,       // Reduced from 56
-        'padding': 8.0,              // Reduced from 16
-        'cellPadding': 8.0,          // Reduced from 16
-        'headerFontSize': 11.0,      // Reduced from 14
-        'cellFontSize': 11.0,        // Reduced from 14
-      };
-    }
-    // Small phones (like older iPhones)
-    else if (screenWidth < 400) {
-      return {
-        'fixedColumnWidth': 140.0,
-        'dataColumnWidth': 100.0,
-        'headerHeight': 50.0,
-        'padding': 10.0,
-        'cellPadding': 10.0,
-        'headerFontSize': 12.0,
-        'cellFontSize': 12.0,
-      };
-    }
-    // Mid-range phones (like Galaxy S23)
-    else if (screenWidth < 450) {
-      return {
-        'fixedColumnWidth': 150.0,
-        'dataColumnWidth': 110.0,
-        'headerHeight': 52.0,
-        'padding': 12.0,
-        'cellPadding': 12.0,
-        'headerFontSize': 13.0,
-        'cellFontSize': 13.0,
-      };
-    }
-    // Regular phones
-    else if (screenWidth < 600) {
-      return {
-        'fixedColumnWidth': 170.0,
-        'dataColumnWidth': 115.0,
-        'headerHeight': 54.0,
-        'padding': 14.0,
-        'cellPadding': 14.0,
-        'headerFontSize': 14.0,
-        'cellFontSize': 14.0,
-      };
-    }
-    // Tablets
-    else if (screenWidth < 900) {
-      return {
-        'fixedColumnWidth': 180.0,
-        'dataColumnWidth': 118.0,
-        'headerHeight': 55.0,
-        'padding': 15.0,
-        'cellPadding': 15.0,
-        'headerFontSize': 14.0,
-        'cellFontSize': 14.0,
-      };
-    }
-    // Large tablets/desktop
-    else {
-      return {
-        'fixedColumnWidth': 190.0,  // Original size
-        'dataColumnWidth': 120.0,   // Original size
-        'headerHeight': 56.0,       // Original size
-        'padding': 16.0,            // Original size
-        'cellPadding': 16.0,        // Original size
-        'headerFontSize': 14.0,
-        'cellFontSize': 14.0,
-      };
-    }
+  Widget _yearToggle() {
+    const rows = [
+      ['year1+2', 'year3+4'],
+      ['year5', 'year6'],
+    ];
+    final scheme = Theme.of(context).colorScheme;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: scheme.outline.withValues(alpha: 0.45)),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(11),
+        child: Column(
+          children: [
+            for (var r = 0; r < rows.length; r++) ...[
+              if (r > 0)
+                Divider(
+                  height: 1,
+                  thickness: 1,
+                  color: scheme.outline.withValues(alpha: 0.25),
+                ),
+              IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    for (var c = 0; c < rows[r].length; c++) ...[
+                      if (c > 0)
+                        Container(
+                          width: 1,
+                          color: scheme.outline.withValues(alpha: 0.25),
+                        ),
+                      Expanded(child: _yearCell(rows[r][c])),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _yearCell(String yearLevel) {
+    final width = MediaQuery.sizeOf(context).width;
+    final selected = _selectedYear == yearLevel;
+    return Material(
+      key: ValueKey('payscale-year-$yearLevel'),
+      color: selected ? AppTheme.primaryColor : Colors.transparent,
+      child: InkWell(
+        onTap: () {
+          if (_selectedYear == yearLevel) return;
+          setState(() => _selectedYear = yearLevel);
+        },
+        child: Padding(
+          padding: EdgeInsets.symmetric(vertical: width < 350 ? 10 : 12),
+          child: Text(
+            PayScaleService.getYearLevelDisplayName(yearLevel),
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: width < 350 ? 13 : 14,
+              fontWeight: FontWeight.w700,
+              color: selected
+                  ? Colors.white
+                  : Theme.of(context).colorScheme.onSurface,
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _buildCoreHrLink(BuildContext context, Map<String, double> sizes) {
@@ -215,6 +215,7 @@ class PayscaleScreenState extends State<PayscaleScreen> {
     final cardBg = theme.brightness == Brightness.dark
         ? theme.cardColor
         : Colors.white;
+    final iconSize = sizes['fontSize']! + 10;
 
     return Material(
       color: Colors.transparent,
@@ -243,7 +244,7 @@ class PayscaleScreenState extends State<PayscaleScreen> {
               Icon(
                 Icons.paid,
                 color: AppTheme.primaryColor,
-                size: sizes['headerFontSize']! + 10,
+                size: iconSize,
               ),
               SizedBox(width: sizes['padding']!),
               Expanded(
@@ -269,7 +270,7 @@ class PayscaleScreenState extends State<PayscaleScreen> {
               ),
               Icon(
                 Icons.open_in_new,
-                size: sizes['headerFontSize']! + 4,
+                size: sizes['fontSize']! + 4,
                 color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
               ),
             ],
@@ -279,166 +280,109 @@ class PayscaleScreenState extends State<PayscaleScreen> {
     );
   }
 
-  Widget _buildPayscaleTable() {
-    if (_payscaleData == null || _payscaleData!.isEmpty) {
+  Widget _buildBody(Map<String, double> sizes) {
+    if (_isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(color: AppTheme.primaryColor),
+      );
+    }
+    if (_errorMessage != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Text(_errorMessage!, textAlign: TextAlign.center),
+        ),
+      );
+    }
+
+    final catalog = _catalog;
+    if (catalog == null || catalog.rows.isEmpty) {
       return const Center(child: Text('No pay scale data available'));
     }
 
-    final sizes = _getResponsiveSizes(context);
-    final textScale = MediaQuery.textScalerOf(context).scale(1.0);
-    final scaledHeaderHeight =
-        sizes['headerHeight']! * math.min(1.65, math.max(1.0, textScale));
-    final scaledFixedWidth =
-        math.max(100.0, sizes['fixedColumnWidth']! * math.min(1.5, math.max(1.0, textScale)));
-
-    List<String> allHeaders = _payscaleData![0].keys.toList();
-    String fixedColumnKey = 'type';
-    List<String> scrollableColumnHeaders = allHeaders.where((h) => h != fixedColumnKey).toList();
-
-    final labelMap = {
-      'type': 'Payment Type',
-      'year1+2': 'Year 1-2',
-      'year3+4': 'Year 3-4',
-      'year5': 'Year 5',
-      'year6': 'Year 6+',
-    };
-
-    final paymentTypeFormatMap = {
-      'basicdaily': 'Basic Daily Rate',
-      'shiftdaily': 'Shift Premium (Daily)',
-      'weeklyexlsunday': 'Weekly Rate (Excl. Sunday)',
-      'weeklyinclsunday': 'Weekly Rate (Incl. Sunday)',
-      'workingrestday(mon-sat)': 'Rest Day Rate (Mon-Sat)',
-      'workingrestday(sun)': 'Rest Day Rate (Sunday)',
-      'bankholiday': 'Bank Holiday Rate',
-      'overtimeweekday(hourly)': 'Overtime Rate (Weekday)',
-      'overtimesunday(hourly)': 'Overtime Rate (Sunday)',
-      'overtimebankholiday(hourly)': 'Overtime Rate (Bank Holiday)',
-      'privatehireweekday(hourly)': 'Private Hire Rate (Weekday)',
-      'privatehiresunday(hourly)': 'Private Hire Rate (Sunday)',
-      'privatehirebankholiday(hourly)': 'Private Hire Rate (Bank Holiday)',
-      'spreadover(hourly)': 'Spreadover Rate (Hourly)',
-    };
-
-    // Define enhanced colors and styles
-    final cardBackgroundColor = Theme.of(context).brightness == Brightness.dark 
-        ? Theme.of(context).cardColor
-        : Colors.white;
-        
-    final oddRowOverlayColor = (Theme.of(context).brightness == Brightness.dark 
-        ? Colors.white.withValues(alpha: 0.04) 
-        : Colors.black.withValues(alpha: 0.02));
-        
-    final headerBackgroundColor = Theme.of(context).brightness == Brightness.dark
-        ? AppTheme.primaryColor.withValues(alpha: 0.2)
-        : AppTheme.primaryColor.withValues(alpha: 0.1);
-        
-    final borderColor = Theme.of(context).brightness == Brightness.dark
-        ? Colors.white.withValues(alpha: 0.1)
-        : Colors.black.withValues(alpha: 0.07);
-
-    final headerTextStyle = TextStyle(
-      fontWeight: FontWeight.bold,
-      color: Theme.of(context).brightness == Brightness.dark
-          ? Colors.white.withValues(alpha: 0.9)
-          : AppTheme.primaryColor.withValues(alpha: 0.9),
-      fontSize: sizes['headerFontSize']!,
+    final groups = catalog.grouped();
+    return ListView(
+      padding: EdgeInsets.only(bottom: sizes['padding']!),
+      children: [
+        for (final group in groups) _sectionGroup(group, sizes),
+      ],
     );
-    
-    final cellTextStyle = TextStyle(
-      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.87),
-      fontSize: sizes['cellFontSize']!,
-    );
+  }
 
-    return Padding(
-      padding: EdgeInsets.all(sizes['padding']!),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Driver Pay Scales',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.primaryColor,
-                ),
-          ),
-          SizedBox(height: sizes['padding']! * 0.5),
-          Text(
-            'The following rates apply based on length of service:',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Theme.of(context).colorScheme.onSurface,
+  Widget _sectionGroup(PayScaleGroup group, Map<String, double> sizes) {
+    final scheme = Theme.of(context).colorScheme;
+    final width = MediaQuery.sizeOf(context).width;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(4, 6, 4, 6),
+          child: Text(
+            group.title,
+            style: TextStyle(
+              fontSize: width < 350 ? 12 : 13,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.4,
+              color: scheme.onSurfaceVariant,
             ),
           ),
-          SizedBox(height: sizes['padding']! * 1.25),
-          _buildCoreHrLink(context, sizes),
-          SizedBox(height: sizes['padding']! * 1.25),
-          Expanded(
-            child: Container(
-              decoration: BoxDecoration(
-                color: cardBackgroundColor,
-                borderRadius: BorderRadius.circular(AppTheme.borderRadius),
-                boxShadow: [
-                  BoxShadow(
-                    color: Theme.of(context).shadowColor.withValues(alpha: 0.1),
-                    blurRadius: 10,
-                    offset: const Offset(0, 2),
-                  ),
+        ),
+        DecoratedBox(
+          decoration: BoxDecoration(
+            color: scheme.surface,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: scheme.outlineVariant.withValues(alpha: 0.55),
+            ),
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(14),
+            child: Column(
+              children: [
+                for (var i = 0; i < group.rows.length; i++) ...[
+                  if (i > 0)
+                    Divider(
+                      height: 1,
+                      color: scheme.outlineVariant.withValues(alpha: 0.45),
+                    ),
+                  _rateRow(group.rows[i], sizes),
                 ],
+              ],
+            ),
+          ),
+        ),
+        SizedBox(height: sizes['gap']!),
+      ],
+    );
+  }
+
+  Widget _rateRow(PayScaleRow row, Map<String, double> sizes) {
+    final width = MediaQuery.sizeOf(context).width;
+    return Padding(
+      padding: EdgeInsets.symmetric(
+        horizontal: width < 350 ? 12 : 14,
+        vertical: width < 350 ? 10 : 12,
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              row.label,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: sizes['fontSize'],
+                fontWeight: FontWeight.w600,
               ),
-              clipBehavior: Clip.antiAlias,
-              child: HorizontalSplitTable(
-                fixedColumnWidth: scaledFixedWidth,
-                headerHeight: scaledHeaderHeight,
-                headerBackgroundColor: headerBackgroundColor,
-                dataColumnWidth: sizes['dataColumnWidth']!,
-                cellPadding: sizes['cellPadding']!,
-                fixedColumnHeader: labelMap[fixedColumnKey] ?? fixedColumnKey,
-                dataColumnHeaders: scrollableColumnHeaders.map((header) => labelMap[header] ?? header).toList(),
-                rowCount: _payscaleData!.length,
-                fixedColumnCellBuilder: (context, index) {
-                  Map<String, dynamic> row = _payscaleData![index];
-                  String cellValue = row[fixedColumnKey] ?? '';
-                  cellValue = paymentTypeFormatMap[cellValue.toLowerCase()] ?? cellValue;
-                  
-                  return Container(
-                    alignment: Alignment.centerLeft,
-                    padding: EdgeInsets.symmetric(horizontal: sizes['cellPadding']!),
-                    child: Text(
-                      cellValue, 
-                      style: cellTextStyle.copyWith(
-                        fontWeight: FontWeight.w500,
-                      ), 
-                      overflow: TextOverflow.ellipsis,
-                      maxLines: 2,
-                    ),
-                  );
-                },
-                dataCellBuilder: (context, rowIndex, colIndex) {
-                  Map<String, dynamic> row = _payscaleData![rowIndex];
-                  String header = scrollableColumnHeaders[colIndex];
-                  String cellValue = row[header] ?? '';
-                  
-                  try {
-                    final value = double.parse(cellValue);
-                    cellValue = '€${value.toStringAsFixed(2)}';
-                  } catch (e) {
-                    // Keep original
-                  }
-                  
-                  return Container(
-                    alignment: Alignment.centerRight,
-                    padding: EdgeInsets.symmetric(horizontal: sizes['cellPadding']!),
-                    child: Text(
-                      cellValue, 
-                      style: cellTextStyle,
-                      textAlign: TextAlign.right,
-                    ),
-                  );
-                },
-                alternateRowColor: oddRowOverlayColor,
-                headerTextStyle: headerTextStyle,
-                borderColor: borderColor,
-              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Text(
+            row.formattedRate(_selectedYear),
+            style: TextStyle(
+              fontSize: width < 350 ? 15 : 16,
+              fontWeight: FontWeight.w700,
+              fontFeatures: const [FontFeature.tabularFigures()],
             ),
           ),
         ],
@@ -446,234 +390,3 @@ class PayscaleScreenState extends State<PayscaleScreen> {
     );
   }
 }
-
-class HorizontalSplitTable extends StatefulWidget {
-  final double fixedColumnWidth;
-  final double headerHeight;
-  final Color headerBackgroundColor;
-  final double dataColumnWidth;
-  final double cellPadding;
-  final String fixedColumnHeader;
-  final List<String> dataColumnHeaders;
-  final int rowCount;
-  final Widget Function(BuildContext, int) fixedColumnCellBuilder;
-  final Widget Function(BuildContext, int, int) dataCellBuilder;
-  final Color alternateRowColor;
-  final TextStyle headerTextStyle;
-  final Color borderColor;
-
-  const HorizontalSplitTable({
-    super.key,
-    required this.fixedColumnWidth,
-    required this.headerHeight,
-    required this.headerBackgroundColor,
-    required this.dataColumnWidth,
-    required this.cellPadding,
-    required this.fixedColumnHeader,
-    required this.dataColumnHeaders,
-    required this.rowCount,
-    required this.fixedColumnCellBuilder,
-    required this.dataCellBuilder,
-    required this.alternateRowColor,
-    required this.headerTextStyle,
-    required this.borderColor,
-  });
-
-  @override
-  HorizontalSplitTableState createState() => HorizontalSplitTableState();
-}
-
-class HorizontalSplitTableState extends State<HorizontalSplitTable> {
-  final ScrollController _horizontalScrollController1 = ScrollController();
-  final ScrollController _horizontalScrollController2 = ScrollController();
-  final ScrollController _verticalScrollController1 = ScrollController();
-  final ScrollController _verticalScrollController2 = ScrollController();
-  bool _isScrollingHorizontally = false;
-  bool _isScrollingVertically = false;
-
-  @override
-  void initState() {
-    super.initState();
-    
-    // Set up horizontal scroll synchronization
-    _horizontalScrollController1.addListener(() {
-      if (!_isScrollingHorizontally) {
-        _isScrollingHorizontally = true;
-        _horizontalScrollController2.jumpTo(_horizontalScrollController1.offset);
-        _isScrollingHorizontally = false;
-      }
-    });
-    
-    _horizontalScrollController2.addListener(() {
-      if (!_isScrollingHorizontally) {
-        _isScrollingHorizontally = true;
-        _horizontalScrollController1.jumpTo(_horizontalScrollController2.offset);
-        _isScrollingHorizontally = false;
-      }
-    });
-    
-    // Set up vertical scroll synchronization
-    _verticalScrollController1.addListener(() {
-      if (!_isScrollingVertically) {
-        _isScrollingVertically = true;
-        _verticalScrollController2.jumpTo(_verticalScrollController1.offset);
-        _isScrollingVertically = false;
-      }
-    });
-    
-    _verticalScrollController2.addListener(() {
-      if (!_isScrollingVertically) {
-        _isScrollingVertically = true;
-        _verticalScrollController1.jumpTo(_verticalScrollController2.offset);
-        _isScrollingVertically = false;
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _horizontalScrollController1.dispose();
-    _horizontalScrollController2.dispose();
-    _verticalScrollController1.dispose();
-    _verticalScrollController2.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final totalWidth = widget.dataColumnWidth * widget.dataColumnHeaders.length;
-    
-    return Column(
-      children: [
-        // Header Row
-        SizedBox(
-          height: widget.headerHeight,
-          child: Row(
-            children: [
-              // Top-left fixed cell
-              Container(
-                width: widget.fixedColumnWidth,
-                height: widget.headerHeight,
-                alignment: Alignment.centerLeft,
-                padding: EdgeInsets.symmetric(horizontal: widget.cellPadding),
-                decoration: BoxDecoration(
-                  color: widget.headerBackgroundColor,
-                  border: Border(
-                    right: BorderSide(color: widget.borderColor, width: 1),
-                    bottom: BorderSide(color: widget.borderColor, width: 1),
-                  ),
-                ),
-                child: Text(
-                  widget.fixedColumnHeader,
-                  style: widget.headerTextStyle,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              // Header scrollable part
-              Expanded(
-                child: SingleChildScrollView(
-                  controller: _horizontalScrollController1,
-                  scrollDirection: Axis.horizontal,
-                  physics: const ClampingScrollPhysics(),
-                  child: Container(
-                    height: widget.headerHeight,
-                    width: totalWidth,
-                    decoration: BoxDecoration(
-                      color: widget.headerBackgroundColor,
-                      border: Border(
-                        bottom: BorderSide(color: widget.borderColor, width: 1),
-                      ),
-                    ),
-                    child: Row(
-                      children: List.generate(widget.dataColumnHeaders.length, (index) {
-                        return Container(
-                          width: widget.dataColumnWidth,
-                          height: widget.headerHeight,
-                          alignment: Alignment.centerRight,
-                          padding: EdgeInsets.symmetric(horizontal: widget.cellPadding),
-                          child: Text(
-                            widget.dataColumnHeaders[index],
-                            style: widget.headerTextStyle,
-                            textAlign: TextAlign.right,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        );
-                      }),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        // Table Body
-        Expanded(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Fixed left column
-              SizedBox(
-                width: widget.fixedColumnWidth,
-                child: ListView.builder(
-                  controller: _verticalScrollController1,
-                  itemCount: widget.rowCount,
-                  physics: const ClampingScrollPhysics(),
-                  itemBuilder: (context, index) {
-                    return Container(
-                      height: widget.headerHeight,
-                      decoration: BoxDecoration(
-                        color: index.isOdd ? widget.alternateRowColor : Colors.transparent,
-                        border: Border(
-                          right: BorderSide(color: widget.borderColor, width: 1),
-                          bottom: BorderSide(color: widget.borderColor.withValues(alpha: 0.5), width: 1),
-                        ),
-                      ),
-                      child: widget.fixedColumnCellBuilder(context, index),
-                    );
-                  },
-                ),
-              ),
-              // Scrollable data area
-              Expanded(
-                child: SingleChildScrollView(
-                  controller: _horizontalScrollController2,
-                  scrollDirection: Axis.horizontal,
-                  physics: const ClampingScrollPhysics(),
-                  child: SizedBox(
-                    width: totalWidth,
-                    child: ListView.builder(
-                      controller: _verticalScrollController2,
-                      itemCount: widget.rowCount,
-                      physics: const ClampingScrollPhysics(),
-                      itemBuilder: (context, rowIndex) {
-                        return Container(
-                          height: widget.headerHeight,
-                          decoration: BoxDecoration(
-                            color: rowIndex.isOdd ? widget.alternateRowColor : Colors.transparent,
-                            border: Border(
-                              bottom: BorderSide(color: widget.borderColor.withValues(alpha: 0.5), width: 1),
-                            ),
-                          ),
-                          child: Row(
-                            children: List.generate(widget.dataColumnHeaders.length, (colIndex) {
-                              return SizedBox(
-                                width: widget.dataColumnWidth,
-                                child: widget.dataCellBuilder(context, rowIndex, colIndex),
-                              );
-                            }),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-} 

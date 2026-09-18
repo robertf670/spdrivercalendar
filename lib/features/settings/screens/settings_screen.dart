@@ -1039,7 +1039,7 @@ class SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObser
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    'Spread Pay Rate',
+                    'Pay Rate Year',
                     style: theme.textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w600,
                     ),

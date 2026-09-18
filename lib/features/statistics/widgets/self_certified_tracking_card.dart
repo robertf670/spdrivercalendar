@@ -100,10 +100,10 @@ class SelfCertifiedTrackingCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
                 
-                // First Half (Jan-Jun)
+                // November–April
                 _buildHalfYearSection(
                   context,
-                  'First Half (Jan-Jun)',
+                  'November–April',
                   firstHalfUsed,
                   firstHalfRemaining,
                   firstHalfLimit,
@@ -112,10 +112,10 @@ class SelfCertifiedTrackingCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
                 
-                // Second Half (Jul-Dec)
+                // May–October
                 _buildHalfYearSection(
                   context,
-                  'Second Half (Jul-Dec)',
+                  'May–October',
                   secondHalfUsed,
                   secondHalfRemaining,
                   secondHalfLimit,

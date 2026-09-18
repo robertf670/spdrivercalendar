@@ -1,4 +1,36 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '4.2.0': [
+    {
+      'title': 'Spare View Board',
+      'description':
+          'View Board is available on spare duties from the spare dialog, using the assigned duty.',
+    },
+    {
+      'title': 'Rest Day Spread',
+      'description':
+          'Spread statistics now include duties worked on rest days.',
+    },
+    {
+      'title': 'Self-Cert Limits',
+      'description':
+          'Self-cert halves are November–April and May–October for the sick bonus. You can still add a day after the limit.',
+    },
+    {
+      'title': 'Custom Day Colour',
+      'description':
+          'Long-press a calendar day to set a custom colour.',
+    },
+    {
+      'title': 'Pay Scale',
+      'description':
+          'Pay Scale now shows one year at a time, and opens on the year set in Settings.',
+    },
+    {
+      'title': 'Year View',
+      'description':
+          'Year View opens on the current month and loads faster.',
+    },
+  ],
   '4.1.2': [
     {
       'title': '5-Week Cycle',

@@ -131,4 +131,63 @@ void main() {
     expect(appearance.hasBankHolidayRedundant, isTrue);
     expect(appearance.selectedBorderColor, Colors.red);
   });
+
+  test('per-day colour override wins over sick and shift colours', () {
+    final appearance = resolveCalendarDayAppearance(
+      date: DateTime(2026, 8, 4),
+      events: [_event(sickDayType: 'normal')],
+      rosterShift: 'E',
+      shiftInfoMap: shiftInfoMap,
+      holidays: const [],
+      highlightWorkoutDays: false,
+      workoutDates: null,
+      hasDayNote: false,
+      isBankHoliday: false,
+      isBankHolidayRedundantMarked: false,
+      dayInLieuColor: Colors.teal,
+      workoutColor: Colors.brown,
+      sickDayColor: (_) => Colors.red,
+      themePrimaryColor: Colors.blue,
+      schemePrimaryColor: Colors.indigo,
+      colorOverride: Colors.pink,
+    );
+
+    expect(appearance.cellColor, Colors.pink);
+    expect(appearance.backgroundColor, Colors.pink.withValues(alpha: 0.3));
+    expect(appearance.hasEvents, isTrue);
+  });
+
+  test('week-view accent prefers custom colour over rest day', () {
+    expect(
+      resolveWeekDayAccent(
+        colorOverride: Colors.pink,
+        isRosteredRestDay: true,
+        restDayColor: Colors.grey,
+      ),
+      Colors.pink,
+    );
+    expect(
+      resolveWeekDayAccent(
+        colorOverride: null,
+        isRosteredRestDay: true,
+        restDayColor: Colors.grey,
+      ),
+      Colors.grey,
+    );
+    expect(
+      resolveWeekDayAccent(
+        colorOverride: null,
+        isRosteredRestDay: false,
+        restDayColor: Colors.grey,
+      ),
+      isNull,
+    );
+  });
+
+  test('year-view override tints the cell and event dot', () {
+    expect(yearViewColorOverride(null), isNull);
+    final tint = yearViewColorOverride(Colors.pink)!;
+    expect(tint.cellColor, Colors.pink.withValues(alpha: 0.3));
+    expect(tint.eventDotColor, Colors.pink);
+  });
 }

@@ -39,6 +39,17 @@ service cloud.firestore {
       allow read: if true;
       allow write: if true;
     }
+
+    // Contacts - all users can read, admin can write (app-level control)
+    match /contacts/{document} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    match /contact_sections/{document} {
+      allow read: if true;
+      allow write: if true;
+    }
     
     // Deny all other collections by default
     match /{document=**} {

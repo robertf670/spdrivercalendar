@@ -7,7 +7,10 @@ import 'package:spdrivercalendar/models/event.dart';
 import 'package:spdrivercalendar/models/holiday.dart';
 import 'package:spdrivercalendar/models/bank_holiday.dart';
 import 'package:spdrivercalendar/services/color_customization_service.dart';
+import 'package:spdrivercalendar/services/day_color_service.dart';
 import 'package:spdrivercalendar/services/rest_day_swap_service.dart';
+import 'package:spdrivercalendar/features/calendar/utils/calendar_day_appearance.dart';
+import 'package:spdrivercalendar/features/calendar/utils/year_view_layout.dart';
 
 // Cached data structure for a single day
 class _DayCellData {
@@ -51,6 +54,7 @@ class YearViewScreen extends StatefulWidget {
   final List<BankHoliday>? bankHolidays;
   final bool markedInEnabled;
   final String markedInStatus;
+  final int? initialMonth;
 
   const YearViewScreen({
     super.key,
@@ -62,6 +66,7 @@ class YearViewScreen extends StatefulWidget {
     this.bankHolidays,
     required this.markedInEnabled,
     required this.markedInStatus,
+    this.initialMonth,
   });
 
   @override
@@ -73,16 +78,17 @@ class YearViewScreenState extends State<YearViewScreen> {
   late int _currentYear; // Store year in state to avoid closure issues
   bool _markedInEnabled = false;
   String _markedInStatus = 'Shift';
+  final ScrollController _scrollController = ScrollController();
+  int _targetMonth = 1;
+  int? _pendingScrollMonth;
   
   // Progressive loading state
   final Set<int> _loadedMonths = {}; // Track which months have finished loading
-  bool _isInitialLoad = true; // Track if this is the first load
   
   // Caching system
   Map<String, _DayCellData> _dayCellCache = {}; // Cache key: "year-month-day"
   Map<String, BankHoliday> _bankHolidayMap = {}; // Pre-indexed bank holidays
   Map<String, List<Holiday>> _holidayMap = {}; // Pre-indexed holidays by date
-  Map<String, bool> _saturdayServiceCache = {}; // Cache Saturday service checks
   
   // Pre-computed colors (avoid repeated lookups)
   final Color _dayInLieuColor = ColorCustomizationService.getColorForShift('DAY_IN_LIEU');
@@ -97,8 +103,20 @@ class YearViewScreenState extends State<YearViewScreen> {
     _currentYear = widget.year;
     _markedInEnabled = widget.markedInEnabled;
     _markedInStatus = widget.markedInStatus;
+    _targetMonth = yearViewScrollTargetMonth(
+      displayedYear: _currentYear,
+      now: DateTime.now(),
+      focusedMonth: widget.initialMonth,
+    );
+    _pendingScrollMonth = _targetMonth;
     _buildIndexes();
     _preloadMonthsProgressive();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
   }
 
   void _buildIndexes() {
@@ -135,12 +153,7 @@ class YearViewScreenState extends State<YearViewScreen> {
     super.didUpdateWidget(oldWidget);
     // Update state if year changed
     if (oldWidget.year != widget.year) {
-      _currentYear = widget.year;
-      _loadedMonths.clear();
-      _dayCellCache.clear();
-      _saturdayServiceCache.clear();
-      _isInitialLoad = true;
-      _buildIndexes();
+      _prepareYear(widget.year, focusedMonth: widget.initialMonth);
       _preloadMonthsProgressive();
     }
     // Reload marked-in settings in case they changed
@@ -155,32 +168,94 @@ class YearViewScreenState extends State<YearViewScreen> {
       _markedInStatus = widget.markedInStatus;
       _loadedMonths.clear();
       _dayCellCache.clear();
-      _isInitialLoad = true;
       _preloadMonthsProgressive();
     }
   }
 
+  void _prepareYear(int year, {int? focusedMonth}) {
+    _currentYear = year;
+    _targetMonth = yearViewScrollTargetMonth(
+      displayedYear: year,
+      now: DateTime.now(),
+      focusedMonth: focusedMonth,
+    );
+    _pendingScrollMonth = _targetMonth;
+    _loadedMonths.clear();
+    _dayCellCache.clear();
+    _buildIndexes();
+  }
+
+  void _switchYear(int year, {int? focusedMonth}) {
+    _prepareYear(year, focusedMonth: focusedMonth);
+    if (_scrollController.hasClients) {
+      _scrollController.jumpTo(0);
+    }
+    setState(() {});
+    _preloadMonthsProgressive();
+  }
+
+  void _scheduleScrollToTarget({
+    required int crossAxisCount,
+    required double viewportWidth,
+    required double padding,
+    required double spacing,
+    required double aspectRatio,
+  }) {
+    final month = _pendingScrollMonth;
+    if (month == null) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _pendingScrollMonth != month) return;
+      if (!_scrollController.hasClients) return;
+      final position = _scrollController.position;
+      if (!position.hasContentDimensions) return;
+      final max = position.maxScrollExtent;
+      if (max <= 0) {
+        _pendingScrollMonth = null;
+        return;
+      }
+      final offset = yearViewMonthScrollOffset(
+        month: month,
+        crossAxisCount: crossAxisCount,
+        viewportWidth: viewportWidth,
+        padding: padding,
+        spacing: spacing,
+        aspectRatio: aspectRatio,
+      );
+      _scrollController.jumpTo(offset.clamp(0.0, max));
+      _pendingScrollMonth = null;
+    });
+  }
+
   Future<void> _preloadMonthsProgressive() async {
     final loadingYear = _currentYear;
+    final prioritize = _targetMonth;
+
+    await DayColorService.load();
+    if (!mounted || loadingYear != _currentYear) return;
+
+    // Paint the month we're scrolled to first (usually already in memory
+    // from the main calendar), then load the rest of the year.
+    _buildMonthCache(prioritize);
+    if (!mounted || loadingYear != _currentYear) return;
+    setState(() {
+      _loadedMonths.add(prioritize);
+    });
+    await Future<void>.delayed(Duration.zero);
+
     await EventService.preloadYear(loadingYear);
     if (!mounted || loadingYear != _currentYear) return;
 
+    final remaining = yearViewMonthLoadOrder(prioritize).skip(1).toList();
     const batchSize = 3;
-    for (var batchStart = 1; batchStart <= 12; batchStart += batchSize) {
-      final batchEnd = (batchStart + batchSize - 1).clamp(1, 12);
-      final completedMonths = <int>{};
-
-      for (var month = batchStart; month <= batchEnd; month++) {
+    for (var i = 0; i < remaining.length; i += batchSize) {
+      final chunk = remaining.skip(i).take(batchSize).toList();
+      for (final month in chunk) {
         _buildMonthCache(month);
-        completedMonths.add(month);
       }
-
       if (!mounted || loadingYear != _currentYear) return;
       setState(() {
-        _loadedMonths.addAll(completedMonths);
-        _isInitialLoad = false;
+        _loadedMonths.addAll(chunk);
       });
-
       await Future<void>.delayed(Duration.zero);
     }
   }
@@ -204,46 +279,34 @@ class YearViewScreenState extends State<YearViewScreen> {
       
       // Get holidays for this date (O(1) lookup)
       final dateHolidays = _holidayMap[key] ?? [];
-      final holiday = dateHolidays.isNotEmpty ? dateHolidays.first : null;
-      final dayInLieuHoliday = dateHolidays.firstWhere(
-        (h) => h.type == 'day_in_lieu',
-        orElse: () => Holiday(id: '', startDate: DateTime.now(), endDate: DateTime.now(), type: ''),
-      );
-      final unpaidLeaveHoliday = dateHolidays.firstWhere(
-        (h) => h.type == 'unpaid_leave',
-        orElse: () => Holiday(id: '', startDate: DateTime.now(), endDate: DateTime.now(), type: ''),
-      );
-      
-      // Cache Saturday service check
-      final saturdayServiceKey = '${date.year}-${date.month}-${date.day}';
-      if (!_saturdayServiceCache.containsKey(saturdayServiceKey)) {
-        _saturdayServiceCache[saturdayServiceKey] = RosterService.isSaturdayService(date);
+      Holiday? holiday;
+      Holiday? dayInLieuHoliday;
+      Holiday? unpaidLeaveHoliday;
+      for (final item in dateHolidays) {
+        holiday ??= item;
+        if (item.type == 'day_in_lieu') {
+          dayInLieuHoliday = item;
+        } else if (item.type == 'unpaid_leave') {
+          unpaidLeaveHoliday = item;
+        }
       }
-      final isSaturdayService = _saturdayServiceCache[saturdayServiceKey]!;
+      
+      final isSaturdayService = RosterService.isSaturdayService(date);
       
       // Check for WFO event
       final hasWfoEvent = events.any((event) => event.isWorkForOthers);
       final wfoColor = widget.shiftInfoMap['WFO']?.color;
       
-      // Check for sick day
-      final sickDayEvent = events.firstWhere(
-        (event) => event.sickDayType != null,
-        orElse: () => Event(
-          id: '',
-          title: '',
-          startDate: date,
-          startTime: const TimeOfDay(hour: 0, minute: 0),
-          endDate: date,
-          endTime: const TimeOfDay(hour: 0, minute: 0),
-          isHoliday: false,
-          hasLateBreak: false,
-          tookFullBreak: false,
-          isWorkForOthers: false,
-        ),
-      );
-      final hasSickDay = sickDayEvent.sickDayType != null;
+      String? sickDayType;
+      for (final event in events) {
+        if (event.sickDayType != null) {
+          sickDayType = event.sickDayType;
+          break;
+        }
+      }
+      final hasSickDay = sickDayType != null;
       final sickDayColor = hasSickDay 
-          ? ColorCustomizationService.getColorForSickType(sickDayEvent.sickDayType) 
+          ? ColorCustomizationService.getColorForSickType(sickDayType) 
           : null;
       
       // Determine holiday color
@@ -266,41 +329,36 @@ class YearViewScreenState extends State<YearViewScreen> {
       final isRestDay = shift == 'R';
       final useRestDayColorForHoliday = isRestDay &&
           shiftInfo != null &&
-          (dayInLieuHoliday.id.isNotEmpty || unpaidLeaveHoliday.id.isNotEmpty || holiday != null);
+          (dayInLieuHoliday != null || unpaidLeaveHoliday != null || holiday != null);
 
-      // Determine cell color
+      final override = yearViewColorOverride(DayColorService.colorForDate(date));
+
+      // Determine cell color and event dot (custom colour wins)
       Color? cellColor;
-      if (hasSickDay && sickDayColor != null) {
-        cellColor = sickDayColor.withValues(alpha: 0.3);
-      } else if (useRestDayColorForHoliday) {
-        cellColor = shiftInfo.color.withValues(alpha: 0.3);
-      } else if (dayInLieuHoliday.id.isNotEmpty) {
-        cellColor = _dayInLieuColor.withValues(alpha: 0.3);
-      } else if (unpaidLeaveHoliday.id.isNotEmpty) {
-        cellColor = _unpaidLeaveColor.withValues(alpha: 0.3);
-      } else if (holiday != null) {
-        cellColor = holidayColorValue.withValues(alpha: 0.3);
-      } else if (hasWfoEvent && wfoColor != null) {
-        cellColor = wfoColor.withValues(alpha: 0.3);
-      } else if (shiftInfo != null) {
-        cellColor = shiftInfo.color.withValues(alpha: 0.3);
-      }
-      
-      // Determine event dot color
       Color eventDotColor = Colors.grey;
-      if (hasSickDay && sickDayColor != null) {
+      if (override != null) {
+        cellColor = override.cellColor;
+        eventDotColor = override.eventDotColor;
+      } else if (hasSickDay && sickDayColor != null) {
+        cellColor = sickDayColor.withValues(alpha: 0.3);
         eventDotColor = sickDayColor;
       } else if (useRestDayColorForHoliday) {
+        cellColor = shiftInfo.color.withValues(alpha: 0.3);
         eventDotColor = shiftInfo.color;
-      } else if (dayInLieuHoliday.id.isNotEmpty) {
+      } else if (dayInLieuHoliday != null) {
+        cellColor = _dayInLieuColor.withValues(alpha: 0.3);
         eventDotColor = _dayInLieuColor;
-      } else if (unpaidLeaveHoliday.id.isNotEmpty) {
+      } else if (unpaidLeaveHoliday != null) {
+        cellColor = _unpaidLeaveColor.withValues(alpha: 0.3);
         eventDotColor = _unpaidLeaveColor;
       } else if (holiday != null) {
+        cellColor = holidayColorValue.withValues(alpha: 0.3);
         eventDotColor = holidayColorValue;
       } else if (hasWfoEvent && wfoColor != null) {
+        cellColor = wfoColor.withValues(alpha: 0.3);
         eventDotColor = wfoColor;
       } else if (shiftInfo != null) {
+        cellColor = shiftInfo.color.withValues(alpha: 0.3);
         eventDotColor = shiftInfo.color;
       }
       
@@ -311,8 +369,8 @@ class YearViewScreenState extends State<YearViewScreen> {
         events: events,
         bankHoliday: bankHoliday,
         holiday: holiday,
-        dayInLieuHoliday: dayInLieuHoliday.id.isNotEmpty ? dayInLieuHoliday : null,
-        unpaidLeaveHoliday: unpaidLeaveHoliday.id.isNotEmpty ? unpaidLeaveHoliday : null,
+        dayInLieuHoliday: dayInLieuHoliday,
+        unpaidLeaveHoliday: unpaidLeaveHoliday,
         isSaturdayService: isSaturdayService,
         hasWfoEvent: hasWfoEvent,
         cellColor: cellColor,
@@ -368,17 +426,12 @@ class YearViewScreenState extends State<YearViewScreen> {
             icon: const Icon(Icons.today),
             tooltip: 'Go to Current Year',
             onPressed: () {
-              final currentYear = DateTime.now().year;
-              if (currentYear != _currentYear) {
-                setState(() {
-                  _currentYear = currentYear;
-                  _loadedMonths.clear();
-                  _dayCellCache.clear();
-                  _saturdayServiceCache.clear();
-                  _isInitialLoad = true;
-                });
-                _buildIndexes();
-                _preloadMonthsProgressive();
+              final now = DateTime.now();
+              if (now.year != _currentYear) {
+                _switchYear(now.year, focusedMonth: now.month);
+              } else {
+                _pendingScrollMonth = now.month;
+                setState(() {});
               }
             },
           ),
@@ -408,17 +461,7 @@ class YearViewScreenState extends State<YearViewScreen> {
                     color: Colors.transparent,
                     child: InkWell(
                       borderRadius: BorderRadius.circular(24),
-                      onTap: () {
-                        setState(() {
-                          _currentYear = _currentYear - 1;
-                          _loadedMonths.clear();
-                          _dayCellCache.clear();
-                          _saturdayServiceCache.clear();
-                          _isInitialLoad = true;
-                        });
-                        _buildIndexes();
-                        _preloadMonthsProgressive();
-                      },
+                      onTap: () => _switchYear(_currentYear - 1),
                       child: Container(
                         padding: const EdgeInsets.all(8),
                         child: Icon(
@@ -468,17 +511,7 @@ class YearViewScreenState extends State<YearViewScreen> {
                     color: Colors.transparent,
                     child: InkWell(
                       borderRadius: BorderRadius.circular(24),
-                      onTap: () {
-                        setState(() {
-                          _currentYear = _currentYear + 1;
-                          _loadedMonths.clear();
-                          _dayCellCache.clear();
-                          _saturdayServiceCache.clear();
-                          _isInitialLoad = true;
-                        });
-                        _buildIndexes();
-                        _preloadMonthsProgressive();
-                      },
+                      onTap: () => _switchYear(_currentYear + 1),
                       child: Container(
                         padding: const EdgeInsets.all(8),
                         child: Icon(
@@ -492,58 +525,32 @@ class YearViewScreenState extends State<YearViewScreen> {
               ),
             ),
             
-            // Progressive loading indicator or grid
+            // Month grid — shown immediately so we can scroll to this month
             Expanded(
-              child: _isInitialLoad && _loadedMonths.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          CircularProgressIndicator(),
-                          const SizedBox(height: 16),
-                          Text(
-                            'Loading calendar...',
-                            style: TextStyle(
-                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                            ),
-                          ),
-                        ],
-                      ),
-                    )
-                  : LayoutBuilder(
+              child: LayoutBuilder(
                       builder: (context, constraints) {
-                        // Determine number of columns based on screen width
                         final screenWidth = constraints.maxWidth;
-                        int crossAxisCount = 3; // Default to 3 columns
-                        if (screenWidth > 900) {
-                          crossAxisCount = 4; // 4 columns on very large screens
-                        } else if (screenWidth < 600) {
-                          crossAxisCount = 2; // 2 columns on small screens
-                        }
-                        
-                        // Calculate responsive values based on screen width
-                        final isSmallScreen = screenWidth < 600;
-                        final isLargeScreen = screenWidth > 900;
-                        
-                        // Responsive spacing
-                        final gridPadding = isSmallScreen ? 6.0 : (isLargeScreen ? 12.0 : 8.0);
-                        final gridSpacing = isSmallScreen ? 6.0 : (isLargeScreen ? 12.0 : 8.0);
-                        
-                        // Responsive aspect ratio (smaller screens need taller cells).
-                        // Divide by text scale so month tiles stay tall enough at max font size.
+                        final crossAxisCount = yearViewCrossAxisCount(screenWidth);
+                        final gridPadding = yearViewGridPadding(screenWidth);
+                        final gridSpacing = yearViewGridSpacing(screenWidth);
                         final textScale =
                             MediaQuery.textScalerOf(context).scale(1.0).clamp(1.0, 3.0);
-                        final baseAspect =
-                            isSmallScreen ? 0.92 : (isLargeScreen ? 0.98 : 0.95);
-                        final aspectRatio =
-                            (baseAspect / textScale).clamp(0.42, 1.05);
+                        final aspectRatio = yearViewTileAspectRatio(
+                          width: screenWidth,
+                          textScale: textScale,
+                        );
+
+                        _scheduleScrollToTarget(
+                          crossAxisCount: crossAxisCount,
+                          viewportWidth: screenWidth,
+                          padding: gridPadding,
+                          spacing: gridSpacing,
+                          aspectRatio: aspectRatio,
+                        );
                         
-                        return SingleChildScrollView(
-                          padding: EdgeInsets.all(gridPadding),
-                          child: GridView.builder(
-                            key: ValueKey('year_grid_$_currentYear'), // Force rebuild when year changes
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
+                        return GridView.builder(
+                            controller: _scrollController,
+                            padding: EdgeInsets.all(gridPadding),
                             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                               crossAxisCount: crossAxisCount,
                               crossAxisSpacing: gridSpacing,
@@ -556,18 +563,15 @@ class YearViewScreenState extends State<YearViewScreen> {
                               final currentYear = _currentYear;
                               final isLoaded = _loadedMonths.contains(month);
                               
-                              // Show loading placeholder for months not yet loaded
                               if (!isLoaded) {
                                 return _buildLoadingPlaceholder(month, screenWidth);
                               }
                               
-                              // Wrap each month in RepaintBoundary for performance
                               return RepaintBoundary(
                                 child: _buildMonthCalendar(month, currentYear, screenWidth),
                               );
                             },
-                          ),
-                        );
+                          );
                       },
                     ),
             ),

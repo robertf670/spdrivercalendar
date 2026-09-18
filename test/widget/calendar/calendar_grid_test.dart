@@ -100,4 +100,42 @@ void main() {
 
     expect(find.byKey(const ValueKey('selected-day')), findsOneWidget);
   });
+
+  testWidgets('forwards a long-press on a day cell', (tester) async {
+    DateTime? longPressedDate;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: CalendarGrid(
+            tableKey: const ValueKey('long-press-calendar-grid'),
+            focusedDay: DateTime(2026, 7, 1),
+            selectedDay: null,
+            onPreviousMonth: () {},
+            onNextMonth: () {},
+            onShowYear: () {},
+            onDaySelected: (_, __) async {},
+            onDayLongPressed: (selected, focused) async {
+              longPressedDate = selected;
+            },
+            onPageChanged: (_) {},
+            eventLoader: (_) => const [],
+            dayBuilder: (
+              date, {
+              required isToday,
+              required isOutsideDay,
+              isSelected = false,
+            }) {
+              return Center(child: Text('${date.day}'));
+            },
+          ),
+        ),
+      ),
+    );
+
+    await tester.longPress(find.text('15'));
+    await tester.pump();
+
+    expect(longPressedDate, DateTime.utc(2026, 7, 15));
+  });
 }

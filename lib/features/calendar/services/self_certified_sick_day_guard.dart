@@ -70,10 +70,9 @@ class SelfCertifiedSickDayGuard {
     required DateTime date,
     required String? currentSickDayType,
   }) async {
-    final year = date.year;
+    final year = SelfCertifiedSickDaysService.bonusYearFor(date);
     final halfYear = SelfCertifiedSickDaysService.getHalfYear(date);
-    final halfYearName =
-        halfYear == 'first' ? 'First Half (Jan-Jun)' : 'Second Half (Jul-Dec)';
+    final halfYearName = SelfCertifiedSickDaysService.halfYearName(halfYear);
 
     if (currentSickDayType == 'self-certified') {
       return SelfCertifiedSickDayCheckResult(
@@ -91,17 +90,11 @@ class SelfCertifiedSickDayGuard {
       final halfYearCount = await _countForHalfYear(year, halfYear);
       final yearlyCount = await _countForYear(year);
 
-      final String warningMessage;
-      if (!canAddHalfYear && !canAddYearly) {
-        warningMessage =
-            'You have already used your limit of 2 self-certified days in the $halfYearName and 4 for the year. You cannot add more self-certified days.';
-      } else if (!canAddHalfYear) {
-        warningMessage =
-            'You have already used your limit of 2 self-certified days in the $halfYearName. You cannot add more self-certified days for this half-year.';
-      } else {
-        warningMessage =
-            'You have already used your limit of 4 self-certified days for the year. You cannot add more self-certified days.';
-      }
+      final warningMessage = SelfCertifiedSickDaysService.limitWarningMessage(
+        halfYearName: halfYearName,
+        halfYearReached: !canAddHalfYear,
+        yearReached: !canAddYearly,
+      );
 
       return SelfCertifiedSickDayCheckResult(
         decision: SelfCertifiedSickDayDecision.limitReached,
@@ -126,10 +119,9 @@ class SelfCertifiedSickDayGuard {
   Future<SelfCertifiedSickDayCheckResult> remainingAfterSave({
     required DateTime date,
   }) async {
-    final year = date.year;
+    final year = SelfCertifiedSickDaysService.bonusYearFor(date);
     final halfYear = SelfCertifiedSickDaysService.getHalfYear(date);
-    final halfYearName =
-        halfYear == 'first' ? 'First Half (Jan-Jun)' : 'Second Half (Jul-Dec)';
+    final halfYearName = SelfCertifiedSickDaysService.halfYearName(halfYear);
 
     return SelfCertifiedSickDayCheckResult(
       decision: SelfCertifiedSickDayDecision.allowed,

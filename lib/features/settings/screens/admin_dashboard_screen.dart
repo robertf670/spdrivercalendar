@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'admin_panel_screen.dart';
 import 'user_analytics_screen.dart';
 import 'poll_management_screen.dart';
+import 'package:spdrivercalendar/features/contacts/screens/contacts_management_screen.dart';
 import 'package:spdrivercalendar/features/toilet_codes/screens/toilet_codes_management_screen.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
@@ -133,6 +134,14 @@ class AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         color: Colors.brown,
                         onTap: () => _navigateToToiletCodes(context),
                       ),
+                      _buildAdminCard(
+                        context,
+                        title: 'Contacts',
+                        subtitle: 'Manage contact list',
+                        icon: Icons.contacts,
+                        color: Colors.indigo,
+                        onTap: () => _navigateToContacts(context),
+                      ),
                     ],
                   ),
                 ),
@@ -234,6 +243,15 @@ class AdminDashboardScreenState extends State<AdminDashboardScreen> {
       context,
       MaterialPageRoute(
         builder: (context) => const ToiletCodesManagementScreen(),
+      ),
+    );
+  }
+
+  void _navigateToContacts(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const ContactsManagementScreen(),
       ),
     );
   }

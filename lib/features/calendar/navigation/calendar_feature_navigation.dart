@@ -113,6 +113,7 @@ class CalendarFeatureNavigation {
     required List<BankHoliday>? bankHolidays,
     required bool markedInEnabled,
     required String markedInStatus,
+    int? initialMonth,
   }) {
     return Navigator.of(context).push<DateTime>(
       MaterialPageRoute(
@@ -126,6 +127,7 @@ class CalendarFeatureNavigation {
           bankHolidays: bankHolidays,
           markedInEnabled: markedInEnabled,
           markedInStatus: markedInStatus,
+          initialMonth: initialMonth,
         ),
       ),
     );

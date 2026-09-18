@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:spdrivercalendar/services/pay_scale_service.dart';
-import 'package:spdrivercalendar/core/services/storage_service.dart';
 import 'package:spdrivercalendar/theme/app_theme.dart';
 
 /// Widget that calculates and displays spread over payment estimate only
@@ -59,21 +58,16 @@ class _EarningsCalculatorCardState extends State<EarningsCalculatorCard> {
   }
 
   Future<void> _loadSavedYearLevel() async {
-    final saved = await StorageService.getString('selected_year_level');
-    if (saved != null && mounted) {
+    final saved = await PayScaleService.loadSavedYearLevel();
+    if (mounted) {
       setState(() {
         _selectedYearLevel = saved;
-      });
-    } else if (mounted) {
-      // Default to year1+2 if nothing saved
-      setState(() {
-        _selectedYearLevel = 'year1+2';
       });
     }
   }
 
   Future<void> _saveYearLevel(String level) async {
-    await StorageService.saveString('selected_year_level', level);
+    await PayScaleService.saveYearLevel(level);
   }
 
   double? _calculateEarnings(Duration spreadTime) {

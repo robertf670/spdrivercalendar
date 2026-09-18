@@ -29,6 +29,7 @@ void main() {
     );
 
     expect(find.text('Bills & Boards'), findsOneWidget);
+    expect(find.textContaining('send me a message'), findsOneWidget);
     expect(find.widgetWithText(ActionChip, '01–20'), findsOneWidget);
     expect(find.widgetWithText(ActionChip, '61–80'), findsOneWidget);
     expect(tester.takeException(), isNull);

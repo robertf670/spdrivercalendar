@@ -313,7 +313,7 @@ class SickDaysStatisticsCard extends StatelessWidget {
     String currentRange,
   ) {
     // Always show tracking info for current year
-    final year = DateTime.now().year;
+    final year = SelfCertifiedSickDaysService.bonusYearFor(DateTime.now());
 
     return FutureBuilder<Map<String, dynamic>>(
       future: SelfCertifiedSickDaysService.getStatistics(year),
@@ -410,7 +410,9 @@ class SickDaysStatisticsCard extends StatelessWidget {
                             children: [
                               _buildLimitItem(
                                 context,
-                                'Jan-Jun',
+                                SelfCertifiedSickDaysService.halfYearShortName(
+                                  SelfCertifiedSickDaysService.halfNovApr,
+                                ),
                                 firstHalfUsed,
                                 firstHalfLimit,
                                 firstHalfRemaining,
@@ -418,7 +420,9 @@ class SickDaysStatisticsCard extends StatelessWidget {
                               const SizedBox(height: 6),
                               _buildLimitItem(
                                 context,
-                                'Jul-Dec',
+                                SelfCertifiedSickDaysService.halfYearShortName(
+                                  SelfCertifiedSickDaysService.halfMayOct,
+                                ),
                                 secondHalfUsed,
                                 secondHalfLimit,
                                 secondHalfRemaining,
@@ -441,7 +445,9 @@ class SickDaysStatisticsCard extends StatelessWidget {
                               Expanded(
                                 child: _buildLimitItem(
                                   context,
-                                  'Jan-Jun',
+                                  SelfCertifiedSickDaysService.halfYearShortName(
+                                    SelfCertifiedSickDaysService.halfNovApr,
+                                  ),
                                   firstHalfUsed,
                                   firstHalfLimit,
                                   firstHalfRemaining,
@@ -451,7 +457,9 @@ class SickDaysStatisticsCard extends StatelessWidget {
                               Expanded(
                                 child: _buildLimitItem(
                                   context,
-                                  'Jul-Dec',
+                                  SelfCertifiedSickDaysService.halfYearShortName(
+                                    SelfCertifiedSickDaysService.halfMayOct,
+                                  ),
                                   secondHalfUsed,
                                   secondHalfLimit,
                                   secondHalfRemaining,

@@ -1,4 +1,6 @@
 import 'package:flutter/services.dart';
+import 'package:spdrivercalendar/core/constants/app_constants.dart';
+import 'package:spdrivercalendar/core/services/storage_service.dart';
 
 class PayScaleService {
   static Map<String, double>? _cachedRates;
@@ -92,16 +94,52 @@ class PayScaleService {
   static String getYearLevelDisplayName(String yearLevel) {
     switch (yearLevel.toLowerCase()) {
       case 'year1+2':
-        return 'Year 1/2';
+        return 'Year 1-2';
       case 'year3+4':
-        return 'Year 3/4';
+        return 'Year 3-4';
       case 'year5':
         return 'Year 5';
       case 'year6':
-        return 'Year 6';
+        return 'Year 6+';
       default:
         return yearLevel;
     }
+  }
+
+  static String getYearLevelShortName(String yearLevel) {
+    switch (yearLevel.toLowerCase()) {
+      case 'year1+2':
+        return '1-2';
+      case 'year3+4':
+        return '3-4';
+      case 'year5':
+        return '5';
+      case 'year6':
+        return '6+';
+      default:
+        return yearLevel;
+    }
+  }
+
+  static String normalizeYearLevel(String? yearLevel) {
+    final options = getYearLevelOptions();
+    if (yearLevel != null && options.contains(yearLevel)) {
+      return yearLevel;
+    }
+    return 'year1+2';
+  }
+
+  /// Same year used by Settings Pay Rate Year, Pay Scale, and spread stats.
+  static Future<String> loadSavedYearLevel() async {
+    final saved = await StorageService.getString(AppConstants.spreadPayRateKey);
+    return normalizeYearLevel(saved);
+  }
+
+  static Future<void> saveYearLevel(String level) async {
+    await StorageService.saveString(
+      AppConstants.spreadPayRateKey,
+      normalizeYearLevel(level),
+    );
   }
 }
 

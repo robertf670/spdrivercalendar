@@ -15,6 +15,7 @@ import 'package:spdrivercalendar/services/jamestown_feature_service.dart';
 import 'package:spdrivercalendar/services/donnybrook_feature_service.dart';
 
 // Import the new widgets
+import '../utils/spread_pay.dart';
 import '../widgets/frequency_chart.dart';
 import '../widgets/shift_type_summary_card.dart';
 import '../widgets/work_time_stats_card.dart';
@@ -603,7 +604,7 @@ class StatisticsScreenState extends State<StatisticsScreen>
           SizedBox(height: sizes['cardSpacing']!), // Spacing between cards
           _buildExpandableSection(
             title: 'Spread Statistics',
-            subtitle: 'Time worked over 10 hours on M-F duties only',
+            subtitle: 'Time worked over 10 hours on M-F duties, including rest days',
             icon: Icons.timer,
             children: [
               const SizedBox(height: 8),
@@ -1695,60 +1696,46 @@ class StatisticsScreenState extends State<StatisticsScreen>
      }
   }
 
-  // Calculate spread time for UNI shifts (start to finish time)
-  Future<Duration?> _calculateUniSpreadTime(String shiftCode) async {
+  Future<Duration?> _calculateUniSpreadTime(
+    String shiftCode,
+    String dayOfWeek,
+  ) async {
+    for (final fileName in SpreadPay.uniSpreadFiles(dayOfWeek)) {
+      final duration = await _tryLoadUniSpreadFromFile(shiftCode, fileName);
+      if (duration != null) return duration;
+    }
+    return null;
+  }
+
+  Future<Duration?> _tryLoadUniSpreadFromFile(
+    String shiftCode,
+    String fileName,
+  ) async {
     try {
-      // Only use UNI_M-F.csv for spread calculations (M-F only)
-      const fileName = 'UNI_M-F.csv';
-      
-      // Check cache first (reuse existing spread cache)
       if (_csvSpreadTimeCache.containsKey(fileName)) {
-        final cachedFile = _csvSpreadTimeCache[fileName]!;
-        if (cachedFile.containsKey(shiftCode)) {
-          return cachedFile[shiftCode];
-        }
+        return _csvSpreadTimeCache[fileName]![shiftCode];
       }
 
-      // Load and parse UNI_M-F.csv
       final csvData = await rootBundle.loadString('assets/$fileName');
       final lines = csvData.split('\n');
       final Map<String, Duration> parsedSpreadTimes = {};
+      var headerSkipped = false;
 
-      bool headerSkippedSpread = false;
       for (final line in lines) {
         if (line.trim().isEmpty) continue;
-        
-        // Skip header row
-        if (!headerSkippedSpread) {
-          headerSkippedSpread = true;
+        if (!headerSkipped) {
+          headerSkipped = true;
           continue;
         }
-        
+
         final parts = line.split(',');
-        
-        // New 17-column format: shift,duty,report,depart,location,startbreak,startbreaklocation,breakreport,finishbreak,finishbreaklocation,finish,finishlocation,signoff,spread,work,relief,routes
-        if (parts.length >= 14) {
-          final currentShiftCode = parts[0].trim();
-          final spreadTimeStr = parts.length > 13 ? parts[13].trim() : '';
-          
-          // Use spread time directly from CSV column 13
-          if (spreadTimeStr.isNotEmpty && spreadTimeStr.toLowerCase() != 'nan') {
-            final timeParts = spreadTimeStr.split(':');
-            if (timeParts.length >= 2) {
-              final spreadDuration = Duration(
-                hours: int.parse(timeParts[0]),
-                minutes: int.parse(timeParts[1])
-              );
-              parsedSpreadTimes[currentShiftCode] = spreadDuration;
-            }
-          }
-        }
+        if (parts.length < 14) continue;
+        final duration = SpreadPay.parseCsvDuration(parts[13]);
+        if (duration == null) continue;
+        parsedSpreadTimes[parts[0].trim()] = duration;
       }
 
-      // Cache the parsed data
       _csvSpreadTimeCache[fileName] = parsedSpreadTimes;
-
-      // Return the requested duration
       return parsedSpreadTimes[shiftCode];
     } catch (e) {
       return null;
@@ -1972,27 +1959,13 @@ class StatisticsScreenState extends State<StatisticsScreen>
 
     Set<String> processedIds = {};
 
-    for (final entry in widget.events.entries) {
-      final date = entry.key;
-      final events = entry.value;
-
-      final normalizedDate = DateTime.utc(date.year, date.month, date.day);
-
-      // Skip if this is a rest day (respects marked-in status)
-      final bool isRest = await _isRestDay(normalizedDate);
-
-      if (isRest) {
-        continue;
-      }
-
+    for (final events in widget.events.values) {
       for (final event in events) {
         final eventNormalizedStartDate = DateTime.utc(event.startDate.year, event.startDate.month, event.startDate.day);
-        
-        // Only process Monday-Friday work shifts, no duplicates, no overtime
-        final dayOfWeek = event.startDate.weekday;
-        if (dayOfWeek < DateTime.monday || dayOfWeek > DateTime.friday ||
-            !event.isWorkShift || 
-            event.title.contains('(OT)') || 
+
+        if (!SpreadPay.isSpreadWeekday(event.startDate.weekday) ||
+            !event.isWorkShift ||
+            event.title.contains('(OT)') ||
             processedIds.contains(event.id)) {
           continue;
         }
@@ -2025,53 +1998,28 @@ class StatisticsScreenState extends State<StatisticsScreen>
   }
 
   Future<Duration> _calculateSpreadPay(Event event) async {
-    if (!event.isWorkShift) {
+    if (!event.isWorkShift || SpreadPay.hasNoSpreadPay(event.title)) {
       return Duration.zero;
     }
 
-    // For spare duties, 22B/01, Union, and Mentor - no spread pay (they're typically shorter shifts)
-    if (event.title.startsWith('SP') || event.title == '22B/01' || event.title == 'Union' || event.title == 'Mentor') {
-      return Duration.zero;
-    }
-
-    final spreadTime = await _calculateSpreadTime(event);
-    if (spreadTime == null) {
-      return Duration.zero;
-    }
-
-    // Calculate spread pay: anything over 10 hours
-    const tenHours = Duration(hours: 10);
-    if (spreadTime > tenHours) {
-      return spreadTime - tenHours;
-    }
-
-    return Duration.zero;
+    return SpreadPay.overThreshold(await _calculateSpreadTime(event));
   }
 
   Future<Duration?> _calculateSpreadTime(Event event) async {
-    final shiftCode = event.title;
+    final shiftCode = event.title.replaceAll('Shift: ', '').trim();
 
     try {
-      // Handle different shift types similar to _calculateWorkTime
       bool isBusCheck = false;
-      bool isUniShift = false;
       String fileName = '';
       String zoneNumber = '1';
-      String dayOfWeek = '';
+      final dayOfWeek = await _getDayOfWeek(event.startDate);
 
-      // BusCheck shifts
-      if (shiftCode.startsWith('BC')) {
+      if (shiftCode.startsWith('BC') || shiftCode.startsWith('BusCheck')) {
         isBusCheck = true;
         fileName = 'buscheck.csv';
-      }
-      // UNI shifts (identified by pattern like 307/01, 807/90, etc.)
-      else if (RegExp(r'^\d+/').firstMatch(shiftCode) != null) {
-        isUniShift = true;
-        // For UNI shifts, we calculate spread from start to finish time
-        return await _calculateUniSpreadTime(shiftCode);
-      }
-      // PZ shifts
-      else {
+      } else if (RegExp(r'^\d+/').firstMatch(shiftCode) != null) {
+        return await _calculateUniSpreadTime(shiftCode, dayOfWeek);
+      } else {
         final match = RegExp(r'PZ(\d+)/').firstMatch(shiftCode);
         if (match != null) {
           zoneNumber = match.group(1) ?? '1';
@@ -2079,7 +2027,7 @@ class StatisticsScreenState extends State<StatisticsScreen>
         fileName = RosterService.getShiftFilename(zoneNumber, dayOfWeek, event.startDate);
       }
 
-      if (fileName.isEmpty && !isUniShift) {
+      if (fileName.isEmpty) {
         return null;
       }
 

@@ -31,8 +31,8 @@ class CalendarDayAppearance {
 
 /// Resolves day-cell colours and badge flags from calendar day state.
 ///
-/// Colour priority matches the previous CalendarScreen implementation:
-/// sick → rest-on-holiday → day-in-lieu → unpaid → holiday → WFO → workout → shift.
+/// Colour priority: per-day override → sick → rest-on-holiday → day-in-lieu →
+/// unpaid → holiday → WFO → workout → shift.
 CalendarDayAppearance resolveCalendarDayAppearance({
   required DateTime date,
   required List<Event> events,
@@ -51,6 +51,7 @@ CalendarDayAppearance resolveCalendarDayAppearance({
   required Color schemePrimaryColor,
   Color holidayColor = AppTheme.holidayColor,
   Color unpaidLeaveColor = Colors.purple,
+  Color? colorOverride,
 }) {
   final hasEvents = events.isNotEmpty;
   final isHoliday = holidays.any((h) => h.containsDate(date));
@@ -96,7 +97,10 @@ CalendarDayAppearance resolveCalendarDayAppearance({
   final Color? backgroundColor;
   final Color cellColor;
 
-  if (hasSickDay && resolvedSickColor != null) {
+  if (colorOverride != null) {
+    backgroundColor = colorOverride.withValues(alpha: 0.3);
+    cellColor = colorOverride;
+  } else if (hasSickDay && resolvedSickColor != null) {
     backgroundColor = resolvedSickColor.withValues(alpha: 0.3);
     cellColor = resolvedSickColor;
   } else if (useRestDayColorForHoliday) {
@@ -133,5 +137,27 @@ CalendarDayAppearance resolveCalendarDayAppearance({
     hasNotes: hasNotes,
     hasBankHolidayRedundant: hasBankHolidayRedundant,
     isBankHoliday: isBankHoliday,
+  );
+}
+
+/// Week-view day-card accent: custom colour wins, then rest-day colour.
+Color? resolveWeekDayAccent({
+  required Color? colorOverride,
+  required bool isRosteredRestDay,
+  required Color? restDayColor,
+}) {
+  if (colorOverride != null) return colorOverride;
+  if (isRosteredRestDay) return restDayColor;
+  return null;
+}
+
+/// Year-view fill and event-dot colours when a custom day colour is set.
+({Color cellColor, Color eventDotColor})? yearViewColorOverride(
+  Color? colorOverride,
+) {
+  if (colorOverride == null) return null;
+  return (
+    cellColor: colorOverride.withValues(alpha: 0.3),
+    eventDotColor: colorOverride,
   );
 }

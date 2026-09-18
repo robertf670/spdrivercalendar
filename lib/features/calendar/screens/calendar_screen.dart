@@ -22,7 +22,9 @@ import 'package:spdrivercalendar/services/bus_tracking_service.dart';
 import 'package:spdrivercalendar/features/calendar/dialogs/event_duty_notes_dialog.dart';
 import 'package:spdrivercalendar/features/calendar/dialogs/universal_board_dialog.dart';
 import 'package:spdrivercalendar/features/calendar/dialogs/day_notes_dialog.dart';
+import 'package:spdrivercalendar/features/calendar/dialogs/day_color_dialog.dart';
 import 'package:spdrivercalendar/features/calendar/dialogs/sick_day_status_dialog.dart';
+import 'package:spdrivercalendar/features/calendar/dialogs/self_certified_limit_dialog.dart';
 import 'package:spdrivercalendar/features/calendar/dialogs/overtime_selection_dialog.dart';
 import 'package:spdrivercalendar/features/calendar/dialogs/late_finish_selection_dialog.dart';
 import 'package:spdrivercalendar/features/calendar/dialogs/break_status_dialog.dart';
@@ -91,6 +93,7 @@ import 'package:spdrivercalendar/services/color_customization_service.dart';
 import '../../../models/universal_board.dart';
 import '../../../services/days_in_lieu_service.dart';
 import '../../../services/day_note_service.dart';
+import '../../../services/day_color_service.dart';
 import '../../../services/bank_holiday_redundant_day_service.dart';
 import '../dialogs/days_in_lieu_setup_dialog.dart';
 import '../dialogs/annual_leave_setup_dialog.dart';
@@ -243,6 +246,9 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
 
     // Load day notes and bank-holiday redundant (day-only) flags
     DayNoteService.loadDayNotes().then((_) {
+      if (mounted) setState(() {});
+    });
+    DayColorService.load().then((_) {
       if (mounted) setState(() {});
     });
     BankHolidayRedundantDayService.load().then((_) {
@@ -1154,6 +1160,40 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
     );
   }
 
+  Future<void> _showDayColorSheet(DateTime date) async {
+    final result = await DayColorDialog.show(
+      context,
+      date: date,
+      currentOverride: DayColorService.colorForDate(date),
+      initialColor: resolveCalendarDayAppearance(
+        date: date,
+        events: getEventsForDay(date),
+        rosterShift: _startDate != null ? getShiftForDate(date) : '',
+        shiftInfoMap: _shiftInfoMap,
+        holidays: _holidays,
+        highlightWorkoutDays: _highlightWorkoutDays,
+        workoutDates: _workoutDates,
+        hasDayNote: DayNoteService.hasNoteForDate(date),
+        isBankHoliday: getBankHoliday(date) != null,
+        isBankHolidayRedundantMarked:
+            BankHolidayRedundantDayService.isMarked(date),
+        dayInLieuColor: ColorCustomizationService.getColorForShift('DAY_IN_LIEU'),
+        workoutColor: ColorCustomizationService.getColorForShift('WORKOUT'),
+        sickDayColor: ColorCustomizationService.getColorForSickType,
+        themePrimaryColor: Theme.of(context).primaryColor,
+        schemePrimaryColor: Theme.of(context).colorScheme.primary,
+        holidayColor: holidayColor,
+      ).cellColor,
+    );
+    if (result == null) return;
+    if (result.reset) {
+      await DayColorService.clearColor(date);
+    } else if (result.color != null) {
+      await DayColorService.setColor(date, result.color!);
+    }
+    if (mounted) setState(() {});
+  }
+
   Future<void> _applyBreakStatusChange(
     BuildContext dialogContext,
     Event event, {
@@ -1359,42 +1399,14 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
 
     if (check.decision == SelfCertifiedSickDayDecision.limitReached) {
       if (!dialogContext.mounted) return;
-      await showDialog<void>(
-        context: dialogContext,
-        builder: (context) => AlertDialog(
-          title: const Row(
-            children: [
-              Icon(Icons.warning_amber_rounded, color: Colors.orange),
-              SizedBox(width: 8),
-              Expanded(
-                child: Text('Self-Certified Limit Reached'),
-              ),
-            ],
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(check.warningMessage ?? ''),
-              const SizedBox(height: 16),
-              const Text(
-                'Current usage:',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              Text('${check.halfYearName}: ${check.halfYearCount}/2'),
-              Text('Year total: ${check.yearlyCount}/4'),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('OK'),
-            ),
-          ],
-        ),
+      final addAnyway = await SelfCertifiedLimitDialog.confirm(
+        dialogContext,
+        warningMessage: check.warningMessage ?? '',
+        halfYearName: check.halfYearName,
+        halfYearCount: check.halfYearCount ?? 0,
+        yearlyCount: check.yearlyCount ?? 0,
       );
-      return;
+      if (!addAnyway) return;
     }
 
     await _eventStatusUpdateService.applySickDayType(event, 'self-certified');
@@ -1542,6 +1554,16 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
           );
         }
       },
+      onDayLongPressed: (selectedDay, focusedDay) async {
+        if (mounted) {
+          _calendarController.selectDay(
+            selectedDay,
+            focusedDay: focusedDay,
+          );
+        }
+        if (!mounted) return;
+        await _showDayColorSheet(selectedDay);
+      },
       onPageChanged: _onPageChanged,
       eventLoader: (day) => getEventsForDay(day),
       dayBuilder: (
@@ -1592,6 +1614,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
       themePrimaryColor: Theme.of(context).primaryColor,
       schemePrimaryColor: Theme.of(context).colorScheme.primary,
       holidayColor: holidayColor,
+      colorOverride: DayColorService.colorForDate(date),
     );
 
     return CalendarDayCell(
@@ -1656,6 +1679,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
       hasDayNote: DayNoteService.hasNoteForDate(selectedDate),
       showBankHolidayRedundant: showRedundant,
       onShowDayNotes: () => _showDayNotesDialog(selectedDate),
+      colorOverride: DayColorService.colorForDate(selectedDate),
     );
   }
 
@@ -2074,6 +2098,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
       bankHolidays: _bankHolidays,
       markedInEnabled: _markedInEnabled,
       markedInStatus: _markedInStatus,
+      initialMonth: _focusedDay.month,
     );
 
     if (selectedMonth != null && mounted) {

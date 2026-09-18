@@ -2,11 +2,12 @@ import 'package:flutter/material.dart';
 
 class AppConstants {
   static const String appName = 'Spare Driver Shift Calendar';
-  static const String appVersion = '4.1.2';
+  static const String appVersion = '4.2.0';
   
   // Storage Keys
   static const String eventsStorageKey = 'events';
   static const String dayNotesStorageKey = 'day_notes';
+  static const String dayColorsStorageKey = 'day_colors';
   static const String startDateKey = 'startDate';
   static const String startWeekKey = 'startWeek';
   static const String endDateKey = 'endDate';

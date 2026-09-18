@@ -41,6 +41,7 @@ class DayDetailSection extends StatelessWidget {
     this.bankHoliday,
     this.hasDayNote = false,
     this.showBankHolidayRedundant = false,
+    this.colorOverride,
   });
 
   final DateTime selectedDate;
@@ -57,6 +58,7 @@ class DayDetailSection extends StatelessWidget {
   final bool hasDayNote;
   final bool showBankHolidayRedundant;
   final VoidCallback onShowDayNotes;
+  final Color? colorOverride;
 
   @override
   Widget build(BuildContext context) {
@@ -85,6 +87,7 @@ class DayDetailSection extends StatelessWidget {
               hasDayNote: hasDayNote,
               onShowDayNotes: onShowDayNotes,
               showBankHolidayRedundant: showBankHolidayRedundant,
+              colorOverride: colorOverride,
             ),
           ),
         Padding(
@@ -148,6 +151,7 @@ class DayDetailSection extends StatelessWidget {
                         onBusAssignmentUpdate: onBusAssignmentUpdate,
                         highlightWorkoutDays: highlightWorkoutDays,
                         isWorkoutDay: item.isWorkoutDay,
+                        colorOverride: colorOverride,
                       ),
                   ],
                 ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:spdrivercalendar/core/widgets/correction_note.dart';
 import 'package:spdrivercalendar/features/bills/models/bill_duty.dart';
 import 'package:spdrivercalendar/features/bills/services/bills_csv_service.dart';
 import 'package:spdrivercalendar/features/bills/services/board_lookup.dart';
@@ -244,6 +245,10 @@ class BillsScreenState extends State<BillsScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              const CorrectionNote(
+                pageLabel: 'the bills & boards page',
+                padding: EdgeInsets.only(bottom: 8),
+              ),
               _buildFilterCard(context, sizes),
               SizedBox(height: sizes['gap']!),
               Expanded(child: _buildBody()),

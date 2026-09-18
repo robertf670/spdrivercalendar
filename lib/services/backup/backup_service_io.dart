@@ -12,6 +12,7 @@ import 'package:spdrivercalendar/services/backup/backup_models.dart';
 import 'package:spdrivercalendar/services/color_customization_service.dart';
 import 'package:spdrivercalendar/services/bank_holiday_redundant_day_service.dart';
 import 'package:spdrivercalendar/services/day_note_service.dart';
+import 'package:spdrivercalendar/services/day_color_service.dart';
 
 class BackupService {
   static const String _autoBackupDirName = 'autobackups';
@@ -20,6 +21,7 @@ class BackupService {
   static final List<String> _backupKeys = [
     AppConstants.eventsStorageKey,
     AppConstants.dayNotesStorageKey,
+    AppConstants.dayColorsStorageKey,
     'holidays',
     AppConstants.startDateKey,
     AppConstants.startWeekKey,
@@ -205,6 +207,7 @@ class BackupService {
             // Some tools decode the inner "events" / holidays payload as a Map. Storage expects a string.
             if (key == AppConstants.eventsStorageKey ||
                 key == AppConstants.dayNotesStorageKey ||
+                key == AppConstants.dayColorsStorageKey ||
                 key == 'holidays') {
               await prefs.setString(key, jsonEncode(value));
               restoredCount++;
@@ -235,6 +238,7 @@ class BackupService {
 
     if (restoredCount > 0) {
       DayNoteService.invalidateCache();
+      DayColorService.invalidateCache();
       BankHolidayRedundantDayService.invalidateCache();
       return true;
     }

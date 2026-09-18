@@ -14,6 +14,8 @@ class ShiftDetailsCard extends StatelessWidget {
   final VoidCallback onShowDayNotes;
   /// True when this bank holiday is marked redundant (day off), with or without a work shift in the app.
   final bool showBankHolidayRedundant;
+  /// Per-day colour override; when set, the summary uses it instead of the roster colour.
+  final Color? colorOverride;
 
   const ShiftDetailsCard({
     super.key,
@@ -24,12 +26,14 @@ class ShiftDetailsCard extends StatelessWidget {
     required this.hasDayNote,
     required this.onShowDayNotes,
     this.showBankHolidayRedundant = false,
+    this.colorOverride,
   });
 
   @override
   Widget build(BuildContext context) {
     final shiftInfo = shiftInfoMap[shift];
     final isBankHoliday = bankHoliday != null;
+    final accentColor = colorOverride ?? shiftInfo?.color ?? Colors.blue;
     
     // Determine if it's a Saturday or Saturday service date
     final isSaturday = RosterService.isSaturdayService(date) || date.weekday == DateTime.saturday;
@@ -64,7 +68,7 @@ class ShiftDetailsCard extends StatelessWidget {
                       ? (Theme.of(context).brightness == Brightness.dark
                           ? Colors.white.withValues(alpha: 0.9)
                           : Colors.black.withValues(alpha: 0.8))
-                      : (shiftInfo?.color ?? Colors.blue).withValues(alpha: 0.6),
+                      : accentColor.withValues(alpha: 0.6),
                 ),
                 if (hasDayNote)
                   Positioned(
@@ -89,10 +93,10 @@ class ShiftDetailsCard extends StatelessWidget {
     Widget shiftIconBlock() => Container(
           padding: const EdgeInsets.all(6),
           decoration: BoxDecoration(
-            color: shiftInfo?.color.withValues(alpha: 0.2) ?? Colors.blue.withValues(alpha: 0.2),
+            color: accentColor.withValues(alpha: 0.2),
             borderRadius: BorderRadius.circular(AppTheme.borderRadius / 2),
           ),
-          child: Icon(Icons.work, color: shiftInfo?.color, size: 20),
+          child: Icon(Icons.work, color: accentColor, size: 20),
         );
 
     Widget titleBlock() => Column(
@@ -199,7 +203,7 @@ class ShiftDetailsCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(AppTheme.borderRadius),
           gradient: LinearGradient(
             colors: [
-              shiftInfo?.color.withValues(alpha: 0.2) ?? Colors.blue.withValues(alpha: 0.2),
+              accentColor.withValues(alpha: 0.2),
               Colors.transparent,
             ],
             stops: const [0.3, 1.0],

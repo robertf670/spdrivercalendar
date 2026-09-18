@@ -8,6 +8,8 @@ import 'package:spdrivercalendar/models/bank_holiday.dart';
 import 'package:spdrivercalendar/theme/app_theme.dart';
 import 'package:spdrivercalendar/core/services/storage_service.dart';
 import 'package:spdrivercalendar/core/constants/app_constants.dart';
+import 'package:spdrivercalendar/features/calendar/utils/calendar_day_appearance.dart';
+import 'package:spdrivercalendar/services/day_color_service.dart';
 import 'package:spdrivercalendar/services/rest_day_swap_service.dart';
 
 class WeekViewScreen extends StatefulWidget {
@@ -42,6 +44,9 @@ class WeekViewScreenState extends State<WeekViewScreen> {
     _calculateWeekStart();
     _generateWeekDays();
     _loadMarkedInSettings();
+    DayColorService.load().then((_) {
+      if (mounted) setState(() {});
+    });
   }
 
   Future<void> _loadMarkedInSettings() async {
@@ -290,24 +295,26 @@ class WeekViewScreenState extends State<WeekViewScreen> {
     // Get the actual roster shift type for this date (respecting M-F)
     final rosterShiftType = _getShiftForDate(day);
     final isRosteredRestDay = rosterShiftType == 'R';
-    
-    // Get rest day color for visual distinction
-    final restDayColor = widget.shiftInfoMap['R']?.color;
+    final accent = resolveWeekDayAccent(
+      colorOverride: DayColorService.colorForDate(day),
+      isRosteredRestDay: isRosteredRestDay,
+      restDayColor: widget.shiftInfoMap['R']?.color,
+    );
+    final hasAccent = accent != null;
     
     return Container(
       decoration: BoxDecoration(
-        // Use tinted background for rest days to make them stand out
-        color: isRosteredRestDay && restDayColor != null
-            ? restDayColor.withValues(alpha: 0.15)
+        color: hasAccent
+            ? accent.withValues(alpha: 0.15)
             : Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: _isToday(day) 
             ? AppTheme.primaryColor 
-            : isRosteredRestDay && restDayColor != null
-              ? restDayColor.withValues(alpha: 0.5)
+            : hasAccent
+              ? accent.withValues(alpha: 0.5)
               : Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
-          width: _isToday(day) ? 4 : isRosteredRestDay ? 2 : 1,
+          width: _isToday(day) ? 4 : hasAccent ? 2 : 1,
         ),
         boxShadow: [
           BoxShadow(
@@ -330,8 +337,8 @@ class WeekViewScreenState extends State<WeekViewScreen> {
             decoration: BoxDecoration(
               color: _isToday(day) 
                 ? AppTheme.primaryColor.withValues(alpha: 0.1)
-                : isRosteredRestDay && restDayColor != null
-                  ? restDayColor.withValues(alpha: 0.25)
+                : hasAccent
+                  ? accent.withValues(alpha: 0.25)
                   : Theme.of(context).colorScheme.surfaceContainerLow,
               borderRadius: const BorderRadius.vertical(top: Radius.circular(11)),
             ),
@@ -411,7 +418,9 @@ class WeekViewScreenState extends State<WeekViewScreen> {
                         mainAxisAlignment: MainAxisAlignment.start,
                         children: [
                           // Work events - stack vertically, no Expanded wrapper
-                          ...workEvents.take(3).map((event) => _buildDayDutyItem(event)),
+                          ...workEvents.take(3).map(
+                            (event) => _buildDayDutyItem(event, accent: accent),
+                          ),
                           if (workEvents.length > 3)
                             Padding(
                               padding: EdgeInsets.only(top: sizes['dutyCardMargin']!),
@@ -448,12 +457,12 @@ class WeekViewScreenState extends State<WeekViewScreen> {
                                     horizontal: sizes['dutyCardPadding']! * 0.5,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: isRosteredRestDay && restDayColor != null
-                                        ? restDayColor.withValues(alpha: 0.2)
+                                    color: hasAccent
+                                        ? accent.withValues(alpha: 0.2)
                                         : Theme.of(context).colorScheme.surfaceContainerLow,
                                     borderRadius: BorderRadius.circular(8),
-                                    border: isRosteredRestDay && restDayColor != null
-                                        ? Border.all(color: restDayColor.withValues(alpha: 0.4), width: 1.5)
+                                    border: hasAccent
+                                        ? Border.all(color: accent.withValues(alpha: 0.4), width: 1.5)
                                         : null,
                                   ),
                                   child: Column(
@@ -463,8 +472,8 @@ class WeekViewScreenState extends State<WeekViewScreen> {
                                       Icon(
                                         isRosteredRestDay ? Icons.free_breakfast : Icons.info_outline,
                                         size: sizes['moreText']! * 3,
-                                        color: isRosteredRestDay && restDayColor != null
-                                            ? restDayColor
+                                        color: hasAccent
+                                            ? accent
                                             : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
                                       ),
                                       SizedBox(height: sizes['dutyCardMargin']!),
@@ -473,8 +482,8 @@ class WeekViewScreenState extends State<WeekViewScreen> {
                                         style: TextStyle(
                                           fontSize: sizes['moreText']!,
                                           fontWeight: isRosteredRestDay ? FontWeight.w600 : FontWeight.normal,
-                                          color: isRosteredRestDay && restDayColor != null
-                                              ? restDayColor
+                                          color: hasAccent
+                                              ? accent
                                               : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                                           fontStyle: isRosteredRestDay ? FontStyle.normal : FontStyle.italic,
                                         ),
@@ -498,9 +507,10 @@ class WeekViewScreenState extends State<WeekViewScreen> {
     );
   }
 
-  Widget _buildDayDutyItem(Event event) {
+  Widget _buildDayDutyItem(Event event, {Color? accent}) {
     final hasBreaks = event.breakStartTime != null && event.breakEndTime != null;
     final sizes = _getResponsiveSizes(context);
+    final itemColor = accent ?? AppTheme.primaryColor;
     
     return SizedBox(
       width: double.infinity,
@@ -514,9 +524,9 @@ class WeekViewScreenState extends State<WeekViewScreen> {
           bottom: sizes['dutyCardMargin']! * 0.5,
         ),
       decoration: BoxDecoration(
-        color: AppTheme.primaryColor.withValues(alpha: 0.08),
+        color: itemColor.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: AppTheme.primaryColor.withValues(alpha: 0.3), width: 1),
+        border: Border.all(color: itemColor.withValues(alpha: 0.3), width: 1),
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -528,7 +538,7 @@ class WeekViewScreenState extends State<WeekViewScreen> {
             style: TextStyle(
               fontSize: sizes['dutyTitle']!,
               fontWeight: FontWeight.w600,
-              color: AppTheme.primaryColor,
+              color: itemColor,
             ),
             textAlign: TextAlign.center,
             maxLines: 1,
@@ -621,7 +631,7 @@ class WeekViewScreenState extends State<WeekViewScreen> {
                 vertical: sizes['dutyCardMargin']! * 0.3,
               ),
               decoration: BoxDecoration(
-                color: AppTheme.primaryColor.withValues(alpha: 0.15),
+                color: itemColor.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
@@ -629,7 +639,7 @@ class WeekViewScreenState extends State<WeekViewScreen> {
                 style: TextStyle(
                   fontSize: sizes['workDuration']!,
                   fontWeight: FontWeight.w500,
-                  color: AppTheme.primaryColor,
+                  color: itemColor,
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,

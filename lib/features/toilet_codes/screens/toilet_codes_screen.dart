@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:spdrivercalendar/core/widgets/correction_note.dart';
 import 'package:spdrivercalendar/services/toilet_codes_service.dart';
 import 'package:spdrivercalendar/theme/app_theme.dart';
 
@@ -27,7 +28,18 @@ class ToiletCodesScreen extends StatelessWidget {
         title: const Text('Toilet Codes'),
         elevation: 0,
       ),
-      body: StreamBuilder<List<ToiletCodeEntry>>(
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: EdgeInsets.fromLTRB(padding, padding, padding, 0),
+            child: const CorrectionNote(
+              pageLabel: 'the toilet codes page',
+              padding: EdgeInsets.only(bottom: 8),
+            ),
+          ),
+          Expanded(
+            child: StreamBuilder<List<ToiletCodeEntry>>(
         stream: ToiletCodesService.getEntriesStream(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -173,6 +185,9 @@ class ToiletCodesScreen extends StatelessWidget {
             ),
           );
         },
+            ),
+          ),
+        ],
       ),
     );
   }

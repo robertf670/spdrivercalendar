@@ -18,10 +18,12 @@ import 'package:spdrivercalendar/services/color_customization_service.dart';
 import 'package:spdrivercalendar/core/services/storage_service.dart';
 import 'package:spdrivercalendar/core/constants/app_constants.dart';
 import 'package:spdrivercalendar/services/self_certified_sick_days_service.dart';
+import 'package:spdrivercalendar/features/calendar/dialogs/self_certified_limit_dialog.dart';
 import 'package:spdrivercalendar/services/donnybrook_feature_service.dart';
 import 'package:spdrivercalendar/services/jamestown_feature_service.dart';
 import 'package:spdrivercalendar/features/calendar/utils/shift_rest_gap.dart';
 import 'package:spdrivercalendar/features/calendar/utils/work_duration_display.dart';
+import 'package:spdrivercalendar/features/calendar/widgets/assigned_duty_board_button.dart';
 
 class EventCard extends StatefulWidget {
   final Event event;
@@ -36,6 +38,8 @@ class EventCard extends StatefulWidget {
   final bool isWorkoutDay;
   /// Only use workout color when this is true (matches Settings toggle).
   final bool highlightWorkoutDays;
+  /// Per-day colour override; when set, the card fill matches the calendar cell.
+  final Color? colorOverride;
 
   const EventCard({
     super.key,
@@ -49,6 +53,7 @@ class EventCard extends StatefulWidget {
     this.onBusAssignmentUpdate,
     this.isWorkoutDay = false,
     this.highlightWorkoutDays = false,
+    this.colorOverride,
   });
 
   @override
@@ -1691,9 +1696,12 @@ class _EventCardState extends State<EventCard> {
 
       // Use theme-aware colors: light mode = light tint + dark text; dark mode = muted tint to match calendar cells
       final isDark = Theme.of(context).brightness == Brightness.dark;
-      final Color cardBgColor = isDark
+      Color cardBgColor = isDark
           ? (holidayColor.shade500).withValues(alpha: 0.15)
           : (holidayColor[100] ?? holidayColor.shade100);
+      if (widget.colorOverride != null) {
+        cardBgColor = widget.colorOverride!.withValues(alpha: isDark ? 0.2 : 0.25);
+      }
       final textColor = isDark
           ? Theme.of(context).colorScheme.onSurface
           : holidayColor[700];
@@ -1850,6 +1858,12 @@ class _EventCardState extends State<EventCard> {
       } else {
         cardColor = sickDayColor.withValues(alpha: 0.08);
       }
+    }
+
+    if (widget.colorOverride != null) {
+      cardColor = widget.colorOverride!.withValues(
+        alpha: Theme.of(context).brightness == Brightness.dark ? 0.25 : 0.3,
+      );
     }
 
     // Inline "Work:" next to the title when there is room. Many phones are ~360 logical px wide;
@@ -3405,6 +3419,11 @@ class _EventCardState extends State<EventCard> {
                             fontWeight: FontWeight.w500,
                           ),
                         ),
+                      ),
+                      AssignedDutyBoardButton(
+                        dutyCode: duty['dutyCode'] as String,
+                        date: widget.event.startDate,
+                        compact: MediaQuery.sizeOf(context).width < 450,
                       ),
                              IconButton(
                         onPressed: () async {
@@ -5143,66 +5162,32 @@ class _EventCardState extends State<EventCard> {
               }
 
               // Get year and half-year info
-              final year = widget.event.startDate.year;
+              final year = SelfCertifiedSickDaysService.bonusYearFor(widget.event.startDate);
               final halfYear = SelfCertifiedSickDaysService.getHalfYear(widget.event.startDate);
-              final halfYearName = halfYear == 'first' ? 'First Half (Jan-Jun)' : 'Second Half (Jul-Dec)';
+              final halfYearName = SelfCertifiedSickDaysService.halfYearName(halfYear);
               
               // Check limits before allowing self-certified
               final canAddHalfYear = await SelfCertifiedSickDaysService.canAddSelfCertifiedDay(widget.event.startDate);
               final canAddYearly = await SelfCertifiedSickDaysService.canAddSelfCertifiedDayYearly(widget.event.startDate);
               
               if (!canAddHalfYear || !canAddYearly) {
-                // Show warning dialog
                 final halfYearCount = await SelfCertifiedSickDaysService.getCountForHalfYear(year, halfYear);
                 final yearlyCount = await SelfCertifiedSickDaysService.getCountForYear(year);
-                
-                String warningMessage;
-                if (!canAddHalfYear && !canAddYearly) {
-                  warningMessage = 'You have already used your limit of 2 self-certified days in the $halfYearName and 4 for the year. You cannot add more self-certified days.';
-                } else if (!canAddHalfYear) {
-                  warningMessage = 'You have already used your limit of 2 self-certified days in the $halfYearName. You cannot add more self-certified days for this half-year.';
-                } else {
-                  warningMessage = 'You have already used your limit of 4 self-certified days for the year. You cannot add more self-certified days.';
-                }
-                
-                if (context.mounted) {
-                  showDialog(
-                    context: context,
-                    builder: (context) => AlertDialog(
-                      title: const Row(
-                        children: [
-                          Icon(Icons.warning_amber_rounded, color: Colors.orange),
-                          SizedBox(width: 8),
-                          Expanded(
-                            child: Text('Self-Certified Limit Reached'),
-                          ),
-                        ],
-                      ),
-                      content: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(warningMessage),
-                          const SizedBox(height: 16),
-                          const Text(
-                            'Current usage:',
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          const SizedBox(height: 8),
-                          Text('$halfYearName: $halfYearCount/2'),
-                          Text('Year total: $yearlyCount/4'),
-                        ],
-                      ),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.of(context).pop(),
-                          child: const Text('OK'),
-                        ),
-                      ],
-                    ),
-                  );
-                }
-                return;
+                final warningMessage = SelfCertifiedSickDaysService.limitWarningMessage(
+                  halfYearName: halfYearName,
+                  halfYearReached: !canAddHalfYear,
+                  yearReached: !canAddYearly,
+                );
+
+                if (!context.mounted) return;
+                final addAnyway = await SelfCertifiedLimitDialog.confirm(
+                  context,
+                  warningMessage: warningMessage,
+                  halfYearName: halfYearName,
+                  halfYearCount: halfYearCount,
+                  yearlyCount: yearlyCount,
+                );
+                if (!addAnyway) return;
               }
               
               // Save the old event for update
@@ -6051,6 +6036,10 @@ class _EventCardState extends State<EventCard> {
                             fontSize: 14,
                             color: Theme.of(context).textTheme.bodyMedium?.color,
                           ),
+                        ),
+                        AssignedDutyBoardButton(
+                          dutyCode: dutyCode,
+                          date: widget.event.startDate,
                         ),
                       ],
                     ),

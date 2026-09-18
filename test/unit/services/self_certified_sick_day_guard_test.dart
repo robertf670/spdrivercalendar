@@ -14,7 +14,7 @@ void main() {
     );
 
     expect(result.decision, SelfCertifiedSickDayDecision.alreadySelected);
-    expect(result.halfYearName, 'First Half (Jan-Jun)');
+    expect(result.halfYearName, 'November–April');
   });
 
   test('half-year limit builds warning', () async {
@@ -31,7 +31,7 @@ void main() {
     );
 
     expect(result.decision, SelfCertifiedSickDayDecision.limitReached);
-    expect(result.warningMessage, contains('Second Half (Jul-Dec)'));
+    expect(result.warningMessage, 'You have already used 2 self-certified days in May–October.');
     expect(result.halfYearCount, 2);
     expect(result.yearlyCount, 2);
   });

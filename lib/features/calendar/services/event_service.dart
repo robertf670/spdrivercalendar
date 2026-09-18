@@ -22,6 +22,7 @@ class EventService {
   
   // Track which months have been populated to avoid redundant calls
   static final Set<String> _populatedMonths = {};
+  static final Set<String> _recoveryAttemptedMonths = {};
   
   // ADD STATIC GETTER for all loaded events - FIXED: Convert to string keys
   static Map<String, List<Event>> get allLoadedEvents => Map.unmodifiable(_events);
@@ -285,9 +286,13 @@ class EventService {
     
     // _logError('getEventsForDay', 'Returning ${finalEvents.length} events for ${normalizedDate.toIso8601String()}');
     
-    // If we still don't have events but the month is cached, check for recovery
-    if (finalEvents.isEmpty && _monthlyCache.containsKey(monthKey)) {
-      // Perform recovery check asynchronously to not block the UI
+    // Empty days are normal. Recover at most once per month, and never after
+    // the month has already been populated from cache (Year View used to
+    // trigger hundreds of full JSON re-parses on open).
+    if (finalEvents.isEmpty &&
+        _monthlyCache.containsKey(monthKey) &&
+        !_populatedMonths.contains(monthKey) &&
+        _recoveryAttemptedMonths.add(monthKey)) {
       _detectAndRecoverMissingEvents(day).then((recovered) {
         if (recovered) {
           _logError('getEventsForDay', 'Recovery successful for ${normalizedDate.toIso8601String()}');
@@ -611,6 +616,7 @@ class EventService {
       // Also remove from populated months tracking
       if (shouldRemove) {
         _populatedMonths.remove(key);
+        _recoveryAttemptedMonths.remove(key);
       }
       
       return shouldRemove;
@@ -628,6 +634,7 @@ class EventService {
     
     // Remove from populated months tracking
     _populatedMonths.remove(monthKey);
+    _recoveryAttemptedMonths.remove(monthKey);
     
           // Clear events for this month from _events cache
       _events.removeWhere((key, _) {
@@ -1309,6 +1316,7 @@ class EventService {
       _events.clear();
       _monthlyCache.clear();
       _populatedMonths.clear();
+      _recoveryAttemptedMonths.clear();
       _lastLoadedMonth = null;
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(AppConstants.eventsStorageKey, '{}');
@@ -1508,6 +1516,7 @@ class EventService {
     _events = {};
     _monthlyCache = {};
     _populatedMonths.clear();
+    _recoveryAttemptedMonths.clear();
     _lastLoadedMonth = null;
     await initializeService();
   }
@@ -1516,6 +1525,7 @@ class EventService {
     _events = {}; // Clear existing in-memory events for a fresh load
     _monthlyCache = {}; // Clear monthly cache as well
     _populatedMonths.clear();
+    _recoveryAttemptedMonths.clear();
     _lastLoadedMonth = null;
 
     final prefs = await SharedPreferences.getInstance();

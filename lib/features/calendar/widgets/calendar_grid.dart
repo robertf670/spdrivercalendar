@@ -23,6 +23,7 @@ class CalendarGrid extends StatelessWidget {
     required this.onNextMonth,
     required this.onShowYear,
     required this.onDaySelected,
+    this.onDayLongPressed,
     required this.onPageChanged,
     required this.eventLoader,
     required this.dayBuilder,
@@ -36,6 +37,8 @@ class CalendarGrid extends StatelessWidget {
   final VoidCallback onShowYear;
   final Future<void> Function(DateTime selectedDay, DateTime focusedDay)
       onDaySelected;
+  final Future<void> Function(DateTime selectedDay, DateTime focusedDay)?
+      onDayLongPressed;
   final ValueChanged<DateTime> onPageChanged;
   final List<Object?> Function(DateTime day) eventLoader;
   final CalendarGridDayBuilder dayBuilder;
@@ -127,6 +130,11 @@ class CalendarGrid extends StatelessWidget {
           onDaySelected: (selected, focused) async {
             await onDaySelected(selected, focused);
           },
+          onDayLongPressed: onDayLongPressed == null
+              ? null
+              : (selected, focused) async {
+                  await onDayLongPressed!(selected, focused);
+                },
           onPageChanged: onPageChanged,
           eventLoader: eventLoader,
           daysOfWeekStyle: DaysOfWeekStyle(
