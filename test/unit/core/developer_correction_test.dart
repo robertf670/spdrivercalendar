@@ -22,6 +22,18 @@ void main() {
     expect(uri.query, contains('App%20correction'));
   });
 
+  test('developerFeedbackUri opens WhatsApp with the typed message', () {
+    final uri = developerFeedbackUri('The rest day colour is wrong.');
+    expect(uri.scheme, 'https');
+    expect(uri.host, 'wa.me');
+    expect(uri.path, '/353892580774');
+    expect(
+      uri.queryParameters['text'],
+      'The rest day colour is wrong.',
+    );
+    expect(uri.scheme, isNot('mailto'));
+  });
+
   testWidgets('correction note has no coloured background', (tester) async {
     await tester.binding.setSurfaceSize(const Size(320, 800));
     addTearDown(() => tester.binding.setSurfaceSize(null));

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:spdrivercalendar/theme/app_theme.dart'; // Assuming AppTheme has colors
-import 'package:url_launcher/url_launcher.dart'; // Import url_launcher
+import 'package:spdrivercalendar/core/utils/developer_correction.dart';
+import 'package:spdrivercalendar/theme/app_theme.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class FeedbackScreen extends StatefulWidget {
   const FeedbackScreen({super.key});
@@ -23,72 +24,47 @@ class FeedbackScreenState extends State<FeedbackScreen> {
 
   Future<void> _submitFeedback() async {
     if (!_formKey.currentState!.validate()) {
-      return; // Don't proceed if validation fails
+      return;
     }
 
-    final feedback = _feedbackController.text;
-    final theme = Theme.of(context); // Capture theme
-    final scaffoldMessenger = ScaffoldMessenger.of(context); // Capture ScaffoldMessenger
-
-    // --- Replace placeholder with url_launcher logic ---
-    const String recipientEmail = 'rob@ixrqq.pro'; // <-- *** REPLACE WITH YOUR EMAIL ***
-    const String subject = 'Spare Driver Calendar App Feedback';
-    final String body = feedback;
-
-    final Uri emailLaunchUri = Uri(
-      scheme: 'mailto',
-      path: recipientEmail,
-      query: _encodeQueryParameters(<String, String>{
-        'subject': subject,
-        'body': body,
-      }),
-    );
+    final feedback = _feedbackController.text.trim();
+    final theme = Theme.of(context);
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    final uri = developerFeedbackUri(feedback);
 
     try {
-      if (await canLaunchUrl(emailLaunchUri)) {
-        await launchUrl(emailLaunchUri);
-        // Optionally show a confirmation that the email client was opened
-        if (mounted) {
-          scaffoldMessenger.showSnackBar(
-            const SnackBar(
-              content: Text('Opening email client to send feedback...'),
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-          _feedbackController.clear(); // Clear the form
-        }
+      final launched = await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
+      );
+      if (!mounted) return;
+      if (launched) {
+        scaffoldMessenger.showSnackBar(
+          const SnackBar(
+            content: Text('Opening WhatsApp to send feedback...'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        _feedbackController.clear();
       } else {
-        // Handle case where mailto links cannot be launched (no email app?)
-        if (mounted) {
-          scaffoldMessenger.showSnackBar(
-            SnackBar(
-              content: const Text('Could not open email client. Please ensure an email app is configured.'),
-              backgroundColor: theme.colorScheme.error,
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-        }
-      }
-    } catch (e) {
-
-      if (mounted) {
         scaffoldMessenger.showSnackBar(
           SnackBar(
-            content: Text('Error opening email client: $e'),
+            content: const Text('Could not open WhatsApp.'),
             backgroundColor: theme.colorScheme.error,
             behavior: SnackBarBehavior.floating,
           ),
         );
       }
+    } catch (e) {
+      if (!mounted) return;
+      scaffoldMessenger.showSnackBar(
+        SnackBar(
+          content: Text('Could not open WhatsApp: $e'),
+          backgroundColor: theme.colorScheme.error,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     }
-  }
-
-  // Helper function to encode URL query parameters
-  String? _encodeQueryParameters(Map<String, String> params) {
-    return params.entries
-        .map((MapEntry<String, String> e) =>
-            '${Uri.encodeComponent(e.key)}=${Uri.encodeComponent(e.value)}')
-        .join('&');
   }
 
   // Responsive sizing helper method
@@ -278,26 +254,22 @@ class FeedbackScreenState extends State<FeedbackScreen> {
                     if (value == null || value.trim().isEmpty) {
                       return 'Please enter your feedback before submitting.';
                     }
-                    if (value.trim().length < 10) {
-                      return 'Please provide a bit more detail (min 10 characters).';
-                    }
                     return null;
                   },
                 ),
                 SizedBox(height: sizes['infoSpacing']!), // Add spacing before the info text
                 Text(
-                  'This feedback will be sent directly to the app creator.',
+                  'This opens WhatsApp to message the app creator.',
                   style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.7), // Muted color
+                    color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.7),
                   ),
                   textAlign: TextAlign.center,
                 ),
-                SizedBox(height: sizes['buttonSpacing']!), // Keep spacing before the button
-                // Update Button: No loading state needed
+                SizedBox(height: sizes['buttonSpacing']!),
                 FilledButton.icon(
-                  onPressed: _submitFeedback, // Directly call the submit function
-                  icon: Icon(Icons.send_rounded, size: sizes['buttonIconSize']!),
-                  label: const Text('Send Feedback via Email'), // Updated label
+                  onPressed: _submitFeedback,
+                  icon: Icon(Icons.chat, size: sizes['buttonIconSize']!),
+                  label: const Text('Send via WhatsApp'),
                   style: FilledButton.styleFrom(
                     padding: EdgeInsets.symmetric(vertical: sizes['buttonPadding']!),
                     // Use primary color from AppTheme if available

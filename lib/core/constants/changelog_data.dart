@@ -30,6 +30,11 @@ final Map<String, List<Map<String, String>>> changelogData = {
       'description':
           'Year View opens on the current month and loads faster.',
     },
+    {
+      'title': 'Feedback - WhatsApp',
+      'description':
+          'Submit Feedback opens WhatsApp instead of email.',
+    },
   ],
   '4.1.2': [
     {
