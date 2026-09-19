@@ -2,8 +2,12 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:spdrivercalendar/core/config/platform_utils.dart';
 import 'package:spdrivercalendar/core/services/storage_service.dart';
 import 'package:spdrivercalendar/services/apk_download_manager.dart';
+
+/// APK download/install is Android-only. Web already reloads via the service worker.
+bool apkUpdatesEnabled({bool? isWeb}) => !(isWeb ?? PlatformUtils.isWeb);
 
 class UpdateInfo {
   final String latestVersion;
@@ -84,6 +88,10 @@ class UpdateService {
   
   /// Check for updates with optional frequency control
   static Future<UpdateInfo?> checkForUpdate({bool forceCheck = false}) async {
+    if (!apkUpdatesEnabled()) {
+      return null;
+    }
+
     try {
       // Check if we should skip update check based on frequency
       if (!forceCheck && !await _shouldCheckForUpdate()) {

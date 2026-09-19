@@ -1,4 +1,11 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '4.2.1': [
+    {
+      'title': 'Web Updates',
+      'description':
+          'The web app no longer asks you to download the Android APK.',
+    },
+  ],
   '4.2.0': [
     {
       'title': 'Spare View Board',
