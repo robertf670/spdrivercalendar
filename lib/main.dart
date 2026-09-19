@@ -1,110 +1,43 @@
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; // Import for SystemChrome
-import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
-import 'package:spdrivercalendar/core/constants/app_constants.dart';
-import 'package:spdrivercalendar/core/services/storage_service.dart';
-import 'package:spdrivercalendar/features/calendar/services/shift_service.dart';
-import 'package:spdrivercalendar/features/calendar/services/roster_service.dart';
-import 'package:spdrivercalendar/features/google/screens/google_login_screen.dart';
-import 'package:spdrivercalendar/features/calendar/screens/calendar_screen.dart';
-import 'package:spdrivercalendar/features/access/screens/access_screen.dart';
-import 'package:spdrivercalendar/features/whatsnew/screens/whats_new_screen.dart';
-import 'package:spdrivercalendar/core/config/platform_utils.dart';
-import 'package:spdrivercalendar/firebase_options.dart';
-import 'package:spdrivercalendar/core/services/web_update_notifier.dart';
-import 'package:spdrivercalendar/theme/app_theme.dart';
-import 'package:spdrivercalendar/google_calendar_service.dart';
-import 'package:spdrivercalendar/services/rest_days_service.dart';
-import 'package:spdrivercalendar/services/rest_day_swap_service.dart';
-import 'package:spdrivercalendar/core/config/flutter_config.dart';
-import 'package:spdrivercalendar/core/widgets/rebuild_text.dart';
-import 'package:spdrivercalendar/services/notification_service.dart';
-import 'package:spdrivercalendar/core/services/cache_service.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:package_info_plus/package_info_plus.dart';
-import 'package:spdrivercalendar/services/backup_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:spdrivercalendar/features/calendar/services/event_service.dart';
+import 'package:spdrivercalendar/core/config/platform_utils.dart';
+import 'package:spdrivercalendar/core/constants/app_constants.dart';
+import 'package:spdrivercalendar/core/services/cache_service.dart';
+import 'package:spdrivercalendar/core/services/storage_service.dart';
+import 'package:spdrivercalendar/core/services/web_update_notifier.dart';
+import 'package:spdrivercalendar/core/startup/app_startup.dart';
+import 'package:spdrivercalendar/core/widgets/rebuild_text.dart';
+import 'package:spdrivercalendar/features/access/screens/access_screen.dart';
+import 'package:spdrivercalendar/features/calendar/screens/calendar_screen.dart';
+import 'package:spdrivercalendar/features/google/screens/google_login_screen.dart';
 import 'package:spdrivercalendar/features/settings/screens/version_history_screen.dart';
-import 'package:spdrivercalendar/services/color_customization_service.dart';
+import 'package:spdrivercalendar/features/whatsnew/screens/whats_new_screen.dart';
+import 'package:spdrivercalendar/services/backup_service.dart';
 import 'package:spdrivercalendar/services/user_activity_service.dart';
-import 'package:intl/date_symbol_data_local.dart';
-import 'dart:convert';
+import 'package:spdrivercalendar/theme/app_theme.dart';
 
-// Global Firebase Analytics instance
-late FirebaseAnalytics analytics;
-late FirebaseAnalyticsObserver observer;
-
-/// Persists bank holiday dates to SharedPreferences for the home screen widget.
-/// The widget reads these to match M-F pattern (bank holidays = Rest for M-F users).
-Future<void> _persistBankHolidaysForWidget() async {
-  try {
-    final holidays = await RosterService.loadBankHolidays();
-    final dateStrings = holidays
-        .map((h) => '${h.date.year.toString().padLeft(4, '0')}-${h.date.month.toString().padLeft(2, '0')}-${h.date.day.toString().padLeft(2, '0')}')
-        .toList();
-    await StorageService.saveString(AppConstants.bankHolidayDatesKey, jsonEncode(dateStrings));
-  } catch (_) {
-    // Ignore - widget will fall back to weekday check only
-  }
-}
+FirebaseAnalytics get analytics => AppStartup.analytics!;
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
-  // Enable edge-to-edge display BEFORE other initializations
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
 
-  // Initialize locale data for table_calendar (required for en_GB and en_US locales)
-  await Future.wait([
-    initializeDateFormatting('en_GB', null),
-    initializeDateFormatting('en_US', null),
-  ]);
-
-  // Initialize cache service first
-  final cacheService = CacheService();
-  
-  // Initialize Firebase (Web needs explicit options; Android uses google-services.json)
-  if (PlatformUtils.isWeb) {
-    await Firebase.initializeApp(options: DefaultFirebaseOptions.web);
-  } else {
-    await Firebase.initializeApp();
+  await AppStartup.essentials();
+  if (!AppStartup.deferHeavyInit()) {
+    await AppStartup.ensureHeavyInit();
   }
 
-  // Initialize Firebase Analytics
-  analytics = FirebaseAnalytics.instance;
-  observer = FirebaseAnalyticsObserver(analytics: analytics);
-  
-  // Run independent initializations in parallel
-  await Future.wait([
-    NotificationService().init(),
-    FlutterConfig.configure(),
-    StorageService.init(),
-    RestDaysService.initialize(),
-    RestDaySwapService.initialize(),
-    GoogleCalendarService.initialize(),
-    ShiftService.initialize(),
-    ColorCustomizationService.initialize(),
-  ]);
-
-  // Initialize EventService AFTER StorageService is ready (as it reads from SharedPreferences)
-  await EventService.initializeService();
-
-  // Persist bank holidays for home screen widget (M-F pattern matching)
-  await _persistBankHolidaysForWidget();
-
-  // Track user activity for analytics (after StorageService is ready)
-  UserActivityService.trackUserActivity();
-
-  // Get initial dark mode setting after StorageService is initialized
-  final isDarkMode = await StorageService.getBool(AppConstants.isDarkModeKey, defaultValue: false);
-  
-  // Cache the dark mode setting
+  final cacheService = CacheService();
+  final isDarkMode = await StorageService.getBool(
+    AppConstants.isDarkModeKey,
+    defaultValue: false,
+  );
   cacheService.set(AppConstants.isDarkModeKey, isDarkMode);
-  
-  runApp(MyApp(
-    isDarkModeInitial: isDarkMode,
-  ));
+
+  runApp(MyApp(isDarkModeInitial: isDarkMode));
 }
 
 class MyApp extends StatefulWidget {
@@ -133,6 +66,11 @@ class MyAppState extends State<MyApp> with WidgetsBindingObserver {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       initWebUpdateNotifier(_navigatorKey);
     });
+    if (AppStartup.deferHeavyInit()) {
+      AppStartup.ensureHeavyInit().then((_) {
+        if (mounted) setState(() {});
+      }).catchError((_) {});
+    }
   }
 
   @override
@@ -175,7 +113,9 @@ class MyAppState extends State<MyApp> with WidgetsBindingObserver {
             theme: AppTheme.lightTheme(),
             darkTheme: AppTheme.darkTheme(),
             themeMode: isDarkMode ? ThemeMode.dark : ThemeMode.light,
-            navigatorObservers: [observer],
+            navigatorObservers: [
+              if (AppStartup.observer != null) AppStartup.observer!,
+            ],
             initialRoute: AppConstants.splashRoute,
             routes: {
               AppConstants.accessRoute: (context) => AccessScreen(
@@ -246,6 +186,13 @@ class SplashScreenState extends State<SplashScreen> {
         Navigator.of(context).pushReplacementNamed(AppConstants.accessRoute);
         return;
       }
+    }
+
+    if (AppStartup.deferHeavyInit()) {
+      try {
+        await AppStartup.ensureHeavyInit();
+      } catch (_) {}
+      if (!mounted) return;
     }
 
     final shouldShowWhatsNew = await _checkVersionUpdate();

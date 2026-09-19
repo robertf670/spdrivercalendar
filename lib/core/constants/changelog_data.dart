@@ -1,4 +1,11 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '4.2.2': [
+    {
+      'title': 'White Screen Fix',
+      'description':
+          'Stops the long white/black screen on the iPhone home-screen web app while it loads.',
+    },
+  ],
   '4.2.1': [
     {
       'title': 'Web Updates',
