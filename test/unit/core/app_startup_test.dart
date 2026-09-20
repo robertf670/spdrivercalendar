@@ -16,6 +16,12 @@ void main() {
     expect(html, contains('flutter-first-frame'));
   });
 
+  test('web index does not use iOS PWA viewport cover that offsets taps', () {
+    final html = File('web/index.html').readAsStringSync();
+    expect(html, isNot(contains('viewport-fit=cover')));
+    expect(html, isNot(contains('height: 100%')));
+  });
+
   test('web bootstrap does not wait long for the service worker', () {
     final js = File('web/flutter_bootstrap.js').readAsStringSync();
     expect(js, contains('timeoutMillis: 1'));

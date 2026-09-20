@@ -1,4 +1,11 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '4.2.3': [
+    {
+      'title': 'iPhone Taps',
+      'description':
+          'Fixed home-screen web app taps hitting the calendar cell below the one you press.',
+    },
+  ],
   '4.2.2': [
     {
       'title': 'White Screen Fix',
