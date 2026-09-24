@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:spdrivercalendar/features/bills/screens/bills_screen.dart';
-import 'package:spdrivercalendar/features/bills/widgets/bill_duty_card.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

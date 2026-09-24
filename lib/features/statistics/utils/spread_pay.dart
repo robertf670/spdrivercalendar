@@ -9,8 +9,17 @@ class SpreadPay {
     return spreadTime - threshold;
   }
 
+  static String dutyCode(String title) {
+    var code =
+        title.startsWith('Shift: ') ? title.substring(7).trim() : title.trim();
+    if (code.startsWith('UNI:')) {
+      code = code.substring(4);
+    }
+    return code;
+  }
+
   static bool hasNoSpreadPay(String title) {
-    final code = title.startsWith('Shift: ') ? title.substring(7) : title;
+    final code = dutyCode(title);
     return code.startsWith('SP') ||
         code == '22B/01' ||
         code == 'Union' ||

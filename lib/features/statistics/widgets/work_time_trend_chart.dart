@@ -32,7 +32,7 @@ class WorkTimeTrendChart extends StatelessWidget {
     final maxHours = sortedEntries.isEmpty
         ? 0.0
         : sortedEntries
-            .map((e) => e.value.inHours.toDouble())
+            .map((e) => e.value.inMinutes / 60.0)
             .reduce((a, b) => a > b ? a : b);
 
     if (maxHours == 0) {
@@ -155,7 +155,7 @@ class WorkTimeTrendChart extends StatelessWidget {
                     LineChartBarData(
                       spots: sortedEntries.asMap().entries.map((entry) {
                         final index = entry.key;
-                        final hours = entry.value.value.inHours.toDouble();
+                        final hours = entry.value.value.inMinutes / 60.0;
                         return FlSpot(index.toDouble(), hours);
                       }).toList(),
                       isCurved: true,

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:spdrivercalendar/core/constants/app_constants.dart';
 import 'package:spdrivercalendar/core/services/storage_service.dart';
 import 'package:spdrivercalendar/core/widgets/correction_note.dart';
@@ -23,9 +22,6 @@ class PayscaleScreen extends StatefulWidget {
 }
 
 class PayscaleScreenState extends State<PayscaleScreen> {
-  static const String _coreHrUrl =
-      'https://my.corehr.com/pls/coreportal_dbp/cp_por_public_main_page.display_login_page';
-
   late String _selectedYear;
   PayScaleCatalog? _catalog;
   bool _isLoading = true;
@@ -58,30 +54,6 @@ class PayscaleScreenState extends State<PayscaleScreen> {
         _errorMessage = 'Error loading pay scales: $e';
         _isLoading = false;
       });
-    }
-  }
-
-  Future<void> _launchCoreHr(BuildContext context) async {
-    final scaffoldMessenger = ScaffoldMessenger.of(context);
-    final uri = Uri.parse(_coreHrUrl);
-    try {
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
-      } else {
-        scaffoldMessenger.showSnackBar(
-          const SnackBar(
-            content: Text('Could not open People XD'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    } catch (e) {
-      scaffoldMessenger.showSnackBar(
-        SnackBar(
-          content: Text('Error opening link: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
     }
   }
 
@@ -123,8 +95,6 @@ class PayscaleScreenState extends State<PayscaleScreen> {
                 pageLabel: 'the Pay Scale page',
                 padding: EdgeInsets.only(bottom: 8),
               ),
-              _buildCoreHrLink(context, sizes),
-              SizedBox(height: sizes['gap']!),
               _yearToggle(),
               SizedBox(height: sizes['gap']!),
               Expanded(child: _buildBody(sizes)),
@@ -204,76 +174,6 @@ class PayscaleScreenState extends State<PayscaleScreen> {
                   ? Colors.white
                   : Theme.of(context).colorScheme.onSurface,
             ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCoreHrLink(BuildContext context, Map<String, double> sizes) {
-    final theme = Theme.of(context);
-    final cardBg = theme.brightness == Brightness.dark
-        ? theme.cardColor
-        : Colors.white;
-    final iconSize = sizes['fontSize']! + 10;
-
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: () => _launchCoreHr(context),
-        borderRadius: BorderRadius.circular(AppTheme.borderRadius),
-        child: Container(
-          padding: EdgeInsets.all(sizes['padding']!),
-          decoration: BoxDecoration(
-            color: cardBg,
-            borderRadius: BorderRadius.circular(AppTheme.borderRadius),
-            border: Border.all(
-              color: AppTheme.primaryColor.withValues(alpha: 0.3),
-              width: 1,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: theme.shadowColor.withValues(alpha: 0.08),
-                blurRadius: 6,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Row(
-            children: [
-              Icon(
-                Icons.paid,
-                color: AppTheme.primaryColor,
-                size: iconSize,
-              ),
-              SizedBox(width: sizes['padding']!),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'People XD (Core HR)',
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: AppTheme.primaryColor,
-                      ),
-                    ),
-                    SizedBox(height: sizes['padding']! * 0.25),
-                    Text(
-                      'View payslips, holiday allowance & more',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Icon(
-                Icons.open_in_new,
-                size: sizes['fontSize']! + 4,
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-              ),
-            ],
           ),
         ),
       ),

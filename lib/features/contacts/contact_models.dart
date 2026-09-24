@@ -373,16 +373,22 @@ class ContactsCatalog {
         sections: defaultContactSections,
         entries: defaultContactEntries,
       );
+
+  /// People XD is retired; hide leftover seeded copies.
+  static const retiredEntryIds = {'contact_people_xd'};
+  static const retiredSectionId = 'section_hr_pay';
+
+  ContactsCatalog withoutRetired() {
+    return ContactsCatalog(
+      sections: sections,
+      entries: entries
+          .where((entry) => !retiredEntryIds.contains(entry.id))
+          .toList(),
+    );
+  }
 }
 
 const defaultContactSections = <ContactSection>[
-  ContactSection(
-    id: 'section_hr_pay',
-    name: 'HR & Pay',
-    sortOrder: 10,
-    iconKey: 'paid',
-    colorArgb: 0xFFFF9800,
-  ),
   ContactSection(
     id: 'section_depot_mgmt',
     name: 'Depot Management',
@@ -421,16 +427,6 @@ const defaultContactEntries = <ContactEntry>[
     sectionId: '',
     sortOrder: 10,
     iconKey: 'business',
-  ),
-  ContactEntry(
-    id: 'contact_people_xd',
-    title: 'People XD (Core HR)',
-    url:
-        'https://my.corehr.com/pls/coreportal_dbp/cp_por_public_main_page.display_login_page',
-    note: 'Payslips, holiday allowance & more',
-    sectionId: 'section_hr_pay',
-    sortOrder: 10,
-    iconKey: 'paid',
   ),
   ContactEntry(
     id: 'contact_depot_manager',

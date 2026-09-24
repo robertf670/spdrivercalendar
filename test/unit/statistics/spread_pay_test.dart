@@ -29,6 +29,14 @@ void main() {
     });
   });
 
+  group('SpreadPay.dutyCode', () {
+    test('strips Shift: and UNI: prefixes', () {
+      expect(SpreadPay.dutyCode('Shift: PZ4/24'), 'PZ4/24');
+      expect(SpreadPay.dutyCode('UNI:807/18'), '807/18');
+      expect(SpreadPay.dutyCode('807/18'), '807/18');
+    });
+  });
+
   group('SpreadPay.hasNoSpreadPay', () {
     test('excludes spare, 22B, Union and Mentor', () {
       expect(SpreadPay.hasNoSpreadPay('SP0400'), isTrue);

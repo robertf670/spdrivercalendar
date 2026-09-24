@@ -17,7 +17,6 @@ import 'package:spdrivercalendar/features/calendar/services/roster_service.dart'
 import 'package:spdrivercalendar/features/calendar/services/roster_schedule_service.dart';
 import 'package:spdrivercalendar/features/calendar/services/event_service.dart';
 import 'package:spdrivercalendar/features/calendar/services/holiday_service.dart';
-import 'package:spdrivercalendar/features/calendar/services/workout_highlight_service.dart';
 import 'package:spdrivercalendar/services/bus_tracking_service.dart';
 import 'package:spdrivercalendar/features/calendar/dialogs/event_duty_notes_dialog.dart';
 import 'package:spdrivercalendar/features/calendar/dialogs/universal_board_dialog.dart';
@@ -80,7 +79,6 @@ import 'package:spdrivercalendar/models/event.dart';
 import 'package:spdrivercalendar/models/bank_holiday.dart';
 import 'package:spdrivercalendar/models/shift_info.dart';
 import 'package:spdrivercalendar/models/holiday.dart';
-import 'package:spdrivercalendar/theme/app_theme.dart';
 import 'package:spdrivercalendar/features/calendar/services/shift_service.dart';
 import 'package:spdrivercalendar/services/jamestown_feature_service.dart';
 import 'package:spdrivercalendar/services/donnybrook_feature_service.dart';

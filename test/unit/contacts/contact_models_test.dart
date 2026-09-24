@@ -39,7 +39,7 @@ void main() {
       expect(
         const ContactEntry(
           id: '1',
-          title: 'People XD',
+          title: 'HR Portal',
           note: 'Payslips',
           url: 'https://example.com',
           sectionId: '',
@@ -81,8 +81,8 @@ void main() {
     test('normalizeContactUrl adds https when missing', () {
       expect(normalizeContactUrl('example.com'), 'https://example.com');
       expect(
-        normalizeContactUrl('https://my.corehr.com/x'),
-        'https://my.corehr.com/x',
+        normalizeContactUrl('https://example.com/x'),
+        'https://example.com/x',
       );
       expect(normalizeContactUrl('  '), isNull);
     });
@@ -127,13 +127,12 @@ void main() {
       expect(groups.first.entries.single.title, 'Phibsboro Depot');
       expect(
         groups.map((g) => g.section?.name).toList(),
-        [null, 'HR & Pay', 'Depot Management', 'Controllers', 'Services', 'Medical'],
+        [null, 'Depot Management', 'Controllers', 'Services', 'Medical'],
       );
       expect(
         catalog.entries.map((e) => e.title).toList(),
         [
           'Phibsboro Depot',
-          'People XD (Core HR)',
           'Depot Manager',
           'Depot Administrator',
           '39s Controller',
@@ -192,6 +191,19 @@ void main() {
       expect(catalog.nextEntrySortOrder(''), 20);
       expect(catalog.nextEntrySortOrder('section_controllers'), 40);
       expect(catalog.nextSectionSortOrder(), 60);
+    });
+
+    test('withoutRetired hides the old People XD contact', () {
+      const leftover = ContactEntry(
+        id: 'contact_people_xd',
+        title: 'People XD (Core HR)',
+        url: 'https://example.com',
+        sectionId: 'section_hr_pay',
+        sortOrder: 10,
+        iconKey: 'paid',
+      );
+      const catalog = ContactsCatalog(entries: [leftover]);
+      expect(catalog.withoutRetired().entries, isEmpty);
     });
   });
 }

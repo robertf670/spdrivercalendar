@@ -16,6 +16,7 @@ import 'package:spdrivercalendar/services/donnybrook_feature_service.dart';
 
 // Import the new widgets
 import '../utils/spread_pay.dart';
+import '../utils/statistics_date_range.dart';
 import '../widgets/frequency_chart.dart';
 import '../widgets/shift_type_summary_card.dart';
 import '../widgets/work_time_stats_card.dart';
@@ -1050,7 +1051,7 @@ class StatisticsScreenState extends State<StatisticsScreen>
                         ),
                       );
                     }
-                    final zoneOrder = ['Zone 1', 'Zone 2', 'Zone 3', 'Zone 4', 'Uni/Euro'];
+                    final zoneOrder = ['Zone 1', 'Zone 2', 'Zone 3', 'Zone 4', 'Uni/Euro', 'DB Z1'];
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: zoneOrder.where((z) => topPerZone.containsKey(z)).map((zone) {
@@ -1061,6 +1062,7 @@ class StatisticsScreenState extends State<StatisticsScreen>
                           'Zone 3': AppTheme.secondaryColor,
                           'Zone 4': const Color(0xFF7B1FA2),
                           'Uni/Euro': const Color(0xFFE65100),
+                          'DB Z1': const Color(0xFF1565C0),
                         };
                         final zoneColor = zoneColors[zone] ?? AppTheme.primaryColor;
                         return Padding(
@@ -1191,25 +1193,24 @@ class StatisticsScreenState extends State<StatisticsScreen>
     // Statistics always use Sunday-Saturday weeks regardless of calendar display preference
     switch (effectiveTimeRange) {
       case 'This Week':
-        // Start from Sunday of current week
-        final firstDayOfWeek = now.subtract(Duration(days: now.weekday % 7));
-        startDate = DateTime(firstDayOfWeek.year, firstDayOfWeek.month, firstDayOfWeek.day);
-        endDate = startDate.add(const Duration(days: 6));
+        final week = StatisticsDateRange.thisWeek(now);
+        startDate = week.start;
+        endDate = week.end;
         break;
       case 'Last Week':
-        // Last week (previous Sunday to Saturday) - match work time calculation logic
-        final thisWeekStart = DateTime(now.year, now.month, now.day).subtract(Duration(days: now.weekday % 7));
-        final lastWeekEnd = DateTime(thisWeekStart.year, thisWeekStart.month, thisWeekStart.day).subtract(const Duration(days: 1)); // End on previous Saturday
-        startDate = DateTime(lastWeekEnd.year, lastWeekEnd.month, lastWeekEnd.day).subtract(const Duration(days: 6)); // Start on previous Sunday
-        endDate = lastWeekEnd;
+        final week = StatisticsDateRange.lastWeek(now);
+        startDate = week.start;
+        endDate = week.end;
         break;
       case 'This Month':
-        startDate = DateTime(now.year, now.month, 1);
-        endDate = DateTime(now.year, now.month + 1, 1);
+        final month = StatisticsDateRange.thisMonth(now);
+        startDate = month.start;
+        endDate = month.endExclusive.subtract(const Duration(days: 1));
         break;
       case 'Last Month':
-        startDate = DateTime(now.year, now.month - 1, 1);
-        endDate = DateTime(now.year, now.month, 1);
+        final month = StatisticsDateRange.lastMonth(now);
+        startDate = month.start;
+        endDate = month.endExclusive.subtract(const Duration(days: 1));
         break;
       case 'All Time':
       default:
@@ -1240,8 +1241,8 @@ class StatisticsScreenState extends State<StatisticsScreen>
       final events = entry.value;
       for (final event in events) {
         if (processedIds.contains(event.id)) continue;
-        if (!event.startDate.isBefore(startDate) && 
-            event.startDate.isBefore(endDate.add(const Duration(days: 1)))) {
+        if (StatisticsDateRange.isOnOrBetween(
+            event.startDate, startDate, endDate)) {
           processedIds.add(event.id);
           if (event.isWorkForOthers) {
             workForOthersShifts++;
@@ -1258,8 +1259,7 @@ class StatisticsScreenState extends State<StatisticsScreen>
             restDaysWorked++;
           } else {
             totalShifts++;
-            final rawTitle = event.title;
-            final shiftCode = rawTitle.startsWith('UNI:') ? rawTitle.substring(4) : rawTitle;
+            final shiftCode = SpreadPay.dutyCode(event.title);
             final startHour = event.startTime.hour;
             final startMinute = event.startTime.minute;
 
@@ -1362,7 +1362,7 @@ class StatisticsScreenState extends State<StatisticsScreen>
 
     try {
       // Extract shift code and zone number from the event title
-      shiftCode = event.title.replaceAll('Shift: ', '').trim(); // Assign here
+      shiftCode = SpreadPay.dutyCode(event.title);
       String zoneNumber = '1'; // Default
       bool isUniShift = false;
       bool isBusCheck = false;
@@ -1831,30 +1831,10 @@ class StatisticsScreenState extends State<StatisticsScreen>
   Future<Map<String, Duration>> _calculateWorkTimeStatistics() async {
     final now = DateTime.now();
 
-    // This week (Sunday to Saturday) - Statistics always use Sunday-Saturday weeks
-    final thisWeekStart = DateTime(now.year, now.month, now.day).subtract(Duration(days: now.weekday % 7)); // Ensure start is at midnight
-    final thisWeekEnd = DateTime(thisWeekStart.year, thisWeekStart.month, thisWeekStart.day).add(const Duration(days: 6)); // Ensure end is at start of day
-
-    // Last week (previous Sunday to Saturday)
-    final lastWeekEnd = DateTime(thisWeekStart.year, thisWeekStart.month, thisWeekStart.day).subtract(const Duration(days: 1)); // End on previous Saturday (start of day)
-    final lastWeekStart = DateTime(lastWeekEnd.year, lastWeekEnd.month, lastWeekEnd.day).subtract(const Duration(days: 6)); // Start on previous Sunday (start of day)
-
-    // --- Re-add Month Definitions --- 
-    // This month
-    final thisMonthStart = DateTime(now.year, now.month, 1);
-    // End is the start of the *next* month
-    final thisMonthEnd = (now.month < 12)
-        ? DateTime(now.year, now.month + 1, 1)
-        : DateTime(now.year + 1, 1, 1);
-
-    // Last month
-    // Start is the start of the previous month
-    final lastMonthStart = (now.month > 1)
-        ? DateTime(now.year, now.month - 1, 1)
-        : DateTime(now.year - 1, 12, 1);
-    // End is the start of *this* month
-    final lastMonthEnd = thisMonthStart;
-    // --- End Re-add --- 
+    final thisWeek = StatisticsDateRange.thisWeek(now);
+    final lastWeek = StatisticsDateRange.lastWeek(now);
+    final thisMonth = StatisticsDateRange.thisMonth(now);
+    final lastMonth = StatisticsDateRange.lastMonth(now); 
 
     Duration thisWeekWork = Duration.zero;
     Duration lastWeekWork = Duration.zero;
@@ -1868,19 +1848,14 @@ class StatisticsScreenState extends State<StatisticsScreen>
       final date = entry.key; // This date is likely already normalized from EventService
       final events = entry.value;
 
-      // Use the date from the event entry key, assuming it's midnight UTC or similar
-      final normalizedDate = DateTime.utc(date.year, date.month, date.day);
+      final dayKey = StatisticsDateRange.calendarDay(date);
 
       // Skip if this is a rest day (respects M-F, swaps - swapped work days are normal work)
-      final bool isRest = await _isRestDay(normalizedDate);
-      if (isRest) {
+      if (await _isRestDay(dayKey)) {
          continue;
       }
 
       for (final event in events) {
-        // Use event.startDate for checks, normalized to UTC midnight
-        final eventNormalizedStartDate = DateTime.utc(event.startDate.year, event.startDate.month, event.startDate.day);
-        
         // FIXED: Consistent null ID handling to prevent double-counting midnight-spanning shifts
         if (!event.isWorkShift || event.title.contains('(OT)') || processedIds.contains(event.id)) {
             continue;
@@ -1891,24 +1866,23 @@ class StatisticsScreenState extends State<StatisticsScreen>
 
         totalWork += workTime;
 
-        // Check This Week (Inclusive Check: >= start AND <= end)
-        // Use event's normalized start date for comparisons
-        if (!eventNormalizedStartDate.isBefore(thisWeekStart) && !eventNormalizedStartDate.isAfter(thisWeekEnd)) {
+        if (StatisticsDateRange.isOnOrBetween(
+            event.startDate, thisWeek.start, thisWeek.end)) {
           thisWeekWork += workTime;
         }
 
-        // Check Last Week (Inclusive Check: >= start AND <= end)
-        if (!eventNormalizedStartDate.isBefore(lastWeekStart) && !eventNormalizedStartDate.isAfter(lastWeekEnd)) {
+        if (StatisticsDateRange.isOnOrBetween(
+            event.startDate, lastWeek.start, lastWeek.end)) {
           lastWeekWork += workTime;
         }
 
-        // Check This Month (Inclusive Start, Exclusive End: >= start AND < end)
-        if (!eventNormalizedStartDate.isBefore(thisMonthStart) && eventNormalizedStartDate.isBefore(thisMonthEnd)) {
+        if (StatisticsDateRange.isInHalfOpen(
+            event.startDate, thisMonth.start, thisMonth.endExclusive)) {
           thisMonthWork += workTime;
         }
 
-        // Check Last Month (Inclusive Start, Exclusive End: >= start AND < end)
-        if (!eventNormalizedStartDate.isBefore(lastMonthStart) && eventNormalizedStartDate.isBefore(lastMonthEnd)) {
+        if (StatisticsDateRange.isInHalfOpen(
+            event.startDate, lastMonth.start, lastMonth.endExclusive)) {
           lastMonthWork += workTime;
         }
       }
@@ -1933,25 +1907,9 @@ class StatisticsScreenState extends State<StatisticsScreen>
   Future<Map<String, Duration>> _calculateSpreadStatistics() async {
     final now = DateTime.now();
 
-    // This week (Sunday to Saturday) - Statistics always use Sunday-Saturday weeks
-    final thisWeekStart = DateTime(now.year, now.month, now.day).subtract(Duration(days: now.weekday % 7));
-    final thisWeekEnd = DateTime(thisWeekStart.year, thisWeekStart.month, thisWeekStart.day).add(const Duration(days: 6));
-
-    // Last week (previous Sunday to Saturday)
-    final lastWeekEnd = DateTime(thisWeekStart.year, thisWeekStart.month, thisWeekStart.day).subtract(const Duration(days: 1));
-    final lastWeekStart = DateTime(lastWeekEnd.year, lastWeekEnd.month, lastWeekEnd.day).subtract(const Duration(days: 6));
-
-    // This month
-    final thisMonthStart = DateTime(now.year, now.month, 1);
-    final thisMonthEnd = (now.month < 12)
-        ? DateTime(now.year, now.month + 1, 1)
-        : DateTime(now.year + 1, 1, 1);
-
-    // Last month (not used in current implementation but keeping for future expansion)
-    // final lastMonthStart = (now.month > 1)
-    //     ? DateTime(now.year, now.month - 1, 1)
-    //     : DateTime(now.year - 1, 12, 1);
-    // final lastMonthEnd = thisMonthStart;
+    final thisWeek = StatisticsDateRange.thisWeek(now);
+    final lastWeek = StatisticsDateRange.lastWeek(now);
+    final thisMonth = StatisticsDateRange.thisMonth(now);
 
     Duration thisWeekSpread = Duration.zero;
     Duration lastWeekSpread = Duration.zero;
@@ -1961,8 +1919,6 @@ class StatisticsScreenState extends State<StatisticsScreen>
 
     for (final events in widget.events.values) {
       for (final event in events) {
-        final eventNormalizedStartDate = DateTime.utc(event.startDate.year, event.startDate.month, event.startDate.day);
-
         if (!SpreadPay.isSpreadWeekday(event.startDate.weekday) ||
             !event.isWorkShift ||
             event.title.contains('(OT)') ||
@@ -1973,18 +1929,18 @@ class StatisticsScreenState extends State<StatisticsScreen>
 
         final spreadPay = await _calculateSpreadPay(event);
 
-        // Check This Week
-        if (!eventNormalizedStartDate.isBefore(thisWeekStart) && !eventNormalizedStartDate.isAfter(thisWeekEnd)) {
+        if (StatisticsDateRange.isOnOrBetween(
+            event.startDate, thisWeek.start, thisWeek.end)) {
           thisWeekSpread += spreadPay;
         }
 
-        // Check Last Week
-        if (!eventNormalizedStartDate.isBefore(lastWeekStart) && !eventNormalizedStartDate.isAfter(lastWeekEnd)) {
+        if (StatisticsDateRange.isOnOrBetween(
+            event.startDate, lastWeek.start, lastWeek.end)) {
           lastWeekSpread += spreadPay;
         }
 
-        // Check This Month
-        if (!eventNormalizedStartDate.isBefore(thisMonthStart) && eventNormalizedStartDate.isBefore(thisMonthEnd)) {
+        if (StatisticsDateRange.isInHalfOpen(
+            event.startDate, thisMonth.start, thisMonth.endExclusive)) {
           thisMonthSpread += spreadPay;
         }
       }
@@ -2006,7 +1962,7 @@ class StatisticsScreenState extends State<StatisticsScreen>
   }
 
   Future<Duration?> _calculateSpreadTime(Event event) async {
-    final shiftCode = event.title.replaceAll('Shift: ', '').trim();
+    final shiftCode = SpreadPay.dutyCode(event.title);
 
     try {
       bool isBusCheck = false;
@@ -2322,15 +2278,18 @@ class StatisticsScreenState extends State<StatisticsScreen>
   // Helper to get list of shift details (date, title, duration) for a specific date
   Future<List<Map<String, dynamic>>> _getWorkHoursForDate(DateTime targetDate) async {
     List<Map<String, dynamic>> shiftsDetails = []; // List to hold shift details
-    // Use midnight in the local timezone for the key, matching how events are likely stored
-    final localMidnightTargetDate = DateTime(targetDate.year, targetDate.month, targetDate.day);
+    final localMidnightTargetDate = StatisticsDateRange.calendarDay(targetDate);
+    final processedIds = <String>{};
 
-    // Check if the date exists in the events map
-    if (widget.events.containsKey(localMidnightTargetDate)) {
-      final eventsOnDate = widget.events[localMidnightTargetDate]!;
-      for (final event in eventsOnDate) {
+    for (final entry in widget.events.entries) {
+      if (!StatisticsDateRange.sameCalendarDay(entry.key, localMidnightTargetDate)) {
+        continue;
+      }
+      for (final event in entry.value) {
+        if (processedIds.contains(event.id)) continue;
         // Only include rostered work shifts, exclude overtime shifts
         if (event.isWorkShift && !event.title.contains('(OT)')) {
+          processedIds.add(event.id);
           final workTime = await _calculateWorkTime(event); // Use existing calculation
           shiftsDetails.add({
             'date': localMidnightTargetDate, // Store the date for display
@@ -2465,23 +2424,18 @@ class StatisticsScreenState extends State<StatisticsScreen>
     
     final DateTime now = DateTime.now();
     
-    // This week (Sunday to Saturday)
-    final thisWeekStart = DateTime(now.year, now.month, now.day).subtract(Duration(days: now.weekday % 7));
-    final thisWeekEnd = thisWeekStart.add(const Duration(days: 6));
-    
-    // Last week (previous Sunday to Saturday)
-    final lastWeekEnd = thisWeekStart.subtract(const Duration(days: 1));
-    final lastWeekStart = lastWeekEnd.subtract(const Duration(days: 6));
-    
-    // This month
-    final thisMonthStart = DateTime(now.year, now.month, 1);
-    final thisMonthEnd = (now.month < 12)
-        ? DateTime(now.year, now.month + 1, 1).subtract(const Duration(days: 1))
-        : DateTime(now.year + 1, 1, 1).subtract(const Duration(days: 1));
-        
-    // Last month
-    final lastMonthEnd = thisMonthStart.subtract(const Duration(days: 1));
-    final lastMonthStart = DateTime(lastMonthEnd.year, lastMonthEnd.month, 1);
+    final thisWeek = StatisticsDateRange.thisWeek(now);
+    final lastWeek = StatisticsDateRange.lastWeek(now);
+    final thisMonth = StatisticsDateRange.thisMonth(now);
+    final lastMonth = StatisticsDateRange.lastMonth(now);
+    final thisWeekStart = thisWeek.start;
+    final thisWeekEnd = thisWeek.end;
+    final lastWeekStart = lastWeek.start;
+    final lastWeekEnd = lastWeek.end;
+    final thisMonthStart = thisMonth.start;
+    final thisMonthEnd = thisMonth.endExclusive.subtract(const Duration(days: 1));
+    final lastMonthStart = lastMonth.start;
+    final lastMonthEnd = lastMonth.endExclusive.subtract(const Duration(days: 1));
     
     // Get all events with late break OR late finish status from the map of events with duplicate prevention
     final List<Event> eventsWithBreakStatus = [];
@@ -2824,21 +2778,11 @@ class StatisticsScreenState extends State<StatisticsScreen>
       for (final entry in widget.events.entries) {
         final date = entry.key;
         final events = entry.value;
-        final normalizedDate = DateTime.utc(date.year, date.month, date.day);
-        
-        // Skip rest days
-        final String shiftType = (_startDate != null)
-            ? RosterService.getShiftForDate(normalizedDate, _startDate!, _startWeek)
-            : '';
-        if (shiftType == 'R') continue;
+        if (await _isRestDay(StatisticsDateRange.calendarDay(date))) {
+          continue;
+        }
         
         for (final event in events) {
-          final eventNormalizedStartDate = DateTime.utc(
-            event.startDate.year,
-            event.startDate.month,
-            event.startDate.day,
-          );
-          
           if (!event.isWorkShift ||
               event.title.contains('(OT)') ||
               processedIds.contains(event.id)) {
@@ -2846,9 +2790,8 @@ class StatisticsScreenState extends State<StatisticsScreen>
           }
           processedIds.add(event.id);
           
-          // Check if event is in this month
-          if (!eventNormalizedStartDate.isBefore(monthStart) &&
-              eventNormalizedStartDate.isBefore(monthEnd)) {
+          if (StatisticsDateRange.isInHalfOpen(
+              event.startDate, monthStart, monthEnd)) {
             final workTime = await _calculateWorkTime(event);
             monthWork += workTime;
           }

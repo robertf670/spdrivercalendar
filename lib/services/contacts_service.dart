@@ -27,7 +27,7 @@ class ContactsService {
             entries: entrySnap.docs
                 .map((doc) => ContactEntry.fromFirestore(doc.id, doc.data()))
                 .toList(),
-          );
+          ).withoutRetired();
         },
       );
     });
@@ -84,6 +84,7 @@ class ContactsService {
 
   static Future<void> seedDefaults() async {
     try {
+      await _retireObsoleteDefaults();
       final existingEntries =
           await _firestore.collection(entriesCollection).limit(1).get();
       if (existingEntries.docs.isNotEmpty) return;
@@ -107,5 +108,28 @@ class ContactsService {
       }
       await batch.commit();
     } catch (_) {}
+  }
+
+  static Future<void> _retireObsoleteDefaults() async {
+    final batch = _firestore.batch();
+    for (final id in ContactsCatalog.retiredEntryIds) {
+      batch.delete(_firestore.collection(entriesCollection).doc(id));
+    }
+    final leftoverHr = await _firestore
+        .collection(entriesCollection)
+        .where('sectionId', isEqualTo: ContactsCatalog.retiredSectionId)
+        .limit(2)
+        .get();
+    final onlyRetiredLeft = leftoverHr.docs.every(
+      (doc) => ContactsCatalog.retiredEntryIds.contains(doc.id),
+    );
+    if (onlyRetiredLeft) {
+      batch.delete(
+        _firestore
+            .collection(sectionsCollection)
+            .doc(ContactsCatalog.retiredSectionId),
+      );
+    }
+    await batch.commit();
   }
 }

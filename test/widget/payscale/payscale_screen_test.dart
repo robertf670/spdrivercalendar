@@ -29,8 +29,7 @@ spreadover(hourly),17.98,18.61,19.56,20.82
     expect(find.text('Year 3-4'), findsOneWidget);
     expect(find.text('Year 5'), findsOneWidget);
     expect(find.text('Year 6+'), findsOneWidget);
-    expect(find.text('People XD (Core HR)'), findsOneWidget);
-    expect(find.text('View payslips, holiday allowance & more'), findsOneWidget);
+    expect(find.text('People XD (Core HR)'), findsNothing);
     expect(find.text('Daily'), findsOneWidget);
     expect(find.text('Spread'), findsOneWidget);
     expect(find.text('Basic Daily Rate'), findsOneWidget);

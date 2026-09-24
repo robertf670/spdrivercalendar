@@ -1,4 +1,26 @@
 final Map<String, List<Map<String, String>>> changelogData = {
+  '4.2.4': [
+    {
+      'title': '4/24 Monday–Friday Times',
+      'description':
+          'First half now ends at 17:00 and the duty finishes at 21:55.',
+    },
+    {
+      'title': '4/26 Monday–Friday Board',
+      'description':
+          'Removed the extra “Takes Bus 17 at 17:15” line from the second half.',
+    },
+    {
+      'title': 'This Week Saturdays - Statistics Bug',
+      'description':
+          'This Week and Last Week no longer drop Saturday during summer time.',
+    },
+    {
+      'title': 'People XD Removed',
+      'description':
+          'Removed the People XD (Core HR) link. Payslips are on the company app now.',
+    },
+  ],
   '4.2.3': [
     {
       'title': 'iPhone Taps',

@@ -21,7 +21,7 @@ void main() {
     expect(find.text('01 703 3462'), findsOneWidget);
     expect(find.text('Depot Manager'), findsOneWidget);
     expect(find.text('Tim Fitzgibbons'), findsOneWidget);
-    expect(find.text('People XD (Core HR)'), findsOneWidget);
+    expect(find.text('People XD (Core HR)'), findsNothing);
     expect(find.textContaining('send me a message'), findsOneWidget);
     expect(
       find.textContaining('If you notice anything here to be incorrect'),

@@ -37,7 +37,6 @@ class _DayNotesDialogState extends State<DayNotesDialog> {
 
   Map<String, double> _getResponsiveSizes(BuildContext context) {
     final screenWidth = MediaQuery.sizeOf(context).width;
-    final screenHeight = MediaQuery.sizeOf(context).height;
     if (screenWidth < 350) {
       return {
         'widthFactor': 0.95,

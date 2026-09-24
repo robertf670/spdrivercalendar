@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:spdrivercalendar/theme/app_theme.dart';
-import 'package:spdrivercalendar/core/constants/app_constants.dart';
-import 'package:spdrivercalendar/core/services/storage_service.dart';
 import 'package:spdrivercalendar/services/pay_scale_service.dart';
 
 class SpreadStatisticsCard extends StatelessWidget {
@@ -112,7 +110,7 @@ class SpreadStatisticsCard extends StatelessWidget {
 
   Future<Map<String, double?>> _loadPayRates() async {
     try {
-      final payRate = await StorageService.getString(AppConstants.spreadPayRateKey) ?? 'year1+2';
+      final payRate = await PayScaleService.loadSavedYearLevel();
       final hourlyRate = await PayScaleService.getSpreadRate(payRate);
       return {'hourlyRate': hourlyRate};
     } catch (e) {
