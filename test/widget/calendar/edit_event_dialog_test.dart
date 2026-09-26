@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:spdrivercalendar/features/calendar/dialogs/edit_event_dialog.dart';
 import 'package:spdrivercalendar/models/event.dart';
 
 void main() {
+  setUp(() {
+    SharedPreferences.setMockInitialValues({});
+  });
   Event buildEvent() {
     return Event(
       id: '1',

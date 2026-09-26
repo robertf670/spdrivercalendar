@@ -69,6 +69,7 @@ import 'package:spdrivercalendar/features/calendar/utils/calendar_events_by_date
 import 'package:spdrivercalendar/features/calendar/services/calendar_display_settings_loader.dart';
 import 'package:spdrivercalendar/features/calendar/services/calendar_holiday_cache.dart';
 import 'package:spdrivercalendar/features/calendar/navigation/calendar_feature_navigation.dart';
+import 'package:spdrivercalendar/features/bus_reports/bus_report_assign_warning.dart';
 import 'package:spdrivercalendar/features/calendar/widgets/calendar_scaffold.dart';
 import 'package:spdrivercalendar/features/calendar/dialogs/rest_day_setup_dialog.dart';
 import 'package:spdrivercalendar/features/calendar/services/work_for_others_shift_loader.dart';
@@ -1063,9 +1064,22 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
             await EventService.updateEvent(oldEvent, updatedEvent);
             await _syncBusAssignmentsToGoogleCalendar(updatedEvent);
             if (!mounted) return;
+            final viewBus = await warnIfRecentBusReportsForAssignment(
+              context: context,
+              oldEvent: oldEvent,
+              updatedEvent: updatedEvent,
+            );
+            if (!mounted) return;
             setState(() {});
             if (dialogContext.mounted) {
               Navigator.of(dialogContext).pop();
+            }
+            if (viewBus != null) {
+              await CalendarFeatureNavigation.openBusReports(
+                context,
+                busNumber: viewBus,
+              );
+              return;
             }
             _editEvent(updatedEvent);
           },
@@ -1495,6 +1509,8 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
         _showTimingPointsPage();
       case CalendarMenuAction.toiletCodes:
         _showToiletCodesPage();
+      case CalendarMenuAction.busReports:
+        _showBusReportsPage();
       case CalendarMenuAction.settings:
         _showSettingsPage();
       case CalendarMenuAction.addHolidays:
@@ -2058,6 +2074,10 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
 
   void _showToiletCodesPage() {
     CalendarFeatureNavigation.openToiletCodes(context);
+  }
+
+  void _showBusReportsPage() {
+    CalendarFeatureNavigation.openBusReports(context);
   }
 
   void _showLiveUpdatesPage() {

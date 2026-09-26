@@ -24,6 +24,10 @@ import 'package:spdrivercalendar/services/jamestown_feature_service.dart';
 import 'package:spdrivercalendar/features/calendar/utils/shift_rest_gap.dart';
 import 'package:spdrivercalendar/features/calendar/utils/work_duration_display.dart';
 import 'package:spdrivercalendar/features/calendar/widgets/assigned_duty_board_button.dart';
+import 'package:spdrivercalendar/features/ratings/duty_rate_menu_actions.dart';
+import 'package:spdrivercalendar/features/bus_reports/bus_report_row_actions.dart';
+import 'package:spdrivercalendar/features/bus_reports/bus_report_assign_warning.dart';
+import 'package:spdrivercalendar/features/bus_reports/bus_report_key.dart';
 
 class EventCard extends StatefulWidget {
   final Event event;
@@ -3599,6 +3603,14 @@ class _EventCardState extends State<EventCard> {
                                            color: Colors.green[700],
                         ),
                                        ),
+                                     if (widget.event.getBusForDuty(duty['dutyCode'] ?? '') != null)
+                                       BusReportRowActions(
+                                         busNumber: widget.event.getBusForDuty(duty['dutyCode'] ?? '')!,
+                                         date: widget.event.startDate,
+                                         slot: BusReportSlot.forDutyCode(
+                                           duty['dutyCode'] ?? '',
+                                         ),
+                                       ),
                                    ],
                                  ),
                                ),
@@ -3771,6 +3783,10 @@ class _EventCardState extends State<EventCard> {
               },
               child: const Text('Break & Finish'),
             ),
+          DutyRateMenuActions(
+            event: widget.event,
+            style: DutyRateMenuStyle.compact,
+          ),
           // Add Sick Day Status button for work shifts (including spare duties)
           if (widget.event.isWorkShift)
             TextButton(
@@ -4256,6 +4272,9 @@ class _EventCardState extends State<EventCard> {
       // Sync bus assignments to Google Calendar if callback provided
       if (widget.onBusAssignmentUpdate != null) {
         widget.onBusAssignmentUpdate!(widget.event);
+      }
+      if (newBus != null && newBus.trim().isNotEmpty && mounted) {
+        await warnIfRecentBusReport(context, newBus);
       }
       
       // REMOVED: Post-save verification that was causing false positives and data rollbacks
@@ -6221,6 +6240,11 @@ class _EventCardState extends State<EventCard> {
                                         ),
                                       ],
                                     ),
+                                    BusReportRowActions(
+                                      busNumber: _firstHalfBus!,
+                                      date: widget.event.startDate,
+                                      slot: BusReportSlot.first,
+                                    ),
                                   ],
                                 ),
                               ),
@@ -6270,6 +6294,9 @@ class _EventCardState extends State<EventCard> {
                                 // Use change bus method to track breakdown buses
                                 widget.event.changeBusForFirstHalf(result);
                                 await EventService.updateEvent(oldEvent, widget.event);
+                                if (mounted) {
+                                  await warnIfRecentBusReport(context, result);
+                                }
                                 
                                 if (mounted) {
                                   setState(() {
@@ -6387,6 +6414,11 @@ class _EventCardState extends State<EventCard> {
                                         ),
                                       ],
                                     ),
+                                    BusReportRowActions(
+                                      busNumber: _secondHalfBus!,
+                                      date: widget.event.startDate,
+                                      slot: BusReportSlot.second,
+                                    ),
                                   ],
                                 ),
                               ),
@@ -6436,6 +6468,9 @@ class _EventCardState extends State<EventCard> {
                                         // Use change bus method to track breakdown buses
                                         widget.event.changeBusForSecondHalf(result);
                                         await EventService.updateEvent(oldEvent, widget.event);
+                                        if (mounted) {
+                                          await warnIfRecentBusReport(context, result);
+                                        }
                                         
                                         if (mounted) {
                                           setState(() {
@@ -6526,6 +6561,9 @@ class _EventCardState extends State<EventCard> {
                               // Use change bus method to track breakdown buses (or assign if null)
                               widget.event.firstHalfBus = result;
                               await EventService.updateEvent(oldEvent, widget.event);
+                              if (mounted) {
+                                await warnIfRecentBusReport(context, result);
+                              }
                               
                               if (mounted) {
                                 setState(() {
@@ -6572,6 +6610,9 @@ class _EventCardState extends State<EventCard> {
                               // Use change bus method to track breakdown buses (or assign if null)
                               widget.event.secondHalfBus = result;
                               await EventService.updateEvent(oldEvent, widget.event);
+                              if (mounted) {
+                                await warnIfRecentBusReport(context, result);
+                              }
                               
                               if (mounted) {
                                 setState(() {

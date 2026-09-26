@@ -11,6 +11,7 @@ abstract final class CalendarMenuAction {
   static const bills = 'bills';
   static const timingPoints = 'timing_points';
   static const toiletCodes = 'toilet_codes';
+  static const busReports = 'bus_reports';
   static const statistics = 'statistics';
   static const addHolidays = 'add_holidays';
   static const contacts = 'contacts';
@@ -103,6 +104,10 @@ class CalendarScaffold extends StatelessWidget {
                   const PopupMenuItem(
                     value: CalendarMenuAction.toiletCodes,
                     child: Text('Toilet Codes'),
+                  ),
+                  const PopupMenuItem(
+                    value: CalendarMenuAction.busReports,
+                    child: Text('Bus Reports'),
                   ),
                   const PopupMenuItem(
                     value: CalendarMenuAction.statistics,

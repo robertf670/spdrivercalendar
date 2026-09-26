@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:spdrivercalendar/features/calendar/utils/assigned_duty_board_lookup.dart';
 import 'package:spdrivercalendar/features/calendar/utils/spare_shift_duties.dart';
+import 'package:spdrivercalendar/features/ratings/duty_rate_menu_actions.dart';
 import 'package:spdrivercalendar/models/event.dart';
 import 'package:spdrivercalendar/models/universal_board.dart';
 
@@ -168,6 +169,7 @@ class EditEventDialog extends StatelessWidget {
                       child: const Text('Break & Finish'),
                     ),
                   ],
+                  DutyRateMenuActions(event: event),
                   if (event.isWorkShift) ...[
                     const SizedBox(height: 8),
                     TextButton(

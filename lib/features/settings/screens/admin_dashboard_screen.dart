@@ -4,6 +4,8 @@ import 'user_analytics_screen.dart';
 import 'poll_management_screen.dart';
 import 'package:spdrivercalendar/features/contacts/screens/contacts_management_screen.dart';
 import 'package:spdrivercalendar/features/toilet_codes/screens/toilet_codes_management_screen.dart';
+import 'duty_ratings_admin_screen.dart';
+import 'bus_reports_admin_screen.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -142,6 +144,22 @@ class AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         color: Colors.indigo,
                         onTap: () => _navigateToContacts(context),
                       ),
+                      _buildAdminCard(
+                        context,
+                        title: 'Duty Ratings',
+                        subtitle: 'Remove notes or spam',
+                        icon: Icons.star_rate,
+                        color: Colors.amber.shade800,
+                        onTap: () => _navigateToDutyRatings(context),
+                      ),
+                      _buildAdminCard(
+                        context,
+                        title: 'Bus Reports',
+                        subtitle: 'Remove notes or spam',
+                        icon: Icons.report_outlined,
+                        color: Colors.orange.shade800,
+                        onTap: () => _navigateToBusReports(context),
+                      ),
                     ],
                   ),
                 ),
@@ -252,6 +270,24 @@ class AdminDashboardScreenState extends State<AdminDashboardScreen> {
       context,
       MaterialPageRoute(
         builder: (context) => const ContactsManagementScreen(),
+      ),
+    );
+  }
+
+  void _navigateToDutyRatings(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const DutyRatingsAdminScreen(),
+      ),
+    );
+  }
+
+  void _navigateToBusReports(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const BusReportsAdminScreen(),
       ),
     );
   }

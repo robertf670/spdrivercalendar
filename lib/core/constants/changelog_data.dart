@@ -1,4 +1,16 @@
-final Map<String, List<Map<String, String>>> changelogData = {
+ final Map<String, List<Map<String, String>>> changelogData = {
+  '4.3.0': [
+    {
+      'title': 'Duty Ratings',
+      'description':
+          'After sign-off, rate a duty 1–10 with an optional note from Edit Event. Averages show in Statistics. You can turn it off in Settings.',
+    },
+    {
+      'title': 'Bus Reports',
+      'description':
+          'Log a bus issue from Edit Event or the Bus Reports list. You get a warning if someone wrote about that bus in the last 7 days. You can turn it off in Settings.',
+    },
+  ],
   '4.2.4': [
     {
       'title': '4/24 Monday–Friday Times',

@@ -50,6 +50,36 @@ service cloud.firestore {
       allow read: if true;
       allow write: if true;
     }
+
+    // Duty ratings — public read; create/update votes; delete for admin
+    // spam-score removal. Summaries are written by the same app transaction.
+    // Same honesty as polls/contacts: app-level control, not Firebase Auth.
+    match /duty_rating_votes/{document} {
+      allow read: if true;
+      allow create: if true;
+      allow update: if true;
+      allow delete: if true;
+    }
+
+    match /duty_rating_summaries/{document} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Bus defect reports — public read; create/update/delete for own
+    // remove and admin spam removal. Summaries written in the same
+    // app transaction. App-level control, not Firebase Auth.
+    match /bus_defect_reports/{document} {
+      allow read: if true;
+      allow create: if true;
+      allow update: if true;
+      allow delete: if true;
+    }
+
+    match /bus_defect_summaries/{document} {
+      allow read: if true;
+      allow write: if true;
+    }
     
     // Deny all other collections by default
     match /{document=**} {

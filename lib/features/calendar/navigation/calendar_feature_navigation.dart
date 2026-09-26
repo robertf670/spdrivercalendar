@@ -9,6 +9,7 @@ import 'package:spdrivercalendar/features/search/screens/search_screen.dart';
 import 'package:spdrivercalendar/features/statistics/screens/statistics_screen.dart';
 import 'package:spdrivercalendar/features/timing_points/screens/timing_points_screen.dart';
 import 'package:spdrivercalendar/features/toilet_codes/screens/toilet_codes_screen.dart';
+import 'package:spdrivercalendar/features/bus_reports/bus_reports_list_screen.dart';
 import 'package:spdrivercalendar/models/bank_holiday.dart';
 import 'package:spdrivercalendar/models/event.dart';
 import 'package:spdrivercalendar/models/holiday.dart';
@@ -68,6 +69,13 @@ class CalendarFeatureNavigation {
     return Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => const ToiletCodesScreen()),
     );
+  }
+
+  static Future<void> openBusReports(
+    BuildContext context, {
+    String? busNumber,
+  }) {
+    return openBusReportsList(context, busNumber: busNumber);
   }
 
   static Future<void> openLiveUpdates(BuildContext context) {

@@ -3,6 +3,8 @@ import 'package:spdrivercalendar/features/calendar/services/shift_service.dart';
 import 'package:spdrivercalendar/features/calendar/utils/spare_shift_duties.dart';
 import 'package:spdrivercalendar/models/event.dart';
 import 'package:spdrivercalendar/theme/app_theme.dart';
+import 'package:spdrivercalendar/features/bus_reports/bus_report_key.dart';
+import 'package:spdrivercalendar/features/bus_reports/bus_report_row_actions.dart';
 
 /// Bus assignment controls for the Edit Event dialog.
 ///
@@ -306,6 +308,13 @@ class EditEventBusAssignmentSection extends StatelessWidget {
                             );
                           },
                         ),
+                      if (event.firstHalfBus != null &&
+                          event.firstHalfBus!.isNotEmpty)
+                        BusReportRowActions(
+                          busNumber: event.firstHalfBus!,
+                          date: event.startDate,
+                          slot: BusReportSlot.first,
+                        ),
                       if (event.firstHalfBus != null && event.secondHalfBus != null)
                         const SizedBox(height: 4),
                       if (event.secondHalfBus != null)
@@ -543,6 +552,13 @@ class EditEventBusAssignmentSection extends StatelessWidget {
                           ),
                         );
                           },
+                        ),
+                      if (event.secondHalfBus != null &&
+                          event.secondHalfBus!.isNotEmpty)
+                        BusReportRowActions(
+                          busNumber: event.secondHalfBus!,
+                          date: event.startDate,
+                          slot: BusReportSlot.second,
                         ),
                       const SizedBox(height: 4),
                     ],

@@ -69,6 +69,8 @@ class SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObser
   bool _showDutyCodesOnCalendar = true; // Default to true (ON)
   bool _animatedSelectedDay = true; // Default to true (ON) - animated border
   bool _highlightWorkoutDays = false; // Default to false (OFF)
+  bool _dutyRatingsEnabled = true;
+  bool _busDefectReportsEnabled = true;
   
   // Pay rate setting
   String _spreadPayRate = 'year1+2'; // Default to Year 1/2
@@ -201,6 +203,8 @@ class SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObser
     _showDutyCodesOnCalendar = prefs.getBool(AppConstants.showDutyCodesOnCalendarKey) ?? true;
     _animatedSelectedDay = prefs.getBool(AppConstants.animatedSelectedDayKey) ?? true;
     _highlightWorkoutDays = prefs.getBool(AppConstants.highlightWorkoutDaysKey) ?? false;
+    _dutyRatingsEnabled = prefs.getBool(AppConstants.dutyRatingsEnabledKey) ?? true;
+    _busDefectReportsEnabled = prefs.getBool(AppConstants.busDefectReportsEnabledKey) ?? true;
     
     // Load pay rate setting - default to Year 1/2
     _spreadPayRate = prefs.getString(AppConstants.spreadPayRateKey) ?? 'year1+2';
@@ -371,6 +375,20 @@ class SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObser
     // The calendar will refresh automatically when navigating back to it
   }
 
+  Future<void> _toggleDutyRatings(bool value) async {
+    setState(() {
+      _dutyRatingsEnabled = value;
+    });
+    await StorageService.saveBool(AppConstants.dutyRatingsEnabledKey, value);
+  }
+
+  Future<void> _toggleBusDefectReports(bool value) async {
+    setState(() {
+      _busDefectReportsEnabled = value;
+    });
+    await StorageService.saveBool(AppConstants.busDefectReportsEnabledKey, value);
+  }
+
   Future<void> _toggleHighlightWorkoutDays(bool value) async {
     setState(() {
       _highlightWorkoutDays = value;
@@ -467,6 +485,8 @@ class SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObser
                         children: [
                           _buildOvernightDutiesToggle(),
                           _buildDutyCodesToggle(),
+                          _buildDutyRatingsToggle(),
+                          _buildBusDefectReportsToggle(),
                           _buildHighlightWorkoutDaysToggle(),
                           _buildRefreshWorkoutHighlightsButton(),
                           _buildAnimatedSelectedDayToggle(),
@@ -2411,6 +2431,38 @@ class SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObser
         secondary: const Icon(Icons.calendar_view_day),
         value: _showDutyCodesOnCalendar,
         onChanged: _toggleDutyCodesDisplay,
+      ),
+    );
+  }
+
+  Widget _buildDutyRatingsToggle() {
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 4.0),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppTheme.borderRadius),
+      ),
+      child: SwitchListTile(
+        title: const Text('Rate duties'),
+        subtitle: const Text('You can still see community scores in Statistics'),
+        secondary: const Icon(Icons.star_rate),
+        value: _dutyRatingsEnabled,
+        onChanged: _toggleDutyRatings,
+      ),
+    );
+  }
+
+  Widget _buildBusDefectReportsToggle() {
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 4.0),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppTheme.borderRadius),
+      ),
+      child: SwitchListTile(
+        title: const Text('Report bus issues'),
+        subtitle: const Text('You can still read reports on a bus and in Bus Reports'),
+        secondary: const Icon(Icons.report_outlined),
+        value: _busDefectReportsEnabled,
+        onChanged: _toggleBusDefectReports,
       ),
     );
   }

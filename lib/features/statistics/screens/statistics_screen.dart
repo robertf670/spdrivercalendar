@@ -33,6 +33,10 @@ import '../../../services/days_in_lieu_service.dart';
 import '../../../services/annual_leave_service.dart';
 import '../../../services/color_customization_service.dart';
 import '../../../services/rest_day_swap_service.dart';
+import 'package:spdrivercalendar/features/ratings/duty_rating_aggregate.dart';
+import 'package:spdrivercalendar/features/ratings/duty_rating_service.dart';
+import 'package:spdrivercalendar/features/ratings/duty_rating_vote.dart';
+import 'package:spdrivercalendar/features/ratings/duty_ratings_section.dart';
 
 enum ShiftType {
   early,   // 04:00 - 09:59
@@ -136,6 +140,9 @@ class StatisticsScreenState extends State<StatisticsScreen>
   // State variable for summary stats (shift type counts, etc.)
   Future<Map<String, dynamic>>? _summaryStatsFuture;
 
+  Future<({List<DutyRatingSummaryData> summaries, List<DutyRatingVote> notes})>?
+      _dutyRatingsFuture;
+
   // State variables for Sunday Pair Statistics
   DateTime? _currentBlockLsunDate, _currentBlockEsunDate;
   DateTime? _previousBlockLsunDate, _previousBlockEsunDate;
@@ -155,6 +162,7 @@ class StatisticsScreenState extends State<StatisticsScreen>
   final ScrollController _workTimeScrollController = ScrollController();
   final ScrollController _summaryScrollController = ScrollController();
   final ScrollController _frequencyScrollController = ScrollController();
+  final ScrollController _ratingsScrollController = ScrollController();
   
   // Days in lieu balance state
   int _daysInLieuRemaining = 0;
@@ -185,8 +193,7 @@ class StatisticsScreenState extends State<StatisticsScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    // Ensure TabController length is 3
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
     _loadExpandedSections();
     _initializeStatistics();
   }
@@ -297,6 +304,7 @@ class StatisticsScreenState extends State<StatisticsScreen>
     _workTimeScrollController.dispose();
     _summaryScrollController.dispose();
     _frequencyScrollController.dispose();
+    _ratingsScrollController.dispose();
     super.dispose();
   }
 
@@ -316,9 +324,17 @@ class StatisticsScreenState extends State<StatisticsScreen>
          _summaryStatsFuture = _calculateSummaryStatistics();
          _holidayDaysStatsFuture = _calculateHolidayDaysStatistics();
          _monthlyTrendFuture = _calculateMonthlyTrends();
+         _dutyRatingsFuture = _loadDutyRatings();
          _calculateSundayPairStatistics();
        });
     }
+  }
+
+  Future<({List<DutyRatingSummaryData> summaries, List<DutyRatingVote> notes})>
+      _loadDutyRatings() async {
+    final summaries = await DutyRatingService.fetchSummaries();
+    final notes = await DutyRatingService.fetchPublicNotes();
+    return (summaries: summaries, notes: notes);
   }
 
   Future<void> _loadDaysInLieuBalance() async {
@@ -545,7 +561,8 @@ class StatisticsScreenState extends State<StatisticsScreen>
           tabs: const [
             Tab(text: 'Work Time'),
             Tab(text: 'Shift Summary'),
-            Tab(text: 'Frequency'), // Combined tab
+            Tab(text: 'Frequency'),
+            Tab(text: 'Ratings'),
           ],
         ),
       ),
@@ -556,7 +573,8 @@ class StatisticsScreenState extends State<StatisticsScreen>
         children: [
           _buildWorkTimeTab(),
           _buildSummaryTab(),
-          _buildFrequencyTab(), // Use the new combined tab builder
+          _buildFrequencyTab(),
+          _buildDutyRatingsTab(),
         ],
       ),
     );
@@ -941,6 +959,99 @@ class StatisticsScreenState extends State<StatisticsScreen>
           ),
         ],
       ),
+      ),
+    );
+  }
+
+  Widget _buildDutyRatingsTab() {
+    final sizes = _getResponsiveSizes(context);
+    final isSmallScreen = MediaQuery.sizeOf(context).width < 600;
+
+    return Scrollbar(
+      controller: _ratingsScrollController,
+      thumbVisibility: true,
+      thickness: 6,
+      radius: const Radius.circular(3),
+      child: SingleChildScrollView(
+        controller: _ratingsScrollController,
+        padding: EdgeInsets.all(sizes['padding']!),
+        child: Card(
+          margin: EdgeInsets.symmetric(horizontal: isSmallScreen ? 0.0 : 4.0),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppTheme.borderRadius),
+          ),
+          child: Padding(
+            padding: EdgeInsets.all(isSmallScreen ? 12.0 : 16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.star_rate, color: AppTheme.primaryColor),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Duty Ratings',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          color: AppTheme.primaryColor,
+                          fontSize: isSmallScreen ? 18 : 20,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: 'Refresh',
+                      onPressed: () {
+                        setState(() {
+                          _dutyRatingsFuture = _loadDutyRatings();
+                        });
+                      },
+                      icon: const Icon(Icons.refresh),
+                    ),
+                  ],
+                ),
+                Text(
+                  'Community scores after sign-off',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                _dutyRatingsFuture == null
+                    ? const Center(child: CircularProgressIndicator())
+                    : FutureBuilder<
+                        ({
+                          List<DutyRatingSummaryData> summaries,
+                          List<DutyRatingVote> notes
+                        })>(
+                        future: _dutyRatingsFuture,
+                        builder: (context, snapshot) {
+                          if (snapshot.connectionState ==
+                              ConnectionState.waiting) {
+                            return const Center(
+                              child: CircularProgressIndicator(),
+                            );
+                          }
+                          if (snapshot.hasError) {
+                            return const Text('Unable to load duty ratings');
+                          }
+                          final data = snapshot.data;
+                          return DutyRatingsSection(
+                            summaries: data?.summaries ?? const [],
+                            notes: data?.notes ?? const [],
+                            onRefresh: () {
+                              setState(() {
+                                _dutyRatingsFuture = _loadDutyRatings();
+                              });
+                            },
+                          );
+                        },
+                      ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
