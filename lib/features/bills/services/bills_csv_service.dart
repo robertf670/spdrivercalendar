@@ -23,10 +23,6 @@ class BillsCsvService {
     required String dayType,
     DateTime? eraDate,
   }) async {
-    if (zone == 'Zone 2') {
-      return const BillsLoadResult(duties: [], isComingSoon: true);
-    }
-
     try {
       final lines = await _loadLines(
         zone: zone,

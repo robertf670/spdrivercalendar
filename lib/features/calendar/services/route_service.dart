@@ -128,71 +128,18 @@ class RouteService {
     }
   }
 
-  /// Extract route info for PZ2 duties (Route 13) from location codes
-  /// Uses same format as PZ1 until Route 13 location format is known
-  static Future<RouteInfo?> _getPZ2RouteInfo(String shiftCode, DateTime eventDate) async {
-    try {
-      final fileName = _getRouteFilename('2', eventDate);
-
-      if (_routeCache.containsKey(fileName)) {
-        return _routeCache[fileName]![shiftCode];
-      }
-
-      final csvData = await rootBundle.loadString('assets/$fileName');
-      final lines = csvData.split('\n');
-      final Map<String, RouteInfo> parsedRoutes = {};
-
-      for (int i = 1; i < lines.length; i++) {
-        final line = lines[i].trim();
-        if (line.isEmpty) continue;
-
-        final parts = line.split(',');
-        if (parts.length >= 12) {
-          final currentShiftCode = parts[0].trim();
-          final startLocation = parts.length > 4 ? parts[4].trim() : '';
-          final startBreak = parts.length > 5 ? parts[5].trim() : '';
-          final breakLocation = parts.length > 6 ? parts[6].trim() : '';
-          final afterBreakLocation = parts.length > 9 ? parts[9].trim() : '';
-          final finishLocation = parts.length > 11 ? parts[11].trim() : '';
-
-          final firstRoute = _extractRouteFromLocation(breakLocation) ??
-              _extractRouteFromLocation(startLocation);
-          final secondRoute = _extractRouteFromLocation(afterBreakLocation) ??
-              _extractRouteFromLocation(finishLocation);
-
-          final isWorkout = startBreak.toLowerCase() == 'nan';
-
-          RouteInfo? routeInfo;
-          if (isWorkout) {
-            final singleRoute = secondRoute ?? firstRoute;
-            if (singleRoute != null) {
-              routeInfo = RouteInfo(
-                firstRoute: singleRoute,
-                secondRoute: null,
-                isWorkout: true,
-              );
-            }
-          } else {
-            if (firstRoute != null || secondRoute != null) {
-              routeInfo = RouteInfo(
-                firstRoute: firstRoute,
-                secondRoute: secondRoute,
-                isWorkout: false,
-              );
-            }
-          }
-
-          if (routeInfo != null) {
-            parsedRoutes[currentShiftCode] = routeInfo;
-          }
-        }
-      }
-
-      _routeCache[fileName] = parsedRoutes;
-      return parsedRoutes[shiftCode];
-    } catch (e) {
-      return null;
-    }
+  /// PZ2 Sunday Route 13 bill. Location codes (MISQ / Garage) do not
+  /// carry a route number, so the card always shows **13**.
+  static Future<RouteInfo?> _getPZ2RouteInfo(
+    String shiftCode,
+    DateTime eventDate,
+  ) async {
+    return RouteInfo(
+      firstRoute: '13',
+      secondRoute: '13',
+      isWorkout: false,
+      fixedDisplayLabel: '13',
+    );
   }
 
   /// Shift Zone 3 (PZ3/XX): show **L58/L59** on the card (same idea as the combined 23/24 label).

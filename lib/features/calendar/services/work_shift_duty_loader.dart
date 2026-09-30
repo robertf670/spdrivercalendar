@@ -1,6 +1,7 @@
 import 'package:flutter/services.dart';
 import 'package:spdrivercalendar/core/constants/training_constants.dart';
 import 'package:spdrivercalendar/features/calendar/services/roster_service.dart';
+import 'package:spdrivercalendar/features/calendar/services/zone2_duties.dart';
 import 'package:spdrivercalendar/services/donnybrook_feature_service.dart';
 import 'package:spdrivercalendar/services/jamestown_feature_service.dart';
 
@@ -21,6 +22,11 @@ class WorkShiftDutyLoader {
     if (selectedZone == '22B/01' ||
         selectedZone == 'Union' ||
         selectedZone == 'Mentor') {
+      return const [];
+    }
+
+    if (selectedZone == Zone2Duties.zoneLabel &&
+        !Zone2Duties.canAddShiftsOn(shiftDate)) {
       return const [];
     }
 

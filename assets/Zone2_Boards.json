@@ -1,0 +1,250 @@
+{
+  "PZ2/01": {
+    "SUN": {
+      "duty": "201",
+      "depot": "7",
+      "report": "06:07",
+      "depart": "06:15",
+      "signoff": "11:46",
+      "spread": "05:39",
+      "work": "05:39",
+      "relief": "00:00",
+      "board": [
+        ["", "Duty", "201", "Reports at 06:07", "", ""],
+        ["SPL", "", "", "Departs Garage", "", "06:15"],
+        ["13", "", "", "Grange Castle", "", "07:00"],
+        ["13", "", "", "Mountjoy Square", "", "08:30"],
+        ["13", "", "", "Grange Castle", "", "10:00"],
+        ["13", "", "", "Mountjoy Square", "11:30", ""],
+        ["---", "", "", "", "", ""],
+        ["", "Finish", "Duty", "", "", ""]
+      ]
+    }
+  },
+  "PZ2/02": {
+    "SUN": {
+      "duty": "202",
+      "depot": "7",
+      "report": "06:37",
+      "depart": "06:45",
+      "signoff": "12:16",
+      "spread": "05:39",
+      "work": "05:39",
+      "relief": "00:00",
+      "board": [
+        ["", "Duty", "202", "Reports at 06:37", "", ""],
+        ["SPL", "", "", "Departs Garage", "", "06:45"],
+        ["13", "", "", "Grange Castle", "", "07:30"],
+        ["13", "", "", "Mountjoy Square", "", "09:00"],
+        ["13", "", "", "Grange Castle", "", "10:30"],
+        ["13", "", "", "Mountjoy Square", "12:00", ""],
+        ["---", "", "", "", "", ""],
+        ["", "Finish", "Duty", "", "", ""]
+      ]
+    }
+  },
+  "PZ2/03": {
+    "SUN": {
+      "duty": "203",
+      "depot": "7",
+      "report": "06:42",
+      "depart": "06:50",
+      "signoff": "14:31",
+      "spread": "07:49",
+      "work": "06:54",
+      "relief": "00:55",
+      "board": [
+        ["", "Duty", "203", "Reports at 06:42", "", ""],
+        ["SPL", "", "", "Departs Garage", "", "06:50"],
+        ["13", "", "", "Mountjoy Square", "", "07:00"],
+        ["13", "", "", "Grange Castle", "", "08:30"],
+        ["", "", "", "Mountjoy Square", "09:55", ""],
+        ["---", "", "", "", "", ""],
+        ["", "Duty", "203", "Takes up at 11:00 Mountjoy Square", "", ""],
+        ["13", "", "", "Grange Castle", "", "12:30"],
+        ["", "", "", "Mountjoy Square", "14:15", ""],
+        ["", "Finish", "Duty", "", "", ""]
+      ]
+    }
+  },
+  "PZ2/04": {
+    "SUN": {
+      "duty": "204",
+      "depot": "7",
+      "report": "07:07",
+      "depart": "07:15",
+      "signoff": "15:01",
+      "spread": "07:54",
+      "work": "06:59",
+      "relief": "00:55",
+      "board": [
+        ["", "Duty", "204", "Reports at 07:07", "", ""],
+        ["SPL", "", "", "Departs Garage", "", "07:15"],
+        ["13", "", "", "Mountjoy Square", "", "07:30"],
+        ["13", "", "", "Grange Castle", "", "09:00"],
+        ["", "", "", "Mountjoy Square", "10:25", ""],
+        ["---", "", "", "", "", ""],
+        ["", "Duty", "204", "Takes up at 11:30 Mountjoy Square", "", ""],
+        ["13", "", "", "Grange Castle", "", "13:00"],
+        ["", "", "", "Mountjoy Square", "14:45", ""],
+        ["", "Finish", "Duty", "", "", ""]
+      ]
+    }
+  },
+  "PZ2/05": {
+    "SUN": {
+      "duty": "205",
+      "depot": "7",
+      "report": "07:07",
+      "depart": "07:15",
+      "signoff": "13:01",
+      "spread": "05:54",
+      "work": "05:54",
+      "relief": "00:00",
+      "board": [
+        ["", "Duty", "205", "Reports at 07:07", "", ""],
+        ["SPL", "", "", "Departs Garage", "", "07:15"],
+        ["13", "", "", "Grange Castle", "", "08:00"],
+        ["13", "", "", "Mountjoy Square", "", "09:30"],
+        ["13", "", "", "Grange Castle", "", "11:00"],
+        ["13", "", "", "Mountjoy Square", "12:45", ""],
+        ["---", "", "", "", "", ""],
+        ["", "Finish", "Duty", "", "", ""]
+      ]
+    }
+  },
+  "PZ2/06": {
+    "SUN": {
+      "duty": "206",
+      "depot": "7",
+      "report": "07:37",
+      "depart": "07:45",
+      "signoff": "15:31",
+      "spread": "07:54",
+      "work": "06:59",
+      "relief": "00:55",
+      "board": [
+        ["", "Duty", "206", "Reports at 07:37", "", ""],
+        ["SPL", "", "", "Departs Garage", "", "07:45"],
+        ["13", "", "", "Mountjoy Square", "", "08:00"],
+        ["13", "", "", "Grange Castle", "", "09:30"],
+        ["", "", "", "Mountjoy Square", "10:55", ""],
+        ["---", "", "", "", "", ""],
+        ["", "Duty", "206", "Takes up at 12:00 Mountjoy Square", "", ""],
+        ["13", "", "", "Grange Castle", "", "13:30"],
+        ["", "", "", "Mountjoy Square", "15:15", ""],
+        ["", "Finish", "Duty", "", "", ""]
+      ]
+    }
+  },
+  "PZ2/07": {
+    "SUN": {
+      "duty": "207",
+      "depot": "7",
+      "report": "09:41",
+      "depart": "10:00",
+      "signoff": "13:31",
+      "spread": "03:50",
+      "work": "03:50",
+      "relief": "00:00",
+      "board": [
+        ["", "Duty", "207", "Reports at 09:41", "", ""],
+        ["13", "", "", "Mountjoy Square", "", "10:00"],
+        ["13", "", "", "Grange Castle", "", "11:30"],
+        ["13", "", "", "Mountjoy Square", "13:15", ""],
+        ["---", "", "", "", "", ""],
+        ["", "Finish", "Duty", "", "", ""]
+      ]
+    }
+  },
+  "PZ2/08": {
+    "SUN": {
+      "duty": "208",
+      "depot": "7",
+      "report": "11:52",
+      "depart": "12:00",
+      "signoff": "20:46",
+      "spread": "08:54",
+      "work": "07:19",
+      "relief": "01:35",
+      "board": [
+        ["", "Duty", "208", "Reports at 11:52", "", ""],
+        ["SPL", "", "", "Departs Garage", "", "12:00"],
+        ["13", "", "", "Mountjoy Square", "", "12:15"],
+        ["13", "", "", "Grange Castle", "", "13:45"],
+        ["", "", "", "Mountjoy Square", "15:30", ""],
+        ["---", "", "", "", "", ""],
+        ["", "Duty", "208", "Takes up at 17:15 Mountjoy Square", "", ""],
+        ["13", "", "", "Grange Castle", "", "19:00"],
+        ["", "", "", "Mountjoy Square", "20:30", ""],
+        ["", "Finish", "Duty", "", "", ""]
+      ]
+    }
+  },
+  "PZ2/25": {
+    "SUN": {
+      "duty": "225",
+      "depot": "7",
+      "report": "19:22",
+      "depart": "19:25",
+      "signoff": "00:20",
+      "spread": "04:58",
+      "work": "04:58",
+      "relief": "00:00",
+      "board": [
+        ["", "Duty", "225", "Reports at 19:22", "", ""],
+        ["SPL", "", "", "Departs Garage", "", "19:25"],
+        ["13", "", "", "Grange Castle", "", "20:15"],
+        ["13", "", "", "Mountjoy Square", "", "21:45"],
+        ["13", "", "", "Grange Castle", "", "23:00"],
+        ["SPL", "", "", "Mountjoy Square", "", "00:05"],
+        ["---", "", "", "", "", ""],
+        ["", "Finish", "Duty", "", "", ""]
+      ]
+    }
+  },
+  "PZ2/26": {
+    "SUN": {
+      "duty": "226",
+      "depot": "7",
+      "report": "19:42",
+      "depart": "19:45",
+      "signoff": "00:25",
+      "spread": "04:43",
+      "work": "04:43",
+      "relief": "00:00",
+      "board": [
+        ["", "Duty", "226", "Reports at 19:42", "", ""],
+        ["SPL", "", "", "Departs Garage", "", "19:45"],
+        ["13", "", "", "Grange Castle", "", "20:30"],
+        ["13", "", "", "Mountjoy Square", "", "22:00"],
+        ["13", "", "", "Grange Castle", "", "23:15"],
+        ["SPL", "", "", "Mountjoy Square", "", "00:15"],
+        ["---", "", "", "", "", ""],
+        ["", "Finish", "Duty", "", "", ""]
+      ]
+    }
+  },
+  "PZ2/27": {
+    "SUN": {
+      "duty": "227",
+      "depot": "7",
+      "report": "19:52",
+      "depart": "19:55",
+      "signoff": "00:45",
+      "spread": "04:53",
+      "work": "04:53",
+      "relief": "00:00",
+      "board": [
+        ["", "Duty", "227", "Reports at 19:52", "", ""],
+        ["SPL", "", "", "Departs Garage", "", "19:55"],
+        ["13", "", "", "Grange Castle", "", "20:45"],
+        ["13", "", "", "Mountjoy Square", "", "22:15"],
+        ["13", "", "", "Grange Castle", "", "23:30"],
+        ["SPL", "", "", "Mountjoy Square", "", "00:30"],
+        ["---", "", "", "", "", ""],
+        ["", "Finish", "Duty", "", "", ""]
+      ]
+    }
+  }
+}

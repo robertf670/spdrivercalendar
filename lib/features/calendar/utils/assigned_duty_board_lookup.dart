@@ -16,7 +16,7 @@ class AssignedDutyBoardLookup {
     }
     code = code.replaceAll(RegExp(r'\s*\(OT\)\s*$'), '');
 
-    if (RegExp(r'^[134]/').hasMatch(code)) {
+    if (RegExp(r'^[1-4]/').hasMatch(code)) {
       code = 'PZ$code';
     }
 

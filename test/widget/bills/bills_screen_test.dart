@@ -57,6 +57,48 @@ void main() {
     expect(find.text('View board'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('Zone 2 Sunday Route 13 bill is visible before 10 Oct',
+      (tester) async {
+    tester.view.physicalSize = const Size(320, 800);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: BillsScreen(
+          now: DateTime(2026, 10, 4),
+          initialZone: 'Zone 2',
+          initialDayType: 'Sun',
+        ),
+      ),
+    );
+
+    await _pumpUntil(
+      tester,
+      () => find.text('33 duties').evaluate().isNotEmpty,
+    );
+
+    expect(find.text('Zone 2 coming soon'), findsNothing);
+    expect(find.text('33 duties'), findsOneWidget);
+    expect(find.widgetWithText(ActionChip, '01–20'), findsOneWidget);
+
+    await tester.tap(find.text('01').first);
+    await tester.pump();
+    expect(find.text('PZ2/01'), findsOneWidget);
+    expect(find.text('View board'), findsOneWidget);
+
+    await tester.ensureVisible(find.text('View board'));
+    await tester.tap(find.text('View board'));
+    await _pumpUntil(
+      tester,
+      () => find.text('First Half').evaluate().isNotEmpty,
+    );
+    expect(find.textContaining('Grange Castle'), findsWidgets);
+    expect(find.textContaining('Mountjoy Square'), findsWidgets);
+    expect(tester.takeException(), isNull);
+  });
 }
 
 Future<void> _pumpUntil(WidgetTester tester, bool Function() condition) async {

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:spdrivercalendar/features/calendar/services/work_for_others_shift_loader.dart';
+import 'package:spdrivercalendar/features/calendar/services/zone2_duties.dart';
 
 /// Presentation dialog for choosing a Work For Others duty.
 ///
@@ -128,7 +129,12 @@ class _WorkForOthersDialogState extends State<WorkForOthersDialog> {
             if (_isLoading)
               const Center(child: CircularProgressIndicator())
             else if (_shiftNumbers.isEmpty)
-              const Text('No shifts available for selected zone and date.')
+              Text(
+                _selectedZone == Zone2Duties.zoneLabel &&
+                        !Zone2Duties.canAddShiftsOn(widget.shiftDate)
+                    ? Zone2Duties.availableFromMessage
+                    : 'No shifts available for selected zone and date.',
+              )
             else
               DropdownButton<String>(
                 value: dropdownValue,

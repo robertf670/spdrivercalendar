@@ -6,7 +6,7 @@ import 'package:spdrivercalendar/features/calendar/services/shift_service.dart';
 import 'package:spdrivercalendar/features/calendar/utils/zone_board_mapper.dart';
 import 'package:spdrivercalendar/models/universal_board.dart';
 
-/// Loads Zone 1/3/4 and Jamestown duty boards from bundled JSON and maps
+/// Loads Zone 1/2/3/4 and Jamestown duty boards from bundled JSON and maps
 /// them to [UniversalBoard] for the shared board dialog.
 class ZoneBoardService {
   ZoneBoardService._();

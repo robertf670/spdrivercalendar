@@ -1,5 +1,6 @@
 import 'package:flutter/services.dart';
 import 'package:spdrivercalendar/features/calendar/services/roster_service.dart';
+import 'package:spdrivercalendar/features/calendar/services/zone2_duties.dart';
 
 /// Loads available duty codes for the Add Overtime Duty picker.
 ///
@@ -22,6 +23,11 @@ class OvertimeDutyShiftLoader {
     required String selectedZone,
     required DateTime shiftDate,
   }) async {
+    if (selectedZone == Zone2Duties.zoneLabel &&
+        !Zone2Duties.canAddShiftsOn(shiftDate)) {
+      return const [];
+    }
+
     final dayOfWeek = RosterService.getDayOfWeek(shiftDate);
     final zoneNumber = selectedZone.replaceAll('Zone ', '');
 

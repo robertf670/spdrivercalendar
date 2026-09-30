@@ -84,16 +84,21 @@ def first_time(side: list[str]) -> str | None:
     return None
 
 
+def minutes_from_hhmm(value: str) -> int:
+    hh, mm = (int(x) for x in value.split(":"))
+    minutes = hh * 60 + mm
+    # Night second halves (02:xx) sort after evening first halves.
+    # Do not wrap 04:xx–05:xx garage reports or they land after a 10:30 take-up.
+    if hh < 4:
+        minutes += 24 * 60
+    return minutes
+
+
 def sort_key(segment: list[list[str]]) -> int:
     for row in segment:
         t = first_time(row)
-        if not t:
-            continue
-        hh, mm = (int(x) for x in t.split(":"))
-        minutes = hh * 60 + mm
-        if hh < 6:
-            minutes += 24 * 60
-        return minutes
+        if t:
+            return minutes_from_hhmm(t)
     return 0
 
 
@@ -149,47 +154,88 @@ def parse_pages(source_csv: Path) -> list[dict]:
     return pages
 
 
+def parse_side(side_rows: list[list[str]]) -> tuple[list[list[str]], list[tuple[str, list[list[str]]]]]:
+    """Split a column into an unlabelled prefix and duty segments.
+
+    The prefix is trip rows at the top of the right-hand column before the
+    first Duty header — the wrap from the bottom of the left column.
+    """
+    prefix: list[list[str]] = []
+    segments: list[tuple[str, list[list[str]]]] = []
+    current_duty: str | None = None
+    current_seg: list[list[str]] = []
+    capturing_prefix = True
+
+    def flush() -> None:
+        nonlocal current_seg
+        if current_duty and current_seg:
+            segments.append((current_duty, current_seg))
+        current_seg = []
+
+    for side in side_rows:
+        if not side_has_content(side):
+            continue
+        route, label, num, place, arr, dep = side
+        label_l = label.lower()
+        num_duty = duty_number(num)
+
+        if capturing_prefix:
+            if label_l == "duty" and num_duty:
+                capturing_prefix = False
+            else:
+                prefix.append(side)
+                if label_l == "finish":
+                    capturing_prefix = False
+                continue
+
+        if label_l == "finish":
+            if current_duty:
+                current_seg.append(side)
+            continue
+
+        if label_l == "duty" and num_duty:
+            if current_duty and num_duty != current_duty:
+                flush()
+            elif current_duty and current_seg and TAKE_BUS_RE.search(
+                current_seg[-1][3]
+            ):
+                flush()
+            current_duty = num_duty
+            current_seg.append(side)
+            continue
+
+        if current_duty:
+            current_seg.append(side)
+
+    flush()
+    return prefix, segments
+
+
+def ends_with_finish(segment: list[list[str]]) -> bool:
+    return any(row[1].lower() == "finish" for row in segment)
+
+
 def collect_segments(source_csv: Path) -> dict[str, list[list[list[str]]]]:
     segments: dict[str, list[list[list[str]]]] = defaultdict(list)
 
     for page in parse_pages(source_csv):
-        for side_rows in (page["left"], page["right"]):
-            current_duty: str | None = None
-            current_seg: list[list[str]] = []
+        left_prefix, left_segs = parse_side(page["left"])
+        right_prefix, right_segs = parse_side(page["right"])
 
-            def flush() -> None:
-                nonlocal current_seg
-                if current_duty and current_seg:
-                    segments[current_duty].append(current_seg)
-                current_seg = []
+        if left_prefix:
+            # Left-column wrap is unexpected; keep the rows if a duty follows.
+            if left_segs:
+                left_segs[0][1][0:0] = left_prefix
+            elif right_segs:
+                right_segs[0][1][0:0] = left_prefix
 
-            for side in side_rows:
-                if not side_has_content(side):
-                    continue
-                route, label, num, place, arr, dep = side
-                label_l = label.lower()
-                num_duty = duty_number(num)
+        if right_prefix and left_segs and not ends_with_finish(left_segs[-1][1]):
+            left_segs[-1][1].extend(right_prefix)
+        elif right_prefix and right_segs:
+            right_segs[0][1][0:0] = right_prefix
 
-                if label_l == "finish":
-                    if current_duty:
-                        current_seg.append(side)
-                    continue
-
-                if label_l == "duty" and num_duty:
-                    if current_duty and num_duty != current_duty:
-                        flush()
-                    elif current_duty and current_seg and TAKE_BUS_RE.search(
-                        current_seg[-1][3]
-                    ):
-                        flush()
-                    current_duty = num_duty
-                    current_seg.append(side)
-                    continue
-
-                if current_duty:
-                    current_seg.append(side)
-
-            flush()
+        for duty, seg in left_segs + right_segs:
+            segments[duty].append(seg)
 
     return segments
 
@@ -205,8 +251,19 @@ def to_board_row(side: list[str]) -> list[str]:
     return [route, "", "", place, arr, dep]
 
 
+def is_take_bus_only(segment: list[list[str]]) -> bool:
+    rows = [row for row in segment if side_has_content(row)]
+    if len(rows) != 1:
+        return False
+    return TAKE_BUS_RE.search(rows[0][3]) is not None
+
+
 def build_board(segments: list[list[list[str]]]) -> list[list[str]]:
-    ordered = [seg for seg in sorted(segments, key=sort_key) if seg]
+    ordered = [
+        seg
+        for seg in sorted(segments, key=sort_key)
+        if seg and not is_take_bus_only(seg)
+    ]
     rows: list[list[str]] = []
 
     def append_seg(seg: list[list[str]]) -> None:

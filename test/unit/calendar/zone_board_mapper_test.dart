@@ -5,6 +5,7 @@ void main() {
   group('ZoneBoardMapper.normalizeDutyCode', () {
     test('keeps standard duty codes', () {
       expect(ZoneBoardMapper.normalizeDutyCode('PZ1/01'), 'PZ1/01');
+      expect(ZoneBoardMapper.normalizeDutyCode('PZ2/01'), 'PZ2/01');
       expect(ZoneBoardMapper.normalizeDutyCode('PZ3/1X'), 'PZ3/1X');
       expect(ZoneBoardMapper.normalizeDutyCode('PZ4/12'), 'PZ4/12');
       expect(ZoneBoardMapper.normalizeDutyCode('811/36'), '811/36');
@@ -19,7 +20,6 @@ void main() {
 
     test('rejects unsupported titles', () {
       expect(ZoneBoardMapper.normalizeDutyCode('307/01'), isNull);
-      expect(ZoneBoardMapper.normalizeDutyCode('PZ2/01'), isNull);
       expect(ZoneBoardMapper.normalizeDutyCode('SP0800'), isNull);
     });
   });
@@ -29,6 +29,10 @@ void main() {
       expect(
         ZoneBoardMapper.assetPathForDuty('PZ1/01'),
         'assets/Zone1_Boards.json',
+      );
+      expect(
+        ZoneBoardMapper.assetPathForDuty('PZ2/01'),
+        'assets/Zone2_Boards.json',
       );
       expect(
         ZoneBoardMapper.assetPathForDuty('PZ3/01'),
@@ -197,6 +201,7 @@ void main() {
       expect(entries[0].route, isNull);
       expect(entries[0].location, 'Sandymount');
       expect(entries[1].action, 'Arrive');
+      expect(entries[1].route, isNull);
       expect(entries[1].route, isNull);
     });
 

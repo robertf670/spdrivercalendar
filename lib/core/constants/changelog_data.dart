@@ -1,4 +1,20 @@
  final Map<String, List<Map<String, String>>> changelogData = {
+  '4.3.1': [
+    {
+      'title': 'Zone 2 Bills - Route 13',
+      'description':
+          'Route 13 duties are in the Bills screen now. You can add them as shifts from 10 Oct 2026. Bill still subject to change.',
+    },
+    {
+      'title': 'Zone 2 Sunday Boards',
+      'description': 'Some Sunday running boards added for Route 13. More to follow. Boards still subject to change.',
+    },
+    {
+      'title': 'Zone 4 Boards',
+      'description':
+          'Fixed boards on 4/05, 4/12, and 4/34.',
+    },
+  ],
   '4.3.0': [
     {
       'title': 'Duty Ratings',

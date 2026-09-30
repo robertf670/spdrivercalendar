@@ -26,6 +26,7 @@ void main() {
 
     test('prefixes bare zone codes used on 22B/spare', () {
       expect(AssignedDutyBoardLookup.lookupCode('4/07'), 'PZ4/07');
+      expect(AssignedDutyBoardLookup.lookupCode('2/01'), 'PZ2/01');
       expect(AssignedDutyBoardLookup.lookupCode('1/03A'), 'PZ1/03');
     });
   });

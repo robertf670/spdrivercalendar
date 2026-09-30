@@ -12,14 +12,13 @@ class BoardLookup {
     required String dayType,
     required DateTime date,
   }) async {
-    if (zone == 'Zone 2') return {};
     if (zone == 'Uni/Euro') {
       final boards = await UniversalBoardService.loadBoards();
       return boards.map((board) => board.shift).toSet();
     }
 
     final zoneNumber = zone.replaceAll('Zone ', '');
-    if (!['1', '3', '4'].contains(zoneNumber)) return {};
+    if (!['1', '2', '3', '4'].contains(zoneNumber)) return {};
 
     final codes = await ZoneBoardService.listDutyCodes(
       zoneNumber: zoneNumber,

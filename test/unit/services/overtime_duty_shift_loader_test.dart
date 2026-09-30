@@ -66,4 +66,25 @@ void main() {
     expect(shifts.last, '16:00');
     expect(shifts, isNot(contains('16:15')));
   });
+
+  test('Zone 2 overtime stays empty before 10 Oct 2026', () async {
+    final loader = OvertimeDutyShiftLoader(
+      bundle: _FakeBundle({
+        'assets/SUN_DUTIES_PZ2.csv':
+            'shift,a,b,c,d,startbreak\nPZ2/04,x,x,x,x,10:25\n',
+      }),
+    );
+
+    final before = await loader.loadShiftNumbers(
+      selectedZone: 'Zone 2',
+      shiftDate: DateTime(2026, 10, 4),
+    );
+    expect(before, isEmpty);
+
+    final after = await loader.loadShiftNumbers(
+      selectedZone: 'Zone 2',
+      shiftDate: DateTime(2026, 10, 11),
+    );
+    expect(after, ['PZ2/04']);
+  });
 }

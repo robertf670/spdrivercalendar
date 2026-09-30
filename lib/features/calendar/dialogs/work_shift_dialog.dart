@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:spdrivercalendar/core/constants/app_constants.dart';
 import 'package:spdrivercalendar/core/constants/training_constants.dart';
 import 'package:spdrivercalendar/features/calendar/services/roster_service.dart';
+import 'package:spdrivercalendar/features/calendar/services/zone2_duties.dart';
 import 'package:spdrivercalendar/features/calendar/utils/work_shift_zone_options.dart';
 import 'package:spdrivercalendar/features/calendar/widgets/custom_training_form.dart';
 import 'package:spdrivercalendar/features/calendar/widgets/weekday_repeat_day_toggle.dart';
@@ -278,8 +279,9 @@ class _WorkShiftDialogState extends State<WorkShiftDialog> {
                 )
               else if (_shiftNumbers.isEmpty)
                 Text(
-                  _selectedZone == 'Zone 2'
-                      ? 'Coming soon'
+                  _selectedZone == Zone2Duties.zoneLabel &&
+                          !Zone2Duties.canAddShiftsOn(widget.shiftDate)
+                      ? Zone2Duties.availableFromMessage
                       : 'No shifts available for selected zone and date',
                 )
               else

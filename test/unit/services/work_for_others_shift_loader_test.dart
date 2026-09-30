@@ -69,4 +69,24 @@ void main() {
 
     expect(shifts, ['01', '02']);
   });
+
+  test('Zone 2 work-for-others stays empty before 10 Oct 2026', () async {
+    final loader = WorkForOthersShiftLoader(
+      bundle: _FakeBundle({
+        'assets/SUN_DUTIES_PZ2.csv': 'shift\nPZ2/01\nPZ2/02\n',
+      }),
+    );
+
+    final before = await loader.loadShiftNumbers(
+      selectedZone: 'Zone 2',
+      shiftDate: DateTime(2026, 10, 4),
+    );
+    expect(before, isEmpty);
+
+    final after = await loader.loadShiftNumbers(
+      selectedZone: 'Zone 2',
+      shiftDate: DateTime(2026, 10, 11),
+    );
+    expect(after, ['PZ2/01', 'PZ2/02']);
+  });
 }

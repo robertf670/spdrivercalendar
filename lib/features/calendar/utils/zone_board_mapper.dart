@@ -42,7 +42,7 @@ class ZoneBoardMapper {
     code = code.replaceAll(RegExp(r'\s*\(OT\)\s*$'), '');
 
     // Strip OT half suffix A/B, but keep X duties (e.g. PZ1/10X).
-    final pzHalfMatch = RegExp(r'^(PZ[134]/\d+X?)[AB]$').firstMatch(code);
+    final pzHalfMatch = RegExp(r'^(PZ[1-4]/\d+X?)[AB]$').firstMatch(code);
     if (pzHalfMatch != null) {
       code = pzHalfMatch.group(1)!;
     }
@@ -52,7 +52,7 @@ class ZoneBoardMapper {
       code = jamestownHalfMatch.group(1)!;
     }
 
-    if (RegExp(r'^PZ[134]/\S+$').hasMatch(code) ||
+    if (RegExp(r'^PZ[1-4]/\S+$').hasMatch(code) ||
         RegExp(r'^811/\d+$').hasMatch(code)) {
       return code;
     }
@@ -66,6 +66,9 @@ class ZoneBoardMapper {
   static String? assetPathForDuty(String dutyCode, {DateTime? date}) {
     if (dutyCode.startsWith('PZ1/')) {
       return 'assets/Zone1_Boards.json';
+    }
+    if (dutyCode.startsWith('PZ2/')) {
+      return 'assets/Zone2_Boards.json';
     }
     if (dutyCode.startsWith('PZ3/')) {
       return 'assets/Zone3_Boards.json';
@@ -186,7 +189,6 @@ class ZoneBoardMapper {
             action: 'Arrive',
             time: arr,
             location: place.isNotEmpty ? place : null,
-            route: _displayRoute(route),
           ),
         );
         continue;

@@ -21,6 +21,7 @@ const Map<String, String> locationMappings = {
   'CONHILL #1619': 'Con Hill',
   'BSTONE #190': 'B Stone',
   'PK GATE ST': 'Park Gate St',
+  'MISQ': 'Mountjoy Sq',
   
   // Route-specific locations
   '39A-ASTONQ': 'Aston Q',
