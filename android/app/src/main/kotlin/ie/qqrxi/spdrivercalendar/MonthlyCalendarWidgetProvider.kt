@@ -20,7 +20,6 @@ class MonthlyCalendarWidgetProvider : AppWidgetProvider() {
         private const val START_DATE_KEY = "flutter.startDate"
         private const val START_WEEK_KEY = "flutter.startWeek"
         private const val ROSTER_SCHEDULE_CHANGES_KEY = "flutter.rosterScheduleChanges"
-        private const val MARKED_IN_ENABLED_KEY = "flutter.markedInEnabled"
         private const val MARKED_IN_STATUS_KEY = "flutter.markedInStatus"
         private const val BANK_HOLIDAY_DATES_KEY = "flutter.bankHolidayDates"
         private const val REST_DAY_SWAPS_KEY = "flutter.restDaySwaps"
@@ -151,16 +150,14 @@ class MonthlyCalendarWidgetProvider : AppWidgetProvider() {
                 val holidays = parseHolidays(holidaysJson)
                 
                 // Get marked-in settings (M-F shift pattern)
-                val markedInEnabled = prefs.getBoolean(MARKED_IN_ENABLED_KEY, false)
                 val markedInStatus = prefs.getString(MARKED_IN_STATUS_KEY, "") ?: ""
-                val isMFMarkedIn = markedInEnabled && markedInStatus == "M-F"
                 
-                // Get bank holiday dates (for M-F: bank holidays = Rest, matches calendar)
+                // Get bank holiday dates (for M-F / 4 Day: bank holidays = Rest, matches calendar)
                 val bankHolidayDates = loadBankHolidayDates(context, prefs)
                 val restDaySwaps = loadRestDaySwaps(prefs)
                 
                 // Calculate and display calendar grid
-                displayCalendar(views, context, colorContext, currentYear, currentMonth, startDateStr, startWeek, rosterScheduleChanges, eventsMap, holidays, isMFMarkedIn, bankHolidayDates, restDaySwaps)
+                displayCalendar(views, context, colorContext, currentYear, currentMonth, startDateStr, startWeek, rosterScheduleChanges, eventsMap, holidays, markedInStatus, bankHolidayDates, restDaySwaps)
                 
                 // Set up click intent to open the app
                 val intent = android.content.Intent(context, MainActivity::class.java)
@@ -256,7 +253,7 @@ class MonthlyCalendarWidgetProvider : AppWidgetProvider() {
             rosterScheduleChanges: List<Pair<Date, Int>>,
             eventsMap: Map<String, List<EventInfo>>,
             holidays: List<HolidayInfo>,
-            isMFMarkedIn: Boolean = false,
+            markedInStatus: String = "",
             bankHolidayDates: Set<String> = emptySet(),
             restDaySwaps: Map<String, String> = emptyMap()
         ) {
@@ -335,7 +332,7 @@ class MonthlyCalendarWidgetProvider : AppWidgetProvider() {
                         if (displayDate != null) {
                             // Get roster pattern, event status, and holiday status
                             val dateKey = formatDateKey(displayDate.time)
-                            val pattern = getRosterPattern(displayDate.time, startDateStr, startWeek, rosterScheduleChanges, isMFMarkedIn, bankHolidayDates, restDaySwaps)
+                            val pattern = getRosterPattern(displayDate.time, startDateStr, startWeek, rosterScheduleChanges, markedInStatus, bankHolidayDates, restDaySwaps)
                             val hasEvent = eventsMap.containsKey(dateKey)
                             val holidayType = getHolidayTypeForDate(displayDate.time, holidays)
                             
@@ -477,19 +474,25 @@ class MonthlyCalendarWidgetProvider : AppWidgetProvider() {
             }
         }
         
-        private fun getRosterPattern(date: Date, startDateStr: String?, startWeek: Int, rosterScheduleChanges: List<Pair<Date, Int>> = emptyList(), isMFMarkedIn: Boolean = false, bankHolidayDates: Set<String> = emptySet(), restDaySwaps: Map<String, String> = emptyMap()): String? {
+        private fun getRosterPattern(date: Date, startDateStr: String?, startWeek: Int, rosterScheduleChanges: List<Pair<Date, Int>> = emptyList(), markedInStatus: String = "", bankHolidayDates: Set<String> = emptySet(), restDaySwaps: Map<String, String> = emptyMap()): String? {
             val dateKey = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(date)
             restDaySwaps[dateKey]?.let { return it }
             
             val calendar = Calendar.getInstance()
             calendar.time = date
             
-            // M-F marked in: W on Mon-Fri, R on Sat-Sun, R on bank holidays (matches calendar exactly)
-            if (isMFMarkedIn) {
-                val dateKey = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(date)
-                if (bankHolidayDates.contains(dateKey)) return "R"  // Bank holiday = Rest
+            if (markedInStatus == "M-F" || markedInStatus == "4 Day") {
+                if (bankHolidayDates.contains(dateKey)) return "R"
                 val dayOfWeek = calendar.get(Calendar.DAY_OF_WEEK)
-                return if (dayOfWeek >= Calendar.MONDAY && dayOfWeek <= Calendar.FRIDAY) "W" else "R"
+                val isWorkDay = if (markedInStatus == "4 Day") {
+                    dayOfWeek == Calendar.FRIDAY ||
+                        dayOfWeek == Calendar.SATURDAY ||
+                        dayOfWeek == Calendar.SUNDAY ||
+                        dayOfWeek == Calendar.MONDAY
+                } else {
+                    dayOfWeek >= Calendar.MONDAY && dayOfWeek <= Calendar.FRIDAY
+                }
+                return if (isWorkDay) "W" else "R"
             }
             
             if (startDateStr == null) return null

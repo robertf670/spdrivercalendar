@@ -50,4 +50,41 @@ void main() {
     expect(saved!.selectedShiftNumber, 'PZ1/01');
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('marked in on Zone 2 defaults the picker from 10 Oct 2026',
+      (tester) async {
+    await tester.binding.setSurfaceSize(const Size(320, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final loadedZones = <String>[];
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: WorkShiftDialog(
+            shiftDate: DateTime(2026, 10, 12),
+            isMFMarkedIn: false,
+            isShiftMarkedIn: true,
+            markedInZone: 'Zone 2',
+            jamestownEnabled: false,
+            donnybrook1Enabled: false,
+            loadShiftNumbers: (zone) async {
+              loadedZones.add(zone);
+              return const ['PZ2/01', 'PZ2/02'];
+            },
+            dayHasBlockingEvent: (_) => false,
+            onAddShift: (_) async {},
+          ),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(loadedZones, ['Zone 2']);
+    expect(find.text('PZ2/01'), findsOneWidget);
+    expect(find.text('Would you like to repeat this duty this week?'),
+        findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 }

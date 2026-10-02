@@ -46,4 +46,29 @@ void main() {
     expect(bogey.displaySignOff, '18:01');
     expect(bogey.displaySpread, '7h 50m');
   });
+
+  test('PZ2/11, PZ2/12, PZ2/14, and PZ2/27 match the Saturday sheet', () {
+    final duty11 = duties.singleWhere((row) => row.shift == 'PZ2/11');
+    expect(duty11.displayReport, '08:37');
+    expect(duty11.displayDepart, '08:45');
+    expect(duty11.displayFinishBreak, '13:45');
+    expect(duty11.displaySignOff, '16:05');
+
+    final duty12 = duties.singleWhere((row) => row.shift == 'PZ2/12');
+    expect(duty12.isWorkout, isTrue);
+    expect(duty12.displayReport, '09:22');
+    expect(duty12.displayDepart, '09:30');
+    expect(duty12.displaySpread, '5h 54m');
+    expect(duty12.displayWork, '5h 54m');
+
+    final duty14 = duties.singleWhere((row) => row.shift == 'PZ2/14');
+    expect(duty14.displayStartBreak, '15:50');
+    expect(duty14.displayFinishBreak, '17:15');
+
+    final duty27 = duties.singleWhere((row) => row.shift == 'PZ2/27');
+    expect(duty27.displayStartBreak, '19:05');
+    expect(duty27.displayFinishBreak, '20:45');
+    expect(duty27.endLocation, 'Garage');
+    expect(duty27.displaySignOff, '00:45');
+  });
 }

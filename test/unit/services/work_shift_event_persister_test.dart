@@ -139,4 +139,40 @@ void main() {
     expect(result.status, WorkShiftPersistStatus.success);
     expect(created.map((e) => e.startDate.day).toList(), [4, 3, 5]);
   });
+
+  test('repeats Zone 2 duty when marked in on Zone 2', () async {
+    final created = <Event>[];
+    final persister = WorkShiftEventPersister(
+      lookupShiftTimes: (zone, shift, date) async => {
+        'startTime': const TimeOfDay(hour: 5, minute: 37),
+        'endTime': const TimeOfDay(hour: 13, minute: 2),
+        'isNextDay': false,
+      },
+      addEvent: (event) async {
+        created.add(event);
+      },
+      eventsForDay: (_) => const [],
+      bankHolidayForDate: (_) => null,
+      now: () => DateTime(2026, 10, 12, 12),
+    );
+
+    // Monday 12 Oct 2026; repeat Tue of that week.
+    final result = await persister.persist(
+      shiftDate: DateTime(2026, 10, 12),
+      selection: selection(
+        zone: 'Zone 2',
+        shift: 'PZ2/01',
+        repeatDutyThisWeek: true,
+        selectedDays: const {1: true, 2: true},
+      ),
+      isMFMarkedIn: false,
+      isShiftMarkedIn: true,
+      markedInZone: 'Zone 2',
+      jamestownEnabled: false,
+    );
+
+    expect(result.status, WorkShiftPersistStatus.success);
+    expect(created.map((e) => e.title).toSet(), {'PZ2/01'});
+    expect(created.map((e) => e.startDate.day).toList(), [12, 13]);
+  });
 }

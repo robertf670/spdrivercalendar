@@ -25,6 +25,8 @@ import 'package:spdrivercalendar/services/days_in_lieu_service.dart';
 import 'package:spdrivercalendar/services/annual_leave_service.dart';
 import 'package:spdrivercalendar/services/color_customization_service.dart';
 import 'package:spdrivercalendar/services/dev_menu_access_service.dart';
+import 'package:spdrivercalendar/features/calendar/utils/marked_in_zone_options.dart';
+import 'package:spdrivercalendar/features/calendar/services/zone2_duties.dart';
 import 'package:spdrivercalendar/services/jamestown_feature_service.dart';
 
 // Define Preference Keys for Notifications (Consider moving to AppConstants if not already there)
@@ -76,7 +78,7 @@ class SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObser
   String _spreadPayRate = 'year1+2'; // Default to Year 1/2
   
   // Marked In settings
-  String _markedInStatus = 'Spare'; // Spare, Shift, or M-F
+  String _markedInStatus = 'Spare'; // Spare, Shift, M-F, or 4 Day
   String _markedInZone = 'Zone 1'; // Zone selection when Shift is selected
   
   // Days in lieu balance
@@ -228,10 +230,11 @@ class SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObser
     final zone = await StorageService.getString(AppConstants.markedInZoneKey) ?? 'Zone 1';
     
     setState(() {
-      if (markedInEnabled) {
-        // Migrate old settings: if M-F or 4 Day, keep as M-F; otherwise set to Shift
-        if (oldStatus == 'M-F' || oldStatus == '4 Day') {
-          _markedInStatus = 'M-F';
+      if (oldStatus == '4 Day') {
+        _markedInStatus = '4 Day';
+      } else if (markedInEnabled) {
+        if (oldStatus == 'M-F' || oldStatus == 'Shift') {
+          _markedInStatus = oldStatus;
         } else {
           _markedInStatus = 'Shift';
         }
@@ -244,20 +247,20 @@ class SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObser
 
   Future<void> _saveMarkedInSettings() async {
     // Save marked-in enabled state (true if not Spare)
-    final enabled = _markedInStatus != 'Spare';
+    final enabled =
+        _markedInStatus == 'Shift' || _markedInStatus == 'M-F';
     await StorageService.saveBool(AppConstants.markedInEnabledKey, enabled);
     
-    // Save status (use 'M-F' for M-F, 'Shift' for Shift)
     if (_markedInStatus == 'M-F') {
       await StorageService.saveString(AppConstants.markedInStatusKey, 'M-F');
+    } else if (_markedInStatus == '4 Day') {
+      await StorageService.saveString(AppConstants.markedInStatusKey, '4 Day');
     } else if (_markedInStatus == 'Shift') {
       await StorageService.saveString(AppConstants.markedInStatusKey, 'Shift');
     } else {
-      // Spare - clear the status
       await StorageService.saveString(AppConstants.markedInStatusKey, '');
     }
     
-    // Save zone if Shift is selected
     if (_markedInStatus == 'Shift' || _markedInStatus == 'M-F') {
       await StorageService.saveString(AppConstants.markedInZoneKey, _markedInZone);
     }
@@ -955,6 +958,7 @@ class SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObser
                       DropdownMenuItem(value: 'Spare', child: Text('Spare')),
                       DropdownMenuItem(value: 'Shift', child: Text('Shift')),
                       DropdownMenuItem(value: 'M-F', child: Text('M-F')),
+                      DropdownMenuItem(value: '4 Day', child: Text('4 Day')),
                     ],
                     onChanged: (String? newValue) async {
                       if (newValue != null && newValue != _markedInStatus) {
@@ -979,17 +983,16 @@ class SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObser
                         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       ),
                       items: [
-                        const DropdownMenuItem(value: 'Zone 1', child: Text('Zone 1')),
-                        const DropdownMenuItem(value: 'Zone 2', child: Text('Zone 2')),
-                        const DropdownMenuItem(value: 'Zone 3', child: Text('Zone 3')),
-                        const DropdownMenuItem(value: 'Zone 4', child: Text('Zone 4')),
-                        if (_jamestownEnabled ||
-                            _markedInZone ==
-                                JamestownFeatureService.zoneLabel)
+                        for (final zone in markedInZoneOptions(
+                          jamestownEnabled: _jamestownEnabled,
+                          currentZone: _markedInZone,
+                        ))
                           DropdownMenuItem(
-                            value: JamestownFeatureService.zoneLabel,
-                            enabled: _jamestownEnabled,
-                            child: Text(JamestownFeatureService.zoneLabel),
+                            value: zone,
+                            enabled: zone !=
+                                    JamestownFeatureService.zoneLabel ||
+                                _jamestownEnabled,
+                            child: Text(zone),
                           ),
                       ],
                       onChanged: (String? newValue) async {
@@ -1001,6 +1004,14 @@ class SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObser
                         }
                       },
                     ),
+                    if (_markedInZone == Zone2Duties.zoneLabel &&
+                        !Zone2Duties.canAddShiftsOn(DateTime.now())) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        Zone2Duties.availableFromMessage,
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ],
                   ],
                   const SizedBox(height: 12),
                   // Coming soon notice
@@ -1021,7 +1032,7 @@ class SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObser
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            'Bogey, 4 Day and Night Shift coming soon',
+                            'Bogey and Night Shift coming soon',
                             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color: Theme.of(context).colorScheme.onSurface,
                             ),

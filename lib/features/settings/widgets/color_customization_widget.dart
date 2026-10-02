@@ -4,6 +4,7 @@ import '../../../services/color_customization_service.dart';
 import '../../../core/services/storage_service.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../theme/app_theme.dart';
+import 'package:spdrivercalendar/features/calendar/utils/marked_in_status.dart';
 
 class ColorCustomizationWidget extends StatefulWidget {
   final VoidCallback? onColorsChanged;
@@ -30,11 +31,9 @@ class _ColorCustomizationWidgetState extends State<ColorCustomizationWidget> {
   }
 
   Future<void> _loadMarkedInStatus() async {
-    final markedInEnabled = await StorageService.getBool(AppConstants.markedInEnabledKey);
     final markedInStatus = await StorageService.getString(AppConstants.markedInStatusKey) ?? '';
     setState(() {
-      // Only M-F is considered MF marked-in now (4 Day removed)
-      _isMFMarkedIn = markedInEnabled && markedInStatus == 'M-F';
+      _isMFMarkedIn = MarkedInStatus.isFixedWorkPattern(markedInStatus);
     });
   }
 
@@ -195,7 +194,7 @@ class _ColorCustomizationWidgetState extends State<ColorCustomizationWidget> {
                               if (status == 'M-F') {
                                 message = 'M-F Marked In is active. The "Work" color will be used for Monday-Friday shifts.';
                               } else if (status == '4 Day') {
-                                message = '4 Day Marked In is active. The "Work" color will be used for Friday-Monday shifts.';
+                                message = '4 Day roster is active. The "Work" color will be used for Friday–Monday.';
                               } else {
                                 message = 'Marked In is active. Only relevant shift colors are shown.';
                               }

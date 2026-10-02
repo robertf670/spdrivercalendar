@@ -23,6 +23,7 @@ import 'package:spdrivercalendar/services/donnybrook_feature_service.dart';
 import 'package:spdrivercalendar/services/jamestown_feature_service.dart';
 import 'package:spdrivercalendar/features/calendar/utils/shift_rest_gap.dart';
 import 'package:spdrivercalendar/features/calendar/utils/work_duration_display.dart';
+import 'package:spdrivercalendar/features/calendar/utils/assigned_duty_zone.dart';
 import 'package:spdrivercalendar/features/calendar/widgets/assigned_duty_board_button.dart';
 import 'package:spdrivercalendar/features/ratings/duty_rate_menu_actions.dart';
 import 'package:spdrivercalendar/features/bus_reports/bus_report_row_actions.dart';
@@ -2680,6 +2681,18 @@ class _EventCardState extends State<EventCard> {
               isLoading = true;
             });
 
+            if (!AssignedDutyZone.canLoadDuties(
+              selectedZone: selectedZone,
+              date: widget.event.startDate,
+            )) {
+              duties = [];
+              selectedDuty = '';
+              setState(() {
+                isLoading = false;
+              });
+              return;
+            }
+
             try {
               final dayOfWeek = RosterService.getDayOfWeek(widget.event.startDate);
               final bankHoliday = ShiftService.getBankHoliday(widget.event.startDate, ShiftService.bankHolidays);
@@ -2843,7 +2856,7 @@ class _EventCardState extends State<EventCard> {
                 DropdownButton<String>(
                   value: selectedZone,
                   isExpanded: true,
-                  items: ['Zone 1', 'Zone 2', 'Zone 3', 'Zone 4', 'Uni/Euro'].map((zone) {
+                  items: AssignedDutyZone.options.map((zone) {
                     return DropdownMenuItem(
                       value: zone,
                       child: Text(zone),
@@ -2871,7 +2884,12 @@ class _EventCardState extends State<EventCard> {
                       ),
                     )
                   : duties.isEmpty
-                    ? const Text('No duties available for selected zone and date')
+                    ? Text(
+                        AssignedDutyZone.emptyDutiesMessage(
+                          selectedZone: selectedZone,
+                          date: widget.event.startDate,
+                        ),
+                      )
                     : DropdownButton<String>(
                         value: selectedDuty,
                         isExpanded: true,

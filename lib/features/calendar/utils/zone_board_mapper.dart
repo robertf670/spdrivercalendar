@@ -129,6 +129,7 @@ class ZoneBoardMapper {
       }
 
       final isFinish = route.isEmpty && f1 == 'Finish';
+      final isBreak = route.isEmpty && f1 == 'Break';
       final isDutyHdr = route.isEmpty && f1 == 'Duty' && place.length > 4;
       final isLongNote =
           route.isEmpty && arr.isEmpty && dep.isEmpty && place.length > 18;
@@ -138,6 +139,17 @@ class ZoneBoardMapper {
           BoardEntry(
             action: 'Finish',
             time: signoff,
+          ),
+        );
+        continue;
+      }
+
+      if (isBreak) {
+        entries.add(
+          BoardEntry(
+            action: 'Break',
+            time: _firstTime(dep, arr),
+            location: place.isNotEmpty ? place : null,
           ),
         );
         continue;

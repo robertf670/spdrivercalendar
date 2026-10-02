@@ -45,6 +45,42 @@ void main() {
     );
   });
 
+  test('4 Day spare roster returns W Friday–Monday without marked-in', () {
+    expect(
+      rosterShiftForDate(
+        date: DateTime(2026, 10, 16), // Friday
+        startDate: DateTime(2026, 1, 4),
+        startWeek: 0,
+        markedInEnabled: false,
+        markedInStatus: '4 Day',
+        bankHolidayForDate: (_) => null,
+      ),
+      'W',
+    );
+    expect(
+      rosterShiftForDate(
+        date: DateTime(2026, 10, 18), // Sunday
+        startDate: DateTime(2026, 1, 4),
+        startWeek: 0,
+        markedInEnabled: false,
+        markedInStatus: '4 Day',
+        bankHolidayForDate: (_) => null,
+      ),
+      'W',
+    );
+    expect(
+      rosterShiftForDate(
+        date: DateTime(2026, 10, 20), // Tuesday
+        startDate: DateTime(2026, 1, 4),
+        startWeek: 0,
+        markedInEnabled: false,
+        markedInStatus: '4 Day',
+        bankHolidayForDate: (_) => null,
+      ),
+      'R',
+    );
+  });
+
   test('isRosteredRestDay excludes swapped work', () {
     expect(
       isRosteredRestDay(shift: 'R', isSwappedWork: true),

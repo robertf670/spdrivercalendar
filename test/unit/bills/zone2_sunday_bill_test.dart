@@ -75,4 +75,12 @@ void main() {
     expect(duty.displayWork, '6h 17m');
     expect(duty.displayRelief, '52m');
   });
+
+  test('PZ2/16 takes up at Mountjoy Square, not the garage', () {
+    final duty = duties.singleWhere((row) => row.shift == 'PZ2/16');
+    expect(duty.takeUpLocation, 'Mountjoy Sq');
+    expect(duty.displayDepart, '14:15');
+    expect(duty.endLocation, 'Garage');
+    expect(duty.displaySignOff, '22:05');
+  });
 }

@@ -32,6 +32,7 @@ import 'package:share_plus/share_plus.dart';
 import '../../../services/days_in_lieu_service.dart';
 import '../../../services/annual_leave_service.dart';
 import '../../../services/color_customization_service.dart';
+import 'package:spdrivercalendar/features/calendar/utils/marked_in_status.dart';
 import '../../../services/rest_day_swap_service.dart';
 import 'package:spdrivercalendar/features/ratings/duty_rating_aggregate.dart';
 import 'package:spdrivercalendar/features/ratings/duty_rating_service.dart';
@@ -2494,33 +2495,18 @@ class StatisticsScreenState extends State<StatisticsScreen>
     // Swapped rest days are always rest (regardless of M-F or roster)
     if (RestDaySwapService.isSwappedRestDay(date)) return true;
 
-    // Check if marked in is enabled
+    if (MarkedInStatus.isFixedWorkPattern(_markedInStatus)) {
+      final isBankHolidayDate = await isBankHoliday(date);
+      if (isBankHolidayDate) {
+        return true;
+      }
+      return !MarkedInStatus.isWorkDay(_markedInStatus, date);
+    }
+
     if (_markedInEnabled) {
-      // M-F marked in logic: W on Mon-Fri, R on Sat-Sun
-      // Bank holidays are REST days for M-F
-      if (_markedInStatus == 'M-F') {
-        // Check if this is a bank holiday
-        final isBankHolidayDate = await isBankHoliday(date);
-        if (isBankHolidayDate) {
-          // If M-F marked in is enabled, bank holidays are always R (Rest)
-          return true;
-        }
-        
-        // weekday: 1=Monday, 2=Tuesday, ..., 6=Saturday, 7=Sunday
-        final weekday = date.weekday;
-        if (weekday >= 1 && weekday <= 5) {
-          return false; // Work days Mon-Fri
-        } else {
-          return true; // Rest days Sat-Sun
-        }
-      }
-      
-      // Shift marked in: use normal roster calculation
-      if (_markedInStatus == 'Shift') {
-        if (_startDate == null) return false;
-        final String shiftType = RosterService.getShiftForDate(date, _startDate!, _startWeek);
-        return shiftType == 'R';
-      }
+      if (_startDate == null) return false;
+      final String shiftType = RosterService.getShiftForDate(date, _startDate!, _startWeek);
+      return shiftType == 'R';
     }
     
     // Normal roster calculation
@@ -2778,7 +2764,8 @@ class StatisticsScreenState extends State<StatisticsScreen>
     int otherDays = 0;
     
     // Check if user is on M-F schedule
-    final isMFSchedule = _markedInEnabled && _markedInStatus == 'M-F';
+    final isFixedSchedule =
+        MarkedInStatus.isFixedWorkPattern(_markedInStatus);
     
     // Normalize dates to midnight for comparison
     final normalizedStart = DateTime(startDate.year, startDate.month, startDate.day);
@@ -2805,15 +2792,11 @@ class StatisticsScreenState extends State<StatisticsScreen>
         int countedDays;
         
         // For M-F schedules: exclude bank holidays from the count
-        if (isMFSchedule && (holiday.type == 'summer' || holiday.type == 'winter' || holiday.type == 'other')) {
-          // Count only working days (Mon-Fri), excluding bank holidays
+        if (isFixedSchedule && (holiday.type == 'summer' || holiday.type == 'winter' || holiday.type == 'other')) {
           int workingDays = 0;
           DateTime currentDate = overlapStart;
           while (!currentDate.isAfter(overlapEnd)) {
-            final weekday = currentDate.weekday;
-            // Count only Monday-Friday (weekday 1-5)
-            if (weekday >= 1 && weekday <= 5) {
-              // Check if it's a bank holiday - exclude if it is
+            if (MarkedInStatus.isWorkDay(_markedInStatus, currentDate)) {
               final isBankHolidayDate = await isBankHoliday(currentDate);
               if (!isBankHolidayDate) {
                 workingDays++;

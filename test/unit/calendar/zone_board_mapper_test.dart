@@ -186,6 +186,30 @@ void main() {
       expect(board.sections[1].entries.last.action, 'Finish');
     });
 
+    test('maps a Break row with time and location', () {
+      final board = ZoneBoardMapper.fromDayData('PZ2/05', {
+        'duty': '205',
+        'signoff': '13:02',
+        'board': [
+          ['', '', '', 'Mountjoy Square', '09:38', ''],
+          ['', 'Break', '', 'Mountjoy Square', '', '09:43'],
+          ['---', '', '', '', '', ''],
+          ['', 'Duty', '205', 'Takes up at 10:42 Mountjoy Square', '', ''],
+          ['', 'Finish', 'Duty', '', '', ''],
+        ],
+      });
+
+      expect(board, isNotNull);
+      expect(board!.sections, hasLength(2));
+      final first = board.sections[0].entries;
+      expect(first[0].action, 'Arrive');
+      expect(first[0].time, '09:38');
+      expect(first[1].action, 'Break');
+      expect(first[1].time, '09:43');
+      expect(first[1].location, 'Mountjoy Square');
+      expect(first[1].route, isNull);
+    });
+
     test('shows SPL instead of Route SPL', () {
       final board = ZoneBoardMapper.fromDayData('PZ1/01', {
         'duty': '001',

@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:spdrivercalendar/core/constants/app_constants.dart';
 import 'package:spdrivercalendar/core/services/storage_service.dart';
 import 'package:spdrivercalendar/features/calendar/services/holiday_service.dart';
+import 'package:spdrivercalendar/features/calendar/utils/marked_in_status.dart';
 import 'package:spdrivercalendar/models/holiday.dart';
 
 class AnnualLeaveService {
@@ -54,18 +55,21 @@ class AnnualLeaveService {
     }
   }
 
-  /// Check if user is on M-F schedule (through marked-in status)
-  static Future<bool> _isOnMFSchedule() async {
-    final markedInEnabled = await StorageService.getBool(AppConstants.markedInEnabledKey);
-    if (markedInEnabled) {
-      final markedInStatus = await StorageService.getString(AppConstants.markedInStatusKey) ?? '';
-      return markedInStatus == 'M-F';
+  /// Fixed work pattern (M-F marked-in or spare 4 Day), otherwise null.
+  static Future<String?> _fixedWorkStatus() async {
+    final markedInStatus =
+        await StorageService.getString(AppConstants.markedInStatusKey) ?? '';
+    if (MarkedInStatus.isFixedWorkPattern(markedInStatus)) {
+      return markedInStatus;
     }
-    return false;
+    return null;
   }
 
   /// Working days in one winter/summer/other holiday period (full range).
-  static Future<int> _workingDaysInAnnualLeaveHoliday(Holiday holiday, bool isMFSchedule) async {
+  static Future<int> _workingDaysInAnnualLeaveHoliday(
+    Holiday holiday,
+    String? fixedStatus,
+  ) async {
     final startDateNormalized = DateTime(
       holiday.startDate.year,
       holiday.startDate.month,
@@ -77,12 +81,11 @@ class AnnualLeaveService {
       holiday.endDate.day,
     );
 
-    if (isMFSchedule) {
+    if (fixedStatus != null) {
       int workingDays = 0;
       DateTime currentDate = startDateNormalized;
       while (!currentDate.isAfter(endDateNormalized)) {
-        final weekday = currentDate.weekday;
-        if (weekday >= 1 && weekday <= 5) {
+        if (MarkedInStatus.isWorkDay(fixedStatus, currentDate)) {
           final isBankHolidayDate = await _isBankHoliday(currentDate);
           if (!isBankHolidayDate) {
             workingDays++;
@@ -100,11 +103,11 @@ class AnnualLeaveService {
   /// Total annual-leave working days across all winter/summer/other bookings (past, today, future).
   static Future<int> getTotalAnnualLeaveWorkingDays() async {
     final holidays = await HolidayService.getHolidays();
-    final isMFSchedule = await _isOnMFSchedule();
+    final fixedStatus = await _fixedWorkStatus();
     int total = 0;
     for (final holiday in holidays) {
       if (holiday.type == 'winter' || holiday.type == 'summer' || holiday.type == 'other') {
-        total += await _workingDaysInAnnualLeaveHoliday(holiday, isMFSchedule);
+        total += await _workingDaysInAnnualLeaveHoliday(holiday, fixedStatus);
       }
     }
     return total;
@@ -114,15 +117,14 @@ class AnnualLeaveService {
   static Future<int> _workingDaysInRange(
     DateTime start,
     DateTime end,
-    bool isMFSchedule,
+    String? fixedStatus,
   ) async {
     if (start.isAfter(end)) return 0;
-    if (isMFSchedule) {
+    if (fixedStatus != null) {
       int days = 0;
       DateTime currentDate = start;
       while (!currentDate.isAfter(end)) {
-        final weekday = currentDate.weekday;
-        if (weekday >= 1 && weekday <= 5) {
+        if (MarkedInStatus.isWorkDay(fixedStatus, currentDate)) {
           final isBankHolidayDate = await _isBankHoliday(currentDate);
           if (!isBankHolidayDate) {
             days++;
@@ -144,7 +146,7 @@ class AnnualLeaveService {
     final today = DateTime.now();
     final todayNormalized = DateTime(today.year, today.month, today.day);
     final tomorrow = todayNormalized.add(const Duration(days: 1));
-    final isMFSchedule = await _isOnMFSchedule();
+    final fixedStatus = await _fixedWorkStatus();
     int futureDays = 0;
 
     for (final holiday in holidays) {
@@ -158,7 +160,7 @@ class AnnualLeaveService {
       final overlapEnd = end;
       if (overlapStart.isAfter(overlapEnd)) continue;
 
-      futureDays += await _workingDaysInRange(overlapStart, overlapEnd, isMFSchedule);
+      futureDays += await _workingDaysInRange(overlapStart, overlapEnd, fixedStatus);
     }
     return futureDays;
   }
@@ -179,7 +181,7 @@ class AnnualLeaveService {
   /// True if [d] (date-only) counts as one annual-leave day using the same rules as [getFutureBookedAnnualLeaveDays].
   static Future<bool> _isDateAnnualLeaveConsumingDay(DateTime d) async {
     final holidays = await HolidayService.getHolidays();
-    final isMFSchedule = await _isOnMFSchedule();
+    final fixedStatus = await _fixedWorkStatus();
     final dn = DateTime(d.year, d.month, d.day);
     for (final holiday in holidays) {
       if (holiday.type != 'winter' && holiday.type != 'summer' && holiday.type != 'other') {
@@ -188,7 +190,7 @@ class AnnualLeaveService {
       final start = DateTime(holiday.startDate.year, holiday.startDate.month, holiday.startDate.day);
       final end = DateTime(holiday.endDate.year, holiday.endDate.month, holiday.endDate.day);
       if (dn.isBefore(start) || dn.isAfter(end)) continue;
-      final w = await _workingDaysInRange(dn, dn, isMFSchedule);
+      final w = await _workingDaysInRange(dn, dn, fixedStatus);
       if (w > 0) return true;
     }
     return false;

@@ -36,4 +36,20 @@ void main() {
     expect(prefs.isShiftMarkedIn, isTrue);
     expect(prefs.markedInZone, 'Zone 1');
   });
+
+  test('loads Zone 2 marked-in prefs', () async {
+    final loader = WorkShiftMarkedInPrefsLoader(
+      readBool: (key, {defaultValue = false}) async =>
+          key == AppConstants.markedInEnabledKey,
+      readString: (key) async {
+        if (key == AppConstants.markedInStatusKey) return 'Shift';
+        if (key == AppConstants.markedInZoneKey) return 'Zone 2';
+        return null;
+      },
+    );
+
+    final prefs = await loader.load();
+    expect(prefs.isShiftMarkedIn, isTrue);
+    expect(prefs.markedInZone, 'Zone 2');
+  });
 }

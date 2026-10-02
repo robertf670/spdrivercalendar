@@ -10,6 +10,7 @@ import 'package:spdrivercalendar/services/color_customization_service.dart';
 import 'package:spdrivercalendar/services/day_color_service.dart';
 import 'package:spdrivercalendar/services/rest_day_swap_service.dart';
 import 'package:spdrivercalendar/features/calendar/utils/calendar_day_appearance.dart';
+import 'package:spdrivercalendar/features/calendar/utils/roster_shift_lookup.dart';
 import 'package:spdrivercalendar/features/calendar/utils/year_view_layout.dart';
 
 // Cached data structure for a single day
@@ -382,20 +383,14 @@ class YearViewScreenState extends State<YearViewScreen> {
   }
 
   String _getRosterShiftForDate(DateTime date) {
-    if (widget.startDate == null) return '';
-    if (_markedInEnabled) {
-      if (_markedInStatus == 'M-F') {
-        final key = _getDateKey(date);
-        if (_bankHolidayMap.containsKey(key)) return 'R';
-        final weekday = date.weekday;
-        if (weekday >= 1 && weekday <= 5) return 'W';
-        return 'R';
-      }
-      if (_markedInStatus == 'Shift') {
-        return RosterService.getShiftForDate(date, widget.startDate!, widget.startWeek);
-      }
-    }
-    return RosterService.getShiftForDate(date, widget.startDate!, widget.startWeek);
+    return rosterShiftForDate(
+      date: date,
+      startDate: widget.startDate,
+      startWeek: widget.startWeek,
+      markedInEnabled: _markedInEnabled,
+      markedInStatus: _markedInStatus,
+      bankHolidayForDate: (d) => _bankHolidayMap[_getDateKey(d)],
+    );
   }
 
   String _getShiftForDate(DateTime date) {

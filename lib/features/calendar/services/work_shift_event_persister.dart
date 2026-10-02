@@ -264,7 +264,7 @@ class WorkShiftEventPersister {
     final daysToSunday = weekday == 7 ? 0 : weekday;
     final weekStart = shiftDate.subtract(Duration(days: daysToSunday));
 
-    for (var dayIndex = 1; dayIndex <= 5; dayIndex++) {
+    for (var dayIndex = 0; dayIndex <= 6; dayIndex++) {
       if (!(selection.uniEuroSelectedDays[dayIndex] ?? false)) continue;
       final targetDate = weekStart.add(Duration(days: dayIndex));
       if (_isSameDay(targetDate, shiftDate)) continue;
@@ -307,7 +307,7 @@ class WorkShiftEventPersister {
     final daysToSunday = weekday == 7 ? 0 : weekday;
     final weekStart = shiftDate.subtract(Duration(days: daysToSunday));
 
-    for (var dayIndex = 1; dayIndex <= 5; dayIndex++) {
+    for (var dayIndex = 0; dayIndex <= 6; dayIndex++) {
       if (!(selection.selectedDays[dayIndex] ?? false)) continue;
       final targetDate = weekStart.add(Duration(days: dayIndex));
       if (_isSameDay(targetDate, shiftDate)) continue;
