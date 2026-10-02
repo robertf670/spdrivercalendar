@@ -132,14 +132,24 @@ class BusReportService {
     });
   }
 
+  static List<BusReport> _reportsFromSnapshot(
+    QuerySnapshot<Map<String, dynamic>> snap,
+  ) {
+    return snap.docs
+        .map((doc) => BusReport.fromMap(doc.id, doc.data()))
+        .where((report) => report.busNumber.isNotEmpty)
+        .toList();
+  }
+
+  static Stream<List<BusReport>> watchAllReports() {
+    if (!isAvailable) return Stream.value(const []);
+    return _reports.snapshots().map(_reportsFromSnapshot);
+  }
+
   static Future<List<BusReport>> fetchAllReports() async {
     if (!isAvailable) return const [];
     try {
-      final snap = await _reports.get();
-      return snap.docs
-          .map((doc) => BusReport.fromMap(doc.id, doc.data()))
-          .where((report) => report.busNumber.isNotEmpty)
-          .toList();
+      return _reportsFromSnapshot(await _reports.get());
     } catch (_) {
       return const [];
     }

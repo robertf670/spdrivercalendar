@@ -1,130 +1,120 @@
 import 'package:flutter/material.dart';
-import 'package:spdrivercalendar/features/ratings/duty_rating_key.dart';
+import 'package:spdrivercalendar/features/ratings/duty_rating_admin_query.dart';
 import 'package:spdrivercalendar/features/ratings/duty_rating_service.dart';
 import 'package:spdrivercalendar/features/ratings/duty_rating_vote.dart';
 
-class DutyRatingsAdminScreen extends StatelessWidget {
+class DutyRatingsAdminScreen extends StatefulWidget {
   const DutyRatingsAdminScreen({super.key});
 
   @override
+  State<DutyRatingsAdminScreen> createState() => _DutyRatingsAdminScreenState();
+}
+
+class _DutyRatingsAdminScreenState extends State<DutyRatingsAdminScreen> {
+  final _search = TextEditingController();
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
+
+  Future<void> _removeNote(DutyRatingVote vote) async {
+    await DutyRatingService.removeNote(vote.id);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Note removed')),
+    );
+  }
+
+  Future<void> _deleteVote(DutyRatingVote vote) async {
+    await DutyRatingService.deleteVote(vote);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Rating deleted')),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Duty Ratings'),
-        elevation: 0,
-        backgroundColor: theme.colorScheme.primary,
-        foregroundColor: theme.colorScheme.onPrimary,
-      ),
-      body: Column(
-        children: [
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(12),
-            color: theme.colorScheme.errorContainer,
-            child: Row(
-              children: [
-                Icon(
-                  Icons.admin_panel_settings,
-                  color: theme.colorScheme.onErrorContainer,
+      appBar: AppBar(title: const Text('Duty Ratings')),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              TextField(
+                controller: _search,
+                decoration: const InputDecoration(
+                  prefixIcon: Icon(Icons.search),
+                  labelText: 'Search duty, score, or note',
+                  border: OutlineInputBorder(),
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Remove notes without changing scores. Delete a vote only if it is spam.',
-                    style: TextStyle(
-                      color: theme.colorScheme.onErrorContainer,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Expanded(
-            child: StreamBuilder<List<DutyRatingVote>>(
-              stream: DutyRatingService.watchPublicNotes(),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                if (snapshot.hasError) {
-                  return Center(
-                    child: Text(
-                      'Could not load notes',
-                      style: TextStyle(color: theme.colorScheme.error),
-                    ),
-                  );
-                }
-
-                final notes = snapshot.data ?? [];
-                if (notes.isEmpty) {
-                  return const Center(child: Text('No public notes'));
-                }
-
-                return ListView.separated(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: notes.length,
-                  separatorBuilder: (_, __) => const Divider(height: 1),
-                  itemBuilder: (context, index) {
-                    final vote = notes[index];
-                    return ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: Text(vote.note),
-                      subtitle: Text(
-                        '${vote.dutyCode} · ${DutyRatingKey.dayTypeLabel(vote.dayType)} · ${vote.date} · score ${vote.score}',
-                      ),
-                      isThreeLine: true,
-                      trailing: PopupMenuButton<String>(
-                        onSelected: (value) async {
-                          if (value == 'remove') {
-                            await DutyRatingService.removeNote(vote.id);
-                          } else if (value == 'delete') {
-                            final confirmed = await showDialog<bool>(
-                              context: context,
-                              builder: (context) => AlertDialog(
-                                title: const Text('Delete this rating?'),
-                                content: const Text(
-                                  'This removes the score from the average. Use only for spam.',
+                onChanged: (_) => setState(() {}),
+              ),
+              const SizedBox(height: 8),
+              Expanded(
+                child: StreamBuilder<List<DutyRatingVote>>(
+                  stream: DutyRatingService.watchAllVotes(),
+                  builder: (context, snapshot) {
+                    if (snapshot.hasError) {
+                      return const Center(child: Text('Could not load ratings'));
+                    }
+                    if (!snapshot.hasData) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    final rows = DutyRatingAdminQuery.apply(
+                      votes: snapshot.data!,
+                      search: _search.text,
+                    );
+                    if (rows.isEmpty) {
+                      return Center(
+                        child: Text(
+                          snapshot.data!.isEmpty
+                              ? 'No ratings yet'
+                              : 'No ratings match this search',
+                        ),
+                      );
+                    }
+                    return ListView.builder(
+                      itemCount: rows.length,
+                      itemBuilder: (context, index) {
+                        final vote = rows[index];
+                        return ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          isThreeLine: true,
+                          title: Text(vote.dutyCode),
+                          subtitle: Text(DutyRatingAdminQuery.subtitle(vote)),
+                          trailing: PopupMenuButton<String>(
+                            onSelected: (value) {
+                              if (value == 'note') {
+                                _removeNote(vote);
+                              } else if (value == 'delete') {
+                                _deleteVote(vote);
+                              }
+                            },
+                            itemBuilder: (context) => [
+                              if (vote.hasPublicNote)
+                                const PopupMenuItem(
+                                  value: 'note',
+                                  child: Text('Remove note'),
                                 ),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () =>
-                                        Navigator.pop(context, false),
-                                    child: const Text('Cancel'),
-                                  ),
-                                  TextButton(
-                                    onPressed: () =>
-                                        Navigator.pop(context, true),
-                                    child: const Text('Delete'),
-                                  ),
-                                ],
+                              const PopupMenuItem(
+                                value: 'delete',
+                                child: Text('Delete rating'),
                               ),
-                            );
-                            if (confirmed == true) {
-                              await DutyRatingService.deleteVote(vote);
-                            }
-                          }
-                        },
-                        itemBuilder: (context) => const [
-                          PopupMenuItem(
-                            value: 'remove',
-                            child: Text('Remove note'),
+                            ],
                           ),
-                          PopupMenuItem(
-                            value: 'delete',
-                            child: Text('Delete rating'),
-                          ),
-                        ],
-                      ),
+                        );
+                      },
                     );
                   },
-                );
-              },
-            ),
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

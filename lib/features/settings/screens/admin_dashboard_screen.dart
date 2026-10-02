@@ -147,7 +147,7 @@ class AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       _buildAdminCard(
                         context,
                         title: 'Duty Ratings',
-                        subtitle: 'Remove notes or spam',
+                        subtitle: 'All ratings and notes',
                         icon: Icons.star_rate,
                         color: Colors.amber.shade800,
                         onTap: () => _navigateToDutyRatings(context),
@@ -155,7 +155,7 @@ class AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       _buildAdminCard(
                         context,
                         title: 'Bus Reports',
-                        subtitle: 'Remove notes or spam',
+                        subtitle: 'All reports and notes',
                         icon: Icons.report_outlined,
                         color: Colors.orange.shade800,
                         onTap: () => _navigateToBusReports(context),

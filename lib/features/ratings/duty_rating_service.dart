@@ -192,6 +192,31 @@ class DutyRatingService {
     });
   }
 
+  static List<DutyRatingVote> _votesFromSnapshot(
+    QuerySnapshot<Map<String, dynamic>> snap,
+  ) {
+    return snap.docs
+        .map((doc) => DutyRatingVote.fromMap(doc.id, doc.data()))
+        .where((vote) => vote.dutyCode.isNotEmpty)
+        .toList();
+  }
+
+  static Stream<List<DutyRatingVote>> watchAllVotes() {
+    if (!isAvailable) {
+      return Stream.value(const []);
+    }
+    return _votes.snapshots().map(_votesFromSnapshot);
+  }
+
+  static Future<List<DutyRatingVote>> fetchAllVotes() async {
+    if (!isAvailable) return const [];
+    try {
+      return _votesFromSnapshot(await _votes.get());
+    } catch (_) {
+      return const [];
+    }
+  }
+
   static Future<void> removeNote(String voteId) async {
     await _votes.doc(voteId).update({
       'note': '',
