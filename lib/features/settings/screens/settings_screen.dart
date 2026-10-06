@@ -26,6 +26,9 @@ import 'package:spdrivercalendar/services/annual_leave_service.dart';
 import 'package:spdrivercalendar/services/color_customization_service.dart';
 import 'package:spdrivercalendar/services/dev_menu_access_service.dart';
 import 'package:spdrivercalendar/features/calendar/utils/marked_in_zone_options.dart';
+import 'package:spdrivercalendar/features/calendar/utils/marked_in_status.dart';
+import 'package:spdrivercalendar/features/calendar/utils/nights_roster.dart';
+import 'package:spdrivercalendar/features/calendar/dialogs/nights_rest_day_dialog.dart';
 import 'package:spdrivercalendar/features/calendar/services/zone2_duties.dart';
 import 'package:spdrivercalendar/services/jamestown_feature_service.dart';
 
@@ -78,7 +81,9 @@ class SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObser
   String _spreadPayRate = 'year1+2'; // Default to Year 1/2
   
   // Marked In settings
-  String _markedInStatus = 'Spare'; // Spare, Shift, M-F, or 4 Day
+  String _markedInStatus = 'Spare'; // Spare, Shift, M-F, 4 Day, or Nights
+  int _nightsWeekIndex = 0;
+  DateTime? _nightsAnchorSunday;
   String _markedInZone = 'Zone 1'; // Zone selection when Shift is selected
   
   // Days in lieu balance
@@ -228,10 +233,14 @@ class SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObser
     final markedInEnabled = await StorageService.getBool(AppConstants.markedInEnabledKey);
     final oldStatus = await StorageService.getString(AppConstants.markedInStatusKey) ?? 'Shift';
     final zone = await StorageService.getString(AppConstants.markedInZoneKey) ?? 'Zone 1';
+    final nightsAnchor = NightsRosterAnchor.tryParse(
+      sunday: await StorageService.getString(AppConstants.nightsAnchorSundayKey),
+      weekIndex: await StorageService.getInt(AppConstants.nightsWeekIndexKey),
+    );
     
     setState(() {
-      if (oldStatus == '4 Day') {
-        _markedInStatus = '4 Day';
+      if (oldStatus == '4 Day' || oldStatus == MarkedInStatus.nights) {
+        _markedInStatus = oldStatus;
       } else if (markedInEnabled) {
         if (oldStatus == 'M-F' || oldStatus == 'Shift') {
           _markedInStatus = oldStatus;
@@ -242,6 +251,10 @@ class SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObser
         _markedInStatus = 'Spare';
       }
       _markedInZone = zone;
+      if (nightsAnchor != null) {
+        _nightsWeekIndex = nightsAnchor.weekIndex;
+        _nightsAnchorSunday = nightsAnchor.sunday;
+      }
     });
   }
 
@@ -255,6 +268,11 @@ class SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObser
       await StorageService.saveString(AppConstants.markedInStatusKey, 'M-F');
     } else if (_markedInStatus == '4 Day') {
       await StorageService.saveString(AppConstants.markedInStatusKey, '4 Day');
+    } else if (_markedInStatus == MarkedInStatus.nights) {
+      await StorageService.saveString(
+        AppConstants.markedInStatusKey,
+        MarkedInStatus.nights,
+      );
     } else if (_markedInStatus == 'Shift') {
       await StorageService.saveString(AppConstants.markedInStatusKey, 'Shift');
     } else {
@@ -264,6 +282,43 @@ class SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObser
     if (_markedInStatus == 'Shift' || _markedInStatus == 'M-F') {
       await StorageService.saveString(AppConstants.markedInZoneKey, _markedInZone);
     }
+  }
+
+  Future<void> _saveNightsAnchor(int weekIndex) async {
+    final sunday = NightsRoster.sundayOf(DateTime.now());
+    _nightsWeekIndex = weekIndex;
+    _nightsAnchorSunday = sunday;
+    await StorageService.saveInt(AppConstants.nightsWeekIndexKey, weekIndex);
+    await StorageService.saveString(
+      AppConstants.nightsAnchorSundayKey,
+      NightsRoster.dateKey(sunday),
+    );
+  }
+
+  int get _nightsWeekIndexThisWeek {
+    final anchor = _nightsAnchorSunday;
+    if (anchor == null) return _nightsWeekIndex;
+    return NightsRoster.weekIndexForDate(
+      date: DateTime.now(),
+      anchorSunday: anchor,
+      anchorWeekIndex: _nightsWeekIndex,
+    );
+  }
+
+  Future<bool> _pickNightsRestDays() async {
+    final picked = await showDialog<int>(
+      context: context,
+      builder: (context) => NightsRestDayDialog(
+        initialWeekIndex: _nightsWeekIndexThisWeek,
+      ),
+    );
+    if (picked == null || !mounted) return false;
+    setState(() {
+      _nightsWeekIndex = picked;
+      _nightsAnchorSunday = NightsRoster.sundayOf(DateTime.now());
+    });
+    await _saveNightsAnchor(picked);
+    return true;
   }
 
   Future<void> _loadDaysInLieuBalance() async {
@@ -511,7 +566,8 @@ class SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObser
                         children: [
                           _buildMarkedInSettings(),
                           _buildPayRateDropdown(),
-                          _buildResetRestDaysButton(),
+                          if (_markedInStatus != MarkedInStatus.nights)
+                            _buildResetRestDaysButton(),
                         ],
                       ),
                       _buildFeedbackButton(),
@@ -959,14 +1015,20 @@ class SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObser
                       DropdownMenuItem(value: 'Shift', child: Text('Shift')),
                       DropdownMenuItem(value: 'M-F', child: Text('M-F')),
                       DropdownMenuItem(value: '4 Day', child: Text('4 Day')),
+                      DropdownMenuItem(value: 'Nights', child: Text('Nights')),
                     ],
                     onChanged: (String? newValue) async {
-                      if (newValue != null && newValue != _markedInStatus) {
-                        setState(() {
-                          _markedInStatus = newValue;
-                        });
-                        await _saveMarkedInSettings();
+                      if (newValue == null || newValue == _markedInStatus) {
+                        return;
                       }
+                      if (newValue == MarkedInStatus.nights) {
+                        final picked = await _pickNightsRestDays();
+                        if (!picked) return;
+                      }
+                      setState(() {
+                        _markedInStatus = newValue;
+                      });
+                      await _saveMarkedInSettings();
                     },
                   ),
                   // Zone selection for Shift and M-F (Zone 1 M-F enables 12-week roster fill)
@@ -1013,6 +1075,18 @@ class SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObser
                       ),
                     ],
                   ],
+                  if (_markedInStatus == MarkedInStatus.nights) ...[
+                    const SizedBox(height: 16),
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('Rest days this week'),
+                      subtitle: Text(
+                        NightsRoster.restDaysLabel(_nightsWeekIndexThisWeek),
+                      ),
+                      trailing: const Icon(Icons.edit_outlined),
+                      onTap: _pickNightsRestDays,
+                    ),
+                  ],
                   const SizedBox(height: 12),
                   // Coming soon notice
                   Container(
@@ -1032,7 +1106,7 @@ class SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObser
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            'Bogey and Night Shift coming soon',
+                            'Bogey coming soon',
                             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color: Theme.of(context).colorScheme.onSurface,
                             ),

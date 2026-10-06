@@ -6,11 +6,15 @@ class MarkedInStatus {
   static const shift = 'Shift';
   static const mf = 'M-F';
   static const fourDay = '4 Day';
+  static const nights = 'Nights';
 
-  static const statusOptions = [spare, shift, mf, fourDay];
+  static const statusOptions = [spare, shift, mf, fourDay, nights];
 
   static bool isFixedWorkPattern(String status) =>
       status == mf || status == fourDay;
+
+  static bool usesWorkRestColors(String status) =>
+      isFixedWorkPattern(status) || status == nights;
 
   static bool needsZone(String status) =>
       status == shift || status == mf;

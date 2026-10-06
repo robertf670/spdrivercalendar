@@ -12,6 +12,9 @@ import 'package:spdrivercalendar/services/rest_day_swap_service.dart';
 import 'package:spdrivercalendar/features/calendar/utils/calendar_day_appearance.dart';
 import 'package:spdrivercalendar/features/calendar/utils/roster_shift_lookup.dart';
 import 'package:spdrivercalendar/features/calendar/utils/year_view_layout.dart';
+import 'package:spdrivercalendar/features/calendar/utils/nights_roster.dart';
+import 'package:spdrivercalendar/core/constants/app_constants.dart';
+import 'package:spdrivercalendar/core/services/storage_service.dart';
 
 // Cached data structure for a single day
 class _DayCellData {
@@ -79,6 +82,8 @@ class YearViewScreenState extends State<YearViewScreen> {
   late int _currentYear; // Store year in state to avoid closure issues
   bool _markedInEnabled = false;
   String _markedInStatus = 'Shift';
+  DateTime? _nightsAnchorSunday;
+  int _nightsWeekIndex = 0;
   final ScrollController _scrollController = ScrollController();
   int _targetMonth = 1;
   int? _pendingScrollMonth;
@@ -111,7 +116,18 @@ class YearViewScreenState extends State<YearViewScreen> {
     );
     _pendingScrollMonth = _targetMonth;
     _buildIndexes();
-    _preloadMonthsProgressive();
+    _loadNightsRoster();
+  }
+
+  Future<void> _loadNightsRoster() async {
+    final nightsAnchor = NightsRosterAnchor.tryParse(
+      sunday: await StorageService.getString(AppConstants.nightsAnchorSundayKey),
+      weekIndex: await StorageService.getInt(AppConstants.nightsWeekIndexKey),
+    );
+    if (!mounted) return;
+    _nightsAnchorSunday = nightsAnchor?.sunday;
+    _nightsWeekIndex = nightsAnchor?.weekIndex ?? 0;
+    await _preloadMonthsProgressive();
   }
 
   @override
@@ -390,6 +406,8 @@ class YearViewScreenState extends State<YearViewScreen> {
       markedInEnabled: _markedInEnabled,
       markedInStatus: _markedInStatus,
       bankHolidayForDate: (d) => _bankHolidayMap[_getDateKey(d)],
+      nightsAnchorSunday: _nightsAnchorSunday,
+      nightsWeekIndex: _nightsWeekIndex,
     );
   }
 

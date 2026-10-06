@@ -318,7 +318,9 @@ class _BoardEntryRow extends StatelessWidget {
                       padding: const EdgeInsets.only(top: 2),
                       child: _metaRow(
                         icon: Icons.location_on,
-                        text: entry.location!,
+                        text: entry.action == 'SPL'
+                            ? 'To ${entry.location}'
+                            : entry.location!,
                       ),
                     ),
                 ],

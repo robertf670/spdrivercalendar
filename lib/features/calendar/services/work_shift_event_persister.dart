@@ -5,6 +5,7 @@ import 'package:spdrivercalendar/features/calendar/dialogs/work_shift_dialog.dar
 import 'package:spdrivercalendar/features/calendar/services/event_service.dart';
 import 'package:spdrivercalendar/features/calendar/services/roster_service.dart';
 import 'package:spdrivercalendar/features/calendar/services/shift_service.dart';
+import 'package:spdrivercalendar/features/calendar/utils/work_shift_duty_repeat.dart';
 import 'package:spdrivercalendar/features/calendar/utils/work_shift_title.dart';
 import 'package:spdrivercalendar/features/calendar/widgets/custom_training_form.dart';
 import 'package:spdrivercalendar/models/bank_holiday.dart';
@@ -74,6 +75,7 @@ class WorkShiftEventPersister {
     required bool isShiftMarkedIn,
     required String markedInZone,
     required bool jamestownEnabled,
+    bool isNightsRoster = false,
   }) async {
     final selectedZone = selection.selectedZone;
     final selectedShiftNumber = selection.selectedShiftNumber;
@@ -135,18 +137,17 @@ class WorkShiftEventPersister {
       );
     }
 
-    final isJamestownRepeatZone =
-        selectedZone == JamestownFeatureService.zoneLabel;
-    final isRepeatableDutyZone = selectedZone == 'Zone 1' ||
-        selectedZone == 'Zone 2' ||
-        selectedZone == 'Zone 3' ||
-        selectedZone == 'Zone 4' ||
-        selectedZone == DonnybrookFeatureService.zoneLabel ||
-        (isJamestownRepeatZone && jamestownEnabled);
-    final zoneMatchesMarkedIn = selectedZone == markedInZone ||
-        (isMFMarkedIn && isJamestownRepeatZone && jamestownEnabled);
+    final isRepeatableDutyZone = WorkShiftDutyRepeat.isRepeatableZone(
+      selectedZone,
+      jamestownEnabled: jamestownEnabled,
+    );
+    final zoneMatchesMarkedIn = isNightsRoster ||
+        selectedZone == markedInZone ||
+        (isMFMarkedIn &&
+            selectedZone == JamestownFeatureService.zoneLabel &&
+            jamestownEnabled);
     if (selection.repeatDutyThisWeek &&
-        (isShiftMarkedIn || isMFMarkedIn) &&
+        (isShiftMarkedIn || isMFMarkedIn || isNightsRoster) &&
         isRepeatableDutyZone &&
         zoneMatchesMarkedIn) {
       await _repeatDutyThisWeek(
@@ -238,12 +239,14 @@ class WorkShiftEventPersister {
         endHour += 1;
         endMinute -= 60;
       }
-      if (endHour >= 24) {
+      final isNextDay = endHour >= 24;
+      if (isNextDay) {
         endHour -= 24;
       }
       return {
         'startTime': TimeOfDay(hour: hour, minute: minute),
         'endTime': TimeOfDay(hour: endHour, minute: endMinute),
+        'isNextDay': isNextDay,
       };
     }
     return {
@@ -311,6 +314,10 @@ class WorkShiftEventPersister {
       if (!(selection.selectedDays[dayIndex] ?? false)) continue;
       final targetDate = weekStart.add(Duration(days: dayIndex));
       if (_isSameDay(targetDate, shiftDate)) continue;
+      if (targetDate.weekday == DateTime.saturday ||
+          targetDate.weekday == DateTime.sunday) {
+        continue;
+      }
       if (_eventsForDay(targetDate).any((e) => e.title == title)) continue;
 
       Map<String, dynamic>? targetShiftTimes;

@@ -7,6 +7,8 @@ import 'package:spdrivercalendar/features/calendar/utils/calendar_day_display_te
 import 'package:spdrivercalendar/features/calendar/utils/calendar_day_appearance.dart';
 import 'package:spdrivercalendar/features/calendar/utils/events_for_day.dart';
 import 'package:spdrivercalendar/features/calendar/utils/roster_shift_lookup.dart';
+import 'package:spdrivercalendar/features/calendar/utils/nights_roster.dart';
+import 'package:spdrivercalendar/features/calendar/utils/marked_in_status.dart';
 import 'package:spdrivercalendar/features/calendar/services/workout_dates_loader.dart';
 import 'package:spdrivercalendar/features/calendar/services/leave_balance_setup.dart';
 import 'package:spdrivercalendar/features/calendar/services/work_shift_marked_in_prefs.dart';
@@ -124,6 +126,8 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
   // Marked In settings
   bool _markedInEnabled = false;
   String _markedInStatus = 'Shift';
+  DateTime? _nightsAnchorSunday;
+  int _nightsWeekIndex = 0;
   
   // Display settings
   bool _showDutyCodesOnCalendar = true; // Default to true (ON)
@@ -305,14 +309,27 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
     final settings = await _displaySettingsLoader.load();
     if (!mounted) return;
 
+    final nightsAnchor = NightsRosterAnchor.tryParse(
+      sunday: await StorageService.getString(AppConstants.nightsAnchorSundayKey),
+      weekIndex: await StorageService.getInt(AppConstants.nightsWeekIndexKey),
+    );
+    if (!mounted) return;
+
+    final nightsSunday = nightsAnchor?.sunday;
+    final nightsWeek = nightsAnchor?.weekIndex ?? 0;
+
     final needsUpdate = _markedInEnabled != settings.markedInEnabled ||
         _markedInStatus != settings.markedInStatus ||
+        _nightsAnchorSunday != nightsSunday ||
+        _nightsWeekIndex != nightsWeek ||
         _showDutyCodesOnCalendar != settings.showDutyCodesOnCalendar ||
         _animatedSelectedDay != settings.animatedSelectedDay ||
         _highlightWorkoutDays != settings.highlightWorkoutDays;
 
     _markedInEnabled = settings.markedInEnabled;
     _markedInStatus = settings.markedInStatus;
+    _nightsAnchorSunday = nightsSunday;
+    _nightsWeekIndex = nightsWeek;
     _showDutyCodesOnCalendar = settings.showDutyCodesOnCalendar;
     _animatedSelectedDay = settings.animatedSelectedDay;
     _highlightWorkoutDays = settings.highlightWorkoutDays;
@@ -529,6 +546,8 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
       markedInEnabled: _markedInEnabled,
       markedInStatus: _markedInStatus,
       bankHolidayForDate: getBankHoliday,
+      nightsAnchorSunday: _nightsAnchorSunday,
+      nightsWeekIndex: _nightsWeekIndex,
     );
   }
 
@@ -653,6 +672,14 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
         markedInZone: markedInZone,
         jamestownEnabled: jamestownEnabled,
         donnybrook1Enabled: donnybrook1Enabled,
+        isNightsRoster: _markedInStatus == MarkedInStatus.nights,
+        isNightsWorkDay: _nightsAnchorSunday == null
+            ? null
+            : (date) => NightsRoster.isWorkDay(
+                  date: date,
+                  anchorSunday: _nightsAnchorSunday!,
+                  anchorWeekIndex: _nightsWeekIndex,
+                ),
         loadShiftNumbers: (selectedZone) => shiftLoader.loadShiftNumbers(
           selectedZone: selectedZone,
           shiftDate: shiftDate,
@@ -668,6 +695,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
           isShiftMarkedIn: isShiftMarkedIn,
           markedInZone: markedInZone,
           jamestownEnabled: jamestownEnabled,
+          isNightsRoster: _markedInStatus == MarkedInStatus.nights,
         ),
       ),
     );
@@ -681,6 +709,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
     required bool isShiftMarkedIn,
     required String markedInZone,
     required bool jamestownEnabled,
+    bool isNightsRoster = false,
   }) async {
     final persister = WorkShiftEventPersister(
       lookupShiftTimes: (zone, shiftNumber, date) =>
@@ -698,6 +727,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
       isShiftMarkedIn: isShiftMarkedIn,
       markedInZone: markedInZone,
       jamestownEnabled: jamestownEnabled,
+      isNightsRoster: isNightsRoster,
     );
 
     if (result.status == WorkShiftPersistStatus.missingCustomTrainingTimes) {

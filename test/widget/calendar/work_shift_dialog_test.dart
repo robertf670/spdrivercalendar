@@ -87,4 +87,68 @@ void main() {
         findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('nights roster offers duty repeat on a weekday work day',
+      (tester) async {
+    await tester.binding.setSurfaceSize(const Size(320, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: WorkShiftDialog(
+            shiftDate: DateTime(2024, 4, 9),
+            isMFMarkedIn: false,
+            isShiftMarkedIn: false,
+            markedInZone: '',
+            jamestownEnabled: false,
+            donnybrook1Enabled: false,
+            isNightsRoster: true,
+            isNightsWorkDay: (date) =>
+                date.weekday >= DateTime.monday &&
+                date.weekday <= DateTime.thursday,
+            loadShiftNumbers: (_) async => const ['PZ1/91'],
+            dayHasBlockingEvent: (_) => false,
+            onAddShift: (_) async {},
+          ),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(find.text('Would you like to repeat this duty this week?'),
+        findsOneWidget);
+  });
+
+  testWidgets('nights roster does not offer duty repeat on Saturday',
+      (tester) async {
+    await tester.binding.setSurfaceSize(const Size(320, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: WorkShiftDialog(
+            shiftDate: DateTime(2024, 4, 13),
+            isMFMarkedIn: false,
+            isShiftMarkedIn: false,
+            markedInZone: '',
+            jamestownEnabled: false,
+            donnybrook1Enabled: false,
+            isNightsRoster: true,
+            isNightsWorkDay: (_) => true,
+            loadShiftNumbers: (_) async => const ['PZ1/91'],
+            dayHasBlockingEvent: (_) => false,
+            onAddShift: (_) async {},
+          ),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(find.text('Would you like to repeat this duty this week?'),
+        findsNothing);
+  });
 }

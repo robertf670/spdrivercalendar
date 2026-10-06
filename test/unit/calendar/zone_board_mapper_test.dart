@@ -243,5 +243,79 @@ void main() {
       expect(board.sections.single.entries.first.time, '04:52');
       expect(board.sections.single.entries.first.location, 'Garage');
     });
+
+    test('Zone 3 workout does not open a Second Half after Finished Duty', () {
+      final board = ZoneBoardMapper.fromDayData('PZ3/01', {
+        'duty': '301',
+        'signoff': '10:25',
+        'board': [
+          ['', '', '', 'Duty 301 Reports 04:52 Garage', '', ''],
+          ['', '', '', 'Garage', '', '05:00'],
+          ['L58', '', '', 'Riverforest', '', '05:30'],
+          ['', '', '', 'Riverforest', '09:40', ''],
+          ['SPL', '', '', '', '', ''],
+          ['', '', '', 'Garage', '10:25', ''],
+          ['---', '', '', '', '', ''],
+          ['', '', '', 'Duty 301 Finished Duty', '', ''],
+        ],
+      });
+
+      expect(board, isNotNull);
+      expect(board!.sections, hasLength(1));
+      expect(board.sections.single.type, 'firstHalf');
+      final entries = board.sections.single.entries;
+      expect(entries[entries.length - 2].action, 'SPL');
+      expect(entries[entries.length - 2].time, '09:40');
+      expect(entries[entries.length - 2].location, 'Garage');
+      expect(entries.last.action, 'Finish');
+      expect(entries.last.time, '10:25');
+      expect(entries.last.location, 'Garage');
+    });
+
+    test('Zone 3 skips Takes up and Departs notes when Garage already has the time',
+        () {
+      final board = ZoneBoardMapper.fromDayData('PZ3/5X', {
+        'duty': '355',
+        'signoff': '20:00',
+        'board': [
+          ['', '', '', 'Duty 355 Takes up at 17:03 Garage', '', ''],
+          ['', '', '', 'Duty 355 Departs 17:06 Garage', '', ''],
+          ['', '', '', 'Garage', '', '17:06'],
+          ['L59', '', '', 'Hazelhatch', '', '17:59'],
+        ],
+      });
+
+      expect(board, isNotNull);
+      final entries = board!.sections.single.entries;
+      expect(entries.every((e) => !e.action.contains('Takes up')), isTrue);
+      expect(entries.every((e) => !e.action.contains('Departs')), isTrue);
+      expect(entries.first.action, 'Garage');
+      expect(entries.first.time, '17:06');
+    });
+
+    test('Zone 3 x is SPL to Garage, g is Finish at Garage', () {
+      final board = ZoneBoardMapper.fromDayData('PZ3/05', {
+        'duty': '305',
+        'signoff': '21:00',
+        'board': [
+          ['L59', '', '', 'Riverforest', '', '19:45'],
+          ['', '', '', 'Hazelhatch', '20:20', ''],
+          ['SPL', '', '', '', '', ''],
+          ['', '', '', 'Garage', '21:00', ''],
+          ['', '', '', 'Duty 305 Finished Duty', '', ''],
+        ],
+      });
+
+      expect(board, isNotNull);
+      final entries = board!.sections.single.entries;
+      expect(entries[0].action, 'Route');
+      expect(entries[1].action, 'SPL');
+      expect(entries[1].time, '20:20');
+      expect(entries[1].location, 'Garage');
+      expect(entries.last.action, 'Finish');
+      expect(entries.last.time, '21:00');
+      expect(entries.last.location, 'Garage');
+      expect(entries.where((e) => e.action == 'Arrive'), isEmpty);
+    });
   });
 }

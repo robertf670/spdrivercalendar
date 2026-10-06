@@ -880,4 +880,461 @@ void main() {
 
     expect(codes, containsAll(['PZ1/01', 'PZ1/67']));
   });
+
+  test('loads PZ3/05 Monday board with L58/L59 from the running board', () async {
+    final board = await ZoneBoardService.getBoardForDuty(
+      dutyTitle: 'PZ3/05',
+      date: DateTime(2026, 8, 10),
+    );
+
+    expect(board, isNotNull);
+    expect(board!.sections, hasLength(2));
+
+    final first = board.sections[0].entries;
+    expect(first.first.action, 'Report');
+    expect(first.first.time, '12:07');
+    expect(
+      first.where((e) => e.time == '12:45').single.route,
+      'L59',
+    );
+    expect(
+      first.where((e) => e.time == '13:36').single.route,
+      'L59',
+    );
+    expect(
+      first.where((e) => e.time == '14:15').single.route,
+      'L59',
+    );
+    expect(
+      first.where((e) => e.time == '15:00').single.route,
+      'L58',
+    );
+    expect(
+      first.where((e) => e.time == '15:30').single.route,
+      'L58',
+    );
+
+    final second = board.sections[1].entries;
+    expect(second.where((e) => e.time == '18:30').single.route, 'L58');
+    expect(second.where((e) => e.time == '18:30').single.location, 'Riverforest');
+    expect(second.where((e) => e.time == '19:06').single.route, 'L59');
+    expect(second.where((e) => e.time == '19:45').single.route, 'L59');
+    expect(second.where((e) => e.time == '20:20').single.action, 'SPL');
+    expect(second.where((e) => e.time == '20:20').single.location, 'Garage');
+    expect(second.last.action, 'Finish');
+    expect(second.last.time, '21:00');
+    expect(second.last.location, 'Garage');
+  });
+
+  test('loads PZ3/5X Monday board for duty 355', () async {
+    final board = await ZoneBoardService.getBoardForDuty(
+      dutyTitle: 'PZ3/5X',
+      date: DateTime(2026, 8, 10),
+    );
+
+    expect(board, isNotNull);
+    expect(board!.duty, '355');
+    expect(board.sections, hasLength(2));
+    expect(board.sections[0].entries.first.time, '10:19');
+    expect(
+      board.sections[0].entries.where((e) => e.time == '11:07').single.route,
+      'L59',
+    );
+    expect(
+      board.sections[0].entries.where((e) => e.time == '12:38').single.route,
+      'L59',
+    );
+    expect(
+      board.sections[0].entries.where((e) => e.time == '13:15').single.route,
+      'L59',
+    );
+    expect(
+      board.sections[1].entries.map((e) => e.action).join(' '),
+      isNot(contains('Takes up')),
+    );
+    expect(
+      board.sections[1].entries.map((e) => e.action).join(' '),
+      isNot(contains('Departs')),
+    );
+    expect(
+      board.sections[1].entries.where((e) => e.time == '17:59').single.location,
+      'Hazelhatch',
+    );
+    expect(board.sections[1].entries.last.action, 'Finish');
+    expect(board.sections[1].entries.last.location, 'Garage');
+    expect(board.sections[1].entries.last.time, '20:00');
+  });
+
+  test('loads PZ3/1X Monday board for duty 351', () async {
+    final board = await ZoneBoardService.getBoardForDuty(
+      dutyTitle: 'PZ3/1X',
+      date: DateTime(2026, 8, 10),
+    );
+
+    expect(board, isNotNull);
+    expect(board!.duty, '351');
+    expect(board.sections, hasLength(2));
+
+    final first = board.sections[0].entries;
+    expect(first.where((e) => e.time == '08:30').single.route, 'L59');
+    expect(first.where((e) => e.time == '08:30').single.location, 'Hazelhatch');
+    expect(first.where((e) => e.time == '09:30').single.route, 'L58');
+    expect(first.where((e) => e.time == '09:30').single.location, 'Riverforest');
+    expect(first.where((e) => e.time == '10:09').single.route, 'L59');
+    expect(first.where((e) => e.time == '10:45').single.route, 'L59');
+    expect(first.where((e) => e.time == '11:20').single.action, 'SPL');
+    expect(first.last.action, 'Break');
+    expect(first.last.time, '12:00');
+    expect(first.last.location, 'Garage');
+
+    final second = board.sections[1].entries;
+    expect(second.where((e) => e.time == '16:30').single.route, 'L59');
+    expect(second.where((e) => e.time == '16:30').single.location, 'Hazelhatch');
+    expect(second.where((e) => e.time == '17:20').single.action, 'SPL');
+    expect(second.last.action, 'Finish');
+    expect(second.last.time, '18:00');
+    expect(second.last.location, 'Garage');
+  });
+
+  test('loads PZ3/3X Monday board for duty 353', () async {
+    final board = await ZoneBoardService.getBoardForDuty(
+      dutyTitle: 'PZ3/3X',
+      date: DateTime(2026, 8, 10),
+    );
+
+    expect(board, isNotNull);
+    expect(board!.duty, '353');
+    expect(board.sections, hasLength(2));
+
+    final first = board.sections[0].entries;
+    expect(first.where((e) => e.time == '09:15').single.route, 'L59');
+    expect(first.where((e) => e.time == '09:15').single.location, 'Riverforest');
+    expect(first.where((e) => e.time == '10:00').single.route, 'L58');
+    expect(first.where((e) => e.time == '10:30').single.route, 'L58');
+    expect(first.where((e) => e.time == '11:00').single.route, 'L58');
+    expect(first.where((e) => e.time == '11:00').single.location, 'Hazelhatch');
+    expect(first.where((e) => e.time == '11:25').single.action, 'SPL');
+    expect(first.last.action, 'Break');
+    expect(first.last.time, '12:05');
+
+    final second = board.sections[1].entries;
+    expect(second.where((e) => e.time == '17:15').single.route, 'L59');
+    expect(second.where((e) => e.time == '18:10').single.route, 'L58');
+    expect(second.where((e) => e.time == '18:40').single.action, 'SPL');
+    expect(second.last.action, 'Finish');
+    expect(second.last.time, '19:15');
+  });
+
+  test('loads PZ3/4X Monday board for duty 354', () async {
+    final board = await ZoneBoardService.getBoardForDuty(
+      dutyTitle: 'PZ3/4X',
+      date: DateTime(2026, 8, 10),
+    );
+
+    expect(board, isNotNull);
+    expect(board!.duty, '354');
+    expect(board.sections, hasLength(2));
+
+    final first = board.sections[0].entries;
+    expect(first.where((e) => e.time == '09:30').single.route, 'L59');
+    expect(first.where((e) => e.time == '09:30').single.location, 'Hazelhatch');
+    expect(first.where((e) => e.time == '10:15').single.route, 'L59');
+    expect(first.where((e) => e.time == '11:00').single.action, 'SPL');
+    expect(first.last.action, 'Break');
+    expect(first.last.time, '11:40');
+
+    final second = board.sections[1].entries;
+    expect(second.where((e) => e.time == '15:10').single.route, 'L59');
+    expect(second.where((e) => e.time == '16:00').single.route, 'L59');
+    expect(second.where((e) => e.time == '16:45').single.route, 'L59');
+    expect(second.where((e) => e.time == '17:30').single.action, 'SPL');
+    expect(second.last.action, 'Finish');
+    expect(second.last.time, '18:13');
+  });
+
+  test('loads PZ3/02 Monday board for duty 302', () async {
+    final board = await ZoneBoardService.getBoardForDuty(
+      dutyTitle: 'PZ3/02',
+      date: DateTime(2026, 8, 10),
+    );
+
+    expect(board, isNotNull);
+    expect(board!.duty, '302');
+    expect(board.sections, hasLength(2));
+
+    final first = board.sections[0].entries;
+    expect(first.where((e) => e.time == '05:45').single.route, 'L59');
+    expect(first.where((e) => e.time == '06:15').single.route, 'L59');
+    expect(first.where((e) => e.time == '06:45').single.route, 'L59');
+    expect(first.where((e) => e.time == '07:30').single.route, 'L59');
+    expect(first.where((e) => e.time == '07:30').single.location, 'Hazelhatch');
+    expect(first.where((e) => e.time == '08:15').single.route, 'L59');
+    expect(first.where((e) => e.time == '09:05').single.action, 'SPL');
+    expect(first.last.action, 'Break');
+    expect(first.last.time, '09:57');
+
+    final second = board.sections[1].entries;
+    expect(second.where((e) => e.time == '11:40').single.route, 'L59');
+    expect(second.where((e) => e.time == '12:15').single.route, 'L59');
+    expect(second.where((e) => e.time == '12:50').single.action, 'SPL');
+    expect(second.last.action, 'Finish');
+    expect(second.last.time, '13:30');
+  });
+
+  test('loads PZ3/03 Monday board for duty 303', () async {
+    final board = await ZoneBoardService.getBoardForDuty(
+      dutyTitle: 'PZ3/03',
+      date: DateTime(2026, 8, 10),
+    );
+
+    expect(board, isNotNull);
+    expect(board!.duty, '303');
+    expect(board.sections, hasLength(2));
+
+    final first = board.sections[0].entries;
+    expect(first.where((e) => e.time == '06:15').single.route, 'L59');
+    expect(first.where((e) => e.time == '07:00').single.route, 'L58');
+    expect(first.where((e) => e.time == '07:00').single.location, 'Hazelhatch');
+    expect(first.where((e) => e.time == '07:30').single.route, 'L58');
+    expect(first.where((e) => e.time == '07:30').single.location, 'Riverforest');
+    expect(first.where((e) => e.time == '07:57').single.route, 'L59');
+    expect(first.where((e) => e.time == '08:57').single.action, 'SPL');
+    expect(first.last.action, 'Break');
+    expect(first.last.time, '09:44');
+    expect(first.any((e) => e.time == '10:55'), isFalse);
+
+    final second = board.sections[1].entries;
+    expect(second.first.time, '10:55');
+    expect(second.first.action, 'Garage');
+    expect(second.where((e) => e.time == '11:30').single.route, 'L58');
+    expect(second.where((e) => e.time == '11:30').single.location, 'Riverforest');
+    expect(second.where((e) => e.time == '12:09').single.route, 'L59');
+    expect(second.where((e) => e.time == '12:45').single.action, 'SPL');
+    expect(second.last.action, 'Finish');
+    expect(second.last.time, '13:20');
+  });
+
+  test('loads PZ3/04 Monday board for duty 304', () async {
+    final board = await ZoneBoardService.getBoardForDuty(
+      dutyTitle: 'PZ3/04',
+      date: DateTime(2026, 8, 10),
+    );
+
+    expect(board, isNotNull);
+    expect(board!.duty, '304');
+    expect(board.sections, hasLength(2));
+
+    final first = board.sections[0].entries;
+    expect(first.where((e) => e.time == '08:00').single.route, 'L58');
+    expect(first.where((e) => e.time == '08:45').single.route, 'L59');
+    expect(first.where((e) => e.time == '08:45').single.location, 'Riverforest');
+  });
+
+  test('loads PZ3/06 Monday board for duty 306', () async {
+    final board = await ZoneBoardService.getBoardForDuty(
+      dutyTitle: 'PZ3/06',
+      date: DateTime(2026, 8, 10),
+    );
+
+    expect(board, isNotNull);
+    expect(board!.duty, '306');
+    expect(board.sections, hasLength(2));
+
+    final first = board.sections[0].entries;
+    expect(first.where((e) => e.time == '14:32').single.route, 'L59');
+    expect(first.where((e) => e.time == '14:32').single.location, 'Hazelhatch');
+
+    final second = board.sections[1].entries;
+    expect(second.where((e) => e.time == '17:45').single.route, 'L59');
+    expect(second.where((e) => e.time == '17:45').single.location, 'Riverforest');
+  });
+
+  test('loads PZ3/10 Monday board for duty 310', () async {
+    final board = await ZoneBoardService.getBoardForDuty(
+      dutyTitle: 'PZ3/10',
+      date: DateTime(2026, 8, 10),
+    );
+
+    expect(board, isNotNull);
+    expect(board!.duty, '310');
+
+    final first = board.sections[0].entries;
+    expect(first.where((e) => e.time == '19:37').single.route, 'L59');
+    expect(first.where((e) => e.time == '19:37').single.location, 'Hazelhatch');
+    expect(first.where((e) => e.time == '20:15').single.route, 'L59');
+    expect(first.where((e) => e.time == '20:15').single.location, 'Riverforest');
+  });
+
+  test('loads PZ3/01 Saturday board for duty 301', () async {
+    final board = await ZoneBoardService.getBoardForDuty(
+      dutyTitle: 'PZ3/01',
+      date: DateTime(2026, 8, 8),
+    );
+
+    expect(board, isNotNull);
+    expect(board!.duty, '301');
+
+    final entries = board.sections.first.entries;
+    expect(entries.where((e) => e.time == '06:29').single.route, 'L59');
+    expect(entries.where((e) => e.time == '07:32').single.route, 'L59');
+    expect(entries.where((e) => e.time == '08:05').single.route, 'L58');
+    expect(entries.where((e) => e.time == '08:31').single.route, 'L59');
+    expect(entries.where((e) => e.time == '09:05').single.route, 'L58');
+    expect(entries.where((e) => e.time == '09:32').single.route, 'L59');
+  });
+
+  test('loads PZ3/02 Saturday board for duty 302', () async {
+    final board = await ZoneBoardService.getBoardForDuty(
+      dutyTitle: 'PZ3/02',
+      date: DateTime(2026, 8, 8),
+    );
+
+    expect(board, isNotNull);
+    expect(board!.duty, '302');
+
+    final first = board.sections[0].entries;
+    expect(first.where((e) => e.time == '06:00').single.route, 'L58');
+    expect(first.where((e) => e.time == '06:00').single.location, 'Hazelhatch');
+    expect(first.where((e) => e.time == '06:30').single.route, 'L59');
+    expect(first.where((e) => e.time == '06:30').single.location, 'Riverforest');
+    expect(first.where((e) => e.time == '07:00').single.route, 'L58');
+    expect(first.where((e) => e.time == '07:00').single.location, 'Hazelhatch');
+    expect(first.where((e) => e.time == '07:30').single.route, 'L59');
+    expect(first.where((e) => e.time == '07:30').single.location, 'Riverforest');
+    expect(first.where((e) => e.time == '08:00').single.route, 'L58');
+    expect(first.where((e) => e.time == '08:00').single.location, 'Hazelhatch');
+    expect(first.where((e) => e.time == '08:25').single.action, 'SPL');
+    expect(first.last.action, 'Break');
+    expect(first.last.time, '09:00');
+
+    final second = board.sections[1].entries;
+    expect(second.where((e) => e.time == '11:45').single.route, 'L59');
+    expect(second.where((e) => e.time == '11:45').single.location, 'Riverforest');
+  });
+
+  test('loads PZ3/03 Saturday board for duty 303', () async {
+    final board = await ZoneBoardService.getBoardForDuty(
+      dutyTitle: 'PZ3/03',
+      date: DateTime(2026, 8, 8),
+    );
+
+    expect(board, isNotNull);
+    expect(board!.duty, '303');
+
+    final first = board.sections[0].entries;
+    expect(first.where((e) => e.time == '08:30').single.route, 'L59');
+    expect(first.where((e) => e.time == '08:30').single.location, 'Riverforest');
+  });
+
+  test('loads PZ3/10 Saturday board for duty 310', () async {
+    final board = await ZoneBoardService.getBoardForDuty(
+      dutyTitle: 'PZ3/10',
+      date: DateTime(2026, 8, 8),
+    );
+
+    expect(board, isNotNull);
+    expect(board!.duty, '310');
+
+    final entries = board.sections.first.entries;
+    expect(entries.where((e) => e.time == '23:30').single.route, 'L59');
+    expect(entries.where((e) => e.time == '23:30').single.location, 'Riverforest');
+  });
+
+  test('loads PZ3/2X Saturday board for duty 352', () async {
+    final board = await ZoneBoardService.getBoardForDuty(
+      dutyTitle: 'PZ3/2X',
+      date: DateTime(2026, 8, 8),
+    );
+
+    expect(board, isNotNull);
+    expect(board!.duty, '352');
+
+    final second = board.sections[1].entries;
+    expect(second.where((e) => e.time == '16:50').single.action, 'SPL');
+    expect(second.where((e) => e.time == '16:50').single.location, 'Garage');
+    expect(second.last.action, 'Finish');
+    expect(second.last.time, '17:25');
+  });
+
+  test('loads PZ3/01 Sunday board for duty 301', () async {
+    final board = await ZoneBoardService.getBoardForDuty(
+      dutyTitle: 'PZ3/01',
+      date: DateTime(2026, 8, 9),
+    );
+
+    expect(board, isNotNull);
+    expect(board!.duty, '301');
+
+    final entries = board.sections.first.entries;
+    expect(entries.where((e) => e.time == '08:00').single.route, 'L58');
+    expect(entries.where((e) => e.time == '08:00').single.location, 'Hazelhatch');
+    expect(entries.where((e) => e.time == '08:30').single.route, 'L59');
+    expect(entries.where((e) => e.time == '08:30').single.location, 'Riverforest');
+    expect(entries.where((e) => e.time == '09:00').single.route, 'L58');
+    expect(entries.where((e) => e.time == '09:30').single.route, 'L59');
+    expect(entries.where((e) => e.time == '10:00').single.route, 'L58');
+    expect(entries.where((e) => e.time == '10:20').single.action, 'SPL');
+    expect(entries.where((e) => e.time == '10:20').single.location, 'Hazelhatch');
+    expect(entries.where((e) => e.time == '10:45').single.route, 'L59');
+    expect(entries.where((e) => e.time == '11:15').single.route, 'L59');
+    expect(entries.where((e) => e.time == '12:10').single.action, 'SPL');
+    expect(entries.last.action, 'Finish');
+    expect(entries.last.time, '12:50');
+  });
+
+  test('loads PZ3/02 Sunday board for duty 302', () async {
+    final board = await ZoneBoardService.getBoardForDuty(
+      dutyTitle: 'PZ3/02',
+      date: DateTime(2026, 8, 9),
+    );
+
+    expect(board, isNotNull);
+    expect(board!.duty, '302');
+
+    final entries = board.sections.first.entries;
+    expect(entries.where((e) => e.time == '10:50').single.route, 'L59');
+    expect(entries.where((e) => e.time == '10:50').single.location, 'Riverforest');
+  });
+
+  test('loads PZ3/04 Sunday board for duty 304', () async {
+    final board = await ZoneBoardService.getBoardForDuty(
+      dutyTitle: 'PZ3/04',
+      date: DateTime(2026, 8, 9),
+    );
+
+    expect(board, isNotNull);
+    expect(board!.duty, '304');
+
+    final first = board.sections[0].entries;
+    expect(first.where((e) => e.time == '15:40').single.route, 'L59');
+    expect(first.where((e) => e.time == '15:40').single.location, 'Hazelhatch');
+  });
+
+  test('loads PZ3/07 Sunday board for duty 307', () async {
+    final board = await ZoneBoardService.getBoardForDuty(
+      dutyTitle: 'PZ3/07',
+      date: DateTime(2026, 8, 9),
+    );
+
+    expect(board, isNotNull);
+    expect(board!.duty, '307');
+
+    final entries = board.sections.last.entries;
+    expect(entries.where((e) => e.time == '23:30').single.route, 'L59');
+    expect(entries.where((e) => e.time == '23:30').single.location, 'Riverforest');
+  });
+
+  test('loads PZ3/1X Sunday board for duty 351', () async {
+    final board = await ZoneBoardService.getBoardForDuty(
+      dutyTitle: 'PZ3/1X',
+      date: DateTime(2026, 8, 9),
+    );
+
+    expect(board, isNotNull);
+    expect(board!.duty, '351');
+
+    final first = board.sections[0].entries;
+    expect(first.where((e) => e.time == '11:40').single.route, 'L59');
+    expect(first.where((e) => e.time == '11:40').single.location, 'Hazelhatch');
+  });
 }

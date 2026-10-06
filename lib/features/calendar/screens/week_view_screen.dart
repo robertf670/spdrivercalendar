@@ -9,6 +9,7 @@ import 'package:spdrivercalendar/theme/app_theme.dart';
 import 'package:spdrivercalendar/core/services/storage_service.dart';
 import 'package:spdrivercalendar/core/constants/app_constants.dart';
 import 'package:spdrivercalendar/features/calendar/utils/calendar_day_appearance.dart';
+import 'package:spdrivercalendar/features/calendar/utils/nights_roster.dart';
 import 'package:spdrivercalendar/features/calendar/utils/marked_in_status.dart';
 import 'package:spdrivercalendar/features/calendar/utils/roster_shift_lookup.dart';
 import 'package:spdrivercalendar/services/day_color_service.dart';
@@ -39,6 +40,8 @@ class WeekViewScreenState extends State<WeekViewScreen> {
   late List<DateTime> _weekDays;
   bool _markedInEnabled = false;
   String _markedInStatus = 'Shift';
+  DateTime? _nightsAnchorSunday;
+  int _nightsWeekIndex = 0;
 
   @override
   void initState() {
@@ -54,10 +57,16 @@ class WeekViewScreenState extends State<WeekViewScreen> {
   Future<void> _loadMarkedInSettings() async {
     final markedInEnabled = await StorageService.getBool(AppConstants.markedInEnabledKey);
     final markedInStatus = await StorageService.getString(AppConstants.markedInStatusKey) ?? '';
+    final nightsAnchor = NightsRosterAnchor.tryParse(
+      sunday: await StorageService.getString(AppConstants.nightsAnchorSundayKey),
+      weekIndex: await StorageService.getInt(AppConstants.nightsWeekIndexKey),
+    );
     if (mounted) {
       setState(() {
         _markedInEnabled = markedInEnabled && markedInStatus.isNotEmpty;
         _markedInStatus = markedInStatus.isEmpty ? 'Spare' : markedInStatus;
+        _nightsAnchorSunday = nightsAnchor?.sunday;
+        _nightsWeekIndex = nightsAnchor?.weekIndex ?? 0;
       });
     }
   }
@@ -113,6 +122,8 @@ class WeekViewScreenState extends State<WeekViewScreen> {
       markedInEnabled: _markedInEnabled,
       markedInStatus: _markedInStatus,
       bankHolidayForDate: _getBankHoliday,
+      nightsAnchorSunday: _nightsAnchorSunday,
+      nightsWeekIndex: _nightsWeekIndex,
     );
   }
 
@@ -133,7 +144,7 @@ class WeekViewScreenState extends State<WeekViewScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text('Week View'),
-            if (MarkedInStatus.isFixedWorkPattern(_markedInStatus)) ...[
+            if (MarkedInStatus.usesWorkRestColors(_markedInStatus)) ...[
               const SizedBox(width: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),

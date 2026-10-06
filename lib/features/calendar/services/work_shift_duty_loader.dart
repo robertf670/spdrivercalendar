@@ -1,6 +1,7 @@
 import 'package:flutter/services.dart';
 import 'package:spdrivercalendar/core/constants/training_constants.dart';
 import 'package:spdrivercalendar/features/calendar/services/roster_service.dart';
+import 'package:spdrivercalendar/features/calendar/utils/spare_time_options.dart';
 import 'package:spdrivercalendar/features/calendar/services/zone2_duties.dart';
 import 'package:spdrivercalendar/services/donnybrook_feature_service.dart';
 import 'package:spdrivercalendar/services/jamestown_feature_service.dart';
@@ -44,7 +45,7 @@ class WorkShiftDutyLoader {
 
     List<String> shiftNumbers;
     if (selectedZone == 'Spare') {
-      shiftNumbers = _spareTimeOptions();
+      shiftNumbers = spareTimeOptions();
     } else if (selectedZone == 'Uni/Euro') {
       shiftNumbers = await _loadUniEuroShifts(dayOfWeek);
     } else if (selectedZone == 'Bus Check') {
@@ -82,19 +83,6 @@ class WorkShiftDutyLoader {
       await RosterService.loadZone3ShiftRoster();
     }
 
-    return shiftNumbers;
-  }
-
-  List<String> _spareTimeOptions() {
-    final shiftNumbers = <String>[];
-    for (var hour = 4; hour <= 16; hour++) {
-      for (var minute = 0; minute < 60; minute += 15) {
-        if (hour == 16 && minute > 0) continue;
-        final hourStr = hour.toString().padLeft(2, '0');
-        final minuteStr = minute.toString().padLeft(2, '0');
-        shiftNumbers.add('$hourStr:$minuteStr');
-      }
-    }
     return shiftNumbers;
   }
 

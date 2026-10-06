@@ -81,6 +81,55 @@ void main() {
     );
   });
 
+  test('Nights follows the 4-week cycle from this week rest days', () {
+    final week1Sunday = DateTime(2024, 4, 7);
+    expect(
+      rosterShiftForDate(
+        date: DateTime(2024, 4, 12),
+        startDate: DateTime(2026, 1, 4),
+        startWeek: 0,
+        markedInEnabled: false,
+        markedInStatus: 'Nights',
+        bankHolidayForDate: (_) => BankHoliday(
+          name: 'Ignored',
+          date: DateTime(2024, 4, 12),
+        ),
+        nightsAnchorSunday: week1Sunday,
+        nightsWeekIndex: 0,
+      ),
+      'R',
+    );
+    expect(
+      rosterShiftForDate(
+        date: DateTime(2024, 4, 17),
+        startDate: DateTime(2026, 1, 4),
+        startWeek: 0,
+        markedInEnabled: false,
+        markedInStatus: 'Nights',
+        bankHolidayForDate: (_) => null,
+        nightsAnchorSunday: week1Sunday,
+        nightsWeekIndex: 0,
+      ),
+      'R',
+    );
+    expect(
+      rosterShiftForDate(
+        date: DateTime(2024, 4, 8),
+        startDate: DateTime(2026, 1, 4),
+        startWeek: 0,
+        markedInEnabled: false,
+        markedInStatus: 'Nights',
+        bankHolidayForDate: (_) => BankHoliday(
+          name: 'Work night',
+          date: DateTime(2024, 4, 8),
+        ),
+        nightsAnchorSunday: week1Sunday,
+        nightsWeekIndex: 0,
+      ),
+      'W',
+    );
+  });
+
   test('isRosteredRestDay excludes swapped work', () {
     expect(
       isRosteredRestDay(shift: 'R', isSwappedWork: true),

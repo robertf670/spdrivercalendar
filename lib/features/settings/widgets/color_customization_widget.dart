@@ -33,7 +33,7 @@ class _ColorCustomizationWidgetState extends State<ColorCustomizationWidget> {
   Future<void> _loadMarkedInStatus() async {
     final markedInStatus = await StorageService.getString(AppConstants.markedInStatusKey) ?? '';
     setState(() {
-      _isMFMarkedIn = MarkedInStatus.isFixedWorkPattern(markedInStatus);
+      _isMFMarkedIn = MarkedInStatus.usesWorkRestColors(markedInStatus);
     });
   }
 
@@ -195,6 +195,8 @@ class _ColorCustomizationWidgetState extends State<ColorCustomizationWidget> {
                                 message = 'M-F Marked In is active. The "Work" color will be used for Monday-Friday shifts.';
                               } else if (status == '4 Day') {
                                 message = '4 Day roster is active. The "Work" color will be used for Friday–Monday.';
+                              } else if (status == 'Nights') {
+                                message = 'Nights roster is active. The "Work" color will be used for work days.';
                               } else {
                                 message = 'Marked In is active. Only relevant shift colors are shown.';
                               }

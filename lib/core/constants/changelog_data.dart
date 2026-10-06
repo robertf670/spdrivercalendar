@@ -1,4 +1,21 @@
  final Map<String, List<Map<String, String>>> changelogData = {
+  '4.3.3': [
+    {
+      'title': 'Nights Roster',
+      'description':
+          'Nights option in Settings. Choose this week’s rest days and the calendar fills Work/Rest from the nights cycle. Bank holidays are work. You can repeat a duty onto other weekday work days this week.',
+    },
+    {
+      'title': 'Spare Start Times',
+      'description':
+          'Spare duties can now be added with start times up to 19:00, or a custom time.',
+    },
+    {
+      'title': 'Zone 3 Boards',
+      'description':
+          'L58/L59 running boards corrected across the week — Monday–Friday, Saturday, and Sunday.',
+    },
+  ],
   '4.3.2': [
     {
       'title': 'Zone 2 Boards - Route 13',
@@ -13,7 +30,7 @@
     {
       'title': '4 Day Roster',
       'description':
-          'Spare 4 ',
+          'Spare 4 day roster added to the app.',
     },
   ],
   '4.3.1': [

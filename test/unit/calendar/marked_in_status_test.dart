@@ -23,4 +23,10 @@ void main() {
     expect(MarkedInStatus.needsZone('4 Day'), isFalse);
     expect(MarkedInStatus.isFixedWorkPattern('4 Day'), isTrue);
   });
+
+  test('Nights is spare and uses Work/Rest colours', () {
+    expect(MarkedInStatus.needsZone('Nights'), isFalse);
+    expect(MarkedInStatus.usesWorkRestColors('Nights'), isTrue);
+    expect(MarkedInStatus.isFixedWorkPattern('Nights'), isFalse);
+  });
 }

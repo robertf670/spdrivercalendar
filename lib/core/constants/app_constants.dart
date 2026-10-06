@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 class AppConstants {
   static const String appName = 'Spare Driver Shift Calendar';
-  static const String appVersion = '4.3.2';
+  static const String appVersion = '4.3.3';
   
   // Storage Keys
   static const String eventsStorageKey = 'events';
@@ -41,6 +41,8 @@ class AppConstants {
   static const String markedInEnabledKey = 'markedInEnabled';
   static const String markedInStatusKey = 'markedInStatus';
   static const String markedInZoneKey = 'markedInZone'; // Zone selection when Shift or M-F is selected
+  static const String nightsWeekIndexKey = 'nightsWeekIndex';
+  static const String nightsAnchorSundayKey = 'nightsAnchorSunday';
 
   /// When false, the add-duty dialog does not offer Shift Zone 1 15-week roster auto-fill.
   static const bool enableZone1ShiftDutyRosterAutoFill = false;

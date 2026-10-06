@@ -109,12 +109,20 @@ class ZoneBoardMapper {
       entries = <BoardEntry>[];
     }
 
+    final rows = <List<String>>[];
     for (final rawRow in boardRows) {
       if (rawRow is! List) continue;
       final cells = rawRow.map((e) => e?.toString() ?? '').toList();
       while (cells.length < 6) {
         cells.add('');
       }
+      rows.add(cells);
+    }
+
+    var skipUntil = -1;
+    for (var i = 0; i < rows.length; i++) {
+      if (i <= skipUntil) continue;
+      final cells = rows[i];
 
       final route = cells[0].trim();
       final f1 = cells[1].trim();
@@ -156,16 +164,29 @@ class ZoneBoardMapper {
       }
 
       if (isDutyHdr || isLongNote) {
+        final finishEntry = _finishFromNote(place, signoff);
+        if (finishEntry != null) {
+          // Zone 3 "Finished Duty" duplicates the garage-g Finish row.
+          continue;
+        }
         final reportEntry = _reportFromNote(place);
         if (reportEntry != null) {
           entries.add(reportEntry);
-        } else if (place.isNotEmpty) {
+          continue;
+        }
+        if (_isRedundantZone3DutyNote(place)) {
+          continue;
+        }
+        if (place.isNotEmpty) {
           entries.add(BoardEntry(action: place));
         }
         continue;
       }
 
       if (route.isEmpty && place.isEmpty && arr.isEmpty && dep.isEmpty) {
+        continue;
+      }
+      if (place.toLowerCase().startsWith('then spl')) {
         continue;
       }
 
@@ -192,6 +213,41 @@ class ZoneBoardMapper {
           time: dep,
           location: place.isNotEmpty ? place : null,
         ));
+        continue;
+      }
+
+      // x at HH/RF is the SPL to Garage; g is Finish (end) or Break (meal).
+      if (hasArr && !hasDep && _isTerminusPlace(place)) {
+        final garageIdx = _peekGarageArrIndex(rows, i + 1);
+        if (garageIdx != null) {
+          entries.add(
+            BoardEntry(
+              action: 'SPL',
+              time: arr,
+              location: 'Garage',
+            ),
+          );
+          final garageTime = rows[garageIdx][4];
+          entries.add(
+            BoardEntry(
+              action: _isDutyEndGarage(rows, garageIdx) ? 'Finish' : 'Break',
+              time: garageTime,
+              location: 'Garage',
+            ),
+          );
+          skipUntil = garageIdx;
+          continue;
+        }
+      }
+
+      if (hasArr && !hasDep && _isGaragePlace(place)) {
+        entries.add(
+          BoardEntry(
+            action: _isDutyEndGarage(rows, i) ? 'Finish' : 'Break',
+            time: arr,
+            location: 'Garage',
+          ),
+        );
         continue;
       }
 
@@ -260,7 +316,7 @@ class ZoneBoardMapper {
     final last = sections.last;
     if (last.type != 'secondHalf') return;
     final onlyFinish = last.entries.isNotEmpty &&
-        last.entries.every((e) => e.action == 'Finish');
+        last.entries.every(_isFinishEntry);
     if (!onlyFinish) return;
 
     final previous = sections[sections.length - 2];
@@ -269,6 +325,24 @@ class ZoneBoardMapper {
       entries: [...previous.entries, ...last.entries],
     );
     sections.removeLast();
+  }
+
+  static bool _isFinishEntry(BoardEntry entry) {
+    if (entry.action == 'Finish') return true;
+    return RegExp(
+      r'Finish(?:ed|es)\s+Duty',
+      caseSensitive: false,
+    ).hasMatch(entry.action);
+  }
+
+  static BoardEntry? _finishFromNote(String place, String? signoff) {
+    if (!RegExp(
+      r'Finish(?:ed|es)\s+Duty',
+      caseSensitive: false,
+    ).hasMatch(place)) {
+      return null;
+    }
+    return BoardEntry(action: 'Finish', time: signoff);
   }
 
   static BoardEntry? _reportFromNote(String place) {
@@ -281,7 +355,7 @@ class ZoneBoardMapper {
     }
 
     final bareMatch = RegExp(
-      r'Reports?\s+(\d{2}:\d{2})',
+      r'Reports?\s*(\d{2}:\d{2})',
       caseSensitive: false,
     ).firstMatch(place);
     if (bareMatch != null) {
@@ -309,6 +383,75 @@ class ZoneBoardMapper {
     if (value == null || value.trim().isEmpty) return null;
     return value.trim();
   }
+
+  static bool _isRedundantZone3DutyNote(String place) {
+    // Zone 3 puts "Duty 355 Takes up at 17:03 Garage" / "Departs 17:06 Garage"
+    // in one cell. The Garage time row already covers that.
+    if (!RegExp(r'^Duty\s+\d+\s+', caseSensitive: false).hasMatch(place)) {
+      return false;
+    }
+    final lower = place.toLowerCase();
+    return lower.contains('takes up') || lower.contains('departs');
+  }
+
+  static bool _isGaragePlace(String place) =>
+      place.toLowerCase().trim() == 'garage';
+
+  static bool _isTerminusPlace(String place) {
+    final lower = place.toLowerCase();
+    return lower == 'hazelhatch' || lower == 'riverforest';
+  }
+
+  static bool _isEmptyBoardRow(List<String> cells) =>
+      cells[0].isEmpty &&
+      cells[1].isEmpty &&
+      cells[3].isEmpty &&
+      cells[4].isEmpty &&
+      cells[5].isEmpty;
+
+  static bool _isEmptySplRow(List<String> cells) =>
+      cells[0].toUpperCase() == 'SPL' &&
+      cells[3].isEmpty &&
+      cells[4].isEmpty &&
+      cells[5].isEmpty;
+
+  static int? _peekGarageArrIndex(List<List<String>> rows, int from) {
+    for (var i = from; i < rows.length; i++) {
+      final cells = rows[i];
+      if (cells[0] == '---') return null;
+      if (_isEmptySplRow(cells) ||
+          _isEmptyBoardRow(cells) ||
+          cells[3].toLowerCase().startsWith('then spl')) {
+        continue;
+      }
+      if (_isGaragePlace(cells[3]) &&
+          cells[4].isNotEmpty &&
+          cells[5].isEmpty) {
+        return i;
+      }
+      return null;
+    }
+    return null;
+  }
+
+  static bool _isDutyEndGarage(List<List<String>> rows, int garageIndex) {
+    for (var i = garageIndex + 1; i < rows.length; i++) {
+      final cells = rows[i];
+      if (cells[0] == '---') continue;
+      if (_isEmptySplRow(cells) || _isEmptyBoardRow(cells)) continue;
+      if (_isFinishedDutyNote(cells[3])) continue;
+      if (_isRedundantZone3DutyNote(cells[3])) continue;
+      if (cells[3].toLowerCase().startsWith('then spl')) continue;
+      return false;
+    }
+    return true;
+  }
+
+  static bool _isFinishedDutyNote(String place) =>
+      RegExp(
+        r'Finish(?:ed|es)\s+Duty',
+        caseSensitive: false,
+      ).hasMatch(place);
 
   static bool _isSpl(String route) => route.toUpperCase() == 'SPL';
 

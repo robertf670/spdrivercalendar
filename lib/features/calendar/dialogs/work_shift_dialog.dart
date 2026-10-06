@@ -4,11 +4,12 @@ import 'package:spdrivercalendar/core/constants/app_constants.dart';
 import 'package:spdrivercalendar/core/constants/training_constants.dart';
 import 'package:spdrivercalendar/features/calendar/services/roster_service.dart';
 import 'package:spdrivercalendar/features/calendar/services/zone2_duties.dart';
+import 'package:spdrivercalendar/features/calendar/utils/spare_time_options.dart';
+import 'package:spdrivercalendar/features/calendar/utils/work_shift_duty_repeat.dart';
 import 'package:spdrivercalendar/features/calendar/utils/work_shift_zone_options.dart';
 import 'package:spdrivercalendar/features/calendar/widgets/custom_training_form.dart';
 import 'package:spdrivercalendar/features/calendar/widgets/weekday_repeat_day_toggle.dart';
 import 'package:spdrivercalendar/services/donnybrook_feature_service.dart';
-import 'package:spdrivercalendar/services/jamestown_feature_service.dart';
 
 /// Result handed to the caller when Add Shift is pressed.
 class WorkShiftDialogSelection {
@@ -52,6 +53,8 @@ class WorkShiftDialog extends StatefulWidget {
     required this.loadShiftNumbers,
     required this.dayHasBlockingEvent,
     required this.onAddShift,
+    this.isNightsRoster = false,
+    this.isNightsWorkDay,
   });
 
   final DateTime shiftDate;
@@ -60,6 +63,8 @@ class WorkShiftDialog extends StatefulWidget {
   final String markedInZone;
   final bool jamestownEnabled;
   final bool donnybrook1Enabled;
+  final bool isNightsRoster;
+  final bool Function(DateTime date)? isNightsWorkDay;
   final Future<List<String>> Function(String selectedZone) loadShiftNumbers;
   final bool Function(DateTime date) dayHasBlockingEvent;
   final Future<void> Function(WorkShiftDialogSelection selection) onAddShift;
@@ -74,6 +79,7 @@ class _WorkShiftDialogState extends State<WorkShiftDialog> {
   List<String> _shiftNumbers = const [];
   bool _isLoading = true;
   bool _isSaving = false;
+  TimeOfDay? _customSpareTime;
 
   bool _repeatUniEuroThisWeek = false;
   Map<int, bool> _uniEuroSelectedDays = _emptyWeekMap();
@@ -155,23 +161,34 @@ class _WorkShiftDialogState extends State<WorkShiftDialog> {
     }
   }
 
-  Map<int, bool> _weekdayBlockingMap() {
+  Map<int, bool> _repeatDisabledDays({required bool includeWeekend}) {
     final weekday = widget.shiftDate.weekday;
     final daysToSunday = weekday == 7 ? 0 : weekday;
     final weekStart = widget.shiftDate.subtract(Duration(days: daysToSunday));
     final disabled = <int, bool>{};
-    for (var dayIndex = 1; dayIndex <= 5; dayIndex++) {
+    final first = includeWeekend ? 0 : 1;
+    final last = includeWeekend ? 6 : 5;
+    for (var dayIndex = first; dayIndex <= last; dayIndex++) {
       final targetDate = weekStart.add(Duration(days: dayIndex));
-      disabled[dayIndex] = widget.dayHasBlockingEvent(targetDate);
+      final restDay = widget.isNightsRoster &&
+          !(widget.isNightsWorkDay?.call(targetDate) ?? false);
+      disabled[dayIndex] =
+          restDay || widget.dayHasBlockingEvent(targetDate);
     }
     return disabled;
   }
 
-  void _autoSelectCurrentWeekday(Map<int, bool> selected, Map<int, bool> disabled) {
-    final weekday = widget.shiftDate.weekday;
-    if (weekday >= 1 && weekday <= 5 && !(disabled[weekday] ?? false)) {
-      selected[weekday] = true;
-    }
+  void _autoSelectCurrentDay(
+    Map<int, bool> selected,
+    Map<int, bool> disabled, {
+    required bool includeWeekend,
+  }) {
+    final dayIndex = includeWeekend
+        ? widget.shiftDate.weekday % 7
+        : widget.shiftDate.weekday;
+    if (!includeWeekend && (dayIndex < 1 || dayIndex > 5)) return;
+    if (disabled[dayIndex] ?? false) return;
+    selected[dayIndex] = true;
   }
 
   bool get _isFixedDutyZone =>
@@ -179,11 +196,41 @@ class _WorkShiftDialogState extends State<WorkShiftDialog> {
       _selectedZone == 'Union' ||
       _selectedZone == 'Mentor';
 
+  bool get _needsCustomSpareTime =>
+      _selectedZone == 'Spare' &&
+      isSpareCustomTimeOption(_selectedShiftNumber);
+
+  String get _resolvedShiftNumber {
+    final custom = _customSpareTime;
+    if (_needsCustomSpareTime && custom != null) {
+      return formatSpareClockTime(custom.hour, custom.minute);
+    }
+    return _selectedShiftNumber;
+  }
+
   bool get _canSubmit =>
       !_isLoading &&
       !_isSaving &&
       (_isFixedDutyZone ||
-          (_shiftNumbers.isNotEmpty && _selectedShiftNumber.isNotEmpty));
+          (_shiftNumbers.isNotEmpty &&
+              _selectedShiftNumber.isNotEmpty &&
+              (!_needsCustomSpareTime || _customSpareTime != null)));
+
+  Future<void> _pickCustomSpareTime() async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: _customSpareTime ?? const TimeOfDay(hour: 19, minute: 0),
+      helpText: 'Spare start time',
+      builder: (context, child) {
+        return MediaQuery(
+          data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
+          child: child!,
+        );
+      },
+    );
+    if (picked == null || !mounted) return;
+    setState(() => _customSpareTime = picked);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -242,6 +289,7 @@ class _WorkShiftDialogState extends State<WorkShiftDialog> {
                         setState(() {
                           _selectedZone = value;
                           _selectedShiftNumber = '';
+                          _customSpareTime = null;
                         });
                         _loadShiftNumbers();
                       },
@@ -302,9 +350,32 @@ class _WorkShiftDialogState extends State<WorkShiftDialog> {
                           if (value == null) return;
                           setState(() {
                             _selectedShiftNumber = value;
+                            if (!isSpareCustomTimeOption(value)) {
+                              _customSpareTime = null;
+                            }
                           });
+                          if (isSpareCustomTimeOption(value)) {
+                            _pickCustomSpareTime();
+                          }
                         },
                 ),
+              if (_needsCustomSpareTime) ...[
+                const SizedBox(height: 8),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.schedule),
+                  title: Text(
+                    _customSpareTime == null
+                        ? 'Choose start time'
+                        : formatSpareClockTime(
+                            _customSpareTime!.hour,
+                            _customSpareTime!.minute,
+                          ),
+                  ),
+                  trailing: const Icon(Icons.edit_outlined),
+                  onTap: _isSaving ? null : _pickCustomSpareTime,
+                ),
+              ],
               if (_selectedZone == 'Training' &&
                   _selectedShiftNumber ==
                       TrainingConstants.customTrainingShiftOption) ...[
@@ -336,7 +407,7 @@ class _WorkShiftDialogState extends State<WorkShiftDialog> {
                     await widget.onAddShift(
                       WorkShiftDialogSelection(
                         selectedZone: _selectedZone,
-                        selectedShiftNumber: _selectedShiftNumber,
+                        selectedShiftNumber: _resolvedShiftNumber,
                         repeatUniEuroThisWeek: _repeatUniEuroThisWeek,
                         uniEuroSelectedDays: Map<int, bool>.from(
                           _uniEuroSelectedDays,
@@ -388,11 +459,13 @@ class _WorkShiftDialogState extends State<WorkShiftDialog> {
                       setState(() {
                         _repeatUniEuroThisWeek = enabled;
                         if (enabled) {
-                          _uniEuroDisabledDays = _weekdayBlockingMap();
+                          _uniEuroDisabledDays =
+                              _repeatDisabledDays(includeWeekend: false);
                           _uniEuroSelectedDays = _emptyWeekMap();
-                          _autoSelectCurrentWeekday(
+                          _autoSelectCurrentDay(
                             _uniEuroSelectedDays,
                             _uniEuroDisabledDays,
+                            includeWeekend: false,
                           );
                         } else {
                           _uniEuroSelectedDays = _emptyWeekMap();
@@ -421,22 +494,17 @@ class _WorkShiftDialogState extends State<WorkShiftDialog> {
   }
 
   Widget _buildDutyRepeatSection() {
-    final dayOfWeek = RosterService.getDayOfWeek(widget.shiftDate);
-    final isWeekend = dayOfWeek == 'Saturday' || dayOfWeek == 'Sunday';
-    final isJamestownZone =
-        _selectedZone == JamestownFeatureService.zoneLabel;
-    final isRepeatableDutyZone = _selectedZone == 'Zone 1' ||
-        _selectedZone == 'Zone 2' ||
-        _selectedZone == 'Zone 3' ||
-        _selectedZone == 'Zone 4' ||
-        _selectedZone == DonnybrookFeatureService.zoneLabel ||
-        (isJamestownZone && widget.jamestownEnabled);
-    final zoneMatch =
-        widget.isShiftMarkedIn ? (_selectedZone == widget.markedInZone) : true;
-    final shouldShow = (widget.isShiftMarkedIn || widget.isMFMarkedIn) &&
-        isRepeatableDutyZone &&
-        zoneMatch &&
-        !isWeekend;
+    final includeWeekend = false;
+    final shouldShow = WorkShiftDutyRepeat.shouldShow(
+      selectedZone: _selectedZone,
+      shiftDate: widget.shiftDate,
+      isMFMarkedIn: widget.isMFMarkedIn,
+      isShiftMarkedIn: widget.isShiftMarkedIn,
+      isNightsRoster: widget.isNightsRoster,
+      markedInZone: widget.markedInZone,
+      jamestownEnabled: widget.jamestownEnabled,
+      isNightsWorkDay: widget.isNightsWorkDay,
+    );
     if (!shouldShow) return const SizedBox.shrink();
 
     return Column(
@@ -453,11 +521,14 @@ class _WorkShiftDialogState extends State<WorkShiftDialog> {
                       setState(() {
                         _repeatDutyThisWeek = enabled;
                         if (enabled) {
-                          _disabledDays = _weekdayBlockingMap();
+                          _disabledDays = _repeatDisabledDays(
+                            includeWeekend: includeWeekend,
+                          );
                           _selectedDays = _emptyWeekMap();
-                          _autoSelectCurrentWeekday(
+                          _autoSelectCurrentDay(
                             _selectedDays,
                             _disabledDays,
+                            includeWeekend: includeWeekend,
                           );
                         } else {
                           _selectedDays = _emptyWeekMap();
@@ -479,6 +550,7 @@ class _WorkShiftDialogState extends State<WorkShiftDialog> {
           _weekdayToggleRow(
             selected: _selectedDays,
             disabled: _disabledDays,
+            includeWeekend: includeWeekend,
           ),
         ],
       ],
@@ -599,6 +671,7 @@ class _WorkShiftDialogState extends State<WorkShiftDialog> {
   Widget _weekdayToggleRow({
     required Map<int, bool> selected,
     required Map<int, bool> disabled,
+    bool includeWeekend = false,
   }) {
     Widget toggle(int dayIndex, String label) {
       final isSelected = selected[dayIndex] ?? false;
@@ -615,15 +688,29 @@ class _WorkShiftDialogState extends State<WorkShiftDialog> {
       );
     }
 
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-      children: [
-        toggle(1, 'M'),
-        toggle(2, 'T'),
-        toggle(3, 'W'),
-        toggle(4, 'T'),
-        toggle(5, 'F'),
-      ],
+    final days = includeWeekend
+        ? [
+            toggle(0, 'S'),
+            toggle(1, 'M'),
+            toggle(2, 'T'),
+            toggle(3, 'W'),
+            toggle(4, 'T'),
+            toggle(5, 'F'),
+            toggle(6, 'S'),
+          ]
+        : [
+            toggle(1, 'M'),
+            toggle(2, 'T'),
+            toggle(3, 'W'),
+            toggle(4, 'T'),
+            toggle(5, 'F'),
+          ];
+
+    return Wrap(
+      alignment: WrapAlignment.spaceEvenly,
+      spacing: 4,
+      runSpacing: 4,
+      children: days,
     );
   }
 }

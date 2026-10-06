@@ -1,6 +1,7 @@
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:spdrivercalendar/features/calendar/services/overtime_duty_shift_loader.dart';
+import 'package:spdrivercalendar/features/calendar/utils/spare_time_options.dart';
 
 class _FakeBundle extends CachingAssetBundle {
   _FakeBundle(this.assets);
@@ -55,7 +56,7 @@ void main() {
     expect(shifts, ['807/01', '807/02']);
   });
 
-  test('generates spare time options through 16:00', () async {
+  test('generates spare time options through 19:00', () async {
     final loader = OvertimeDutyShiftLoader(bundle: _FakeBundle({}));
     final shifts = await loader.loadShiftNumbers(
       selectedZone: 'Spare',
@@ -63,8 +64,10 @@ void main() {
     );
 
     expect(shifts.first, '04:00');
-    expect(shifts.last, '16:00');
-    expect(shifts, isNot(contains('16:15')));
+    expect(shifts, contains('16:15'));
+    expect(shifts, contains('19:00'));
+    expect(shifts.last, spareCustomTimeOption);
+    expect(shifts, isNot(contains('19:15')));
   });
 
   test('Zone 2 overtime stays empty before 10 Oct 2026', () async {

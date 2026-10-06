@@ -33,6 +33,7 @@ import '../../../services/days_in_lieu_service.dart';
 import '../../../services/annual_leave_service.dart';
 import '../../../services/color_customization_service.dart';
 import 'package:spdrivercalendar/features/calendar/utils/marked_in_status.dart';
+import 'package:spdrivercalendar/features/calendar/utils/nights_roster.dart';
 import '../../../services/rest_day_swap_service.dart';
 import 'package:spdrivercalendar/features/ratings/duty_rating_aggregate.dart';
 import 'package:spdrivercalendar/features/ratings/duty_rating_service.dart';
@@ -125,6 +126,8 @@ class StatisticsScreenState extends State<StatisticsScreen>
   // Marked-in settings
   bool _markedInEnabled = false;
   String _markedInStatus = 'Shift';
+  DateTime? _nightsAnchorSunday;
+  int _nightsWeekIndex = 0;
 
   // State variable to hold the future for work time stats
   Future<Map<String, Duration>>? _workTimeStatsFuture;
@@ -2479,11 +2482,17 @@ class StatisticsScreenState extends State<StatisticsScreen>
   Future<void> _loadMarkedInSettings() async {
     final markedInEnabled = await StorageService.getBool(AppConstants.markedInEnabledKey);
     final markedInStatus = await StorageService.getString(AppConstants.markedInStatusKey) ?? '';
+    final nightsAnchor = NightsRosterAnchor.tryParse(
+      sunday: await StorageService.getString(AppConstants.nightsAnchorSundayKey),
+      weekIndex: await StorageService.getInt(AppConstants.nightsWeekIndexKey),
+    );
     if (mounted) {
       setState(() {
         // Determine if marked-in is actually enabled (enabled flag must be true AND status must not be empty)
         _markedInEnabled = markedInEnabled && markedInStatus.isNotEmpty;
         _markedInStatus = markedInStatus.isEmpty ? 'Spare' : markedInStatus;
+        _nightsAnchorSunday = nightsAnchor?.sunday;
+        _nightsWeekIndex = nightsAnchor?.weekIndex ?? 0;
       });
     }
   }
@@ -2501,6 +2510,15 @@ class StatisticsScreenState extends State<StatisticsScreen>
         return true;
       }
       return !MarkedInStatus.isWorkDay(_markedInStatus, date);
+    }
+
+    if (_markedInStatus == MarkedInStatus.nights) {
+      if (_nightsAnchorSunday == null) return false;
+      return !NightsRoster.isWorkDay(
+        date: date,
+        anchorSunday: _nightsAnchorSunday!,
+        anchorWeekIndex: _nightsWeekIndex,
+      );
     }
 
     if (_markedInEnabled) {

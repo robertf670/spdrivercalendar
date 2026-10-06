@@ -4,6 +4,7 @@ import 'package:spdrivercalendar/core/constants/training_constants.dart';
 import 'package:spdrivercalendar/features/calendar/dialogs/work_shift_dialog.dart';
 import 'package:spdrivercalendar/features/calendar/services/work_shift_event_persister.dart';
 import 'package:spdrivercalendar/models/event.dart';
+import 'package:spdrivercalendar/models/bank_holiday.dart';
 
 void main() {
   WorkShiftDialogSelection selection({
@@ -80,6 +81,34 @@ void main() {
     expect(created.single.title, 'SP0515');
     expect(created.single.startTime, const TimeOfDay(hour: 5, minute: 15));
     expect(created.single.endTime, const TimeOfDay(hour: 13, minute: 53));
+  });
+
+  test('custom spare minute becomes SP title and 8h38 end time', () async {
+    final created = <Event>[];
+    final persister = WorkShiftEventPersister(
+      lookupShiftTimes: (zone, shift, date) async => null,
+      addEvent: (event) async {
+        created.add(event);
+      },
+      eventsForDay: (_) => const [],
+      bankHolidayForDate: (_) => null,
+      now: () => DateTime(2026, 8, 4, 12),
+    );
+
+    final result = await persister.persist(
+      shiftDate: DateTime(2026, 8, 4),
+      selection: selection(zone: 'Spare', shift: '19:07'),
+      isMFMarkedIn: false,
+      isShiftMarkedIn: false,
+      markedInZone: '',
+      jamestownEnabled: false,
+    );
+
+    expect(result.status, WorkShiftPersistStatus.success);
+    expect(created.single.title, 'SP1907');
+    expect(created.single.startTime, const TimeOfDay(hour: 19, minute: 7));
+    expect(created.single.endTime, const TimeOfDay(hour: 3, minute: 45));
+    expect(created.single.endDate, DateTime(2026, 8, 5));
   });
 
   test('missing custom training times returns dedicated status', () async {
@@ -174,5 +203,44 @@ void main() {
     expect(result.status, WorkShiftPersistStatus.success);
     expect(created.map((e) => e.title).toSet(), {'PZ2/01'});
     expect(created.map((e) => e.startDate.day).toList(), [12, 13]);
+  });
+
+  test('nights repeats a duty onto other weekday work days', () async {
+    final created = <Event>[];
+    final persister = WorkShiftEventPersister(
+      lookupShiftTimes: (zone, shift, date) async => {
+        'startTime': const TimeOfDay(hour: 22, minute: 0),
+        'endTime': const TimeOfDay(hour: 6, minute: 0),
+        'isNextDay': true,
+      },
+      addEvent: (event) async {
+        created.add(event);
+      },
+      eventsForDay: (_) => const [],
+      bankHolidayForDate: (_) => BankHoliday(
+        name: 'Still work',
+        date: DateTime(2024, 4, 8),
+      ),
+      now: () => DateTime(2024, 4, 9, 12),
+    );
+
+    final result = await persister.persist(
+      shiftDate: DateTime(2024, 4, 9),
+      selection: selection(
+        zone: 'Zone 1',
+        shift: 'PZ1/91',
+        repeatDutyThisWeek: true,
+        selectedDays: const {1: true, 2: true, 6: true},
+      ),
+      isMFMarkedIn: false,
+      isShiftMarkedIn: false,
+      markedInZone: '',
+      jamestownEnabled: false,
+      isNightsRoster: true,
+    );
+
+    expect(result.status, WorkShiftPersistStatus.success);
+    expect(created.map((e) => e.title).toSet(), {'PZ1/91'});
+    expect(created.map((e) => e.startDate.day).toList(), [9, 8]);
   });
 }

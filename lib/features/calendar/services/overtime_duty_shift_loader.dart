@@ -1,5 +1,6 @@
 import 'package:flutter/services.dart';
 import 'package:spdrivercalendar/features/calendar/services/roster_service.dart';
+import 'package:spdrivercalendar/features/calendar/utils/spare_time_options.dart';
 import 'package:spdrivercalendar/features/calendar/services/zone2_duties.dart';
 
 /// Loads available duty codes for the Add Overtime Duty picker.
@@ -41,7 +42,7 @@ class OvertimeDutyShiftLoader {
     }
 
     if (selectedZone == 'Spare') {
-      return _spareTimeOptions();
+      return spareTimeOptions();
     }
     if (selectedZone == 'Uni/Euro') {
       return _loadUniEuroShifts(dayOfWeek);
@@ -62,19 +63,6 @@ class OvertimeDutyShiftLoader {
     }
 
     return shifts;
-  }
-
-  List<String> _spareTimeOptions() {
-    final shiftNumbers = <String>[];
-    for (var hour = 4; hour <= 16; hour++) {
-      for (var minute = 0; minute < 60; minute += 15) {
-        if (hour == 16 && minute > 0) continue;
-        final hourStr = hour.toString().padLeft(2, '0');
-        final minuteStr = minute.toString().padLeft(2, '0');
-        shiftNumbers.add('$hourStr:$minuteStr');
-      }
-    }
-    return shiftNumbers;
   }
 
   Future<List<String>> _loadUniEuroShifts(String dayOfWeek) async {
