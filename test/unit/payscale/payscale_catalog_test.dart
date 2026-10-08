@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:spdrivercalendar/core/constants/app_constants.dart';
@@ -27,6 +29,24 @@ void main() {
       catalog.grouped().map((g) => g.title).toList(),
       ['Daily', 'Weekly', 'Spread'],
     );
+  });
+
+  test('bundled payscale CSV matches the 01/01/26 5-day chart', () {
+    final catalog = PayScaleCatalog.parse(
+      File('pay/payscale.csv').readAsStringSync(),
+    );
+    final byKey = {for (final row in catalog.rows) row.typeKey: row};
+
+    expect(byKey['basicdaily']!.formattedRate('year1+2'), '€144.82');
+    expect(byKey['basicdaily']!.formattedRate('year3+4'), '€149.90');
+    expect(byKey['basicdaily']!.formattedRate('year5'), '€157.52');
+    expect(byKey['basicdaily']!.formattedRate('year6'), '€167.68');
+    expect(byKey['weeklyinclsunday']!.formattedRate('year1+2'), '€965.47');
+    expect(byKey['workingrestday(mon-sat)']!.formattedRate('year6'), '€279.46');
+    expect(byKey['bankholiday']!.formattedRate('year1+2'), '€446.52');
+    expect(byKey['overtimesunday(hourly)']!.formattedRate('year6'), '€64.49');
+    expect(byKey['spreadover(hourly)']!.formattedRate('year1+2'), '€18.56');
+    expect(byKey['spreadover(hourly)']!.formattedRate('year6'), '€21.49');
   });
 
   test('normalises saved year levels', () {

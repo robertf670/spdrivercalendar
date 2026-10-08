@@ -24,6 +24,10 @@ import 'package:spdrivercalendar/services/jamestown_feature_service.dart';
 import 'package:spdrivercalendar/features/calendar/utils/shift_rest_gap.dart';
 import 'package:spdrivercalendar/features/calendar/utils/work_duration_display.dart';
 import 'package:spdrivercalendar/features/calendar/utils/assigned_duty_zone.dart';
+import 'package:spdrivercalendar/features/calendar/utils/spare_meal.dart';
+import 'package:spdrivercalendar/features/calendar/utils/spare_time_options.dart';
+import 'package:spdrivercalendar/features/calendar/widgets/dialog_action_layout.dart';
+import 'package:spdrivercalendar/features/calendar/widgets/spare_meal_controls.dart';
 import 'package:spdrivercalendar/features/calendar/widgets/assigned_duty_board_button.dart';
 import 'package:spdrivercalendar/features/ratings/duty_rate_menu_actions.dart';
 import 'package:spdrivercalendar/features/bus_reports/bus_report_row_actions.dart';
@@ -2268,6 +2272,36 @@ class _EventCardState extends State<EventCard> {
                 _buildRouteTimeRow(),
                 const SizedBox(height: 3.0), // Reduced gap - route/location and breaks are related
               ],
+              if (SpareMeal.isSpareTitle(widget.event.title) &&
+                  widget.event.breakStartTime != null &&
+                  widget.event.breakEndTime != null) ...[
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 2.0),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(
+                        Icons.coffee,
+                        size: 16,
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.white
+                            : Colors.black,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          '${formatSpareClockTime(widget.event.breakStartTime!.hour, widget.event.breakStartTime!.minute)}–${formatSpareClockTime(widget.event.breakEndTime!.hour, widget.event.breakEndTime!.minute)}',
+                          style: _detailIconRowTextStyle(context).copyWith(
+                            fontWeight: FontWeight.w500,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
               // MODIFIED: Break times row (if available AND NOT BusCheck AND is work shift AND NOT training shift AND NOT spare shift)
               if (breakTime != null && !isBusCheckShift && !widget.event.title.contains('(OT)') && widget.event.isWorkShift && widget.event.title != 'CPC' && widget.event.title != 'Union' && widget.event.title != 'Mentor' && !widget.event.isCustomTraining && !widget.event.title.startsWith('SP') && widget.event.title != '22B/01') ...[
                 Padding(
@@ -2650,6 +2684,8 @@ class _EventCardState extends State<EventCard> {
     List<String> duties = [];
     bool isLoading = true;
     bool fillWholeWeek = false;
+    var dutyLoadGeneration = 0;
+    var requestedInitialDutyLoad = false;
 
     // Check if user is M-F marked in and if it's a weekday (do this outside the builder)
     bool isMFMarkedIn = false;
@@ -2675,21 +2711,22 @@ class _EventCardState extends State<EventCard> {
         builder: (context, setState) {
           // Calculate if checkbox should be shown (reactive to zone changes)
           final shouldShowFillWeekCheckbox = isMFMarkedIn && isWeekday && selectedZone == 'Uni/Euro' && halfIndicator == null;
-          // Function to load duties for selected zone
-          void loadDuties() async {
-            setState(() {
-              isLoading = true;
-            });
+          Future<void> loadDuties() async {
+            final generation = ++dutyLoadGeneration;
+            isLoading = true;
+            setState(() {});
 
             if (!AssignedDutyZone.canLoadDuties(
               selectedZone: selectedZone,
               date: widget.event.startDate,
             )) {
+              if (generation != dutyLoadGeneration || !dialogContext.mounted) {
+                return;
+              }
               duties = [];
               selectedDuty = '';
-              setState(() {
-                isLoading = false;
-              });
+              isLoading = false;
+              setState(() {});
               return;
             }
 
@@ -2697,8 +2734,7 @@ class _EventCardState extends State<EventCard> {
               final dayOfWeek = RosterService.getDayOfWeek(widget.event.startDate);
               final bankHoliday = ShiftService.getBankHoliday(widget.event.startDate, ShiftService.bankHolidays);
               final zoneNumber = selectedZone.replaceAll('Zone ', '');
-              
-              duties = [];
+              final nextDuties = <String>[];
               final seenDuties = <String>{};
 
               if (selectedZone == 'Uni/Euro') {
@@ -2727,9 +2763,8 @@ class _EventCardState extends State<EventCard> {
                       continue; // Skip duties without breaks for half duties
                     }
                     
-                    if (dutyCode.isNotEmpty && !seenDuties.contains(dutyCode)) {
-                      seenDuties.add(dutyCode);
-                      duties.add(dutyCode);
+                    if (dutyCode.isNotEmpty && seenDuties.add(dutyCode)) {
+                      nextDuties.add(dutyCode);
                     }
                   }
                 } catch (e) {
@@ -2761,9 +2796,8 @@ class _EventCardState extends State<EventCard> {
                         continue; // Skip duties without breaks for half duties
                       }
                       
-                      if (dutyCode.isNotEmpty && !seenDuties.contains(dutyCode)) {
-                        seenDuties.add(dutyCode);
-                        duties.add(dutyCode);
+                      if (dutyCode.isNotEmpty && seenDuties.add(dutyCode)) {
+                        nextDuties.add(dutyCode);
                       }
                     }
                   } catch (e) {
@@ -2804,30 +2838,34 @@ class _EventCardState extends State<EventCard> {
                   }
 
                   final dutyCode = parts[0].trim();
-                  if (dutyCode.isNotEmpty && !seenDuties.contains(dutyCode)) {
-                    seenDuties.add(dutyCode);
-                    duties.add(dutyCode);
+                  if (dutyCode.isNotEmpty && seenDuties.add(dutyCode)) {
+                    nextDuties.add(dutyCode);
                   }
                 }
               }
 
-              selectedDuty = duties.isNotEmpty ? duties[0] : '';
-
-              setState(() {
-                isLoading = false;
-              });
+              if (generation != dutyLoadGeneration || !dialogContext.mounted) {
+                return;
+              }
+              duties = nextDuties;
+              selectedDuty = duties.contains(selectedDuty) && selectedDuty.isNotEmpty
+                  ? selectedDuty
+                  : (duties.isNotEmpty ? duties.first : '');
+              isLoading = false;
+              setState(() {});
             } catch (e) {
-
+              if (generation != dutyLoadGeneration || !dialogContext.mounted) {
+                return;
+              }
               duties = [];
               selectedDuty = '';
-              setState(() {
-                isLoading = false;
-              });
+              isLoading = false;
+              setState(() {});
             }
           }
 
-          // Load duties when zone changes or dialog opens
-          if (isLoading) {
+          if (!requestedInitialDutyLoad) {
+            requestedInitialDutyLoad = true;
             loadDuties();
           }
 
@@ -2863,13 +2901,10 @@ class _EventCardState extends State<EventCard> {
                     );
                   }).toList(),
                   onChanged: (value) {
-                    if (value != null && value != selectedZone) {
-                      setState(() {
-                        selectedZone = value;
-                        selectedDuty = '';
-                        loadDuties();
-                      });
-                    }
+                    if (value == null || value == selectedZone) return;
+                    selectedZone = value;
+                    selectedDuty = '';
+                    loadDuties();
                   },
                 ),
                 
@@ -2891,18 +2926,21 @@ class _EventCardState extends State<EventCard> {
                         ),
                       )
                     : DropdownButton<String>(
-                        value: selectedDuty,
+                        value: duties.contains(selectedDuty)
+                            ? selectedDuty
+                            : duties.first,
                         isExpanded: true,
-                        items: duties.map((duty) {
-                          // For display, append 'A' or 'B' to the duty code for half duties
-                          final displayDuty = halfIndicator != null 
-                              ? '$duty$halfIndicator'
-                              : duty;
-                          return DropdownMenuItem(
-                            value: duty, // Keep the original value without suffix
-                            child: Text(displayDuty),
-                          );
-                        }).toList(),
+                        items: [
+                          for (final duty in duties.toSet())
+                            DropdownMenuItem(
+                              value: duty,
+                              child: Text(
+                                halfIndicator != null
+                                    ? '$duty$halfIndicator'
+                                    : duty,
+                              ),
+                            ),
+                        ],
                         onChanged: (value) {
                           if (value != null) {
                             setState(() {
@@ -3128,59 +3166,175 @@ class _EventCardState extends State<EventCard> {
     );
   }
 
+  Future<void> _pickSpareMeal(
+    BuildContext context,
+    StateSetter dialogSetState,
+  ) async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: widget.event.breakStartTime ??
+          const TimeOfDay(hour: 14, minute: 0),
+      builder: (context, child) {
+        return MediaQuery(
+          data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
+          child: child!,
+        );
+      },
+    );
+    if (picked == null || !context.mounted) return;
+    final previous = widget.event.copyWith();
+    SpareMeal.apply(widget.event, picked);
+    await EventService.updateEvent(previous, widget.event);
+    if (!context.mounted) return;
+    dialogSetState(() {});
+    setState(() {});
+    widget.onBusAssignmentUpdate?.call(widget.event);
+  }
+
+  Future<void> _clearSpareMeal(
+    BuildContext context,
+    StateSetter dialogSetState,
+  ) async {
+    final previous = widget.event.copyWith();
+    SpareMeal.clear(widget.event);
+    await EventService.updateEvent(previous, widget.event);
+    if (!context.mounted) return;
+    dialogSetState(() {});
+    setState(() {});
+    widget.onBusAssignmentUpdate?.call(widget.event);
+  }
+
+  Future<void> _confirmAndDeleteSpareEvent(BuildContext context) async {
+    final shouldDelete = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Event'),
+        content: const Text(
+          'Are you sure you want to delete this spare event? This action cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldDelete != true) return;
+
+    await EventService.deleteEvent(widget.event);
+    if (!context.mounted) return;
+
+    final navigator = Navigator.of(context);
+    navigator.pop();
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Event deleted successfully'),
+        duration: Duration(seconds: 2),
+      ),
+    );
+
+    widget.onEdit(Event(
+      id: 'refresh_trigger_delete',
+      title: 'refresh',
+      startDate: DateTime.now(),
+      startTime: const TimeOfDay(hour: 0, minute: 0),
+      endDate: DateTime.now(),
+      endTime: const TimeOfDay(hour: 0, minute: 0),
+    ));
+  }
+
+  Widget _spareDutyChoiceButton({
+    required String label,
+    required Color color,
+    required VoidCallback onPressed,
+  }) {
+    return SizedBox(
+      height: 44,
+      width: double.infinity,
+      child: ElevatedButton(
+        onPressed: onPressed,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: color,
+          foregroundColor: Colors.white,
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          textStyle: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ),
+        child: Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ),
+    );
+  }
+
   void _showSpareShiftDialog(BuildContext context) {
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
-        builder: (context, dialogSetState) => AlertDialog(
-        title: Row(
+        builder: (context, dialogSetState) {
+        final screen = MediaQuery.sizeOf(context);
+        final dialogWidth = (screen.width * 0.9).clamp(0.0, 500.0);
+        return AlertDialog(
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: AppTheme.primaryColor.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Icon(
-                Icons.schedule,
-                color: AppTheme.primaryColor,
-                size: 24,
-              ),
+            Text(
+              'Spare Shift',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Spare Shift',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+            const SizedBox(height: 4),
+            Text(
+              SpareMeal.hasMovedFinish(widget.event)
+                  ? '${widget.event.title} • ${widget.event.formattedStartTime}–${SpareMeal.originalFinishClock(widget.event)} → ${widget.event.formattedEndTime}'
+                  : '${widget.event.title} • ${widget.event.formattedStartTime}–${SpareMeal.originalFinishClock(widget.event)}',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
-                  Text(
-                    '${widget.event.title} • ${widget.event.formattedStartTime} - ${widget.event.formattedEndTime}',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                ],
-              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),
-        contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
-        insetPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 24.0),
-        content: ConstrainedBox(
-          constraints: BoxConstraints(
-            maxHeight: MediaQuery.of(context).size.height * 0.7,
-            minWidth: MediaQuery.of(context).size.width * 0.8,
-          ),
-          child: SingleChildScrollView(
+        titlePadding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+        contentPadding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+        insetPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+        content: SizedBox(
+          width: dialogWidth,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: screen.height * 0.65,
+            ),
+            child: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+            if (SpareMeal.isSpareTitle(widget.event.title)) ...[
+              SpareMealControls(
+                mealStart: widget.event.breakStartTime,
+                mealEnd: widget.event.breakEndTime,
+                onSet: () => _pickSpareMeal(context, dialogSetState),
+                onClear: () => _clearSpareMeal(context, dialogSetState),
+              ),
+              const SizedBox(height: 20),
+            ],
             // Show duty addition buttons if we have less than 2 duties
             if (widget.event.assignedDuties == null || widget.event.assignedDuties!.length < 2) ...[
               // Analyze existing duties to determine what can be added
@@ -3204,169 +3358,75 @@ class _EventCardState extends State<EventCard> {
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // Enhanced section header
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: AppTheme.primaryColor.withValues(alpha: 0.05),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppTheme.primaryColor.withValues(alpha: 0.1)),
-                      ),
-                      child: Column(
-                        children: [
-                          const Row(
-                            children: [
-                              Icon(Icons.add_circle_outline, color: AppTheme.primaryColor, size: 20),
-                              SizedBox(width: 8),
-                              Text(
-                                'Add Duty',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppTheme.primaryColor,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            hasFullDuty 
-                              ? 'Full duty assigned - no additional duties allowed'
-                              : hasHalfDuty
-                                ? 'Half duties assigned - only additional half duties allowed'
-                                : 'Choose the type of duty to add to your spare shift:',
-                style: TextStyle(
-                  fontSize: 14,
-                              color: Colors.grey[600],
-                            ),
-                          ),
-                        ],
-                ),
-              ),
-              const SizedBox(height: 16),
-
-                    // Show buttons based on existing duties
                     if (!hasFullDuty && !hasHalfDuty) ...[
-                      // No duties assigned - show all options
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
-                onPressed: () {
-                  final navigator = Navigator.of(context);
-                  navigator.pop();
-                  _showDutySelectionDialog(context);
-                },
-                          icon: const Icon(Icons.work, size: 18),
-                          label: const Text('Full Duty'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.primaryColor,
-                            foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                ),
-                        ),
-              ),
-                      const SizedBox(height: 10),
+                      _spareDutyChoiceButton(
+                        label: 'Full Duty',
+                        color: AppTheme.primaryColor,
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                          _showDutySelectionDialog(context);
+                        },
+                      ),
+                      const SizedBox(height: 20),
                       Row(
                         children: [
                           Expanded(
-                            child: ElevatedButton.icon(
-                onPressed: () {
-                  final navigator = Navigator.of(context);
-                  navigator.pop();
+                            child: _spareDutyChoiceButton(
+                              label: 'First Half',
+                              color: Colors.orange,
+                              onPressed: () {
+                                Navigator.of(context).pop();
                                 _showDutySelectionDialog(context, 'A');
                               },
-                              icon: const Icon(Icons.schedule, size: 16),
-                              label: const Text('First Half'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.orange,
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(vertical: 10),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                ),
-                              ),
                             ),
-              ),
-                          const SizedBox(width: 8),
+                          ),
+                          const SizedBox(width: 12),
                           Expanded(
-                            child: ElevatedButton.icon(
-                onPressed: () {
-                  final navigator = Navigator.of(context);
-                  navigator.pop();
+                            child: _spareDutyChoiceButton(
+                              label: 'Second Half',
+                              color: Colors.teal,
+                              onPressed: () {
+                                Navigator.of(context).pop();
                                 _showDutySelectionDialog(context, 'B');
                               },
-                              icon: const Icon(Icons.access_time, size: 16),
-                              label: const Text('Second Half'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.teal,
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(vertical: 10),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                              ),
                             ),
                           ),
                         ],
                       ),
                     ] else if (hasHalfDuty && !hasFullDuty) ...[
-                      // Half duties assigned - only show half duty options
                       Row(
                         children: [
                           Expanded(
-                            child: ElevatedButton.icon(
+                            child: _spareDutyChoiceButton(
+                              label: 'First Half',
+                              color: Colors.orange,
                               onPressed: () {
                                 Navigator.of(context).pop();
                                 _showDutySelectionDialog(context, 'A');
                               },
-                              icon: const Icon(Icons.schedule, size: 16),
-                              label: const Text('First Half'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.orange,
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(vertical: 10),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                              ),
                             ),
                           ),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: 12),
                           Expanded(
-                            child: ElevatedButton.icon(
+                            child: _spareDutyChoiceButton(
+                              label: 'Second Half',
+                              color: Colors.teal,
                               onPressed: () {
                                 Navigator.of(context).pop();
                                 _showDutySelectionDialog(context, 'B');
                               },
-                              icon: const Icon(Icons.access_time, size: 16),
-                              label: const Text('Second Half'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.teal,
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(vertical: 10),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                              ),
                             ),
                           ),
                         ],
                       ),
                     ],
-                    // If hasFullDuty is true, no buttons are shown
                   ],
                 );
               }(),
-              const SizedBox(height: 16),
-                          ],
-              
-              const SizedBox(height: 16),
-            
-            // Show current duties if any
+            ],
+
             if (widget.event.assignedDuties != null && widget.event.assignedDuties!.isNotEmpty) ...[
+              const SizedBox(height: 16),
               const Text(
                 'Current duties:',
                 style: TextStyle(
@@ -3374,7 +3434,7 @@ class _EventCardState extends State<EventCard> {
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 10),
               
               // Check if this has full duties - if so, show regular bus assignment UI
               if (_spareShiftHasFullDuties()) ...[
@@ -3440,6 +3500,8 @@ class _EventCardState extends State<EventCard> {
                             fontSize: 12,
                             fontWeight: FontWeight.w500,
                           ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                       AssignedDutyBoardButton(
@@ -3691,137 +3753,60 @@ class _EventCardState extends State<EventCard> {
                 )).toList();
               })(),
               ],
-              const SizedBox(height: 16),
             ],
-            
-            // Show delete button at the bottom
-             Container(
-               width: double.infinity,
-               margin: const EdgeInsets.only(top: 8),
-               child: ElevatedButton.icon(
-              onPressed: () async {
-                // Show confirmation dialog
-                final shouldDelete = await showDialog<bool>(
-                  context: context,
-                  builder: (context) => AlertDialog(
-                       title: const Row(
-                         children: [
-                           Icon(Icons.warning_amber, color: Colors.red, size: 24),
-                           SizedBox(width: 8),
-                           Text('Delete Event'),
-                         ],
-                       ),
-                       content: const Text('Are you sure you want to delete this spare event? This action cannot be undone.'),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.of(context).pop(false),
-                        child: const Text('Cancel'),
-                      ),
-                         ElevatedButton(
-                        onPressed: () => Navigator.of(context).pop(true),
-                           style: ElevatedButton.styleFrom(
-                             backgroundColor: Colors.red,
-                             foregroundColor: Colors.white,
-                           ),
-                        child: const Text('Delete'),
-                      ),
-                    ],
-                  ),
-                );
-
-                if (shouldDelete == true) {
-                  // Delete the event
-                  await EventService.deleteEvent(widget.event);
-                  
-                  // Check if context is still valid
-                  if (!context.mounted) return;
-                  
-                  // Capture navigator after checking mounted
-                  final navigator = Navigator.of(context);
-                  
-                  // Close the dialog
-                  navigator.pop();
-                  
-                  // Show confirmation message
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Event deleted successfully'),
-                      duration: Duration(seconds: 2),
-                    ),
-                  );
-                  
-                  // Trigger calendar refresh by creating a refresh event
-                  final refreshEvent = Event(
-                    id: 'refresh_trigger_delete',
-                    title: 'refresh',
-                    startDate: DateTime.now(),
-                    startTime: const TimeOfDay(hour: 0, minute: 0),
-                    endDate: DateTime.now(),
-                    endTime: const TimeOfDay(hour: 0, minute: 0),
-                  );
-                  widget.onEdit(refreshEvent);
-                }
-              },
-                 icon: const Icon(Icons.delete_forever),
-                 label: const Text('Delete Spare Event'),
-                 style: ElevatedButton.styleFrom(
-                   backgroundColor: Colors.red,
-                   foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                   shape: RoundedRectangleBorder(
-                     borderRadius: BorderRadius.circular(8),
-              ),
-                 ),
-               ),
-            ),
               ],
             ),
           ),
+          ),
         ),
-        actionsPadding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
+        actionsPadding: EdgeInsets.zero,
         actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (!mounted) return;
-                widget.onShowNotes(widget.event);
-              });
-            },
-            child: const Text('Notes'),
-          ),
-          // Add Break Status button for spare duties and 22B/01
-          if (widget.event.isEligibleForOvertimeTracking)
-            TextButton(
-              onPressed: () {
-                // Close the current dialog
-                Navigator.of(context).pop();
-                // Show break status dialog
-                _showBreakStatusDialog(context);
-              },
-              child: const Text('Break & Finish'),
-            ),
-          DutyRateMenuActions(
-            event: widget.event,
-            style: DutyRateMenuStyle.compact,
-          ),
-          // Add Sick Day Status button for work shifts (including spare duties)
-          if (widget.event.isWorkShift)
-            TextButton(
-              onPressed: () {
-                // Close the current dialog
-                Navigator.of(context).pop();
-                // Show sick day status dialog
-                _showSickDayStatusDialog(context);
-              },
-              child: const Text('Sick Day Status'),
-            ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(), // Simple close action
-            child: const Text('Close'),
+          dialogFooterActions(
+            children: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (!mounted) return;
+                    widget.onShowNotes(widget.event);
+                  });
+                },
+                child: const Text('Notes'),
+              ),
+              if (widget.event.isEligibleForOvertimeTracking)
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                    _showBreakStatusDialog(context);
+                  },
+                  child: const Text('Break & Finish'),
+                ),
+              DutyRateMenuActions(
+                event: widget.event,
+                style: DutyRateMenuStyle.compact,
+              ),
+              if (widget.event.isWorkShift)
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                    _showSickDayStatusDialog(context);
+                  },
+                  child: const Text('Sick Day Status'),
+                ),
+              TextButton(
+                onPressed: () => _confirmAndDeleteSpareEvent(context),
+                style: TextButton.styleFrom(foregroundColor: Colors.red),
+                child: const Text('Delete'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Close'),
+              ),
+            ],
           ),
         ],
-        ),
+        );
+        },
       ),
     );
   }
@@ -6887,6 +6872,10 @@ class _EventCardState extends State<EventCard> {
     
     // For regular (non-PZ, non-overtime) shifts: Standard time display
     else {
+      final isSpare = SpareMeal.isSpareTitle(widget.event.title);
+      final usualFinish =
+          isSpare ? SpareMeal.originalFinishClock(widget.event) : null;
+      final showUsual = isSpare && SpareMeal.hasMovedFinish(widget.event);
       return <TextSpan>[
         TextSpan(
           text: widget.event.formattedStartTime,
@@ -6897,6 +6886,11 @@ class _EventCardState extends State<EventCard> {
           text: widget.event.formattedEndTime,
           style: const TextStyle(fontWeight: FontWeight.w600),
         ),
+        if (showUsual && usualFinish != null)
+          TextSpan(
+            text: '  (usual $usualFinish)',
+            style: const TextStyle(fontWeight: FontWeight.w500),
+          ),
       ];
     }
   }

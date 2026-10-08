@@ -5,6 +5,7 @@ import 'package:spdrivercalendar/features/calendar/dialogs/work_shift_dialog.dar
 import 'package:spdrivercalendar/features/calendar/services/event_service.dart';
 import 'package:spdrivercalendar/features/calendar/services/roster_service.dart';
 import 'package:spdrivercalendar/features/calendar/services/shift_service.dart';
+import 'package:spdrivercalendar/features/calendar/utils/spare_meal.dart';
 import 'package:spdrivercalendar/features/calendar/utils/work_shift_duty_repeat.dart';
 import 'package:spdrivercalendar/features/calendar/utils/work_shift_title.dart';
 import 'package:spdrivercalendar/features/calendar/widgets/custom_training_form.dart';
@@ -218,7 +219,7 @@ class WorkShiftEventPersister {
       };
     }
     if (selectedZone == 'Spare') {
-      return _spareShiftTimes(selectedShiftNumber);
+      return SpareMeal.timesForStartClock(selectedShiftNumber);
     }
     if (selectedZone == 'Training' &&
         selectedShiftNumber == TrainingConstants.customTrainingShiftOption) {
@@ -226,33 +227,6 @@ class WorkShiftEventPersister {
       return customTrainingShiftTimes(customTrainingData);
     }
     return _lookupShiftTimes(selectedZone, selectedShiftNumber, shiftDate);
-  }
-
-  Map<String, dynamic> _spareShiftTimes(String selectedShiftNumber) {
-    final timeParts = selectedShiftNumber.split(':');
-    if (timeParts.length == 2) {
-      final hour = int.parse(timeParts[0]);
-      final minute = int.parse(timeParts[1]);
-      var endHour = hour + 8;
-      var endMinute = minute + 38;
-      if (endMinute >= 60) {
-        endHour += 1;
-        endMinute -= 60;
-      }
-      final isNextDay = endHour >= 24;
-      if (isNextDay) {
-        endHour -= 24;
-      }
-      return {
-        'startTime': TimeOfDay(hour: hour, minute: minute),
-        'endTime': TimeOfDay(hour: endHour, minute: endMinute),
-        'isNextDay': isNextDay,
-      };
-    }
-    return {
-      'startTime': const TimeOfDay(hour: 4, minute: 0),
-      'endTime': const TimeOfDay(hour: 12, minute: 38),
-    };
   }
 
   Future<void> _repeatUniEuroThisWeek({

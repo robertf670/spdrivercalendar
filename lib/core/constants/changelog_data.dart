@@ -1,4 +1,16 @@
  final Map<String, List<Map<String, String>>> changelogData = {
+  '4.3.4': [
+    {
+      'title': 'Pay Scale 2026',
+      'description':
+          '5-day driver pay rates updated from 1 January 2026.',
+    },
+    {
+      'title': 'Spare Break',
+      'description':
+          'On spare, set a 1-hour break. The usual finish stays on the card and spare dialog, and the new finish is shown when break end plus 5h 30m is sooner.',
+    },
+  ],
   '4.3.3': [
     {
       'title': 'Nights Roster',
