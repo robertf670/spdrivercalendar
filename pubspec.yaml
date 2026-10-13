@@ -87,6 +87,7 @@ flutter:
     - assets/zone1_mf_12week_roster.json
     - assets/zone1_shift_86week_roster.json
     - assets/zone3_shift_10week_roster.json
+    - assets/zone2_shift_35week_roster.json
     - pay/
 
 flutter_launcher_icons:

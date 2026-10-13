@@ -138,6 +138,18 @@ void main() {
     });
   });
 
+  group('RosterService Zone 2 Shift roster', () {
+    test('loads 35 weeks and pins PZ2/33 Tuesday as week 11', () async {
+      TestWidgetsFlutterBinding.ensureInitialized();
+      final loaded = await RosterService.loadZone2ShiftRoster();
+      expect(loaded, isTrue);
+      expect(RosterService.zone2ShiftWeeks, hasLength(35));
+      expect(RosterService.getZone2ShiftDayDuty(10, 2), 'PZ2/33');
+      expect(RosterService.getZone2ShiftDayDuty(10, 6), 'PZ2/20');
+      expect(RosterService.getZone2ShiftDayDuty(0, 0), 'R');
+    });
+  });
+
   group('RosterService browse filenames', () {
     test('keeps M-F bills when era date is a Saturday', () {
       expect(

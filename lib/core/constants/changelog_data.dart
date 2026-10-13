@@ -5,6 +5,10 @@
       'description':
           'Added Jamestown 40 hour duties for those who moved and asked.',
     },
+    {
+      'title': 'Dev Menu',
+      'description': 'Added an experimental feature to the Dev Menu.',
+    },
   ],
   '4.3.4': [
     {

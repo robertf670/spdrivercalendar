@@ -84,6 +84,7 @@ import 'package:spdrivercalendar/models/shift_info.dart';
 import 'package:spdrivercalendar/models/holiday.dart';
 import 'package:spdrivercalendar/features/calendar/services/shift_service.dart';
 import 'package:spdrivercalendar/services/jamestown_feature_service.dart';
+import 'package:spdrivercalendar/services/zone2_roster_feature_service.dart';
 import 'package:spdrivercalendar/services/donnybrook_feature_service.dart';
 
 import 'package:spdrivercalendar/services/rest_days_service.dart';
@@ -571,6 +572,15 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
       isSwappedWork: result.isSwappedWork,
     );
   }
+
+  List<bool>? _zone2CalendarWeekIsRest(DateTime shiftDate) {
+    final sunday = RosterService.getSundayOfWeek(shiftDate);
+    final restDays = List<bool>.generate(7, (d) {
+      return _isRosteredRestDay(sunday.add(Duration(days: d)));
+    });
+    if (!restDays.contains(true)) return null;
+    return restDays;
+  }
   
   List<Event> getEventsForDay(DateTime day) {
     return eventsForDay(
@@ -658,6 +668,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
 
     final jamestownEnabled = await JamestownFeatureService.isEnabled();
     final donnybrook1Enabled = await DonnybrookFeatureService.isEnabled();
+    final zone2RosterEnabled = await Zone2RosterFeatureService.isEnabled();
 
     if (!mounted) return;
 
@@ -672,6 +683,8 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
         markedInZone: markedInZone,
         jamestownEnabled: jamestownEnabled,
         donnybrook1Enabled: donnybrook1Enabled,
+        zone2RosterEnabled: zone2RosterEnabled,
+        isRosteredRestDay: _isRosteredRestDay,
         isNightsRoster: _markedInStatus == MarkedInStatus.nights,
         isNightsWorkDay: _nightsAnchorSunday == null
             ? null
@@ -695,6 +708,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
           isShiftMarkedIn: isShiftMarkedIn,
           markedInZone: markedInZone,
           jamestownEnabled: jamestownEnabled,
+          zone2RosterEnabled: zone2RosterEnabled,
           isNightsRoster: _markedInStatus == MarkedInStatus.nights,
         ),
       ),
@@ -709,14 +723,21 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
     required bool isShiftMarkedIn,
     required String markedInZone,
     required bool jamestownEnabled,
+    bool zone2RosterEnabled = false,
     bool isNightsRoster = false,
   }) async {
+    var googleSyncCount = 0;
     final persister = WorkShiftEventPersister(
       lookupShiftTimes: (zone, shiftNumber, date) =>
           _getShiftTimes(zone, shiftNumber, date),
       onEventCreated: (created) async {
         if (!mounted) return;
-        await _checkAndSyncToGoogleCalendar(created, context);
+        final synced = await _checkAndSyncToGoogleCalendar(
+          created,
+          context,
+          showSnackBar: false,
+        );
+        if (synced) googleSyncCount++;
       },
     );
 
@@ -728,6 +749,8 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
       markedInZone: markedInZone,
       jamestownEnabled: jamestownEnabled,
       isNightsRoster: isNightsRoster,
+      zone2RosterEnabled: zone2RosterEnabled,
+      zone2CalendarWeekIsRest: _zone2CalendarWeekIsRest(shiftDate),
     );
 
     if (result.status == WorkShiftPersistStatus.missingCustomTrainingTimes) {
@@ -751,6 +774,18 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
       Navigator.of(dialogContext).pop();
     }
     if (!mounted) return;
+    if (googleSyncCount > 0) {
+      ScaffoldMessenger.of(context).clearSnackBars();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            googleSyncCount == 1
+                ? 'Shift added to Google Calendar'
+                : '$googleSyncCount shifts added to Google Calendar',
+          ),
+        ),
+      );
+    }
     await EventService.preloadMonth(_focusedDay);
     if (!mounted) return;
     setState(() {});
@@ -989,8 +1024,12 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
     );
   }
 
-  Future<void> _checkAndSyncToGoogleCalendar(Event event, BuildContext? context) async {
-    if (context == null || !mounted) return;
+  Future<bool> _checkAndSyncToGoogleCalendar(
+    Event event,
+    BuildContext? context, {
+    bool showSnackBar = true,
+  }) async {
+    if (context == null || !mounted) return false;
 
     final scaffoldMessenger = ScaffoldMessenger.of(context);
     final success = await _googleCalendarSyncService().syncNewEvent(
@@ -999,11 +1038,13 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
       isMounted: () => mounted,
     );
 
-    if (success && mounted) {
+    if (success && mounted && showSnackBar) {
+      scaffoldMessenger.clearSnackBars();
       scaffoldMessenger.showSnackBar(
         const SnackBar(content: Text('Shift added to Google Calendar')),
       );
     }
+    return success;
   }
 
   Future<void> _editCustomTrainingEvent(Event event) async {

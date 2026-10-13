@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:spdrivercalendar/features/calendar/dialogs/work_shift_dialog.dart';
+import 'package:spdrivercalendar/features/calendar/services/roster_service.dart';
 import 'package:spdrivercalendar/features/calendar/utils/jamestown_road.dart';
 
 void main() {
@@ -86,6 +87,56 @@ void main() {
     expect(find.text('PZ2/01'), findsOneWidget);
     expect(find.text('Would you like to repeat this duty this week?'),
         findsOneWidget);
+    expect(find.text('Auto-fill the next 35 weeks from my roster?'),
+        findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Zone 2 roster fill checkbox appears when pinned and enabled',
+      (tester) async {
+    await tester.binding.setSurfaceSize(const Size(320, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    expect(await RosterService.loadZone2ShiftRoster(), isTrue);
+
+    WorkShiftDialogSelection? saved;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: WorkShiftDialog(
+            shiftDate: DateTime(2026, 10, 13),
+            isMFMarkedIn: false,
+            isShiftMarkedIn: true,
+            markedInZone: 'Zone 2',
+            jamestownEnabled: false,
+            donnybrook1Enabled: false,
+            zone2RosterEnabled: true,
+            loadShiftNumbers: (_) async => const ['PZ2/33', 'PZ2/01'],
+            dayHasBlockingEvent: (_) => false,
+            onAddShift: (selection) async {
+              saved = selection;
+            },
+          ),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    final fillLabel = find.text('Auto-fill the next 35 weeks from my roster?');
+    expect(fillLabel, findsOneWidget);
+    await tester.ensureVisible(fillLabel);
+    await tester.tap(find.byType(Checkbox).last);
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.text('Add Shift'));
+    await tester.tap(find.text('Add Shift'));
+    await tester.pumpAndSettle();
+
+    expect(saved, isNotNull);
+    expect(saved!.selectedShiftNumber, 'PZ2/33');
+    expect(saved!.fillNext35Weeks, isTrue);
     expect(tester.takeException(), isNull);
   });
 

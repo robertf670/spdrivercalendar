@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:spdrivercalendar/core/constants/training_constants.dart';
 import 'package:spdrivercalendar/features/calendar/dialogs/work_shift_dialog.dart';
+import 'package:spdrivercalendar/features/calendar/services/roster_service.dart';
 import 'package:spdrivercalendar/features/calendar/services/work_shift_event_persister.dart';
 import 'package:spdrivercalendar/features/calendar/utils/jamestown_road.dart';
+import 'package:spdrivercalendar/features/calendar/utils/zone2_shift_roster.dart';
 import 'package:spdrivercalendar/models/event.dart';
 import 'package:spdrivercalendar/models/bank_holiday.dart';
 
@@ -15,6 +17,7 @@ void main() {
     bool repeatDutyThisWeek = false,
     bool repeatUniEuroThisWeek = false,
     Map<int, bool>? uniEuroSelectedDays,
+    bool fillNext35Weeks = false,
   }) {
     return WorkShiftDialogSelection(
       selectedZone: zone,
@@ -26,6 +29,7 @@ void main() {
       fillNext12Weeks: false,
       fillNext15Weeks: false,
       fillNext10Weeks: false,
+      fillNext35Weeks: fillNext35Weeks,
     );
   }
 
@@ -285,5 +289,135 @@ void main() {
     expect(created.map((e) => e.title).toSet(), {'311/01'});
     expect(created.map((e) => e.startDate.day).toList(), [12, 13, 14, 15, 16]);
     expect(lookedUp.length, greaterThan(1));
+  });
+
+  test('does not fill Zone 2 roster unless the Dev Menu toggle is on', () async {
+    final created = <Event>[];
+    final persister = WorkShiftEventPersister(
+      lookupShiftTimes: (zone, shift, date) async => {
+        'startTime': const TimeOfDay(hour: 19, minute: 12),
+        'endTime': const TimeOfDay(hour: 0, minute: 45),
+        'isNextDay': true,
+      },
+      addEvent: (event) async {
+        created.add(event);
+      },
+      eventsForDay: (_) => const [],
+      bankHolidayForDate: (_) => null,
+      now: () => DateTime(2026, 10, 13, 12),
+    );
+
+    await persister.persist(
+      shiftDate: DateTime(2026, 10, 13),
+      selection: selection(
+        zone: 'Zone 2',
+        shift: 'PZ2/33',
+        fillNext35Weeks: true,
+      ),
+      isMFMarkedIn: false,
+      isShiftMarkedIn: true,
+      markedInZone: 'Zone 2',
+      jamestownEnabled: false,
+    );
+
+    expect(created, hasLength(1));
+    expect(created.single.rosterFillSource, isNull);
+  });
+
+  test('fills 35 weeks of Zone 2 duties, skips BH and sat-service weekdays',
+      () async {
+    TestWidgetsFlutterBinding.ensureInitialized();
+    expect(await RosterService.loadZone2ShiftRoster(), isTrue);
+
+    final created = <Event>[];
+    final occupied = Event(
+      id: 'existing',
+      title: 'Keep me',
+      startDate: DateTime(2026, 10, 15),
+      endDate: DateTime(2026, 10, 15),
+      startTime: const TimeOfDay(hour: 8, minute: 0),
+      endTime: const TimeOfDay(hour: 16, minute: 0),
+    );
+    final christmas = BankHoliday(
+      name: 'Christmas Day',
+      date: DateTime(2026, 12, 25),
+    );
+    final lookups = <({DateTime date, String duty})>[];
+
+    final persister = WorkShiftEventPersister(
+      lookupShiftTimes: (zone, shift, date) async {
+        lookups.add((date: date, duty: shift));
+        return {
+          'startTime': const TimeOfDay(hour: 6, minute: 0),
+          'endTime': const TimeOfDay(hour: 14, minute: 0),
+          'isNextDay': false,
+        };
+      },
+      addEvent: (event) async {
+        created.add(event);
+      },
+      eventsForDay: (date) {
+        if (date.year == 2026 && date.month == 10 && date.day == 15) {
+          return [occupied];
+        }
+        return const [];
+      },
+      bankHolidayForDate: (date) {
+        if (date.year == christmas.date.year &&
+            date.month == christmas.date.month &&
+            date.day == christmas.date.day) {
+          return christmas;
+        }
+        return null;
+      },
+      now: () => DateTime(2026, 10, 13, 12),
+    );
+
+    final result = await persister.persist(
+      shiftDate: DateTime(2026, 10, 13),
+      selection: selection(
+        zone: 'Zone 2',
+        shift: 'PZ2/33',
+        fillNext35Weeks: true,
+      ),
+      isMFMarkedIn: false,
+      isShiftMarkedIn: true,
+      markedInZone: 'Zone 2',
+      jamestownEnabled: false,
+      zone2RosterEnabled: true,
+    );
+
+    expect(result.status, WorkShiftPersistStatus.success);
+    expect(created.length, greaterThan(100));
+    expect(
+      created.every((e) => e.rosterFillSource == Zone2ShiftRoster.sourceTag),
+      isTrue,
+    );
+
+    Event? onDay(int year, int month, int day) {
+      final matches = created.where((e) =>
+          e.startDate.year == year &&
+          e.startDate.month == month &&
+          e.startDate.day == day);
+      return matches.isEmpty ? null : matches.single;
+    }
+
+    expect(onDay(2026, 10, 13)?.title, 'PZ2/33');
+    expect(onDay(2026, 10, 14)?.title, 'PZ2/33');
+    expect(onDay(2026, 10, 11), isNull);
+    expect(onDay(2026, 10, 12), isNull);
+    expect(onDay(2026, 10, 15), isNull);
+    expect(onDay(2026, 10, 17)?.title, 'PZ2/20');
+    expect(onDay(2026, 12, 24), isNull);
+    expect(onDay(2026, 12, 25), isNull);
+
+    expect(
+      lookups.any((lookup) =>
+          lookup.date.year == 2026 &&
+          lookup.date.month == 10 &&
+          lookup.date.day == 17 &&
+          lookup.duty == 'PZ2/20'),
+      isTrue,
+    );
   });
 }

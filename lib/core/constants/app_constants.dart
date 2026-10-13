@@ -79,6 +79,7 @@ class AppConstants {
   // Legacy key retained so existing unlocks can migrate to the Dev Menu.
   static const String jamestownUnlockedKey = 'jamestownUnlocked';
   static const String donnybrook1EnabledKey = 'donnybrook1Enabled';
+  static const String zone2RosterEnabledKey = 'zone2RosterEnabled';
 
   // PWA Web Access (Web only)
   static const String workAccessGrantedKey = 'workAccessGranted';

@@ -8,6 +8,7 @@ import 'package:spdrivercalendar/features/calendar/utils/spare_time_options.dart
 import 'package:spdrivercalendar/features/calendar/utils/jamestown_road.dart';
 import 'package:spdrivercalendar/features/calendar/utils/work_shift_duty_repeat.dart';
 import 'package:spdrivercalendar/features/calendar/utils/work_shift_zone_options.dart';
+import 'package:spdrivercalendar/features/calendar/utils/zone2_shift_roster.dart';
 import 'package:spdrivercalendar/features/calendar/widgets/custom_training_form.dart';
 import 'package:spdrivercalendar/features/calendar/widgets/weekday_repeat_day_toggle.dart';
 import 'package:spdrivercalendar/services/donnybrook_feature_service.dart';
@@ -25,6 +26,7 @@ class WorkShiftDialogSelection {
     required this.fillNext12Weeks,
     required this.fillNext15Weeks,
     required this.fillNext10Weeks,
+    required this.fillNext35Weeks,
     this.customTrainingData,
   });
 
@@ -37,6 +39,7 @@ class WorkShiftDialogSelection {
   final bool fillNext12Weeks;
   final bool fillNext15Weeks;
   final bool fillNext10Weeks;
+  final bool fillNext35Weeks;
   final CustomTrainingFormData? customTrainingData;
 }
 
@@ -57,6 +60,8 @@ class WorkShiftDialog extends StatefulWidget {
     required this.onAddShift,
     this.isNightsRoster = false,
     this.isNightsWorkDay,
+    this.zone2RosterEnabled = false,
+    this.isRosteredRestDay,
   });
 
   final DateTime shiftDate;
@@ -67,6 +72,8 @@ class WorkShiftDialog extends StatefulWidget {
   final bool donnybrook1Enabled;
   final bool isNightsRoster;
   final bool Function(DateTime date)? isNightsWorkDay;
+  final bool zone2RosterEnabled;
+  final bool Function(DateTime date)? isRosteredRestDay;
   final Future<List<String>> Function(String selectedZone) loadShiftNumbers;
   final bool Function(DateTime date) dayHasBlockingEvent;
   final Future<void> Function(WorkShiftDialogSelection selection) onAddShift;
@@ -90,6 +97,7 @@ class _WorkShiftDialogState extends State<WorkShiftDialog> {
   bool _fillNext12Weeks = false;
   bool _fillNext15Weeks = false;
   bool _fillNext10Weeks = false;
+  bool _fillNext35Weeks = false;
 
   bool _repeatDutyThisWeek = false;
   Map<int, bool> _selectedDays = _emptyWeekMap();
@@ -404,6 +412,7 @@ class _WorkShiftDialogState extends State<WorkShiftDialog> {
               _buildZone1MfRosterSection(),
               _buildZone1ShiftRosterSection(),
               _buildZone3ShiftRosterSection(),
+              _buildZone2ShiftRosterSection(),
             ],
           ),
         ),
@@ -434,6 +443,7 @@ class _WorkShiftDialogState extends State<WorkShiftDialog> {
                         fillNext12Weeks: _fillNext12Weeks,
                         fillNext15Weeks: _fillNext15Weeks,
                         fillNext10Weeks: _fillNext10Weeks,
+                        fillNext35Weeks: _fillNext35Weeks,
                         customTrainingData: _selectedZone == 'Training' &&
                                 _selectedShiftNumber ==
                                     TrainingConstants.customTrainingShiftOption
@@ -684,6 +694,54 @@ class _WorkShiftDialogState extends State<WorkShiftDialog> {
             const Expanded(
               child: Text(
                 'Auto-fill the next 10 weeks from my roster?',
+                style: TextStyle(fontSize: 14),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildZone2ShiftRosterSection() {
+    if (!widget.zone2RosterEnabled ||
+        !widget.isShiftMarkedIn ||
+        _selectedZone != Zone2Duties.zoneLabel) {
+      return const SizedBox.shrink();
+    }
+    final dayIndex = widget.shiftDate.weekday % 7;
+    final sunday = RosterService.getSundayOfWeek(widget.shiftDate);
+    final restDays = List<bool>.generate(7, (d) {
+      final date = sunday.add(Duration(days: d));
+      return widget.isRosteredRestDay?.call(date) ?? false;
+    });
+    final hasRestInfo = restDays.contains(true);
+    final weekIndex = Zone2ShiftRoster.pinWeekIndex(
+      weeks: RosterService.zone2ShiftWeeks,
+      dayIndex: dayIndex,
+      dutyCode: _selectedShiftNumber,
+      calendarWeekIsRest: hasRestInfo ? restDays : null,
+    );
+    if (weekIndex == null) return const SizedBox.shrink();
+
+    return Column(
+      children: [
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Checkbox(
+              value: _fillNext35Weeks,
+              onChanged: _isSaving
+                  ? null
+                  : (value) {
+                      setState(() {
+                        _fillNext35Weeks = value ?? false;
+                      });
+                    },
+            ),
+            const Expanded(
+              child: Text(
+                'Auto-fill the next 35 weeks from my roster?',
                 style: TextStyle(fontSize: 14),
               ),
             ),

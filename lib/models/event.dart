@@ -146,6 +146,8 @@ class Event {
   bool isWorkForOthers;
   /// True when rostered to work on a bank holiday but made redundant (day off).
   bool bankHolidayRedundant;
+  /// Set when this event was created by a roster auto-fill (e.g. Zone 2).
+  String? rosterFillSource;
 
   Event({
     required this.id,
@@ -185,6 +187,7 @@ class Event {
     this.sickDayType,
     this.isWorkForOthers = false,
     this.bankHolidayRedundant = false,
+    this.rosterFillSource,
   });
 
   bool get hasNoteImages => noteImagePaths != null && noteImagePaths!.isNotEmpty;
@@ -442,6 +445,7 @@ class Event {
     String? sickDayType,
     bool? isWorkForOthers,
     bool? bankHolidayRedundant,
+    String? rosterFillSource,
     List<String>? routes,
     String? startLocation,
     String? finishLocation,
@@ -487,6 +491,7 @@ class Event {
       sickDayType: sickDayType ?? this.sickDayType,
       isWorkForOthers: isWorkForOthers ?? this.isWorkForOthers,
       bankHolidayRedundant: (bankHolidayRedundant ?? this.bankHolidayRedundant) == true,
+      rosterFillSource: rosterFillSource ?? this.rosterFillSource,
     );
   }
 
@@ -541,6 +546,7 @@ class Event {
       'sickDayType': sickDayType,
       'isWorkForOthers': isWorkForOthers,
       'bankHolidayRedundant': bankHolidayRedundant,
+      'rosterFillSource': rosterFillSource,
     };
   }
 
@@ -627,6 +633,7 @@ class Event {
       isWorkForOthers: map['isWorkForOthers'] ?? false,  // Default to false for backwards compatibility
       // Only JSON true is redundant; null/false/missing/wrong type → false (avoids null on bool in stats)
       bankHolidayRedundant: map['bankHolidayRedundant'] == true,
+      rosterFillSource: map['rosterFillSource'] as String?,
     );
     
     // Auto-migrate legacy duties if needed

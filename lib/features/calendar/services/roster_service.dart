@@ -473,4 +473,38 @@ class RosterService {
     }
     return _zone3ShiftWeeks![weekIndex][dayIndex];
   }
+
+  // --- Zone 2 Shift 35-week roster (variable rest days per week) ---
+  static List<List<String>>? _zone2ShiftWeeks;
+
+  static List<List<String>> get zone2ShiftWeeks =>
+      _zone2ShiftWeeks ?? const <List<String>>[];
+
+  static Future<bool> loadZone2ShiftRoster() async {
+    try {
+      final jsonString =
+          await rootBundle.loadString('assets/zone2_shift_35week_roster.json');
+      final Map<String, dynamic> data = json.decode(jsonString);
+      final List<dynamic> weeks = data['weeks'] as List<dynamic>;
+      _zone2ShiftWeeks = weeks
+          .map((w) => (w as Map<String, dynamic>)['days'] as List<dynamic>)
+          .map((d) => d.map((e) => e.toString()).toList())
+          .toList();
+      return true;
+    } catch (e) {
+      _zone2ShiftWeeks = null;
+      return false;
+    }
+  }
+
+  static String? getZone2ShiftDayDuty(int weekIndex, int dayIndex) {
+    if (_zone2ShiftWeeks == null ||
+        weekIndex < 0 ||
+        weekIndex >= _zone2ShiftWeeks!.length ||
+        dayIndex < 0 ||
+        dayIndex >= 7) {
+      return null;
+    }
+    return _zone2ShiftWeeks![weekIndex][dayIndex];
+  }
 }

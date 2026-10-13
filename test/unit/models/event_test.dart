@@ -80,6 +80,13 @@ void main() {
       expect(restored.notes, isNull);
       expect(restored.noteImagePaths, isNull);
       expect(restored.enhancedAssignedDuties, isNull);
+      expect(restored.rosterFillSource, isNull);
+    });
+
+    test('round-trips rosterFillSource', () {
+      final event = minimalEvent()..rosterFillSource = 'zone2Roster';
+      final restored = roundTrip(event);
+      expect(restored.rosterFillSource, 'zone2Roster');
     });
 
     test('round-trips holiday, notes, images, and status fields', () {
