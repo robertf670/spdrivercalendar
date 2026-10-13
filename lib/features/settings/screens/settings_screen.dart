@@ -81,7 +81,7 @@ class SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObser
   String _spreadPayRate = 'year1+2'; // Default to Year 1/2
   
   // Marked In settings
-  String _markedInStatus = 'Spare'; // Spare, Shift, M-F, 4 Day, or Nights
+  String _markedInStatus = 'Spare'; // Spare, Shift, M-F, 4 Day, Nights, or Jamestown
   int _nightsWeekIndex = 0;
   DateTime? _nightsAnchorSunday;
   String _markedInZone = 'Zone 1'; // Zone selection when Shift is selected
@@ -239,7 +239,9 @@ class SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObser
     );
     
     setState(() {
-      if (oldStatus == '4 Day' || oldStatus == MarkedInStatus.nights) {
+      if (oldStatus == '4 Day' ||
+          oldStatus == MarkedInStatus.nights ||
+          oldStatus == MarkedInStatus.jamestown) {
         _markedInStatus = oldStatus;
       } else if (markedInEnabled) {
         if (oldStatus == 'M-F' || oldStatus == 'Shift') {
@@ -260,8 +262,9 @@ class SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObser
 
   Future<void> _saveMarkedInSettings() async {
     // Save marked-in enabled state (true if not Spare)
-    final enabled =
-        _markedInStatus == 'Shift' || _markedInStatus == 'M-F';
+    final enabled = _markedInStatus == 'Shift' ||
+        _markedInStatus == 'M-F' ||
+        _markedInStatus == MarkedInStatus.jamestown;
     await StorageService.saveBool(AppConstants.markedInEnabledKey, enabled);
     
     if (_markedInStatus == 'M-F') {
@@ -272,6 +275,11 @@ class SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObser
       await StorageService.saveString(
         AppConstants.markedInStatusKey,
         MarkedInStatus.nights,
+      );
+    } else if (_markedInStatus == MarkedInStatus.jamestown) {
+      await StorageService.saveString(
+        AppConstants.markedInStatusKey,
+        MarkedInStatus.jamestown,
       );
     } else if (_markedInStatus == 'Shift') {
       await StorageService.saveString(AppConstants.markedInStatusKey, 'Shift');
@@ -1010,12 +1018,12 @@ class SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObser
                       ),
                       contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     ),
-                    items: const [
-                      DropdownMenuItem(value: 'Spare', child: Text('Spare')),
-                      DropdownMenuItem(value: 'Shift', child: Text('Shift')),
-                      DropdownMenuItem(value: 'M-F', child: Text('M-F')),
-                      DropdownMenuItem(value: '4 Day', child: Text('4 Day')),
-                      DropdownMenuItem(value: 'Nights', child: Text('Nights')),
+                    items: [
+                      for (final status in MarkedInStatus.statusOptions)
+                        DropdownMenuItem(
+                          value: status,
+                          child: Text(status),
+                        ),
                     ],
                     onChanged: (String? newValue) async {
                       if (newValue == null || newValue == _markedInStatus) {
@@ -1051,8 +1059,7 @@ class SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObser
                         ))
                           DropdownMenuItem(
                             value: zone,
-                            enabled: zone !=
-                                    JamestownFeatureService.zoneLabel ||
+                            enabled: !JamestownFeatureService.isZone(zone) ||
                                 _jamestownEnabled,
                             child: Text(zone),
                           ),

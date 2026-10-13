@@ -2,6 +2,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:spdrivercalendar/core/constants/training_constants.dart';
 import 'package:spdrivercalendar/features/calendar/services/work_shift_duty_loader.dart';
+import 'package:spdrivercalendar/features/calendar/utils/jamestown_road.dart';
 
 class _FakeBundle extends CachingAssetBundle {
   _FakeBundle(this.assets);
@@ -126,5 +127,22 @@ void main() {
       donnybrook1Enabled: false,
     );
     expect(shifts, ['PZ2/01', 'PZ2/34']);
+  });
+
+  test('Jamestown Road lists 811s before 311s', () async {
+    final loader = WorkShiftDutyLoader(
+      bundle: _FakeBundle({
+        JamestownRoad.dutiesCsvAsset:
+            'shift,duty\n311/01,501\n311/02,502\n811/01,551\n811/69,539\n',
+      }),
+    );
+
+    final shifts = await loader.loadShiftNumbers(
+      selectedZone: JamestownRoad.zoneLabel,
+      shiftDate: DateTime(2026, 10, 12),
+      donnybrook1Enabled: false,
+    );
+
+    expect(shifts, ['811/01', '811/69', '311/01', '311/02']);
   });
 }

@@ -1,4 +1,5 @@
 import 'package:spdrivercalendar/features/calendar/services/roster_service.dart';
+import 'package:spdrivercalendar/features/calendar/utils/jamestown_road.dart';
 import 'package:spdrivercalendar/services/donnybrook_feature_service.dart';
 import 'package:spdrivercalendar/services/jamestown_feature_service.dart';
 
@@ -39,6 +40,7 @@ List<String> workShiftZoneOptions({
   if (jamestownEnabled) {
     zones.add(JamestownFeatureService.zoneLabel);
   }
+  zones.add(JamestownRoad.zoneLabel);
 
   return zones;
 }

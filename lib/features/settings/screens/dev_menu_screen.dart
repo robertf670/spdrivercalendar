@@ -102,8 +102,8 @@ class _DevMenuScreenState extends State<DevMenuScreen> {
                       ),
                     ),
                     child: SwitchListTile(
-                      title: const Text('Jamestown'),
-                      subtitle: const Text('Enable Jamestown duties'),
+                      title: const Text('Jamestown (30hr)'),
+                      subtitle: const Text('Enable 30hr contract duties'),
                       secondary: Icon(
                         Icons.location_on_outlined,
                         color: _jamestownEnabled

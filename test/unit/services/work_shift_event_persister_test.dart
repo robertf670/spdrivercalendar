@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:spdrivercalendar/core/constants/training_constants.dart';
 import 'package:spdrivercalendar/features/calendar/dialogs/work_shift_dialog.dart';
 import 'package:spdrivercalendar/features/calendar/services/work_shift_event_persister.dart';
+import 'package:spdrivercalendar/features/calendar/utils/jamestown_road.dart';
 import 'package:spdrivercalendar/models/event.dart';
 import 'package:spdrivercalendar/models/bank_holiday.dart';
 
@@ -242,5 +243,47 @@ void main() {
     expect(result.status, WorkShiftPersistStatus.success);
     expect(created.map((e) => e.title).toSet(), {'PZ1/91'});
     expect(created.map((e) => e.startDate.day).toList(), [9, 8]);
+  });
+
+  test('repeats a Jamestown Road duty across selected weekdays', () async {
+    final created = <Event>[];
+    final lookedUp = <DateTime>[];
+    final persister = WorkShiftEventPersister(
+      lookupShiftTimes: (zone, shift, date) async {
+        lookedUp.add(date);
+        expect(zone, JamestownRoad.zoneLabel);
+        expect(shift, '311/01');
+        return {
+          'startTime': const TimeOfDay(hour: 5, minute: 37),
+          'endTime': const TimeOfDay(hour: 18, minute: 34),
+          'isNextDay': false,
+        };
+      },
+      addEvent: (event) async {
+        created.add(event);
+      },
+      eventsForDay: (_) => const [],
+      bankHolidayForDate: (_) => null,
+      now: () => DateTime(2026, 10, 12, 12),
+    );
+
+    final result = await persister.persist(
+      shiftDate: DateTime(2026, 10, 12),
+      selection: selection(
+        zone: JamestownRoad.zoneLabel,
+        shift: '311/01',
+        repeatDutyThisWeek: true,
+        selectedDays: const {1: true, 2: true, 3: true, 4: true, 5: true},
+      ),
+      isMFMarkedIn: true,
+      isShiftMarkedIn: false,
+      markedInZone: JamestownRoad.zoneLabel,
+      jamestownEnabled: false,
+    );
+
+    expect(result.status, WorkShiftPersistStatus.success);
+    expect(created.map((e) => e.title).toSet(), {'311/01'});
+    expect(created.map((e) => e.startDate.day).toList(), [12, 13, 14, 15, 16]);
+    expect(lookedUp.length, greaterThan(1));
   });
 }

@@ -1,4 +1,5 @@
 import 'package:spdrivercalendar/core/constants/training_constants.dart';
+import 'package:spdrivercalendar/features/calendar/utils/jamestown_road.dart';
 import 'package:spdrivercalendar/services/donnybrook_feature_service.dart';
 import 'package:spdrivercalendar/services/jamestown_feature_service.dart';
 
@@ -23,8 +24,8 @@ String buildWorkShiftTitle({
   if (selectedZone == 'Uni/Euro' ||
       selectedZone == 'Bus Check' ||
       selectedZone == DonnybrookFeatureService.zoneLabel ||
-      selectedZone == JamestownFeatureService.zoneLabel ||
-      selectedZone == 'Jamestown Road') {
+      JamestownFeatureService.isZone(selectedZone) ||
+      JamestownRoad.isZone(selectedZone)) {
     return selectedShiftNumber;
   }
   if (selectedZone == 'Training') {

@@ -1,5 +1,6 @@
 import 'package:spdrivercalendar/core/constants/app_constants.dart';
 import 'package:spdrivercalendar/core/services/storage_service.dart';
+import 'package:spdrivercalendar/features/calendar/utils/jamestown_road.dart';
 import 'package:spdrivercalendar/features/calendar/utils/marked_in_status.dart';
 
 /// Marked-in preferences needed by the Add Work Shift dialog.
@@ -38,12 +39,17 @@ class WorkShiftMarkedInPrefsLoader {
           await _readBool(AppConstants.markedInEnabledKey);
       final markedInStatus =
           await _readString(AppConstants.markedInStatusKey) ?? '';
-      final isMFMarkedIn =
-          markedInEnabled && markedInStatus == MarkedInStatus.mf;
+      final isJamestownMarkedIn =
+          markedInEnabled && markedInStatus == MarkedInStatus.jamestown;
+      final isMFMarkedIn = (markedInEnabled &&
+              markedInStatus == MarkedInStatus.mf) ||
+          isJamestownMarkedIn;
 
       var isShiftMarkedIn = false;
       var markedInZone = '';
-      if (markedInEnabled && MarkedInStatus.needsZone(markedInStatus)) {
+      if (isJamestownMarkedIn) {
+        markedInZone = JamestownRoad.zoneLabel;
+      } else if (markedInEnabled && MarkedInStatus.needsZone(markedInStatus)) {
         markedInZone =
             await _readString(AppConstants.markedInZoneKey) ?? 'Zone 1';
         if (markedInStatus == MarkedInStatus.shift) {

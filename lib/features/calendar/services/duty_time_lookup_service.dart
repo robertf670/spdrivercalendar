@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:spdrivercalendar/features/calendar/services/roster_service.dart';
+import 'package:spdrivercalendar/features/calendar/utils/jamestown_road.dart';
 import 'package:spdrivercalendar/services/donnybrook_feature_service.dart';
 import 'package:spdrivercalendar/services/jamestown_feature_service.dart';
 
@@ -101,8 +102,8 @@ class DutyTimeLookupService {
             dayType: _busCheckDayType(dayOfWeek),
           );
           if (result != null) return result;
-        } else if (zone == JamestownFeatureService.zoneLabel ||
-            zone == 'Jamestown Road') {
+        } else if (JamestownFeatureService.isZone(zone) ||
+            JamestownRoad.isZone(zone)) {
           final result = _parseJamestown(
             parts: parts,
             shiftNumber: shiftNumber,
@@ -169,10 +170,10 @@ class DutyTimeLookupService {
     required String dayOfWeek,
   }) {
     if (zone == 'Bus Check') return _busCheckAsset;
-    if (zone == JamestownFeatureService.zoneLabel) {
+    if (JamestownFeatureService.isZone(zone)) {
       return JamestownFeatureService.duties30HrCsvAsset;
     }
-    if (zone == 'Jamestown Road') {
+    if (JamestownRoad.isZone(zone)) {
       return JamestownFeatureService.dutiesMainCsvAsset;
     }
     if (zone == DonnybrookFeatureService.zoneLabel) {

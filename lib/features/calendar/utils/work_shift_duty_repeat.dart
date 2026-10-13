@@ -1,3 +1,4 @@
+import 'package:spdrivercalendar/features/calendar/utils/jamestown_road.dart';
 import 'package:spdrivercalendar/services/donnybrook_feature_service.dart';
 import 'package:spdrivercalendar/services/jamestown_feature_service.dart';
 
@@ -13,11 +14,11 @@ class WorkShiftDutyRepeat {
         selectedZone == 'Zone 2' ||
         selectedZone == 'Zone 3' ||
         selectedZone == 'Zone 4' ||
-        selectedZone == DonnybrookFeatureService.zoneLabel) {
+        selectedZone == DonnybrookFeatureService.zoneLabel ||
+        JamestownRoad.isZone(selectedZone)) {
       return true;
     }
-    return selectedZone == JamestownFeatureService.zoneLabel &&
-        jamestownEnabled;
+    return JamestownFeatureService.isZone(selectedZone) && jamestownEnabled;
   }
 
   static bool shouldShow({

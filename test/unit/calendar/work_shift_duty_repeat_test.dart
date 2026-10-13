@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:spdrivercalendar/features/calendar/utils/jamestown_road.dart';
 import 'package:spdrivercalendar/features/calendar/utils/work_shift_duty_repeat.dart';
 
 void main() {
@@ -70,6 +71,21 @@ void main() {
         jamestownEnabled: false,
       ),
       isFalse,
+    );
+  });
+
+  test('Jamestown Road repeats on a weekday when M-F marked in', () {
+    expect(
+      WorkShiftDutyRepeat.shouldShow(
+        selectedZone: JamestownRoad.zoneLabel,
+        shiftDate: DateTime(2026, 10, 12),
+        isMFMarkedIn: true,
+        isShiftMarkedIn: false,
+        isNightsRoster: false,
+        markedInZone: JamestownRoad.zoneLabel,
+        jamestownEnabled: false,
+      ),
+      isTrue,
     );
   });
 }

@@ -7,11 +7,19 @@ class MarkedInStatus {
   static const mf = 'M-F';
   static const fourDay = '4 Day';
   static const nights = 'Nights';
+  static const jamestown = 'Jamestown';
 
-  static const statusOptions = [spare, shift, mf, fourDay, nights];
+  static const statusOptions = [
+    spare,
+    shift,
+    mf,
+    fourDay,
+    nights,
+    jamestown,
+  ];
 
   static bool isFixedWorkPattern(String status) =>
-      status == mf || status == fourDay;
+      status == mf || status == fourDay || status == jamestown;
 
   static bool usesWorkRestColors(String status) =>
       isFixedWorkPattern(status) || status == nights;
@@ -29,7 +37,7 @@ class MarkedInStatus {
   }
 
   static bool isWorkDay(String status, DateTime date) {
-    if (status == mf) {
+    if (status == mf || status == jamestown) {
       return date.weekday >= DateTime.monday &&
           date.weekday <= DateTime.friday;
     }

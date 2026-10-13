@@ -24,6 +24,7 @@ import 'package:spdrivercalendar/services/jamestown_feature_service.dart';
 import 'package:spdrivercalendar/features/calendar/utils/shift_rest_gap.dart';
 import 'package:spdrivercalendar/features/calendar/utils/work_duration_display.dart';
 import 'package:spdrivercalendar/features/calendar/utils/assigned_duty_zone.dart';
+import 'package:spdrivercalendar/features/calendar/utils/jamestown_road.dart';
 import 'package:spdrivercalendar/features/calendar/utils/spare_meal.dart';
 import 'package:spdrivercalendar/features/calendar/utils/spare_time_options.dart';
 import 'package:spdrivercalendar/features/calendar/widgets/dialog_action_layout.dart';
@@ -428,7 +429,7 @@ class _EventCardState extends State<EventCard> {
       }
       
       // Special handling for Jamestown Road shifts (CHECK BEFORE UNI/Euro!)
-      if (shiftCode.startsWith('811/')) {
+      if (JamestownRoad.isShiftCode(shiftCode)) {
 
         await _loadJamestownShiftData(shiftCode);
         return;
@@ -593,7 +594,7 @@ class _EventCardState extends State<EventCard> {
       return;
     }
 
-    if (widget.event.title.startsWith('811/') ||
+    if (JamestownRoad.isShiftCode(widget.event.title) ||
         widget.event.title.startsWith(DonnybrookFeatureService.shiftPrefix)) {
       return;
     }
@@ -2141,7 +2142,7 @@ class _EventCardState extends State<EventCard> {
               // NEW: Report - Sign Off line (for PZ shifts and UNI overtime shifts)
               // Skip for EA Training (no times/locations)
               if (!_isEATraining && (widget.event.title.startsWith('PZ') ||
-                  widget.event.title.startsWith('811/') ||
+                  JamestownRoad.isShiftCode(widget.event.title) ||
                   widget.event.title.startsWith(DonnybrookFeatureService.shiftPrefix) ||
                   (widget.event.title.contains('(OT)') && RegExp(r'^\d{2,3}/').hasMatch(widget.event.title.replaceAll(RegExp(r'[AB]? \(OT\)$'), '')))))
                 Padding(
@@ -2336,7 +2337,7 @@ class _EventCardState extends State<EventCard> {
                             if (!breakTime!.toLowerCase().contains('workout')) {
                               // Check if this shift type should show break locations
                               final shouldShowLocations = widget.event.title.contains('PZ') || 
-                                                          widget.event.title.startsWith('811/') || 
+                                                          JamestownRoad.isShiftCode(widget.event.title) || 
                                                           widget.event.title.startsWith(DonnybrookFeatureService.shiftPrefix) ||
                                                           RegExp(r'^\d+/').hasMatch(widget.event.title) ||
                                                           widget.event.title == '23' || 
@@ -4404,7 +4405,7 @@ class _EventCardState extends State<EventCard> {
    // For PZ, Jamestown (811/xx), and Universal/Euro duties, show route on a separate line
     if ((widget.event.title.startsWith('PZ1/') || widget.event.title.startsWith('PZ2/') ||
          widget.event.title.startsWith('PZ3/') || widget.event.title.startsWith('PZ4/') ||
-         widget.event.title.startsWith('811/') ||
+         JamestownRoad.isShiftCode(widget.event.title) ||
          RegExp(r'^\d+/').hasMatch(widget.event.title)) &&
         dutyRouteInfo != null && dutyRouteInfo!.isNotEmpty) {
       return Column(
@@ -6775,7 +6776,7 @@ class _EventCardState extends State<EventCard> {
     
     // For PZ shifts, Jamestown Road shifts, Training shifts, and Universal/Euro shifts, use the specialized display format
     if (widget.event.title.startsWith('PZ') ||
-        widget.event.title.startsWith('811/') ||
+        JamestownRoad.isShiftCode(widget.event.title) ||
         widget.event.title.startsWith(DonnybrookFeatureService.shiftPrefix) ||
         widget.event.title == 'CPC' || widget.event.title == 'Union' || widget.event.title == 'Mentor' ||
         widget.event.isCustomTraining ||

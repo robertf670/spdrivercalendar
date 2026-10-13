@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:spdrivercalendar/features/calendar/dialogs/work_shift_dialog.dart';
+import 'package:spdrivercalendar/features/calendar/utils/jamestown_road.dart';
 
 void main() {
   testWidgets('fits 320px and adds the selected work shift', (tester) async {
@@ -150,5 +151,60 @@ void main() {
 
     expect(find.text('Would you like to repeat this duty this week?'),
         findsNothing);
+  });
+
+  testWidgets('Jamestown marked-in defaults to Jamestown Road duties',
+      (tester) async {
+    await tester.binding.setSurfaceSize(const Size(320, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final loadedZones = <String>[];
+    WorkShiftDialogSelection? saved;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: WorkShiftDialog(
+            shiftDate: DateTime(2026, 10, 12),
+            isMFMarkedIn: true,
+            isShiftMarkedIn: false,
+            markedInZone: JamestownRoad.zoneLabel,
+            jamestownEnabled: false,
+            donnybrook1Enabled: false,
+            loadShiftNumbers: (zone) async {
+              loadedZones.add(zone);
+              return const ['811/01', '311/01'];
+            },
+            dayHasBlockingEvent: (_) => false,
+            onAddShift: (selection) async {
+              saved = selection;
+            },
+          ),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(loadedZones, [JamestownRoad.zoneLabel]);
+    expect(find.text('811/01'), findsOneWidget);
+    expect(find.text('Would you like to repeat this duty this week?'),
+        findsOneWidget);
+
+    await tester.tap(find.byType(Checkbox).first);
+    await tester.pumpAndSettle();
+    expect(find.text('M'), findsOneWidget);
+    expect(find.text('F'), findsOneWidget);
+
+    await tester.tap(find.text('Add Shift'));
+    await tester.pumpAndSettle();
+    expect(saved, isNotNull);
+    expect(saved!.repeatDutyThisWeek, isTrue);
+    expect(saved!.selectedDays[1], isTrue);
+    expect(saved!.selectedDays[2], isTrue);
+    expect(saved!.selectedDays[3], isTrue);
+    expect(saved!.selectedDays[4], isTrue);
+    expect(saved!.selectedDays[5], isTrue);
+    expect(tester.takeException(), isNull);
   });
 }

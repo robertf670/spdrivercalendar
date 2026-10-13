@@ -5,11 +5,13 @@ import 'package:spdrivercalendar/core/constants/training_constants.dart';
 import 'package:spdrivercalendar/features/calendar/services/roster_service.dart';
 import 'package:spdrivercalendar/features/calendar/services/zone2_duties.dart';
 import 'package:spdrivercalendar/features/calendar/utils/spare_time_options.dart';
+import 'package:spdrivercalendar/features/calendar/utils/jamestown_road.dart';
 import 'package:spdrivercalendar/features/calendar/utils/work_shift_duty_repeat.dart';
 import 'package:spdrivercalendar/features/calendar/utils/work_shift_zone_options.dart';
 import 'package:spdrivercalendar/features/calendar/widgets/custom_training_form.dart';
 import 'package:spdrivercalendar/features/calendar/widgets/weekday_repeat_day_toggle.dart';
 import 'package:spdrivercalendar/services/donnybrook_feature_service.dart';
+import 'package:spdrivercalendar/services/jamestown_feature_service.dart';
 
 /// Result handed to the caller when Add Shift is pressed.
 class WorkShiftDialogSelection {
@@ -117,6 +119,11 @@ class _WorkShiftDialogState extends State<WorkShiftDialog> {
     _selectedZone = widget.donnybrook1Enabled
         ? DonnybrookFeatureService.zoneLabel
         : (widget.markedInZone.isNotEmpty ? widget.markedInZone : 'Zone 1');
+    if (JamestownRoad.isZone(_selectedZone)) {
+      _selectedZone = JamestownRoad.zoneLabel;
+    } else if (JamestownFeatureService.isZone(_selectedZone)) {
+      _selectedZone = JamestownFeatureService.zoneLabel;
+    }
     if (!zones.contains(_selectedZone)) {
       _selectedZone = zones.first;
     }
@@ -189,6 +196,16 @@ class _WorkShiftDialogState extends State<WorkShiftDialog> {
     if (!includeWeekend && (dayIndex < 1 || dayIndex > 5)) return;
     if (disabled[dayIndex] ?? false) return;
     selected[dayIndex] = true;
+  }
+
+  void _autoSelectAvailableWeekdays(
+    Map<int, bool> selected,
+    Map<int, bool> disabled,
+  ) {
+    for (var dayIndex = 1; dayIndex <= 5; dayIndex++) {
+      if (disabled[dayIndex] ?? false) continue;
+      selected[dayIndex] = true;
+    }
   }
 
   bool get _isFixedDutyZone =>
@@ -525,11 +542,19 @@ class _WorkShiftDialogState extends State<WorkShiftDialog> {
                             includeWeekend: includeWeekend,
                           );
                           _selectedDays = _emptyWeekMap();
-                          _autoSelectCurrentDay(
-                            _selectedDays,
-                            _disabledDays,
-                            includeWeekend: includeWeekend,
-                          );
+                          if (JamestownRoad.isZone(_selectedZone) &&
+                              widget.isMFMarkedIn) {
+                            _autoSelectAvailableWeekdays(
+                              _selectedDays,
+                              _disabledDays,
+                            );
+                          } else {
+                            _autoSelectCurrentDay(
+                              _selectedDays,
+                              _disabledDays,
+                              includeWeekend: includeWeekend,
+                            );
+                          }
                         } else {
                           _selectedDays = _emptyWeekMap();
                           _disabledDays = _emptyWeekMap();

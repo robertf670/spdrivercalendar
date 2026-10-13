@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:spdrivercalendar/features/calendar/utils/jamestown_road.dart';
 import 'package:spdrivercalendar/features/calendar/utils/work_shift_zone_options.dart';
 import 'package:spdrivercalendar/services/donnybrook_feature_service.dart';
 import 'package:spdrivercalendar/services/jamestown_feature_service.dart';
@@ -24,6 +25,7 @@ void main() {
     );
     expect(zones, contains('22B/01'));
     expect(zones, contains(JamestownFeatureService.zoneLabel));
+    expect(zones.last, JamestownRoad.zoneLabel);
     expect(zones.first, 'Zone 1');
   });
 
@@ -35,5 +37,18 @@ void main() {
     );
     expect(zones, isNot(contains('22B/01')));
     expect(zones, isNot(contains(JamestownFeatureService.zoneLabel)));
+    expect(zones.last, JamestownRoad.zoneLabel);
+  });
+
+  test('30hr and 40hr Jamestown sit at the end of the zone picker', () {
+    final zones = workShiftZoneOptions(
+      shiftDate: DateTime(2026, 10, 12),
+      jamestownEnabled: true,
+      donnybrook1Enabled: false,
+    );
+    expect(zones.sublist(zones.length - 2), [
+      JamestownFeatureService.zoneLabel,
+      JamestownRoad.zoneLabel,
+    ]);
   });
 }

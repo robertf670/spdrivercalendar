@@ -14,7 +14,7 @@ List<String> markedInZoneOptions({
     'Zone 3',
     'Zone 4',
     if (jamestownEnabled ||
-        currentZone == JamestownFeatureService.zoneLabel)
+        JamestownFeatureService.isZone(currentZone))
       JamestownFeatureService.zoneLabel,
   ];
 }

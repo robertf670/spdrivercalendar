@@ -32,6 +32,7 @@ import 'package:share_plus/share_plus.dart';
 import '../../../services/days_in_lieu_service.dart';
 import '../../../services/annual_leave_service.dart';
 import '../../../services/color_customization_service.dart';
+import 'package:spdrivercalendar/features/calendar/utils/jamestown_road.dart';
 import 'package:spdrivercalendar/features/calendar/utils/marked_in_status.dart';
 import 'package:spdrivercalendar/features/calendar/utils/nights_roster.dart';
 import '../../../services/rest_day_swap_service.dart';
@@ -1489,7 +1490,7 @@ class StatisticsScreenState extends State<StatisticsScreen>
 
       
       // Check for Jamestown Road shifts first (before UNI check)
-      } else if (shiftCode.startsWith('811/')) {
+      } else if (JamestownRoad.isShiftCode(shiftCode)) {
         // Handle Jamestown Road shifts
         return await _loadJamestownWorkTime(shiftCode);
 

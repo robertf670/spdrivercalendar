@@ -24,6 +24,15 @@ void main() {
     expect(MarkedInStatus.isFixedWorkPattern('4 Day'), isTrue);
   });
 
+  test('Jamestown is last and works Monday through Friday like M-F', () {
+    expect(MarkedInStatus.statusOptions.last, 'Jamestown');
+    expect(MarkedInStatus.needsZone('Jamestown'), isFalse);
+    expect(MarkedInStatus.isFixedWorkPattern('Jamestown'), isTrue);
+    expect(MarkedInStatus.usesWorkRestColors('Jamestown'), isTrue);
+    expect(MarkedInStatus.isWorkDay('Jamestown', DateTime(2026, 10, 12)), isTrue);
+    expect(MarkedInStatus.isWorkDay('Jamestown', DateTime(2026, 10, 17)), isFalse);
+  });
+
   test('Nights is spare and uses Work/Rest colours', () {
     expect(MarkedInStatus.needsZone('Nights'), isFalse);
     expect(MarkedInStatus.usesWorkRestColors('Nights'), isTrue);

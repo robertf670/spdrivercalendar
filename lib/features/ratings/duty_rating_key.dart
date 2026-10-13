@@ -30,7 +30,9 @@ class DutyRatingTarget {
     if (dutyCode.startsWith('PZ2/')) return '2';
     if (dutyCode.startsWith('PZ3/')) return '3';
     if (dutyCode.startsWith('PZ4/')) return '4';
-    if (dutyCode.startsWith('811/')) return 'jamestown';
+    if (dutyCode.startsWith('811/') || dutyCode.startsWith('311/')) {
+      return 'jamestown';
+    }
     if (dutyCode.startsWith('DZ1/')) return 'dbz1';
     if (RegExp(r'^\d{2,3}/').hasMatch(dutyCode)) return 'uni';
     return 'other';
@@ -68,7 +70,7 @@ class DutyRatingKey {
     if (code.startsWith('SP')) return false;
     if (code.startsWith('BusCheck') || code.startsWith('BC')) return false;
     if (code.startsWith('PZ')) return true;
-    if (code.startsWith('811/')) return true;
+    if (code.startsWith('811/') || code.startsWith('311/')) return true;
     if (code.startsWith('DZ1/')) return true;
     if (code == '22B/01') return true;
     if (RegExp(r'^\d{2,3}/\d+').hasMatch(code)) return true;

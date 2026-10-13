@@ -5,6 +5,7 @@ import 'package:spdrivercalendar/features/calendar/services/roster_service.dart'
 import 'package:spdrivercalendar/models/bank_holiday.dart';
 import 'package:spdrivercalendar/models/shift_data.dart';
 import 'package:spdrivercalendar/core/utils/location_utils.dart';
+import 'package:spdrivercalendar/features/calendar/utils/jamestown_road.dart';
 import 'package:spdrivercalendar/services/donnybrook_feature_service.dart';
 import 'package:spdrivercalendar/services/jamestown_feature_service.dart';
 
@@ -66,7 +67,7 @@ class ShiftService {
                      RegExp(r'^\d{2,3}/\d{2}').hasMatch(shiftCode);
     
     // Check if this is a Jamestown Road shift
-    bool isJamestownRoad = shiftCode.startsWith('811/');
+    bool isJamestownRoad = JamestownRoad.isShiftCode(shiftCode);
     
     if (shiftCode.startsWith(DonnybrookFeatureService.shiftPrefix)) {
       final parts = await DonnybrookFeatureService.findShiftCsvParts(

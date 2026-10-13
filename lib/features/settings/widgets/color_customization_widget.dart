@@ -193,6 +193,8 @@ class _ColorCustomizationWidgetState extends State<ColorCustomizationWidget> {
                               String message;
                               if (status == 'M-F') {
                                 message = 'M-F Marked In is active. The "Work" color will be used for Monday-Friday shifts.';
+                              } else if (status == 'Jamestown') {
+                                message = 'Jamestown Marked In is active. The "Work" color will be used for Monday-Friday shifts.';
                               } else if (status == '4 Day') {
                                 message = '4 Day roster is active. The "Work" color will be used for Friday–Monday.';
                               } else if (status == 'Nights') {

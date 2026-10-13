@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:spdrivercalendar/features/calendar/services/duty_time_lookup_service.dart';
+import 'package:spdrivercalendar/features/calendar/utils/jamestown_road.dart';
 import 'package:spdrivercalendar/services/donnybrook_feature_service.dart';
 import 'package:spdrivercalendar/services/jamestown_feature_service.dart';
 
@@ -185,12 +186,13 @@ void main() {
         '811/39',
         date,
       );
-      final mainRoster = await lookup('Jamestown Road', '811/39', date);
+      final mainRoster = await lookup(JamestownRoad.zoneLabel, '311/01', date);
 
       expectTime(thirtyHour!.startTime, 6, 52);
-      expectTime(mainRoster!.startTime, 7, 2);
+      expectTime(mainRoster!.startTime, 5, 37);
       expectTime(thirtyHour.endTime, 19, 8);
       expect(thirtyHour.routes, ['X30/38A']);
+      expect(mainRoster.routes, ['33X']);
     });
 
     test('uses date-specific Donnybrook files and detects overnight', () async {

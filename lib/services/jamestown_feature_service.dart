@@ -4,7 +4,11 @@ import 'package:spdrivercalendar/core/services/storage_service.dart';
 
 /// Controls access to the secret Jamestown duties.
 class JamestownFeatureService {
-  static const String zoneLabel = 'Jamestown';
+  static const String zoneLabel = 'Jamestown (30hr)';
+  static const String legacyZoneLabel = 'Jamestown';
+
+  static bool isZone(String zone) =>
+      zone == zoneLabel || zone == legacyZoneLabel;
   static const String duties30HrCsvAsset = 'assets/jamestown_30hr.csv';
   static const String dutiesMainCsvAsset = 'assets/JAMESTOWN_DUTIES.csv';
 

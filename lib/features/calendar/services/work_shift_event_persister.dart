@@ -11,7 +11,6 @@ import 'package:spdrivercalendar/features/calendar/utils/work_shift_title.dart';
 import 'package:spdrivercalendar/features/calendar/widgets/custom_training_form.dart';
 import 'package:spdrivercalendar/models/bank_holiday.dart';
 import 'package:spdrivercalendar/models/event.dart';
-import 'package:spdrivercalendar/services/donnybrook_feature_service.dart';
 import 'package:spdrivercalendar/services/jamestown_feature_service.dart';
 
 typedef WorkShiftTimesLookup = Future<Map<String, dynamic>?> Function(
@@ -145,7 +144,7 @@ class WorkShiftEventPersister {
     final zoneMatchesMarkedIn = isNightsRoster ||
         selectedZone == markedInZone ||
         (isMFMarkedIn &&
-            selectedZone == JamestownFeatureService.zoneLabel &&
+            JamestownFeatureService.isZone(selectedZone) &&
             jamestownEnabled);
     if (selection.repeatDutyThisWeek &&
         (isShiftMarkedIn || isMFMarkedIn || isNightsRoster) &&
@@ -158,6 +157,7 @@ class WorkShiftEventPersister {
         selectedShiftNumber: selectedShiftNumber,
         selection: selection,
         fallbackShiftTimes: shiftTimes,
+        jamestownEnabled: jamestownEnabled,
       );
     }
 
@@ -279,6 +279,7 @@ class WorkShiftEventPersister {
     required String selectedShiftNumber,
     required WorkShiftDialogSelection selection,
     required Map<String, dynamic> fallbackShiftTimes,
+    required bool jamestownEnabled,
   }) async {
     final weekday = shiftDate.weekday;
     final daysToSunday = weekday == 7 ? 0 : weekday;
@@ -295,12 +296,10 @@ class WorkShiftEventPersister {
       if (_eventsForDay(targetDate).any((e) => e.title == title)) continue;
 
       Map<String, dynamic>? targetShiftTimes;
-      if (selectedZone == 'Zone 1' ||
-          selectedZone == 'Zone 2' ||
-          selectedZone == 'Zone 3' ||
-          selectedZone == 'Zone 4' ||
-          selectedZone == DonnybrookFeatureService.zoneLabel ||
-          selectedZone == JamestownFeatureService.zoneLabel) {
+      if (WorkShiftDutyRepeat.isRepeatableZone(
+        selectedZone,
+        jamestownEnabled: jamestownEnabled,
+      )) {
         targetShiftTimes = await _lookupShiftTimes(
           selectedZone,
           selectedShiftNumber,

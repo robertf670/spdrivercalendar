@@ -1,4 +1,11 @@
  final Map<String, List<Map<String, String>>> changelogData = {
+  '4.4.0': [
+    {
+      'title': 'Jamestown 40 Hour',
+      'description':
+          'Added Jamestown 40 hour duties for those who moved and asked.',
+    },
+  ],
   '4.3.4': [
     {
       'title': 'Pay Scale 2026',

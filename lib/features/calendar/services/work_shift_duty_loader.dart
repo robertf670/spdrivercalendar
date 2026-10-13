@@ -1,6 +1,7 @@
 import 'package:flutter/services.dart';
 import 'package:spdrivercalendar/core/constants/training_constants.dart';
 import 'package:spdrivercalendar/features/calendar/services/roster_service.dart';
+import 'package:spdrivercalendar/features/calendar/utils/jamestown_road.dart';
 import 'package:spdrivercalendar/features/calendar/utils/spare_time_options.dart';
 import 'package:spdrivercalendar/features/calendar/services/zone2_duties.dart';
 import 'package:spdrivercalendar/services/donnybrook_feature_service.dart';
@@ -53,13 +54,13 @@ class WorkShiftDutyLoader {
     } else if (selectedZone == DonnybrookFeatureService.zoneLabel) {
       shiftNumbers =
           await DonnybrookFeatureService.loadShiftCodesForDate(shiftDate);
-    } else if (selectedZone == JamestownFeatureService.zoneLabel) {
+    } else if (JamestownFeatureService.isZone(selectedZone)) {
       if (dayOfWeek == 'Saturday' || dayOfWeek == 'Sunday') {
         shiftNumbers = [];
       } else {
         shiftNumbers = await JamestownFeatureService.load30HrShiftCodes();
       }
-    } else if (selectedZone == 'Jamestown Road') {
+    } else if (JamestownRoad.isZone(selectedZone)) {
       shiftNumbers = await _loadJamestownRoadShifts(dayOfWeek);
     } else if (selectedZone == 'Training') {
       shiftNumbers = await _loadTrainingShifts(
@@ -155,7 +156,7 @@ class WorkShiftDutyLoader {
       return [];
     }
     try {
-      final csv = await _bundle.loadString('assets/JAMESTOWN_DUTIES.csv');
+      final csv = await _bundle.loadString(JamestownRoad.dutiesCsvAsset);
       final lines = csv.split('\n');
       final shiftNumbers = <String>[];
       final seenShifts = <String>{};
@@ -169,7 +170,7 @@ class WorkShiftDutyLoader {
           shiftNumbers.add(shift);
         }
       }
-      return shiftNumbers;
+      return JamestownRoad.orderForPicker(shiftNumbers);
     } catch (_) {
       return [];
     }
