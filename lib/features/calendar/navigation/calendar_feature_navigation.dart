@@ -52,7 +52,7 @@ class CalendarFeatureNavigation {
   static Future<void> openBills(BuildContext context) async {
     final prefs = await WorkShiftMarkedInPrefsLoader().load();
     if (!context.mounted) return;
-    return Navigator.of(context).push(
+    await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => BillsScreen(
           initialZone: billsDefaultZone(prefs.markedInZone),
