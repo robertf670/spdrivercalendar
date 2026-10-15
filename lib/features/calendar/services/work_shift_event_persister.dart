@@ -120,7 +120,7 @@ class WorkShiftEventPersister {
       startDate: shiftDate,
       startTime: shiftTimes['startTime']!,
       endDate: shiftTimes['isNextDay'] == true
-          ? shiftDate.add(const Duration(days: 1))
+          ? _addCalendarDays(shiftDate, 1)
           : shiftDate,
       endTime: shiftTimes['endTime']!,
       breakStartTime: shiftTimes['breakStartTime'] as TimeOfDay?,
@@ -259,11 +259,11 @@ class WorkShiftEventPersister {
   }) async {
     final weekday = shiftDate.weekday;
     final daysToSunday = weekday == 7 ? 0 : weekday;
-    final weekStart = shiftDate.subtract(Duration(days: daysToSunday));
+    final weekStart = _addCalendarDays(shiftDate, -daysToSunday);
 
     for (var dayIndex = 0; dayIndex <= 6; dayIndex++) {
       if (!(selection.uniEuroSelectedDays[dayIndex] ?? false)) continue;
-      final targetDate = weekStart.add(Duration(days: dayIndex));
+      final targetDate = _addCalendarDays(weekStart, dayIndex);
       if (_isSameDay(targetDate, shiftDate)) continue;
       if (_eventsForDay(targetDate).any((e) => e.title == title)) continue;
       if (_bankHolidayForDate(targetDate) != null) continue;
@@ -278,7 +278,7 @@ class WorkShiftEventPersister {
         startDate: targetDate,
         startTime: finalShiftTimes['startTime']!,
         endDate: finalShiftTimes['isNextDay'] == true
-            ? targetDate.add(const Duration(days: 1))
+            ? _addCalendarDays(targetDate, 1)
             : targetDate,
         endTime: finalShiftTimes['endTime']!,
         breakStartTime: finalShiftTimes['breakStartTime'] as TimeOfDay?,
@@ -303,11 +303,11 @@ class WorkShiftEventPersister {
   }) async {
     final weekday = shiftDate.weekday;
     final daysToSunday = weekday == 7 ? 0 : weekday;
-    final weekStart = shiftDate.subtract(Duration(days: daysToSunday));
+    final weekStart = _addCalendarDays(shiftDate, -daysToSunday);
 
     for (var dayIndex = 0; dayIndex <= 6; dayIndex++) {
       if (!(selection.selectedDays[dayIndex] ?? false)) continue;
-      final targetDate = weekStart.add(Duration(days: dayIndex));
+      final targetDate = _addCalendarDays(weekStart, dayIndex);
       if (_isSameDay(targetDate, shiftDate)) continue;
       if (targetDate.weekday == DateTime.saturday ||
           targetDate.weekday == DateTime.sunday) {
@@ -334,7 +334,7 @@ class WorkShiftEventPersister {
         startDate: targetDate,
         startTime: finalShiftTimes['startTime']!,
         endDate: finalShiftTimes['isNextDay'] == true
-            ? targetDate.add(const Duration(days: 1))
+            ? _addCalendarDays(targetDate, 1)
             : targetDate,
         endTime: finalShiftTimes['endTime']!,
         breakStartTime: finalShiftTimes['breakStartTime'] as TimeOfDay?,
@@ -359,9 +359,9 @@ class WorkShiftEventPersister {
 
     final anchorMonday = RosterService.getMondayOfWeek(shiftDate);
     for (var w = 0; w < 12; w++) {
-      final weekStart = anchorMonday.add(Duration(days: w * 7));
+      final weekStart = _addCalendarDays(anchorMonday, w * 7);
       for (var d = 0; d < 5; d++) {
-        final targetDate = weekStart.add(Duration(days: d));
+        final targetDate = _addCalendarDays(weekStart, d);
         if (_isSameDay(targetDate, shiftDate)) continue;
         if (_eventsForDay(targetDate).any((e) => !e.isHoliday)) continue;
         if (_bankHolidayForDate(targetDate) != null) continue;
@@ -397,7 +397,7 @@ class WorkShiftEventPersister {
     final weekStartSunday = RosterService.getSundayOfWeek(shiftDate);
     for (var w = 0; w < 15; w++) {
       for (var d = 0; d < 7; d++) {
-        final targetDate = weekStartSunday.add(Duration(days: w * 7 + d));
+        final targetDate = _addCalendarDays(weekStartSunday, w * 7 + d);
         if (_isSameDay(targetDate, shiftDate)) continue;
         final duty =
             RosterService.getZone1ShiftDayDuty((weekIndex + w) % 86, d);
@@ -434,7 +434,7 @@ class WorkShiftEventPersister {
     final weekStartSunday = RosterService.getSundayOfWeek(shiftDate);
     for (var w = 0; w < 10; w++) {
       for (var d = 0; d < 7; d++) {
-        final targetDate = weekStartSunday.add(Duration(days: w * 7 + d));
+        final targetDate = _addCalendarDays(weekStartSunday, w * 7 + d);
         if (_isSameDay(targetDate, shiftDate)) continue;
         final duty =
             RosterService.getZone3ShiftDayDuty((weekIndex + w) % 10, d);
@@ -477,7 +477,7 @@ class WorkShiftEventPersister {
     final cycle = Zone2ShiftRoster.cycleLengthWeeks;
     for (var w = 0; w < Zone2ShiftRoster.fillBlockWeeks; w++) {
       for (var d = 0; d < 7; d++) {
-        final targetDate = weekStartSunday.add(Duration(days: w * 7 + d));
+        final targetDate = _addCalendarDays(weekStartSunday, w * 7 + d);
         if (_isSameDay(targetDate, shiftDate)) continue;
         if (!Zone2Duties.canAddShiftsOn(targetDate)) continue;
         final isWeekend = targetDate.weekday == DateTime.saturday ||
@@ -520,9 +520,7 @@ class WorkShiftEventPersister {
       title: title,
       startDate: date,
       startTime: times['startTime']!,
-      endDate: times['isNextDay'] == true
-          ? date.add(const Duration(days: 1))
-          : date,
+      endDate: times['isNextDay'] == true ? _addCalendarDays(date, 1) : date,
       endTime: times['endTime']!,
       breakStartTime: times['breakStartTime'] as TimeOfDay?,
       breakEndTime: times['breakEndTime'] as TimeOfDay?,
@@ -541,5 +539,10 @@ class WorkShiftEventPersister {
 
   bool _isSameDay(DateTime a, DateTime b) {
     return a.year == b.year && a.month == b.month && a.day == b.day;
+  }
+
+  /// Calendar days, not 24-hour steps, so DST fallback does not shift the date.
+  DateTime _addCalendarDays(DateTime date, int days) {
+    return DateTime(date.year, date.month, date.day + days);
   }
 }

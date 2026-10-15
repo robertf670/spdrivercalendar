@@ -17,7 +17,10 @@ import 'package:spdrivercalendar/services/backup_service.dart';
 import 'package:intl/intl.dart'; // For DateFormat
 import 'package:spdrivercalendar/features/settings/widgets/color_customization_widget.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:spdrivercalendar/features/calendar/services/event_deletion_service.dart';
 import 'package:spdrivercalendar/features/calendar/services/event_service.dart';
+import 'package:spdrivercalendar/features/settings/dialogs/remove_duties_range_dialog.dart';
+import 'package:spdrivercalendar/models/event.dart';
 import 'package:spdrivercalendar/features/calendar/services/workout_highlight_service.dart';
 import 'package:spdrivercalendar/services/pay_scale_service.dart';
 import '../../../config/app_config.dart';
@@ -578,6 +581,7 @@ class SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObser
                             _buildResetRestDaysButton(),
                         ],
                       ),
+                      _buildRemoveDutiesButton(),
                       _buildFeedbackButton(),
                       _buildLiveUpdatesPreferencesButton(),
                       _buildVersionHistoryButton(),
@@ -1211,6 +1215,53 @@ class SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObser
         title: const Text('Reset Rest Days'),
         subtitle: const Text('Change your shift pattern'),
         onTap: widget.resetRestDaysCallback,
+      ),
+    );
+  }
+
+  Widget _buildRemoveDutiesButton() {
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 4.0),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppTheme.borderRadius),
+      ),
+      child: ListTile(
+        leading: const Icon(Icons.date_range),
+        title: const Text('Remove Duties'),
+        subtitle: const Text('Delete duties between two dates'),
+        onTap: _removeDutiesInDateRange,
+      ),
+    );
+  }
+
+  Future<void> _removeDutiesInDateRange() async {
+    final events = await showDialog<List<Event>>(
+      context: context,
+      builder: (dialogContext) => const RemoveDutiesRangeDialog(),
+    );
+    if (events == null || events.isEmpty || !mounted) return;
+
+    _showLoadingDialog('Removing duties…');
+    final deletion = EventDeletionService();
+    for (final event in events) {
+      if (!mounted) return;
+      await deletion.deleteEvent(
+        event: event,
+        context: context,
+        isMounted: () => mounted,
+      );
+    }
+    if (!mounted) return;
+    Navigator.of(context, rootNavigator: true).pop();
+    widget.onCalendarDataChanged?.call();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          events.length == 1
+              ? 'Removed 1 duty.'
+              : 'Removed ${events.length} duties.',
+        ),
       ),
     );
   }

@@ -1,4 +1,15 @@
  final Map<String, List<Map<String, String>>> changelogData = {
+  '4.4.1': [
+    {
+      'title': 'Remove Duties',
+      'description':
+          'Remove duties between two dates from Settings.',
+    },
+    {
+      'title': 'Bug Fixes',
+      'description': 'Fixed some calendar bugs.',
+    },
+  ],
   '4.4.0': [
     {
       'title': 'Jamestown 40 Hour',

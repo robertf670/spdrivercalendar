@@ -420,4 +420,56 @@ void main() {
       isTrue,
     );
   });
+
+  test('Zone 2 fill keeps calendar dates across the October DST fallback',
+      () async {
+    TestWidgetsFlutterBinding.ensureInitialized();
+    expect(await RosterService.loadZone2ShiftRoster(), isTrue);
+
+    final created = <Event>[];
+    final persister = WorkShiftEventPersister(
+      lookupShiftTimes: (zone, shift, date) async => {
+        'startTime': const TimeOfDay(hour: 6, minute: 0),
+        'endTime': const TimeOfDay(hour: 14, minute: 0),
+        'isNextDay': false,
+      },
+      addEvent: (event) async {
+        created.add(event);
+      },
+      eventsForDay: (_) => const [],
+      bankHolidayForDate: (_) => null,
+      now: () => DateTime(2026, 10, 18, 12),
+    );
+
+    await persister.persist(
+      shiftDate: DateTime(2026, 10, 18),
+      selection: selection(
+        zone: 'Zone 2',
+        shift: 'PZ2/04',
+        fillNext35Weeks: true,
+      ),
+      isMFMarkedIn: false,
+      isShiftMarkedIn: true,
+      markedInZone: 'Zone 2',
+      jamestownEnabled: false,
+      zone2RosterEnabled: true,
+    );
+
+    Event? onDay(int year, int month, int day) {
+      final matches = created.where((e) =>
+          e.startDate.year == year &&
+          e.startDate.month == month &&
+          e.startDate.day == day);
+      return matches.isEmpty ? null : matches.single;
+    }
+
+    expect(onDay(2026, 10, 18)?.title, 'PZ2/04');
+    expect(onDay(2026, 10, 24), isNull);
+    expect(onDay(2026, 10, 25), isNull);
+    expect(onDay(2026, 10, 26), isNull);
+    expect(onDay(2026, 10, 27)?.title, 'PZ2/24');
+    expect(onDay(2026, 10, 30)?.title, 'PZ2/24');
+    expect(onDay(2026, 10, 31)?.title, 'PZ2/22');
+    expect(onDay(2026, 11, 1), isNull);
+  });
 }
