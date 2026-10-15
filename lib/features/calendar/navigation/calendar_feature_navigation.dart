@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:spdrivercalendar/features/bills/screens/bills_screen.dart';
+import 'package:spdrivercalendar/features/bills/utils/bills_default_zone.dart';
+import 'package:spdrivercalendar/features/calendar/services/work_shift_marked_in_prefs.dart';
 import 'package:spdrivercalendar/features/calendar/screens/week_view_screen.dart';
 import 'package:spdrivercalendar/features/calendar/screens/year_view_screen.dart';
 import 'package:spdrivercalendar/features/contacts/contacts_page.dart';
@@ -47,9 +49,15 @@ class CalendarFeatureNavigation {
     );
   }
 
-  static Future<void> openBills(BuildContext context) {
+  static Future<void> openBills(BuildContext context) async {
+    final prefs = await WorkShiftMarkedInPrefsLoader().load();
+    if (!context.mounted) return;
     return Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const BillsScreen()),
+      MaterialPageRoute(
+        builder: (_) => BillsScreen(
+          initialZone: billsDefaultZone(prefs.markedInZone),
+        ),
+      ),
     );
   }
 

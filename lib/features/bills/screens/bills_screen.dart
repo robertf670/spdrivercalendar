@@ -3,6 +3,7 @@ import 'package:spdrivercalendar/core/widgets/correction_note.dart';
 import 'package:spdrivercalendar/features/bills/models/bill_duty.dart';
 import 'package:spdrivercalendar/features/bills/services/bills_csv_service.dart';
 import 'package:spdrivercalendar/features/bills/services/board_lookup.dart';
+import 'package:spdrivercalendar/features/bills/utils/bills_default_zone.dart';
 import 'package:spdrivercalendar/features/bills/widgets/bill_duty_index_list.dart';
 import 'package:spdrivercalendar/features/calendar/services/roster_service.dart';
 import 'package:spdrivercalendar/features/calendar/widgets/universal_board_timeline.dart';
@@ -29,7 +30,6 @@ class BillsScreen extends StatefulWidget {
 }
 
 class BillsScreenState extends State<BillsScreen> {
-  static const _zones = ['Zone 1', 'Zone 2', 'Zone 3', 'Zone 4', 'Uni/Euro'];
   static const _dayTypes = ['M-F', 'Sat', 'Sun'];
 
   late String _selectedDayType;
@@ -58,7 +58,7 @@ class BillsScreenState extends State<BillsScreen> {
   @override
   void initState() {
     super.initState();
-    _selectedZone = widget.initialZone ?? 'Zone 1';
+    _selectedZone = billsDefaultZone(widget.initialZone ?? '');
     _selectedDayType = widget.initialDayType ?? _dayTypeForDate(_now);
     _searchController.addListener(() {
       final query = _searchController.text;
@@ -279,7 +279,7 @@ class BillsScreenState extends State<BillsScreen> {
                 flex: 3,
                 child: _menuField(
                   value: _selectedZone,
-                  options: _zones,
+                  options: billsZones,
                   menuKey: const ValueKey('bills-zone-menu'),
                   onSelected: (zone) {
                     if (zone == _selectedZone) return;

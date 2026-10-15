@@ -6,6 +6,11 @@
           'Remove duties between two dates from Settings.',
     },
     {
+      'title': 'Bills',
+      'description':
+          'Bills opens on your marked-in zone.',
+    },
+    {
       'title': 'Bug Fixes',
       'description': 'Fixed some calendar bugs.',
     },
