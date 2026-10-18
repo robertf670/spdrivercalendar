@@ -139,14 +139,14 @@ void main() {
   });
 
   group('RosterService Zone 2 Shift roster', () {
-    test('loads 35 weeks and pins PZ2/33 Tuesday as week 14', () async {
+    test('loads 35 weeks and pins 13/33 Tuesday as week 14', () async {
       TestWidgetsFlutterBinding.ensureInitialized();
       final loaded = await RosterService.loadZone2ShiftRoster();
       expect(loaded, isTrue);
       expect(RosterService.zone2ShiftWeeks, hasLength(35));
-      expect(RosterService.getZone2ShiftDayDuty(13, 2), 'PZ2/33');
-      expect(RosterService.getZone2ShiftDayDuty(13, 6), 'PZ2/20');
-      expect(RosterService.getZone2ShiftDayDuty(0, 0), 'PZ2/17');
+      expect(RosterService.getZone2ShiftDayDuty(13, 2), '13/33');
+      expect(RosterService.getZone2ShiftDayDuty(13, 6), '13/20');
+      expect(RosterService.getZone2ShiftDayDuty(0, 0), '13/17');
       expect(RosterService.getZone2ShiftDayDuty(0, 2), 'R');
     });
   });

@@ -1,6 +1,7 @@
 import 'package:flutter/services.dart';
 import 'package:spdrivercalendar/features/bills/models/bill_duty.dart';
 import 'package:spdrivercalendar/features/calendar/services/roster_service.dart';
+import 'package:spdrivercalendar/features/calendar/services/zone2_duties.dart';
 
 class BillsLoadResult {
   const BillsLoadResult({
@@ -104,7 +105,7 @@ class BillsCsvService {
       return csv7Days.split('\n');
     }
 
-    final zoneNumber = zone.replaceAll('Zone ', '');
+    final zoneNumber = Zone2Duties.fileZoneNumber(zone);
     final filename = RosterService.getBrowseShiftFilename(
       zoneNumber,
       dayType,

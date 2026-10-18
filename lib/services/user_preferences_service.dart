@@ -5,16 +5,39 @@ class UserPreferencesService {
   static const String _showAllUpdatesKey = 'show_all_updates';
 
 
-  // Default preferred routes
-  static const List<String> _defaultPreferredRoutes = [
-    'C1', 'C2', '39', '39A', '23', '24', 'L58', 'L59'
+  /// Routes this depot actually runs.
+  static const List<String> availableRoutes = [
+    'C1',
+    'C2',
+    'L58',
+    'L59',
+    '13',
+    '23',
+    '24',
+    '39',
+    '39A',
   ];
+
+  static const List<String> _defaultPreferredRoutes = availableRoutes;
+
+  /// Drops routes that are not on [availableRoutes]. Empty results fall back
+  /// to the depot defaults.
+  static List<String> sanitizePreferredRoutes(List<String> routes) {
+    final allowed = availableRoutes.toSet();
+    final kept = [
+      for (final route in availableRoutes)
+        if (routes.contains(route)) route,
+    ];
+    if (kept.isEmpty) return List<String>.from(_defaultPreferredRoutes);
+    return kept;
+  }
 
   /// Get user's preferred routes for live updates
   static Future<List<String>> getPreferredRoutes() async {
     final prefs = await SharedPreferences.getInstance();
     final routes = prefs.getStringList(_preferredRoutesKey);
-    return routes ?? _defaultPreferredRoutes;
+    if (routes == null) return List<String>.from(_defaultPreferredRoutes);
+    return sanitizePreferredRoutes(routes);
   }
 
   /// Set user's preferred routes

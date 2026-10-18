@@ -38,8 +38,8 @@ void main() {
     expect(prefs.markedInZone, 'Zone 1');
   });
 
-  test('loads Zone 2 marked-in prefs', () async {
-    final loader = WorkShiftMarkedInPrefsLoader(
+  test('loads Route 13 marked-in prefs from a saved Zone 2 value', () async {
+    final legacy = WorkShiftMarkedInPrefsLoader(
       readBool: (key, {defaultValue = false}) async =>
           key == AppConstants.markedInEnabledKey,
       readString: (key) async {
@@ -48,10 +48,23 @@ void main() {
         return null;
       },
     );
+    expect((await legacy.load()).markedInZone, 'Route 13');
+  });
+
+  test('loads Zone 2 marked-in prefs', () async {
+    final loader = WorkShiftMarkedInPrefsLoader(
+      readBool: (key, {defaultValue = false}) async =>
+          key == AppConstants.markedInEnabledKey,
+      readString: (key) async {
+        if (key == AppConstants.markedInStatusKey) return 'Shift';
+        if (key == AppConstants.markedInZoneKey) return 'Route 13';
+        return null;
+      },
+    );
 
     final prefs = await loader.load();
     expect(prefs.isShiftMarkedIn, isTrue);
-    expect(prefs.markedInZone, 'Zone 2');
+    expect(prefs.markedInZone, 'Route 13');
   });
 
   test('Jamestown marked-in is M-F for Jamestown Road duties', () async {

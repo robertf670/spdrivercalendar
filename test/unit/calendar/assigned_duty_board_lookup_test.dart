@@ -26,12 +26,31 @@ void main() {
 
     test('prefixes bare zone codes used on 22B/spare', () {
       expect(AssignedDutyBoardLookup.lookupCode('4/07'), 'PZ4/07');
-      expect(AssignedDutyBoardLookup.lookupCode('2/01'), 'PZ2/01');
+      expect(AssignedDutyBoardLookup.lookupCode('2/01'), '13/01');
+      expect(AssignedDutyBoardLookup.lookupCode('PZ2/01'), '13/01');
+      expect(AssignedDutyBoardLookup.lookupCode('13/01'), '13/01');
       expect(AssignedDutyBoardLookup.lookupCode('1/03A'), 'PZ1/03');
     });
   });
 
   group('AssignedDutyBoardLookup.load', () {
+    test('loads a Route 13 board from old PZ2/01 and 2/01 spare codes',
+        () async {
+      final fromLegacy = await AssignedDutyBoardLookup.load(
+        assignedDuty: 'PZ2/01',
+        date: DateTime(2026, 8, 10),
+      );
+      expect(fromLegacy, isNotNull);
+      expect(fromLegacy!.shift, '13/01');
+
+      final fromBare = await AssignedDutyBoardLookup.load(
+        assignedDuty: '2/01',
+        date: DateTime(2026, 8, 10),
+      );
+      expect(fromBare, isNotNull);
+      expect(fromBare!.shift, '13/01');
+    });
+
     test('loads a zone board from a spare half-duty code', () async {
       final board = await AssignedDutyBoardLookup.load(
         assignedDuty: 'PZ1/01A',

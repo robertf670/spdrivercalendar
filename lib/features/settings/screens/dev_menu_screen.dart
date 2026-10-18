@@ -75,9 +75,9 @@ class _DevMenuScreenState extends State<DevMenuScreen> {
           insetPadding: EdgeInsets.symmetric(
             horizontal: width < 350 ? 16 : 40,
           ),
-          title: const Text('Remove Zone 2 roster fills?'),
+          title: const Text('Remove Route 13 roster fills?'),
           content: const Text(
-            'This deletes only duties added by the 35-week Zone 2 roster fill.',
+            'This deletes only duties added by the 35-week Route 13 roster fill.',
           ),
           actions: [
             TextButton(
@@ -113,8 +113,8 @@ class _DevMenuScreenState extends State<DevMenuScreen> {
       SnackBar(
         content: Text(
           events.isEmpty
-              ? 'No Zone 2 roster fills to remove.'
-              : 'Removed ${events.length} Zone 2 roster duties.',
+              ? 'No Route 13 roster fills to remove.'
+              : 'Removed ${events.length} Route 13 roster duties.',
         ),
       ),
     );
@@ -219,7 +219,7 @@ class _DevMenuScreenState extends State<DevMenuScreen> {
                         SwitchListTile(
                           title: const Text(Zone2RosterFeatureService.menuLabel),
                           subtitle: const Text(
-                            'Fill 35 weeks of Zone 2 Shift duties from Add Work Shift',
+                            'Fill 35 weeks of Route 13 Shift duties from Add Work Shift',
                           ),
                           secondary: Icon(
                             Icons.calendar_view_week_outlined,
@@ -236,7 +236,7 @@ class _DevMenuScreenState extends State<DevMenuScreen> {
                             title: Text(
                               _isRemovingRosterFills
                                   ? 'Removing…'
-                                  : 'Remove filled Zone 2 roster duties',
+                                  : 'Remove filled Route 13 roster duties',
                             ),
                             onTap: _isRemovingRosterFills
                                 ? null

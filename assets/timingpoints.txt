@@ -13,8 +13,9 @@ L59 -> Riverforest, Our Lady's Nativity
 C1/C2 -> Sandymount, Fforster Green, Lucan Retail Park, Hermatige Clinic, Memorial Gardens (apparently), Chapelizod Bypass (apparently), Prince's Street South, Ringsend Garage
 C1/C2 -> Adamstown Station, Grand Canal Quay, Aston Quay, Chapelizod Bypass, Clarion Hotel, Ballyowen Park
 
-13 -> Mountjoy Square
-13 -> Grange Castle
+NOTE 13: These are the timing points from Harristown previously. Donnybrook/Phibsboro did not officially set timing points.
+13 -> Mountjoy Square, Convent Road / Boot Road, Convent Road / St. Anthony's Avenue, Fonthill Rd / St. John's, Naas Road / Red Cow Hotel, Naas Road / Robin Hood Ind Est, Naas Road / John F. Kennedy Drive, Naas Road / Luas Kylemore, Naas Road / Kylemore Road, Naas Road / Carriglea I.E., Naas Road / Luas Bluebell, Emmet Road / South Circular Road, James Street / Echlin Street, Parnell Square / Rotunda Hospital
+13 -> Grange Castle, Emmet Road / Bulfin Road, Emmet Road / Camac Close, Naas Road / Luas Kylemore, Naas Road / Robin Hood Road, Naas Road / Long Mile Road (John F. Kennedy Dr), Naas Road / Club Road, Naas Road / Red Cow Hotel, Naas Road / Luas Red Cow, Fonthill Rd / Boot Road, Fonthill Rd / St. John's
 
 23 -> Charlestown
 23 -> Merrion Square

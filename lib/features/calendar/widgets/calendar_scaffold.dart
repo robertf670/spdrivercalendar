@@ -43,6 +43,7 @@ class CalendarScaffold extends StatelessWidget {
     required this.onSearch,
     required this.onWeekView,
     required this.onMenuSelected,
+    this.showWeekViewIcon = true,
     this.activeUpdatesStream,
   });
 
@@ -52,6 +53,7 @@ class CalendarScaffold extends StatelessWidget {
   final VoidCallback onSearch;
   final VoidCallback onWeekView;
   final ValueChanged<String> onMenuSelected;
+  final bool showWeekViewIcon;
   final Stream<List<LiveUpdate>>? activeUpdatesStream;
 
   @override
@@ -85,11 +87,12 @@ class CalendarScaffold extends StatelessWidget {
                 tooltip: 'Search Shifts',
                 onPressed: onSearch,
               ),
-              IconButton(
-                icon: const Icon(Icons.view_week),
-                tooltip: 'Week View',
-                onPressed: onWeekView,
-              ),
+              if (showWeekViewIcon)
+                IconButton(
+                  icon: const Icon(Icons.view_week),
+                  tooltip: 'Week View',
+                  onPressed: onWeekView,
+                ),
               PopupMenuButton<String>(
                 icon: const Icon(Icons.settings),
                 itemBuilder: (context) => [

@@ -111,7 +111,7 @@ class WorkShiftEventPersister {
     final willFillZone2Roster = zone2RosterEnabled &&
         selection.fillNext35Weeks &&
         isShiftMarkedIn &&
-        selectedZone == Zone2Duties.zoneLabel;
+        Zone2Duties.isZone(selectedZone);
 
     final customTrainingData = selection.customTrainingData;
     final event = Event(

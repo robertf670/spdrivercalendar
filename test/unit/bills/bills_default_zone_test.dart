@@ -9,7 +9,8 @@ void main() {
   });
 
   test('Shift / M-F marked-in opens that bills zone', () {
-    expect(billsDefaultZone('Zone 2'), 'Zone 2');
+    expect(billsDefaultZone('Route 13'), 'Route 13');
+    expect(billsDefaultZone('Zone 2'), 'Route 13');
     expect(billsDefaultZone('Zone 1'), 'Zone 1');
     expect(billsDefaultZone('Zone 3'), 'Zone 3');
     expect(billsDefaultZone('Zone 4'), 'Zone 4');

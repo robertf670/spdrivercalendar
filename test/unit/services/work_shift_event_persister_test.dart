@@ -194,19 +194,19 @@ void main() {
     final result = await persister.persist(
       shiftDate: DateTime(2026, 10, 12),
       selection: selection(
-        zone: 'Zone 2',
-        shift: 'PZ2/01',
+        zone: 'Route 13',
+        shift: '13/01',
         repeatDutyThisWeek: true,
         selectedDays: const {1: true, 2: true},
       ),
       isMFMarkedIn: false,
       isShiftMarkedIn: true,
-      markedInZone: 'Zone 2',
+      markedInZone: 'Route 13',
       jamestownEnabled: false,
     );
 
     expect(result.status, WorkShiftPersistStatus.success);
-    expect(created.map((e) => e.title).toSet(), {'PZ2/01'});
+    expect(created.map((e) => e.title).toSet(), {'13/01'});
     expect(created.map((e) => e.startDate.day).toList(), [12, 13]);
   });
 
@@ -310,13 +310,13 @@ void main() {
     await persister.persist(
       shiftDate: DateTime(2026, 10, 13),
       selection: selection(
-        zone: 'Zone 2',
-        shift: 'PZ2/33',
+        zone: 'Route 13',
+        shift: '13/33',
         fillNext35Weeks: true,
       ),
       isMFMarkedIn: false,
       isShiftMarkedIn: true,
-      markedInZone: 'Zone 2',
+      markedInZone: 'Route 13',
       jamestownEnabled: false,
     );
 
@@ -376,13 +376,13 @@ void main() {
     final result = await persister.persist(
       shiftDate: DateTime(2026, 10, 13),
       selection: selection(
-        zone: 'Zone 2',
-        shift: 'PZ2/33',
+        zone: 'Route 13',
+        shift: '13/33',
         fillNext35Weeks: true,
       ),
       isMFMarkedIn: false,
       isShiftMarkedIn: true,
-      markedInZone: 'Zone 2',
+      markedInZone: 'Route 13',
       jamestownEnabled: false,
       zone2RosterEnabled: true,
     );
@@ -402,12 +402,12 @@ void main() {
       return matches.isEmpty ? null : matches.single;
     }
 
-    expect(onDay(2026, 10, 13)?.title, 'PZ2/33');
-    expect(onDay(2026, 10, 14)?.title, 'PZ2/33');
+    expect(onDay(2026, 10, 13)?.title, '13/33');
+    expect(onDay(2026, 10, 14)?.title, '13/33');
     expect(onDay(2026, 10, 11), isNull);
     expect(onDay(2026, 10, 12), isNull);
     expect(onDay(2026, 10, 15), isNull);
-    expect(onDay(2026, 10, 17)?.title, 'PZ2/20');
+    expect(onDay(2026, 10, 17)?.title, '13/20');
     expect(onDay(2026, 12, 24), isNull);
     expect(onDay(2026, 12, 25), isNull);
 
@@ -416,7 +416,7 @@ void main() {
           lookup.date.year == 2026 &&
           lookup.date.month == 10 &&
           lookup.date.day == 17 &&
-          lookup.duty == 'PZ2/20'),
+          lookup.duty == '13/20'),
       isTrue,
     );
   });
@@ -444,13 +444,13 @@ void main() {
     await persister.persist(
       shiftDate: DateTime(2026, 10, 18),
       selection: selection(
-        zone: 'Zone 2',
-        shift: 'PZ2/04',
+        zone: 'Route 13',
+        shift: '13/04',
         fillNext35Weeks: true,
       ),
       isMFMarkedIn: false,
       isShiftMarkedIn: true,
-      markedInZone: 'Zone 2',
+      markedInZone: 'Route 13',
       jamestownEnabled: false,
       zone2RosterEnabled: true,
     );
@@ -463,13 +463,13 @@ void main() {
       return matches.isEmpty ? null : matches.single;
     }
 
-    expect(onDay(2026, 10, 18)?.title, 'PZ2/04');
+    expect(onDay(2026, 10, 18)?.title, '13/04');
     expect(onDay(2026, 10, 24), isNull);
     expect(onDay(2026, 10, 25), isNull);
     expect(onDay(2026, 10, 26), isNull);
-    expect(onDay(2026, 10, 27)?.title, 'PZ2/24');
-    expect(onDay(2026, 10, 30)?.title, 'PZ2/24');
-    expect(onDay(2026, 10, 31)?.title, 'PZ2/22');
+    expect(onDay(2026, 10, 27)?.title, '13/24');
+    expect(onDay(2026, 10, 30)?.title, '13/24');
+    expect(onDay(2026, 10, 31)?.title, '13/22');
     expect(onDay(2026, 11, 1), isNull);
   });
 }

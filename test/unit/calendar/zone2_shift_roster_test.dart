@@ -3,12 +3,20 @@ import 'package:spdrivercalendar/features/calendar/utils/zone2_shift_roster.dart
 
 void main() {
   const weeks = [
-    ['R', 'R', 'PZ2/34', 'PZ2/34', 'PZ2/34', 'PZ2/34', 'PZ2/19'],
-    ['R', 'PZ2/01', 'PZ2/01', 'PZ2/01', 'R', 'PZ2/12', 'PZ2/04'],
-    ['PZ2/17', 'PZ2/34', 'R', 'PZ2/15', 'PZ2/15', 'PZ2/15', 'R'],
+    ['R', 'R', '13/34', '13/34', '13/34', '13/34', '13/19'],
+    ['R', '13/01', '13/01', '13/01', 'R', '13/12', '13/04'],
+    ['13/17', '13/34', 'R', '13/15', '13/15', '13/15', 'R'],
   ];
 
   test('pins a duty that appears once on that weekday', () {
+    expect(
+      Zone2ShiftRoster.pinWeekIndex(
+        weeks: weeks,
+        dayIndex: 2,
+        dutyCode: '13/34',
+      ),
+      0,
+    );
     expect(
       Zone2ShiftRoster.pinWeekIndex(
         weeks: weeks,
@@ -24,7 +32,7 @@ void main() {
       Zone2ShiftRoster.pinWeekIndex(
         weeks: weeks,
         dayIndex: 2,
-        dutyCode: 'PZ2/15',
+        dutyCode: '13/15',
       ),
       isNull,
     );
@@ -32,15 +40,15 @@ void main() {
 
   test('uses rest days to pick one week when the duty repeats', () {
     const ambiguous = [
-      ['R', 'R', 'PZ2/99', 'PZ2/99', 'PZ2/99', 'PZ2/99', 'PZ2/01'],
-      ['R', 'PZ2/01', 'PZ2/99', 'PZ2/99', 'R', 'PZ2/12', 'PZ2/04'],
+      ['R', 'R', '13/99', '13/99', '13/99', '13/99', '13/01'],
+      ['R', '13/01', '13/99', '13/99', 'R', '13/12', '13/04'],
     ];
 
     expect(
       Zone2ShiftRoster.pinWeekIndex(
         weeks: ambiguous,
         dayIndex: 2,
-        dutyCode: 'PZ2/99',
+        dutyCode: '13/99',
       ),
       isNull,
     );
@@ -48,7 +56,7 @@ void main() {
       Zone2ShiftRoster.pinWeekIndex(
         weeks: ambiguous,
         dayIndex: 2,
-        dutyCode: 'PZ2/99',
+        dutyCode: '13/99',
         calendarWeekIsRest: const [
           true,
           true,
@@ -65,7 +73,7 @@ void main() {
       Zone2ShiftRoster.pinWeekIndex(
         weeks: ambiguous,
         dayIndex: 2,
-        dutyCode: 'PZ2/99',
+        dutyCode: '13/99',
         calendarWeekIsRest: const [
           true,
           false,

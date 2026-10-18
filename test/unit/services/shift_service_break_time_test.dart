@@ -47,6 +47,28 @@ void main() {
     expect(breakTime?.toLowerCase(), contains('workout'));
   });
 
+  test('PZ1/83 M-F break is meal time, not meal plus walk', () async {
+    final breakTime = await ShiftService.getBreakTime(
+      _event(
+        title: 'PZ1/83',
+        date: DateTime(2026, 10, 19), // Monday
+      ),
+    );
+
+    expect(breakTime, '18:38 - 20:05 walk 20m');
+  });
+
+  test('1/83 M-F matches PZ1/83 walking-time break', () async {
+    final breakTime = await ShiftService.getBreakTime(
+      _event(
+        title: '1/83',
+        date: DateTime(2026, 10, 19),
+      ),
+    );
+
+    expect(breakTime, '18:38 - 20:05 walk 20m');
+  });
+
   test('22B/01 without assigned duties does not invent break info from title',
       () async {
     final breakTime = await ShiftService.getBreakTime(

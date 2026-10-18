@@ -53,6 +53,11 @@ void main() {
       'PZ1',
     );
     expect(
+      BillsDutyGrouping.sharedPrefix([_duty('13/01'), _duty('13/02')]),
+      '13',
+    );
+    expect(_duty('13/01').shortCode, '01');
+    expect(
       BillsDutyGrouping.sharedPrefix([_duty('307/01'), _duty('807/06')]),
       isNull,
     );

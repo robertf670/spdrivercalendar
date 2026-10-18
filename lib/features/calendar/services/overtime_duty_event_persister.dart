@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:spdrivercalendar/features/calendar/services/duty_time_lookup_service.dart';
 import 'package:spdrivercalendar/features/calendar/services/event_service.dart';
 import 'package:spdrivercalendar/features/calendar/services/roster_service.dart';
+import 'package:spdrivercalendar/features/calendar/services/zone2_duties.dart';
 import 'package:spdrivercalendar/features/calendar/utils/overtime_duty_title.dart';
 import 'package:spdrivercalendar/features/calendar/utils/overtime_half_timing.dart';
 import 'package:spdrivercalendar/models/event.dart';
@@ -161,7 +162,7 @@ class OvertimeDutyEventPersister {
     }
 
     return _lookupShiftTimes(
-      selectedZone.replaceAll('Zone ', ''),
+      Zone2Duties.fileZoneNumber(selectedZone),
       selectedShiftNumber,
       shiftDate,
       isOvertimeShift: true,
@@ -181,7 +182,7 @@ class OvertimeDutyEventPersister {
     final csvFilename = selectedZone == 'Uni/Euro'
         ? 'UNI_7DAYs.csv'
         : RosterService.getShiftFilename(
-            selectedZone.replaceAll('Zone ', ''),
+            Zone2Duties.fileZoneNumber(selectedZone),
             dayOfWeek == 'Saturday'
                 ? 'SAT'
                 : dayOfWeek == 'Sunday'
@@ -197,7 +198,12 @@ class OvertimeDutyEventPersister {
       for (final line in lines) {
         if (line.trim().isEmpty) continue;
         final parts = line.split(',');
-        if (parts.isEmpty || parts[0].trim() != selectedShiftNumber) {
+        if (parts.isEmpty ||
+            (parts[0].trim() != selectedShiftNumber &&
+                !Zone2Duties.codesMatch(
+                  parts[0].trim(),
+                  selectedShiftNumber,
+                ))) {
           continue;
         }
 

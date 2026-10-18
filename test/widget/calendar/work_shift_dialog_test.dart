@@ -67,12 +67,12 @@ void main() {
             shiftDate: DateTime(2026, 10, 12),
             isMFMarkedIn: false,
             isShiftMarkedIn: true,
-            markedInZone: 'Zone 2',
+            markedInZone: 'Route 13',
             jamestownEnabled: false,
             donnybrook1Enabled: false,
             loadShiftNumbers: (zone) async {
               loadedZones.add(zone);
-              return const ['PZ2/01', 'PZ2/02'];
+              return const ['13/01', '13/02'];
             },
             dayHasBlockingEvent: (_) => false,
             onAddShift: (_) async {},
@@ -83,8 +83,8 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    expect(loadedZones, ['Zone 2']);
-    expect(find.text('PZ2/01'), findsOneWidget);
+    expect(loadedZones, ['Route 13']);
+    expect(find.text('13/01'), findsOneWidget);
     expect(find.text('Would you like to repeat this duty this week?'),
         findsOneWidget);
     expect(find.text('Auto-fill the next 35 weeks from my roster?'),
@@ -108,11 +108,11 @@ void main() {
             shiftDate: DateTime(2026, 10, 13),
             isMFMarkedIn: false,
             isShiftMarkedIn: true,
-            markedInZone: 'Zone 2',
+            markedInZone: 'Route 13',
             jamestownEnabled: false,
             donnybrook1Enabled: false,
             zone2RosterEnabled: true,
-            loadShiftNumbers: (_) async => const ['PZ2/33', 'PZ2/01'],
+            loadShiftNumbers: (_) async => const ['13/33', '13/01'],
             dayHasBlockingEvent: (_) => false,
             onAddShift: (selection) async {
               saved = selection;
@@ -135,7 +135,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(saved, isNotNull);
-    expect(saved!.selectedShiftNumber, 'PZ2/33');
+    expect(saved!.selectedShiftNumber, '13/33');
     expect(saved!.fillNext35Weeks, isTrue);
     expect(tester.takeException(), isNull);
   });

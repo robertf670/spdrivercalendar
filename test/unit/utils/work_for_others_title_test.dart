@@ -36,5 +36,22 @@ void main() {
         '807/20',
       );
     });
+
+    test('Route 13 titles stay 13/ and are not prefixed PZ', () {
+      expect(
+        buildWorkForOthersTitle(
+          selectedZone: 'Route 13',
+          selectedShiftNumber: '13/01',
+        ),
+        '13/01',
+      );
+      expect(
+        buildWorkForOthersTitle(
+          selectedZone: 'Zone 2',
+          selectedShiftNumber: 'PZ2/01',
+        ),
+        '13/01',
+      );
+    });
   });
 }

@@ -489,7 +489,7 @@ class BillsScreenState extends State<BillsScreen> {
     if (_isComingSoon) {
       return _messageState(
         icon: Icons.directions_bus_outlined,
-        title: 'Zone 2 coming soon',
+        title: 'Route 13 coming soon',
         subtitle:
             'Route 13 bills and boards will show here when they are published.',
       );

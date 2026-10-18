@@ -1,5 +1,6 @@
 import 'package:spdrivercalendar/core/constants/app_constants.dart';
 import 'package:spdrivercalendar/core/services/storage_service.dart';
+import 'package:spdrivercalendar/features/calendar/services/zone2_duties.dart';
 import 'package:spdrivercalendar/features/calendar/utils/jamestown_road.dart';
 import 'package:spdrivercalendar/features/calendar/utils/marked_in_status.dart';
 
@@ -50,8 +51,9 @@ class WorkShiftMarkedInPrefsLoader {
       if (isJamestownMarkedIn) {
         markedInZone = JamestownRoad.zoneLabel;
       } else if (markedInEnabled && MarkedInStatus.needsZone(markedInStatus)) {
-        markedInZone =
-            await _readString(AppConstants.markedInZoneKey) ?? 'Zone 1';
+        markedInZone = Zone2Duties.normalizeZoneLabel(
+          await _readString(AppConstants.markedInZoneKey) ?? 'Zone 1',
+        );
         if (markedInStatus == MarkedInStatus.shift) {
           isShiftMarkedIn = true;
         }

@@ -5,7 +5,9 @@ import 'package:spdrivercalendar/features/calendar/services/roster_service.dart'
 import 'package:spdrivercalendar/models/bank_holiday.dart';
 import 'package:spdrivercalendar/models/shift_data.dart';
 import 'package:spdrivercalendar/core/utils/location_utils.dart';
+import 'package:spdrivercalendar/features/calendar/utils/duty_break_clock.dart';
 import 'package:spdrivercalendar/features/calendar/utils/jamestown_road.dart';
+import 'package:spdrivercalendar/features/calendar/services/zone2_duties.dart';
 import 'package:spdrivercalendar/services/donnybrook_feature_service.dart';
 import 'package:spdrivercalendar/services/jamestown_feature_service.dart';
 
@@ -64,7 +66,7 @@ class ShiftService {
     // Try to determine if this is a UNI/Euro shift
     bool isUniEuro = shiftCode.startsWith('UNI') || 
                      shiftCode.contains('EURO') || 
-                     RegExp(r'^\d{2,3}/\d{2}').hasMatch(shiftCode);
+                     Zone2Duties.isUniEuroCode(shiftCode);
     
     // Check if this is a Jamestown Road shift
     bool isJamestownRoad = JamestownRoad.isShiftCode(shiftCode);
@@ -109,26 +111,10 @@ class ShiftService {
         final shift = parts[0];
         
         if (shift == shiftCode) {
-          
-          // New 17-column format: shift,duty,report,depart,location,startbreak,startbreaklocation,breakreport,finishbreak,finishbreaklocation,finish,finishlocation,signoff,spread,work,relief,routes
-          final breakStart = parts.length > 5 ? parts[5].trim() : '';
-          final breakEnd = parts.length > 8 ? parts[8].trim() : '';
-          
-          
-          // Check if this is a workout shift or has "nan" values
-          // For UNI shifts, if break times are the same, it's a workout
-          if (breakStart.toLowerCase() == 'workout' || breakEnd.toLowerCase() == 'workout' ||
-              breakStart.isEmpty || breakEnd.isEmpty ||
-              breakStart.toLowerCase() == 'nan' || breakEnd.toLowerCase() == 'nan' ||
-              breakStart == breakEnd) {  // Added check for equal times
-            return 'Workout';
-          }
-          
-          // Format the break times, removing seconds if present and converting times >= 24
-          final formattedStart = _formatTime(breakStart);
-          final formattedEnd = _formatTime(breakEnd);
-          
-          return '$formattedStart - $formattedEnd';
+          return DutyBreakClock.fromCsvParts(
+            parts,
+            equalTimesAreWorkout: true,
+          );
         }
       }
       
@@ -161,25 +147,10 @@ class ShiftService {
           final shift = parts[0];
           
           if (shift == shiftCode) {
-            // New 17-column format: shift,duty,report,depart,location,startbreak,startbreaklocation,breakreport,finishbreak,finishbreaklocation,finish,finishlocation,signoff,spread,work,relief,routes
-            final breakStart = parts.length > 5 ? parts[5].trim() : '';
-            final breakEnd = parts.length > 8 ? parts[8].trim() : '';
-            
-            
-            // Check if this is a workout shift or has "nan" values
-            // For UNI shifts, if break times are the same, it's a workout
-            if (breakStart.toLowerCase() == 'workout' || breakEnd.toLowerCase() == 'workout' ||
-                breakStart.isEmpty || breakEnd.isEmpty ||
-                breakStart.toLowerCase() == 'nan' || breakEnd.toLowerCase() == 'nan' ||
-                breakStart == breakEnd) {  // Added check for equal times
-              return 'Workout';
-            }
-            
-            // Format the break times, removing seconds if present and converting times >= 24
-            final formattedStart = _formatTime(breakStart);
-            final formattedEnd = _formatTime(breakEnd);
-            
-            return '$formattedStart - $formattedEnd';
+            return DutyBreakClock.fromCsvParts(
+              parts,
+              equalTimesAreWorkout: true,
+            );
           }
         }
       }
@@ -194,11 +165,7 @@ class ShiftService {
   static Future<String> _getRegularShiftBreakTime(String shiftCode, String dayOfWeek, DateTime date) async {
     try {
       // Find zone number from the shift code (typical format might be "PZn/123")
-      String zoneNumber = '1'; // Default to zone 1
-      final match = RegExp(r'PZ(\d+)/').firstMatch(shiftCode);
-      if (match != null) {
-        zoneNumber = match.group(1) ?? '1';
-      }
+      final zoneNumber = Zone2Duties.csvZoneNumberForDuty(shiftCode);
       
       
       // Check bank holiday status
@@ -229,13 +196,15 @@ class ShiftService {
           final parts = line.split(',');
           if (parts.length < 4) continue;
           final shift = parts[0];
-          if (shift == shiftCode) {
+          if (Zone2Duties.codesMatch(shift, shiftCode) || shift == shiftCode) {
             return _parseBreakTime(parts);
           }
         }
         
         // Fallback: "1/01" may be shorthand for "PZ1/01" (zone 1, duty 01) in PZ files
-        final shortDutyMatch = RegExp(r'^(\d{1,2})/(\d{2})$').firstMatch(shiftCode);
+        final shortDutyMatch = Zone2Duties.isRoute13Code(shiftCode)
+            ? null
+            : RegExp(r'^(\d{1,2})/(\d{2})$').firstMatch(shiftCode);
         if (shortDutyMatch != null) {
           final zoneFromCode = shortDutyMatch.group(1)!;
           final pzShiftCode = 'PZ$shiftCode';
@@ -281,41 +250,10 @@ class ShiftService {
     try {
       final parts = await JamestownFeatureService.findShiftCsvParts(shiftCode);
       if (parts != null && parts.length >= 17) {
-            final breakStart = parts[5].trim(); // startbreak column
-            final breakEnd = parts[8].trim(); // finishbreak column
-            
-            // Check if this is a workout (break times are empty or nan)
-            if (breakStart.toLowerCase() == 'nan' || 
-                breakStart.isEmpty || 
-                breakEnd.toLowerCase() == 'nan' || 
-                breakEnd.isEmpty ||
-                breakStart == breakEnd) {
-              return 'Workout';
-            }
-            
-            try {
-              // Parse and format the break times
-              final startTimeParts = breakStart.split(':');
-              final endTimeParts = breakEnd.split(':');
-              
-              if (startTimeParts.length >= 2 && endTimeParts.length >= 2) {
-                final startHour = int.tryParse(startTimeParts[0]);
-                final startMinute = int.tryParse(startTimeParts[1]);
-                final endHour = int.tryParse(endTimeParts[0]);
-                final endMinute = int.tryParse(endTimeParts[1]);
-                
-                if (startHour != null && startMinute != null && endHour != null && endMinute != null) {
-                  final formattedStart = _formatTimeOfDay(TimeOfDay(hour: startHour, minute: startMinute));
-                  final formattedEnd = _formatTimeOfDay(TimeOfDay(hour: endHour, minute: endMinute));
-                  return '$formattedStart - $formattedEnd';
-                }
-              }
-            } catch (e) {
-              // Failed to parse break times, assume workout
-            }
-            
-            // If parsing failed, assume workout
-            return 'Workout';
+        return DutyBreakClock.fromCsvParts(
+          parts,
+          equalTimesAreWorkout: true,
+        );
       }
       
       return 'No break info';
@@ -325,63 +263,8 @@ class ShiftService {
     }
   }
   
-  // Helper to parse break time from shift data parts
   static String _parseBreakTime(List<String> parts) {
-    if (parts.length < 6) return 'No break info';
-    
-    // For debugging
-    
-    // Get the break start/end times from the appropriate CSV columns
-    // In the PZ CSV files, startbreak is column 6 (index 5) and finishbreak is column 9 (index 8)
-    final breakStart = parts.length > 5 ? parts[5].trim().toLowerCase() : '';
-    final breakEnd = parts.length > 8 ? parts[8].trim().toLowerCase() : '';
-    
-    
-    // Check if this is a workout shift (many formats possible in data)
-    if (breakStart == 'nan' || breakStart == 'workout' || breakStart.isEmpty || 
-        breakEnd == 'nan' || breakEnd == 'workout' || breakEnd.isEmpty ||
-        breakStart == 'n/a' || breakEnd == 'n/a') {
-      return 'Workout';
-    }
-    
-    try {
-      // Properly parse time formats which may include seconds
-      final startTimeParts = breakStart.split(':');
-      final endTimeParts = breakEnd.split(':');
-      
-      // Additional check for invalid formats
-      if (startTimeParts.length < 2 || endTimeParts.length < 2) {
-        return 'Workout'; // If time format is invalid, assume workout
-      }
-      
-      final startHour = int.tryParse(startTimeParts[0]);
-      final startMinute = int.tryParse(startTimeParts[1]);
-      
-      final endHour = int.tryParse(endTimeParts[0]);
-      final endMinute = int.tryParse(endTimeParts[1]);
-      
-      // If any part couldn't be parsed, it's probably a workout
-      if (startHour == null || startMinute == null || endHour == null || endMinute == null) {
-        return 'Workout';
-      }
-
-      if (startHour == endHour && startMinute == endMinute) {
-        return 'No break';
-      } else {
-        final formattedStart = _formatTimeOfDay(TimeOfDay(hour: startHour, minute: startMinute));
-        final formattedEnd = _formatTimeOfDay(TimeOfDay(hour: endHour, minute: endMinute));
-        return '$formattedStart - $formattedEnd';
-      }
-    } catch (e) {
-      // Failed to parse break time format, default to Workout
-      return 'Workout'; // Default to Workout for any errors
-    }
-  }
-  
-  static String _formatTimeOfDay(TimeOfDay timeOfDay) {
-    final hour = timeOfDay.hour.toString().padLeft(2, '0');
-    final minute = timeOfDay.minute.toString().padLeft(2, '0');
-    return '$hour:$minute';
+    return DutyBreakClock.fromCsvParts(parts);
   }
   
   // Get zone number from zone text
@@ -469,12 +352,14 @@ class ShiftService {
       return 'Spare Shift';
     } else if (shiftCode.endsWith('X')) {
       return 'Bogey Shift';
-    } else if (RegExp(r'^\d{2,3}/').hasMatch(shiftCode)) {
+    } else if (Zone2Duties.isRoute13Code(shiftCode)) {
+      return 'Route 13 Shift';
+    } else if (Zone2Duties.isUniEuroCode(shiftCode)) {
       return 'Uni/Euro Shift';
     } else if (shiftCode.contains('PZ1')) {
       return 'Zone 1 Shift';
     } else if (shiftCode.contains('PZ2')) {
-      return 'Zone 2 Shift';
+      return 'Route 13 Shift';
     } else if (shiftCode.contains('PZ3')) {
       return 'Zone 3 Shift';
     } else if (shiftCode.contains('PZ4')) {
@@ -499,18 +384,4 @@ class ShiftService {
     }
   }
 
-  // Helper method to format time and convert hours >= 24 to actual clock time
-  static String _formatTime(String timeStr) {
-    if (timeStr.isEmpty || timeStr.toLowerCase() == 'nan') return '';
-    final parts = timeStr.split(':');
-    if (parts.length >= 2) {
-      // Convert hours >= 24 to actual clock time (e.g., 28:45 -> 04:45)
-      int hour = int.tryParse(parts[0]) ?? 0;
-      if (hour >= 24) {
-        hour = hour - 24;
-      }
-      return '${hour.toString().padLeft(2, '0')}:${parts[1].padLeft(2, '0')}';
-    }
-    return timeStr;
-  }
 }

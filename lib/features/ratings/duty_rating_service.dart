@@ -47,9 +47,13 @@ class DutyRatingService {
     if (!isAvailable) return null;
     try {
       final id = await userId();
-      final snap = await _votes.doc(target.voteDocId(id)).get();
-      if (!snap.exists || snap.data() == null) return null;
-      return DutyRatingVote.fromMap(snap.id, snap.data()!);
+      for (final alias in target.lookupAliases) {
+        final snap = await _votes.doc(alias.voteDocId(id)).get();
+        if (snap.exists && snap.data() != null) {
+          return DutyRatingVote.fromMap(snap.id, snap.data()!);
+        }
+      }
+      return null;
     } catch (_) {
       return null;
     }
@@ -63,12 +67,15 @@ class DutyRatingService {
     try {
       final id = await userId();
       for (final target in targets) {
-        final snap = await _votes.doc(target.voteDocId(id)).get();
-        if (snap.exists && snap.data() != null) {
-          result[target.summaryId] = DutyRatingVote.fromMap(
-            snap.id,
-            snap.data()!,
-          );
+        for (final alias in target.lookupAliases) {
+          final snap = await _votes.doc(alias.voteDocId(id)).get();
+          if (snap.exists && snap.data() != null) {
+            result[target.summaryId] = DutyRatingVote.fromMap(
+              snap.id,
+              snap.data()!,
+            );
+            break;
+          }
         }
       }
     } catch (_) {}

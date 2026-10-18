@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:spdrivercalendar/models/event.dart';
+import 'package:spdrivercalendar/features/search/utils/search_default_date_range.dart';
 import 'package:spdrivercalendar/services/event_search_service.dart';
 import 'package:spdrivercalendar/theme/app_theme.dart';
 
@@ -31,6 +32,7 @@ class SearchScreenState extends State<SearchScreen> {
   bool _holidaysOnly = false;
   bool _sickDaysOnly = false;
   bool _workoutOnly = false;
+  bool _pastOnly = false;
   
   final List<String> _shiftTypes = [
     'SP',
@@ -42,9 +44,16 @@ class SearchScreenState extends State<SearchScreen> {
     'Night',
   ];
   
+  void _applyDefaultDateRange() {
+    final range = searchDefaultDateRange(DateTime.now());
+    _startDate = range.start;
+    _endDate = range.end;
+  }
+
   @override
   void initState() {
     super.initState();
+    _applyDefaultDateRange();
     _searchController.addListener(_performSearch);
     _busController.addListener(_performSearch);
     _dutyController.addListener(_performSearch);
@@ -82,6 +91,7 @@ class SearchScreenState extends State<SearchScreen> {
         holidaysOnly: _holidaysOnly ? true : null,
         sickDaysOnly: _sickDaysOnly ? true : null,
         workoutOnly: _workoutOnly ? true : null,
+        pastOnly: _pastOnly ? true : null,
       );
       
       if (mounted) {
@@ -101,8 +111,7 @@ class SearchScreenState extends State<SearchScreen> {
   
   void _clearFilters() {
     setState(() {
-      _startDate = null;
-      _endDate = null;
+      _applyDefaultDateRange();
       _selectedShiftType = null;
       _overtimeOnly = false;
       _hasNotes = false;
@@ -111,6 +120,7 @@ class SearchScreenState extends State<SearchScreen> {
       _holidaysOnly = false;
       _sickDaysOnly = false;
       _workoutOnly = false;
+      _pastOnly = false;
     });
     _performSearch();
   }
@@ -569,6 +579,16 @@ class SearchScreenState extends State<SearchScreen> {
                     runSpacing: 8,
                     children: [
                       FilterChip(
+                        label: const Text('Past', style: TextStyle(fontSize: 11)),
+                        selected: _pastOnly,
+                        onSelected: (value) {
+                          setState(() {
+                            _pastOnly = value;
+                          });
+                          _performSearch();
+                        },
+                      ),
+                      FilterChip(
                         label: const Text('Overtime', style: TextStyle(fontSize: 11)),
                         selected: _overtimeOnly,
                         onSelected: (value) {
@@ -662,6 +682,16 @@ class SearchScreenState extends State<SearchScreen> {
                     spacing: 12,
                     runSpacing: 8,
                     children: [
+                      FilterChip(
+                        label: const Text('Past (incl. today)'),
+                        selected: _pastOnly,
+                        onSelected: (value) {
+                          setState(() {
+                            _pastOnly = value;
+                          });
+                          _performSearch();
+                        },
+                      ),
                       FilterChip(
                         label: const Text('Overtime Only'),
                         selected: _overtimeOnly,

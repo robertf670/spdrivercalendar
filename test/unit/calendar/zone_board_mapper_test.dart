@@ -5,7 +5,8 @@ void main() {
   group('ZoneBoardMapper.normalizeDutyCode', () {
     test('keeps standard duty codes', () {
       expect(ZoneBoardMapper.normalizeDutyCode('PZ1/01'), 'PZ1/01');
-      expect(ZoneBoardMapper.normalizeDutyCode('PZ2/01'), 'PZ2/01');
+      expect(ZoneBoardMapper.normalizeDutyCode('13/01'), '13/01');
+      expect(ZoneBoardMapper.normalizeDutyCode('PZ2/01'), '13/01');
       expect(ZoneBoardMapper.normalizeDutyCode('PZ3/1X'), 'PZ3/1X');
       expect(ZoneBoardMapper.normalizeDutyCode('PZ4/12'), 'PZ4/12');
       expect(ZoneBoardMapper.normalizeDutyCode('811/36'), '811/36');
@@ -29,6 +30,10 @@ void main() {
       expect(
         ZoneBoardMapper.assetPathForDuty('PZ1/01'),
         'assets/Zone1_Boards.json',
+      );
+      expect(
+        ZoneBoardMapper.assetPathForDuty('13/01'),
+        'assets/Zone2_Boards.json',
       );
       expect(
         ZoneBoardMapper.assetPathForDuty('PZ2/01'),
@@ -187,7 +192,7 @@ void main() {
     });
 
     test('maps a Break row with time and location', () {
-      final board = ZoneBoardMapper.fromDayData('PZ2/05', {
+      final board = ZoneBoardMapper.fromDayData('13/05', {
         'duty': '205',
         'signoff': '13:02',
         'board': [

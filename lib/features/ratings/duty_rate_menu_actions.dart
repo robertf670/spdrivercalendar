@@ -76,7 +76,7 @@ class _DutyRateMenuActionsState extends State<DutyRateMenuActions> {
       context: context,
       builder: (context) {
         return SimpleDialog(
-          title: const Text('Rate duty'),
+          title: const Text('Rate Duty'),
           children: [
             for (final target in data.targets)
               SimpleDialogOption(
@@ -103,7 +103,7 @@ class _DutyRateMenuActionsState extends State<DutyRateMenuActions> {
     required bool showDuty,
   }) {
     if (vote == null) {
-      return showDuty ? 'Rate ${target.dutyCode}' : 'Rate duty';
+      return showDuty ? 'Rate ${target.dutyCode}' : 'Rate Duty';
     }
     return showDuty
         ? 'Your rating: ${vote.score} (${target.dutyCode})'
@@ -132,7 +132,7 @@ class _DutyRateMenuActionsState extends State<DutyRateMenuActions> {
                 )
               : anyRated
                   ? 'Your ratings'
-                  : 'Rate duty';
+                  : 'Rate Duty';
           return TextButton(
             onPressed: () => _openFromCompact(data),
             child: Text(label),

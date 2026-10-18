@@ -9,6 +9,7 @@ class CalendarDisplaySettings {
     required this.showDutyCodesOnCalendar,
     required this.animatedSelectedDay,
     required this.highlightWorkoutDays,
+    required this.hideWeekViewIcon,
   });
 
   final bool markedInEnabled;
@@ -16,6 +17,7 @@ class CalendarDisplaySettings {
   final bool showDutyCodesOnCalendar;
   final bool animatedSelectedDay;
   final bool highlightWorkoutDays;
+  final bool hideWeekViewIcon;
 }
 
 typedef BoolSettingReader = Future<bool> Function(
@@ -59,6 +61,10 @@ class CalendarDisplaySettingsLoader {
       ),
       highlightWorkoutDays: await _readBool(
         AppConstants.highlightWorkoutDaysKey,
+        defaultValue: false,
+      ),
+      hideWeekViewIcon: await _readBool(
+        AppConstants.hideWeekViewIconKey,
         defaultValue: false,
       ),
     );

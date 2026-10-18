@@ -1,4 +1,5 @@
 import 'package:spdrivercalendar/features/calendar/services/roster_service.dart';
+import 'package:spdrivercalendar/features/calendar/services/zone2_duties.dart';
 import 'package:spdrivercalendar/features/calendar/utils/jamestown_road.dart';
 import 'package:spdrivercalendar/services/donnybrook_feature_service.dart';
 import 'package:spdrivercalendar/services/jamestown_feature_service.dart';
@@ -19,7 +20,7 @@ List<String> workShiftZoneOptions({
   final dayOfWeek = RosterService.getDayOfWeek(shiftDate);
   final zones = <String>[
     'Zone 1',
-    'Zone 2',
+    Zone2Duties.zoneLabel,
     'Zone 3',
     'Zone 4',
   ];

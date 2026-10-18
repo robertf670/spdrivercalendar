@@ -71,8 +71,8 @@ void main() {
     final result = await persister.persist(
       overtimeHalfType: 'B',
       shiftDate: DateTime(2026, 8, 4),
-      selectedZone: 'Zone 2',
-      selectedShiftNumber: 'PZ2/01',
+      selectedZone: 'Route 13',
+      selectedShiftNumber: '13/01',
     );
 
     expect(result.status, OvertimeDutyPersistStatus.shiftTimesUnavailable);

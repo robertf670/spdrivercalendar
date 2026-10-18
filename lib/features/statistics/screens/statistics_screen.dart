@@ -4,6 +4,7 @@ import 'package:spdrivercalendar/models/event.dart';
 import 'package:flutter/services.dart';
 import 'dart:convert';
 import 'package:spdrivercalendar/features/calendar/services/roster_service.dart';
+import 'package:spdrivercalendar/features/calendar/services/zone2_duties.dart';
 import 'package:spdrivercalendar/features/calendar/services/roster_schedule_service.dart';
 import 'package:spdrivercalendar/core/services/storage_service.dart';
 import 'package:spdrivercalendar/core/constants/app_constants.dart';
@@ -15,6 +16,7 @@ import 'package:spdrivercalendar/services/jamestown_feature_service.dart';
 import 'package:spdrivercalendar/services/donnybrook_feature_service.dart';
 
 // Import the new widgets
+import '../utils/duty_zone_label.dart';
 import '../utils/spread_pay.dart';
 import '../utils/statistics_date_range.dart';
 import '../widgets/frequency_chart.dart';
@@ -1167,14 +1169,14 @@ class StatisticsScreenState extends State<StatisticsScreen>
                         ),
                       );
                     }
-                    final zoneOrder = ['Zone 1', 'Zone 2', 'Zone 3', 'Zone 4', 'Uni/Euro', 'DB Z1'];
+                    final zoneOrder = ['Zone 1', 'Route 13', 'Zone 3', 'Zone 4', 'Uni/Euro', 'DB Z1'];
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: zoneOrder.where((z) => topPerZone.containsKey(z)).map((zone) {
                         final busData = topPerZone[zone]!;
                         final zoneColors = {
                           'Zone 1': AppTheme.primaryColor,
-                          'Zone 2': const Color(0xFF00897B),
+                          'Route 13': const Color(0xFF00897B),
                           'Zone 3': AppTheme.secondaryColor,
                           'Zone 4': const Color(0xFF7B1FA2),
                           'Uni/Euro': const Color(0xFFE65100),
@@ -1497,8 +1499,7 @@ class StatisticsScreenState extends State<StatisticsScreen>
       } else if (shiftCode.startsWith(DonnybrookFeatureService.shiftPrefix)) {
         return await _loadDonnybrookWorkTime(shiftCode, event.startDate);
       
-      // Check for UNI using firstMatch with simplified regex
-      } else if (RegExp(r'^\d+/').firstMatch(shiftCode) != null) { // Use \d+ (one or more digits)
+      } else if (Zone2Duties.isUniEuroCode(shiftCode)) {
 
         isUniShift = true;
         
@@ -1536,14 +1537,7 @@ class StatisticsScreenState extends State<StatisticsScreen>
       } else {
 
 
-        final match = RegExp(r'PZ(\d+)/').firstMatch(shiftCode);
-        if (match != null) {
-
-          zoneNumber = match.group(1) ?? '1';
-
-        } else {
-
-        }
+        zoneNumber = Zone2Duties.csvZoneNumberForDuty(shiftCode);
         fileName = RosterService.getShiftFilename(zoneNumber, dayOfWeek, event.startDate);
 
       }
@@ -1563,9 +1557,9 @@ class StatisticsScreenState extends State<StatisticsScreen>
       // 1. Check cache first
       if (_csvWorkTimeCache.containsKey(fileName)) {
         final cachedFile = _csvWorkTimeCache[fileName]!;
-        if (cachedFile.containsKey(shiftCode)) {
-
-          return cachedFile[shiftCode];
+        final cached = _durationForDutyCode(cachedFile, shiftCode);
+        if (cached != null) {
+          return cached;
         }
         // If file is cached but shift isn't, no need to reload file
 
@@ -1617,7 +1611,8 @@ class StatisticsScreenState extends State<StatisticsScreen>
             if (parts.length > 14) { // Ensure index 14 exists
 
                
-               if (currentShiftCode == shiftCode) {
+               if (Zone2Duties.codesMatch(currentShiftCode, shiftCode) ||
+                   currentShiftCode == shiftCode) {
 
                   
                   final workTimeStr = parts[14].trim();
@@ -1653,12 +1648,7 @@ class StatisticsScreenState extends State<StatisticsScreen>
 
 
       // 4. Return the requested duration from the now-cached data
-      if (parsedDurations.containsKey(shiftCode)) {
-         return parsedDurations[shiftCode];
-      } else {
-
-         return null;
-      }
+      return _durationForDutyCode(parsedDurations, shiftCode);
 
     } catch (e) { // Outer catch
       // Error loading or processing CSV file
@@ -2089,13 +2079,10 @@ class StatisticsScreenState extends State<StatisticsScreen>
       if (shiftCode.startsWith('BC') || shiftCode.startsWith('BusCheck')) {
         isBusCheck = true;
         fileName = 'buscheck.csv';
-      } else if (RegExp(r'^\d+/').firstMatch(shiftCode) != null) {
+      } else if (Zone2Duties.isUniEuroCode(shiftCode)) {
         return await _calculateUniSpreadTime(shiftCode, dayOfWeek);
       } else {
-        final match = RegExp(r'PZ(\d+)/').firstMatch(shiftCode);
-        if (match != null) {
-          zoneNumber = match.group(1) ?? '1';
-        }
+        zoneNumber = Zone2Duties.csvZoneNumberForDuty(shiftCode);
         fileName = RosterService.getShiftFilename(zoneNumber, dayOfWeek, event.startDate);
       }
 
@@ -2107,8 +2094,9 @@ class StatisticsScreenState extends State<StatisticsScreen>
       // Check cache first
       if (_csvSpreadTimeCache.containsKey(fileName)) {
         final cachedFile = _csvSpreadTimeCache[fileName]!;
-        if (cachedFile.containsKey(shiftCode)) {
-          return cachedFile[shiftCode];
+        final cached = _durationForDutyCode(cachedFile, shiftCode);
+        if (cached != null) {
+          return cached;
         }
       }
 
@@ -2138,7 +2126,8 @@ class StatisticsScreenState extends State<StatisticsScreen>
           } else {
             // PZ_DUTIES files: shift,duty,...,spread,work,... (spread is index 13)
             if (parts.length > 13) {
-              if (currentShiftCode == shiftCode) {
+              if (Zone2Duties.codesMatch(currentShiftCode, shiftCode) ||
+                  currentShiftCode == shiftCode) {
                 final spreadTimeStr = parts[13].trim();
                 final timeParts = spreadTimeStr.split(':');
                 if (timeParts.length >= 2) {
@@ -2162,8 +2151,7 @@ class StatisticsScreenState extends State<StatisticsScreen>
       // Cache the parsed data
       _csvSpreadTimeCache[fileName] = parsedSpreadTimes;
 
-      // Return the requested duration
-      return parsedSpreadTimes[shiftCode];
+      return _durationForDutyCode(parsedSpreadTimes, shiftCode);
     } catch (e) {
       return null;
     }
@@ -2191,15 +2179,17 @@ class StatisticsScreenState extends State<StatisticsScreen>
     return Map.fromEntries(sortedEntries);
   }
 
-  /// Returns zone name from duty code: Zone 1, Zone 3, Zone 4, or Uni/Euro
-  String? _getZoneFromDutyCode(String dutyCode) {
-    final code = dutyCode.startsWith('UNI:') ? dutyCode.substring(4) : dutyCode;
-    if (code.startsWith(DonnybrookFeatureService.shiftPrefix)) return 'DB Z1';
-    if (code.startsWith('PZ1') || code.contains('PZ1/')) return 'Zone 1';
-    if (code.startsWith('PZ2') || code.contains('PZ2/')) return 'Zone 2';
-    if (code.startsWith('PZ3') || code.contains('PZ3/')) return 'Zone 3';
-    if (code.startsWith('PZ4') || code.contains('PZ4/')) return 'Zone 4';
-    if (code.startsWith('UNI') || RegExp(r'^\d{2,3}/').hasMatch(code)) return 'Uni/Euro';
+  String? _getZoneFromDutyCode(String dutyCode) => dutyZoneLabel(dutyCode);
+
+  Duration? _durationForDutyCode(
+    Map<String, Duration> durations,
+    String shiftCode,
+  ) {
+    final direct = durations[shiftCode];
+    if (direct != null) return direct;
+    for (final entry in durations.entries) {
+      if (Zone2Duties.codesMatch(entry.key, shiftCode)) return entry.value;
+    }
     return null;
   }
 
@@ -2263,12 +2253,12 @@ class StatisticsScreenState extends State<StatisticsScreen>
     return pairs;
   }
 
-  /// Top N buses per zone: Zone 1, Zone 3, Zone 4, Uni/Euro
+  /// Top N buses per zone: Zone 1, Route 13, Zone 3, Zone 4, Uni/Euro
   /// Returns Map<zoneName, Map<busNumber, count>> limited to top N per zone
   Map<String, Map<String, int>> _getTopBusesPerZone() {
     final zoneBusCounts = <String, Map<String, int>>{
       'Zone 1': {},
-      'Zone 2': {},
+      'Route 13': {},
       'Zone 3': {},
       'Zone 4': {},
       'Uni/Euro': {},

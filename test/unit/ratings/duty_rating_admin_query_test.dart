@@ -29,25 +29,25 @@ void main() {
     final rows = DutyRatingAdminQuery.apply(
       votes: [
         vote(id: 'old', code: 'PZ1/10', date: '2026-09-20', note: 'mine'),
-        vote(id: 'new', code: 'PZ2/13', date: '2026-10-02'),
+        vote(id: 'new', code: '13/13', date: '2026-10-02'),
         vote(id: 'mid', code: 'PZ1/11', date: '2026-09-24', score: 3),
       ],
       search: '',
     );
 
-    expect(rows.map((row) => row.dutyCode), ['PZ2/13', 'PZ1/11', 'PZ1/10']);
+    expect(rows.map((row) => row.dutyCode), ['13/13', 'PZ1/11', 'PZ1/10']);
     expect(DutyRatingAdminQuery.subtitle(rows.first), '2026-10-02 · MON-FRI · 7/10 · No note');
   });
 
   test('search matches duty code, score, and note', () {
     final votes = [
       vote(id: 'a', code: 'PZ1/10', date: '2026-10-02', note: 'slow'),
-      vote(id: 'b', code: 'PZ2/13', date: '2026-10-02', score: 9),
+      vote(id: 'b', code: '13/13', date: '2026-10-02', score: 9),
     ];
 
     expect(
       DutyRatingAdminQuery.apply(votes: votes, search: 'pz2').single.dutyCode,
-      'PZ2/13',
+      '13/13',
     );
     expect(
       DutyRatingAdminQuery.apply(votes: votes, search: 'slow').single.dutyCode,
@@ -55,7 +55,7 @@ void main() {
     );
     expect(
       DutyRatingAdminQuery.apply(votes: votes, search: '9').single.dutyCode,
-      'PZ2/13',
+      '13/13',
     );
   });
 }

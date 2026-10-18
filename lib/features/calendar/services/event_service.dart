@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:spdrivercalendar/core/constants/app_constants.dart';
+import 'package:spdrivercalendar/features/calendar/services/pz2_to_route13_migrator.dart';
 import 'package:spdrivercalendar/models/event.dart';
 import 'package:spdrivercalendar/services/notification_service.dart';
 import 'package:intl/intl.dart';
@@ -1282,27 +1283,6 @@ class EventService {
     }
   }
 
-  /// Removes all events from 2 days ahead of today onwards.
-  /// Cancels scheduled notifications for work shifts before deleting.
-  static Future<int> clearFutureEvents() async {
-    final now = DateTime.now();
-    final cutoff = DateTime(now.year, now.month, now.day).add(const Duration(days: 2));
-    final allEvents = await getAllEvents();
-    int removed = 0;
-    for (final event in allEvents) {
-      final eventDate = DateTime(
-        event.startDate.year,
-        event.startDate.month,
-        event.startDate.day,
-      );
-      if (eventDate.isAfter(cutoff) || eventDate.isAtSameMomentAs(cutoff)) {
-        await deleteEvent(event);
-        removed++;
-      }
-    }
-    return removed;
-  }
-
   /// Clears all events from storage and in-memory cache.
   /// Debug use only. Cancels scheduled notifications for work shifts before clearing.
   static Future<void> clearAllEvents() async {
@@ -1529,6 +1509,12 @@ class EventService {
     _lastLoadedMonth = null;
 
     final prefs = await SharedPreferences.getInstance();
+    await Pz2ToRoute13Migrator.migrate(
+      readString: (key) async => prefs.getString(key),
+      writeString: (key, value) async {
+        await prefs.setString(key, value);
+      },
+    );
     final eventsJson = prefs.getString(AppConstants.eventsStorageKey);
 
     if (eventsJson == null || eventsJson.isEmpty) {

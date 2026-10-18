@@ -9,7 +9,7 @@ import 'package:spdrivercalendar/services/zone2_roster_feature_service.dart';
 Event _event({String? rosterFillSource}) {
   return Event(
     id: 'e1',
-    title: 'PZ2/33',
+    title: '13/33',
     startDate: DateTime(2026, 10, 13),
     endDate: DateTime(2026, 10, 13),
     startTime: const TimeOfDay(hour: 19, minute: 12),

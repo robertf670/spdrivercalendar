@@ -6,12 +6,12 @@ void main() {
   test('Zone 2 assigned duties stay empty before 10 Oct 2026', () {
     final before = DateTime(2026, 10, 9);
     expect(
-      AssignedDutyZone.canLoadDuties(selectedZone: 'Zone 2', date: before),
+      AssignedDutyZone.canLoadDuties(selectedZone: 'Route 13', date: before),
       isFalse,
     );
     expect(
       AssignedDutyZone.emptyDutiesMessage(
-        selectedZone: 'Zone 2',
+        selectedZone: 'Route 13',
         date: before,
       ),
       Zone2Duties.availableFromMessage,
@@ -21,12 +21,12 @@ void main() {
   test('Zone 2 assigned duties load from 10 Oct 2026', () {
     final from = DateTime(2026, 10, 10);
     expect(
-      AssignedDutyZone.canLoadDuties(selectedZone: 'Zone 2', date: from),
+      AssignedDutyZone.canLoadDuties(selectedZone: 'Route 13', date: from),
       isTrue,
     );
     expect(
       AssignedDutyZone.emptyDutiesMessage(
-        selectedZone: 'Zone 2',
+        selectedZone: 'Route 13',
         date: from,
       ),
       'No duties available for selected zone and date',

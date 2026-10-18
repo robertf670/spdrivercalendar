@@ -1,4 +1,45 @@
  final Map<String, List<Map<String, String>>> changelogData = {
+  '4.4.2': [
+    {
+      'title': 'Route 13',
+      'description':
+          'Zone 2 is now Route 13. New duties are 13/01. Existing PZ2 duties are renamed to 13/.',
+    },
+    {
+      'title': 'Route 13 Timing Points',
+      'description':
+          'Route 13 timing points added for Mountjoy Square and Grange Castle. These are from Harristown; Donnybrook/Phibsboro did not officially set them.',
+    },
+    {
+      'title': 'Walking Time',
+      'description':
+          'Duties that break in the garage and take up elsewhere (or the reverse) show break time plus walk time, not walk time counted as extra break time.',
+    },
+    {
+      'title': 'Settings',
+      'description':
+          'Settings re-grouped again so that sections are less crowded.',
+    },
+    {
+      'title': 'Search',
+      'description':
+          'Search can filter duties in the past, including today. Date range defaults to this month from the first Sunday.',
+    },
+    {
+      'title': 'Week View',
+      'description':
+          'You can hide the Week View icon from the calendar app bar in Settings.',
+    },
+    {
+      'title': 'Zone 4 Boards',
+      'description':
+          'PZ4/16 M-F second half board corrected to take up at Broadstone.',
+    },
+    {
+      'title': 'Spelling',
+      'description': 'Fixed a spelling mistake.',
+    },
+  ],
   '4.4.1': [
     {
       'title': 'Remove Duties',

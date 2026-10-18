@@ -1,4 +1,6 @@
-/// Pin a Zone 2 Shift week from a duty on a weekday, optionally using rest days.
+import 'package:spdrivercalendar/features/calendar/services/zone2_duties.dart';
+
+/// Pin a Route 13 Shift week from a duty on a weekday, optionally using rest days.
 class Zone2ShiftRoster {
   Zone2ShiftRoster._();
 
@@ -19,7 +21,8 @@ class Zone2ShiftRoster {
     final matches = <int>[];
     for (var i = 0; i < weeks.length; i++) {
       final days = weeks[i];
-      if (dayIndex < days.length && days[dayIndex] == dutyCode) {
+      if (dayIndex < days.length &&
+          Zone2Duties.codesMatch(days[dayIndex], dutyCode)) {
         matches.add(i);
       }
     }

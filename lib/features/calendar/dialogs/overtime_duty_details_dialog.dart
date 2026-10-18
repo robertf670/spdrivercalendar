@@ -144,7 +144,7 @@ class _OvertimeDutyDetailsDialogState extends State<OvertimeDutyDetailsDialog> {
               const Center(child: CircularProgressIndicator())
             else if (_shiftNumbers.isEmpty)
               Text(
-                _selectedZone == Zone2Duties.zoneLabel &&
+                Zone2Duties.isZone(_selectedZone) &&
                         !Zone2Duties.canAddShiftsOn(widget.shiftDate)
                     ? Zone2Duties.availableFromMessage
                     : 'No shifts available for selected zone and date.',

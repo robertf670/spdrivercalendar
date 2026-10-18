@@ -117,7 +117,7 @@ class _DutyRateDialogState extends State<DutyRateDialog> {
 
     return AlertDialog(
       insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-      title: Text(isUpdate ? 'Update rating' : 'Rate duty'),
+      title: Text(isUpdate ? 'Update rating' : 'Rate Duty'),
       content: SizedBox(
         width: dialogWidth,
         child: SingleChildScrollView(

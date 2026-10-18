@@ -29,26 +29,26 @@ Future<void> _pumpMenu(WidgetTester tester, Event event) async {
 }
 
 void main() {
-  testWidgets('shows Rate duty after sign-off', (tester) async {
+  testWidgets('shows Rate Duty after sign-off', (tester) async {
     SharedPreferences.setMockInitialValues({});
     final day = DateTime.now().subtract(const Duration(days: 1));
     await _pumpMenu(tester, _duty(day: day));
-    expect(find.text('Rate duty'), findsOneWidget);
+    expect(find.text('Rate Duty'), findsOneWidget);
   });
 
-  testWidgets('hides Rate duty when settings are off', (tester) async {
+  testWidgets('hides Rate Duty when settings are off', (tester) async {
     SharedPreferences.setMockInitialValues({
       AppConstants.dutyRatingsEnabledKey: false,
     });
     final day = DateTime.now().subtract(const Duration(days: 1));
     await _pumpMenu(tester, _duty(day: day));
-    expect(find.text('Rate duty'), findsNothing);
+    expect(find.text('Rate Duty'), findsNothing);
   });
 
-  testWidgets('hides Rate duty before sign-off', (tester) async {
+  testWidgets('hides Rate Duty before sign-off', (tester) async {
     SharedPreferences.setMockInitialValues({});
     final day = DateTime.now().add(const Duration(days: 2));
     await _pumpMenu(tester, _duty(day: day));
-    expect(find.text('Rate duty'), findsNothing);
+    expect(find.text('Rate Duty'), findsNothing);
   });
 }

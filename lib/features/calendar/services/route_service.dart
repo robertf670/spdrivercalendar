@@ -1,5 +1,6 @@
 import 'package:flutter/services.dart';
 import 'package:spdrivercalendar/features/calendar/services/roster_service.dart';
+import 'package:spdrivercalendar/features/calendar/services/zone2_duties.dart';
 
 class RouteService {
   // Cache for parsed CSV route data: Key = filename, Value = Map<ShiftCode, RouteInfo>
@@ -12,7 +13,7 @@ class RouteService {
       // Handle different shift types
       if (shiftCode.startsWith('PZ1/')) {
         return await _getPZ1RouteInfo(shiftCode, eventDate);
-      } else if (shiftCode.startsWith('PZ2/')) {
+      } else if (Zone2Duties.isRoute13Code(shiftCode)) {
         return await _getPZ2RouteInfo(shiftCode, eventDate);
       } else if (shiftCode.startsWith('PZ3/')) {
         return await _getPZ3RouteInfo(shiftCode, eventDate);

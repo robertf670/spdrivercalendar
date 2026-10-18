@@ -23,6 +23,7 @@ void main() {
     expect(settings.markedInStatus, 'Spare');
     expect(settings.showDutyCodesOnCalendar, isFalse);
     expect(settings.highlightWorkoutDays, isTrue);
+    expect(settings.hideWeekViewIcon, isFalse);
   });
 
   test('enabled marked-in keeps status', () async {

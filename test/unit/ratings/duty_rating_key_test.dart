@@ -41,6 +41,9 @@ void main() {
       expect(DutyRatingKey.normalizeDutyCode('PZ1/10X'), 'PZ1/10X');
       expect(DutyRatingKey.normalizeDutyCode('PZ1/10XA'), 'PZ1/10X');
       expect(DutyRatingKey.normalizeDutyCode('DZ1/12A'), 'DZ1/12');
+      expect(DutyRatingKey.normalizeDutyCode('13/01'), '13/01');
+      expect(DutyRatingKey.normalizeDutyCode('PZ2/01'), '13/01');
+      expect(DutyRatingKey.normalizeDutyCode('13/01A (OT)'), '13/01');
     });
   });
 
@@ -247,6 +250,27 @@ void main() {
       expect(monday.summaryId, friday.summaryId);
       expect(monday.date, '2026-09-28');
       expect(friday.date, '2026-10-02');
+    });
+
+    test('PZ2/01 and 13/01 share the Route 13 summary key', () {
+      final fromNew = DutyRatingKey.targetsForEvent(
+        _event(title: '13/01', startDate: DateTime(2026, 10, 12)),
+        isSaturdayService: false,
+        isBankHoliday: false,
+      ).single;
+      final fromLegacy = DutyRatingKey.targetsForEvent(
+        _event(title: 'PZ2/01', startDate: DateTime(2026, 10, 12)),
+        isSaturdayService: false,
+        isBankHoliday: false,
+      ).single;
+      expect(fromNew.dutyCode, '13/01');
+      expect(fromLegacy.dutyCode, '13/01');
+      expect(fromNew.summaryId, fromLegacy.summaryId);
+      expect(fromNew.zone, '2');
+      expect(
+        fromNew.lookupAliases.map((alias) => alias.dutyCode),
+        ['13/01', 'PZ2/01'],
+      );
     });
   });
 }

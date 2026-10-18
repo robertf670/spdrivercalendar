@@ -21,7 +21,6 @@ import 'package:spdrivercalendar/features/calendar/services/event_deletion_servi
 import 'package:spdrivercalendar/features/calendar/services/event_service.dart';
 import 'package:spdrivercalendar/features/settings/dialogs/remove_duties_range_dialog.dart';
 import 'package:spdrivercalendar/models/event.dart';
-import 'package:spdrivercalendar/features/calendar/services/workout_highlight_service.dart';
 import 'package:spdrivercalendar/services/pay_scale_service.dart';
 import '../../../config/app_config.dart';
 import 'package:spdrivercalendar/services/days_in_lieu_service.dart';
@@ -77,6 +76,7 @@ class SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObser
   bool _showDutyCodesOnCalendar = true; // Default to true (ON)
   bool _animatedSelectedDay = true; // Default to true (ON) - animated border
   bool _highlightWorkoutDays = false; // Default to false (OFF)
+  bool _hideWeekViewIcon = false;
   bool _dutyRatingsEnabled = true;
   bool _busDefectReportsEnabled = true;
   
@@ -103,10 +103,12 @@ class SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObser
   
   // Expandable sections state
   final Map<String, bool> _expandedSections = {
-    'Appearance': true,
+    'Appearance': false,
     'Appearance::Calendar display': false,
     'App': false,
     'App::Work preferences': false,
+    'App::Features': false,
+    'App::Support': false,
     'Holidays & Leave': false,
     'Google Calendar': false,
     'Google Calendar::Sync options': false,
@@ -134,10 +136,12 @@ class SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObser
   Future<void> _loadExpandedSections() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
-      _expandedSections['Appearance'] = prefs.getBool('settings_expanded_appearance') ?? true;
+      _expandedSections['Appearance'] = prefs.getBool('settings_expanded_appearance') ?? false;
       _expandedSections['Appearance::Calendar display'] = prefs.getBool('settings_expanded_appearance_calendar') ?? false;
       _expandedSections['App'] = prefs.getBool('settings_expanded_app') ?? false;
       _expandedSections['App::Work preferences'] = prefs.getBool('settings_expanded_app_work') ?? false;
+      _expandedSections['App::Features'] = prefs.getBool('settings_expanded_app_features') ?? false;
+      _expandedSections['App::Support'] = prefs.getBool('settings_expanded_app_support') ?? false;
       _expandedSections['Holidays & Leave'] = prefs.getBool('settings_expanded_holidays') ?? false;
       _expandedSections['Google Calendar'] = prefs.getBool('settings_expanded_google') ?? false;
       _expandedSections['Google Calendar::Sync options'] = prefs.getBool('settings_expanded_google_sync') ?? false;
@@ -179,6 +183,12 @@ class SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObser
       case 'App::Work preferences':
         key = 'settings_expanded_app_work';
         break;
+      case 'App::Features':
+        key = 'settings_expanded_app_features';
+        break;
+      case 'App::Support':
+        key = 'settings_expanded_app_support';
+        break;
       case 'Google Calendar::Sync options':
         key = 'settings_expanded_google_sync';
         break;
@@ -213,6 +223,7 @@ class SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObser
     _showDutyCodesOnCalendar = prefs.getBool(AppConstants.showDutyCodesOnCalendarKey) ?? true;
     _animatedSelectedDay = prefs.getBool(AppConstants.animatedSelectedDayKey) ?? true;
     _highlightWorkoutDays = prefs.getBool(AppConstants.highlightWorkoutDaysKey) ?? false;
+    _hideWeekViewIcon = prefs.getBool(AppConstants.hideWeekViewIconKey) ?? false;
     _dutyRatingsEnabled = prefs.getBool(AppConstants.dutyRatingsEnabledKey) ?? true;
     _busDefectReportsEnabled = prefs.getBool(AppConstants.busDefectReportsEnabledKey) ?? true;
     
@@ -255,7 +266,7 @@ class SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObser
       } else {
         _markedInStatus = 'Spare';
       }
-      _markedInZone = zone;
+      _markedInZone = Zone2Duties.normalizeZoneLabel(zone);
       if (nightsAnchor != null) {
         _nightsWeekIndex = nightsAnchor.weekIndex;
         _nightsAnchorSunday = nightsAnchor.sunday;
@@ -467,6 +478,13 @@ class SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObser
     // The calendar will refresh automatically when navigating back to it
   }
 
+  Future<void> _toggleHideWeekViewIcon(bool value) async {
+    setState(() {
+      _hideWeekViewIcon = value;
+    });
+    await StorageService.saveBool(AppConstants.hideWeekViewIconKey, value);
+  }
+
   void _onColorsChanged() {
     // Trigger a rebuild to refresh any UI that depends on colors
     setState(() {});
@@ -554,11 +572,9 @@ class SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObser
                         children: [
                           _buildOvernightDutiesToggle(),
                           _buildDutyCodesToggle(),
-                          _buildDutyRatingsToggle(),
-                          _buildBusDefectReportsToggle(),
                           _buildHighlightWorkoutDaysToggle(),
-                          _buildRefreshWorkoutHighlightsButton(),
                           _buildAnimatedSelectedDayToggle(),
+                          _buildHideWeekViewIconToggle(),
                         ],
                       ),
                     ],
@@ -579,12 +595,28 @@ class SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObser
                           _buildPayRateDropdown(),
                           if (_markedInStatus != MarkedInStatus.nights)
                             _buildResetRestDaysButton(),
+                          _buildRemoveDutiesButton(),
                         ],
                       ),
-                      _buildRemoveDutiesButton(),
-                      _buildFeedbackButton(),
-                      _buildLiveUpdatesPreferencesButton(),
-                      _buildVersionHistoryButton(),
+                      _buildNestedExpandableSection(
+                        title: 'Features',
+                        sectionKey: 'App::Features',
+                        icon: Icons.toggle_on_outlined,
+                        children: [
+                          _buildDutyRatingsToggle(),
+                          _buildBusDefectReportsToggle(),
+                        ],
+                      ),
+                      _buildNestedExpandableSection(
+                        title: 'Support',
+                        sectionKey: 'App::Support',
+                        icon: Icons.help_outline,
+                        children: [
+                          _buildFeedbackButton(),
+                          _buildLiveUpdatesPreferencesButton(),
+                          _buildVersionHistoryButton(),
+                        ],
+                      ),
                     ],
                   ),
                   
@@ -605,43 +637,42 @@ class SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObser
                     title: 'Google Calendar',
                     icon: Icons.calendar_today,
                     children: [
-                      // Add disclaimer about Google Calendar access
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
-                        child: Container(
-                          padding: const EdgeInsets.all(12.0),
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-                            borderRadius: BorderRadius.circular(8.0),
-                          ),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Icon(
-                                Icons.info_outline,
-                                color: Theme.of(context).colorScheme.primary,
-                                size: MediaQuery.of(context).size.width < 600 ? 18 : 20,
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  'Google Calendar access requires test user approval. Please use the feedback section to request access with your email address.',
-                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: Theme.of(context).colorScheme.onSurface,
-                                    fontSize: MediaQuery.of(context).size.width < 600 ? 12 : null,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
                       _buildGoogleCalendarHelpButton(),
                       _buildNestedExpandableSection(
                         title: 'Sync Options',
                         sectionKey: 'Google Calendar::Sync options',
                         icon: Icons.sync,
                         children: [
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
+                            child: Container(
+                              padding: const EdgeInsets.all(12.0),
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                                borderRadius: BorderRadius.circular(8.0),
+                              ),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Icon(
+                                    Icons.info_outline,
+                                    color: Theme.of(context).colorScheme.primary,
+                                    size: MediaQuery.of(context).size.width < 600 ? 18 : 20,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      'Google Calendar access requires test user approval. Please use the feedback section to request access with your email address.',
+                                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                        color: Theme.of(context).colorScheme.onSurface,
+                                        fontSize: MediaQuery.of(context).size.width < 600 ? 12 : null,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
                           _buildGoogleAccountSection(),
                           _buildGoogleSyncOption(),
                           _buildManualSyncOption(),
@@ -658,7 +689,6 @@ class SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObser
                     children: [
                       _buildBackupButton(),
                       _buildRestoreButton(),
-                      _buildClearFutureEventsButton(),
                       // Auto-backup is mobile-only (Web uses save-on-change)
                       if (!PlatformUtils.isWeb)
                         _buildNestedExpandableSection(
@@ -1077,7 +1107,7 @@ class SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObser
                         }
                       },
                     ),
-                    if (_markedInZone == Zone2Duties.zoneLabel &&
+                    if (Zone2Duties.isZone(_markedInZone) &&
                         !Zone2Duties.canAddShiftsOn(DateTime.now())) ...[
                       const SizedBox(height: 8),
                       Text(
@@ -1957,56 +1987,6 @@ class SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObser
     );
   }
 
-  Widget _buildClearFutureEventsButton() {
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 4.0),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppTheme.borderRadius),
-      ),
-      child: ListTile(
-        leading: Icon(Icons.event_busy, color: Theme.of(context).iconTheme.color),
-        title: const Text('Clear Future Events'),
-        subtitle: const Text('Remove all events from 2 days ahead onwards'),
-        onTap: _showClearFutureEventsConfirmation,
-      ),
-    );
-  }
-
-  Future<void> _showClearFutureEventsConfirmation() async {
-    final cutoff = DateTime.now().add(const Duration(days: 2));
-    final cutoffStr = DateFormat('EEE, MMM d').format(cutoff);
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Clear Future Events?'),
-        content: Text(
-          'This will permanently delete all events from $cutoffStr onwards. Past and upcoming events (today and tomorrow) will be kept. This cannot be undone.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
-            child: const Text('Clear Future'),
-          ),
-        ],
-      ),
-    );
-    if (confirmed == true && mounted) {
-      _showLoadingDialog('Removing future events...');
-      final removed = await EventService.clearFutureEvents();
-      if (!mounted) return;
-      Navigator.of(context, rootNavigator: true).pop(); // Close loading dialog
-      if (mounted) {
-        // Pop Settings with result; Calendar's .then will refresh and show SnackBar
-        Navigator.of(context).pop(removed);
-      }
-    }
-  }
-
   Future<void> _showAutoBackupSelectionDialog() async {
     _showLoadingDialog("Loading auto-backups...");
     List<BackupEntry> autoBackups = await BackupService.listAutoBackups();
@@ -2585,7 +2565,7 @@ class SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObser
         borderRadius: BorderRadius.circular(AppTheme.borderRadius),
       ),
       child: SwitchListTile(
-        title: const Text('Rate duties'),
+        title: const Text('Rate Duties'),
         subtitle: const Text('You can still see community scores in Statistics'),
         secondary: const Icon(Icons.star_rate),
         value: _dutyRatingsEnabled,
@@ -2601,7 +2581,7 @@ class SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObser
         borderRadius: BorderRadius.circular(AppTheme.borderRadius),
       ),
       child: SwitchListTile(
-        title: const Text('Report bus issues'),
+        title: const Text('Report Bus Issues'),
         subtitle: const Text('You can still read reports on a bus and in Bus Reports'),
         secondary: const Icon(Icons.report_outlined),
         value: _busDefectReportsEnabled,
@@ -2626,77 +2606,6 @@ class SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObser
     );
   }
 
-  Widget _buildRefreshWorkoutHighlightsButton() {
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 4.0),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppTheme.borderRadius),
-      ),
-      child: ListTile(
-        leading: Icon(
-          Icons.refresh,
-          color: _highlightWorkoutDays ? AppTheme.primaryColor : Theme.of(context).disabledColor,
-        ),
-        title: const Text('Refresh Workout Highlights'),
-        subtitle: Text(
-          _highlightWorkoutDays
-              ? 'Scan all duties across all months and highlight workout days'
-              : 'Enable Highlight Workout Days above to use this',
-        ),
-        trailing: const Icon(Icons.chevron_right),
-        enabled: _highlightWorkoutDays,
-        onTap: _highlightWorkoutDays ? _refreshWorkoutHighlights : null,
-      ),
-    );
-  }
-
-  Future<void> _refreshWorkoutHighlights() async {
-    final scaffoldMessenger = ScaffoldMessenger.of(context);
-    final navigator = Navigator.of(context);
-
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => const AlertDialog(
-        title: Text('Scanning Duties'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 16),
-            Text('Checking all duties for workout days...'),
-          ],
-        ),
-      ),
-    );
-
-    try {
-      final workoutDates =
-          await WorkoutHighlightService.computeAndCacheAllWorkoutDates();
-
-      if (!context.mounted) return;
-      navigator.pop();
-
-      scaffoldMessenger.showSnackBar(
-        SnackBar(
-          content: Text(
-            'Found ${workoutDates.length} workout day${workoutDates.length == 1 ? '' : 's'}. Calendar highlights updated.',
-          ),
-          backgroundColor: AppTheme.primaryColor,
-        ),
-      );
-    } catch (e) {
-      if (!context.mounted) return;
-      navigator.pop();
-      scaffoldMessenger.showSnackBar(
-        SnackBar(
-          content: Text('Error scanning duties: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-  }
-
   Widget _buildAnimatedSelectedDayToggle() {
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 4.0),
@@ -2709,6 +2618,32 @@ class SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObser
         secondary: const Icon(Icons.animation),
         value: _animatedSelectedDay,
         onChanged: _toggleAnimatedSelectedDay,
+      ),
+    );
+  }
+
+  Widget _buildHideWeekViewIconToggle() {
+    final iconColor = Theme.of(context).colorScheme.onSurface;
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 4.0),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppTheme.borderRadius),
+      ),
+      child: SwitchListTile(
+        title: Wrap(
+          crossAxisAlignment: WrapCrossAlignment.center,
+          spacing: 8,
+          runSpacing: 4,
+          children: [
+            const Text('Hide Week View Icon'),
+            Icon(Icons.view_week, color: iconColor),
+          ],
+        ),
+        subtitle: const Text(
+          'When enabled, this calendar app bar button is hidden',
+        ),
+        value: _hideWeekViewIcon,
+        onChanged: _toggleHideWeekViewIcon,
       ),
     );
   }

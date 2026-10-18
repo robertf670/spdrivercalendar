@@ -6,7 +6,7 @@ class AssignedDutyZone {
 
   static const options = [
     'Zone 1',
-    'Zone 2',
+    Zone2Duties.zoneLabel,
     'Zone 3',
     'Zone 4',
     'Uni/Euro',
@@ -16,7 +16,7 @@ class AssignedDutyZone {
     required String selectedZone,
     required DateTime date,
   }) {
-    if (selectedZone == Zone2Duties.zoneLabel) {
+    if (Zone2Duties.isZone(selectedZone)) {
       return Zone2Duties.canAddShiftsOn(date);
     }
     return true;
@@ -26,7 +26,7 @@ class AssignedDutyZone {
     required String selectedZone,
     required DateTime date,
   }) {
-    if (selectedZone == Zone2Duties.zoneLabel &&
+    if (Zone2Duties.isZone(selectedZone) &&
         !Zone2Duties.canAddShiftsOn(date)) {
       return Zone2Duties.availableFromMessage;
     }

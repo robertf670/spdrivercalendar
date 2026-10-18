@@ -485,7 +485,10 @@ class CalendarTestHelper {
   static String _getColorIdForShift(String title) {
     if (title.contains('PZ1') || title.contains('Zone 1')) {
       return '7'; // Blue
-    } else if (title.contains('PZ2') || title.contains('Zone 2')) {
+    } else if (title.contains('PZ2') ||
+        title.contains('Zone 2') ||
+        title.startsWith('13/') ||
+        title.contains('Route 13')) {
       return '10'; // Green
     } else if (title.contains('PZ3') || title.contains('Zone 3')) {
       return '6'; // Orange

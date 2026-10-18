@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:spdrivercalendar/features/calendar/services/roster_service.dart';
 import 'package:spdrivercalendar/features/calendar/services/shift_service.dart';
+import 'package:spdrivercalendar/features/calendar/services/zone2_duties.dart';
 import 'package:spdrivercalendar/features/calendar/utils/assigned_duty_board_lookup.dart';
 import 'package:spdrivercalendar/features/calendar/utils/zone_board_mapper.dart';
 import 'package:spdrivercalendar/models/event.dart';
@@ -25,16 +26,32 @@ class DutyRatingTarget {
 
   String voteDocId(String userId) => '${userId}_${encodedSummaryId}_$date';
 
+  /// Canonical Route 13 target plus the old PZ2/ vote key.
+  List<DutyRatingTarget> get lookupAliases {
+    if (!Zone2Duties.isRoute13Code(dutyCode)) return [this];
+    return [
+      for (final code in Zone2Duties.aliases(dutyCode))
+        DutyRatingTarget(
+          dutyCode: code,
+          dayType: dayType,
+          era: era,
+          date: date,
+        ),
+    ];
+  }
+
   String get zone {
     if (dutyCode.startsWith('PZ1/')) return '1';
-    if (dutyCode.startsWith('PZ2/')) return '2';
+    if (Zone2Duties.isRoute13Code(dutyCode) || dutyCode.startsWith('PZ2/')) {
+      return '2';
+    }
     if (dutyCode.startsWith('PZ3/')) return '3';
     if (dutyCode.startsWith('PZ4/')) return '4';
     if (dutyCode.startsWith('811/') || dutyCode.startsWith('311/')) {
       return 'jamestown';
     }
     if (dutyCode.startsWith('DZ1/')) return 'dbz1';
-    if (RegExp(r'^\d{2,3}/').hasMatch(dutyCode)) return 'uni';
+    if (Zone2Duties.isUniEuroCode(dutyCode)) return 'uni';
     return 'other';
   }
 }
@@ -70,10 +87,11 @@ class DutyRatingKey {
     if (code.startsWith('SP')) return false;
     if (code.startsWith('BusCheck') || code.startsWith('BC')) return false;
     if (code.startsWith('PZ')) return true;
+    if (Zone2Duties.isRoute13Code(code)) return true;
     if (code.startsWith('811/') || code.startsWith('311/')) return true;
     if (code.startsWith('DZ1/')) return true;
     if (code == '22B/01') return true;
-    if (RegExp(r'^\d{2,3}/\d+').hasMatch(code)) return true;
+    if (Zone2Duties.isUniEuroCode(code)) return true;
     return false;
   }
 

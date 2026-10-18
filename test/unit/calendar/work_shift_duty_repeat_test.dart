@@ -50,7 +50,31 @@ void main() {
   test('shift marked-in still repeats Mon-Fri only for the marked-in zone', () {
     expect(
       WorkShiftDutyRepeat.shouldShow(
-        selectedZone: 'Zone 2',
+        selectedZone: 'Route 13',
+        shiftDate: DateTime(2026, 10, 12),
+        isMFMarkedIn: false,
+        isShiftMarkedIn: true,
+        isNightsRoster: false,
+        markedInZone: 'Route 13',
+        jamestownEnabled: false,
+      ),
+      isTrue,
+    );
+    expect(
+      WorkShiftDutyRepeat.shouldShow(
+        selectedZone: 'Route 13',
+        shiftDate: DateTime(2026, 10, 17),
+        isMFMarkedIn: false,
+        isShiftMarkedIn: true,
+        isNightsRoster: false,
+        markedInZone: 'Route 13',
+        jamestownEnabled: false,
+      ),
+      isFalse,
+    );
+    expect(
+      WorkShiftDutyRepeat.shouldShow(
+        selectedZone: 'Route 13',
         shiftDate: DateTime(2026, 10, 12),
         isMFMarkedIn: false,
         isShiftMarkedIn: true,
@@ -59,18 +83,6 @@ void main() {
         jamestownEnabled: false,
       ),
       isTrue,
-    );
-    expect(
-      WorkShiftDutyRepeat.shouldShow(
-        selectedZone: 'Zone 2',
-        shiftDate: DateTime(2026, 10, 17),
-        isMFMarkedIn: false,
-        isShiftMarkedIn: true,
-        isNightsRoster: false,
-        markedInZone: 'Zone 2',
-        jamestownEnabled: false,
-      ),
-      isFalse,
     );
   });
 

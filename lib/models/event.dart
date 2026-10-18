@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:spdrivercalendar/core/constants/training_constants.dart';
+import 'package:spdrivercalendar/features/calendar/services/zone2_duties.dart';
 
 // New class for enhanced duty tracking
 class AssignedDuty {
@@ -697,14 +698,14 @@ class Event {
                       title.startsWith('PZ2') || 
                       title.startsWith('PZ3') || 
                       title.startsWith('PZ4') ||
+                      Zone2Duties.isRoute13Code(title) ||
                       // Handle case when PZ is not in the title
                       title.startsWith('1/') || 
                       title.startsWith('2/') || 
                       title.startsWith('3/') || 
                       title.startsWith('4/');
     
-    // Check if it's a Uni/Euro shift (pattern: 2-3 digits followed by slash, e.g., "807/20", "808/25")
-    final isUniEuro = RegExp(r'^\d{2,3}/').hasMatch(title);
+    final isUniEuro = Zone2Duties.isUniEuroCode(title);
     
     // Exclude workout shifts - look for 'workout' in the title
     final isWorkout = title.toLowerCase().contains('workout');
@@ -718,7 +719,10 @@ class Event {
     if (title.startsWith('Shift:')) {
       code = title.substring(6).trim();
     }
-    if (!code.startsWith('PZ') && (code.startsWith('1') || code.startsWith('3') || code.startsWith('4'))) {
+    if (Zone2Duties.isRoute13Code(code)) {
+      return Zone2Duties.canonical(code);
+    }
+    if (!code.startsWith('PZ') && RegExp(r'^[134]/').hasMatch(code)) {
       code = 'PZ$code';
     }
     return code;

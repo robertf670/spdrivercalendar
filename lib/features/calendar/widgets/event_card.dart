@@ -22,8 +22,10 @@ import 'package:spdrivercalendar/features/calendar/dialogs/self_certified_limit_
 import 'package:spdrivercalendar/services/donnybrook_feature_service.dart';
 import 'package:spdrivercalendar/services/jamestown_feature_service.dart';
 import 'package:spdrivercalendar/features/calendar/utils/shift_rest_gap.dart';
+import 'package:spdrivercalendar/features/calendar/utils/duty_break_clock.dart';
 import 'package:spdrivercalendar/features/calendar/utils/work_duration_display.dart';
 import 'package:spdrivercalendar/features/calendar/utils/assigned_duty_zone.dart';
+import 'package:spdrivercalendar/features/calendar/services/zone2_duties.dart';
 import 'package:spdrivercalendar/features/calendar/utils/jamestown_road.dart';
 import 'package:spdrivercalendar/features/calendar/utils/spare_meal.dart';
 import 'package:spdrivercalendar/features/calendar/utils/spare_time_options.dart';
@@ -203,7 +205,7 @@ class _EventCardState extends State<EventCard> {
   String? _calculateOvertimeWorkTime() {
     if (widget.event.title.contains('(OT)')) {
       // For UNI/Euro overtime shifts, use the work time already calculated in _loadUniShiftData
-      if (RegExp(r'^\d{2,3}/').hasMatch(widget.event.title.replaceAll(RegExp(r'[AB]? \(OT\)$'), ''))) {
+      if (Zone2Duties.isUniEuroCode(widget.event.title.replaceAll(RegExp(r'[AB]? \(OT\)$'), ''))) {
         if (workTime != null) {
           return workTime;
         }
@@ -435,8 +437,8 @@ class _EventCardState extends State<EventCard> {
         return;
       }
       
-      // Special handling for UNI/Euro shifts
-      if (RegExp(r'^\d{2,3}/').hasMatch(shiftCode)) {
+      // Special handling for UNI/Euro shifts (not Route 13)
+      if (Zone2Duties.isUniEuroCode(shiftCode)) {
         await _loadUniShiftData(shiftCode);
         return;
       }
@@ -455,12 +457,7 @@ class _EventCardState extends State<EventCard> {
         dayOfWeekForFilename = 'M-F';
       }
       
-      // Find zone number from the shift code
-      String zoneNumber = '1'; // Default to zone 1
-      final match = RegExp(r'PZ(\d+)/').firstMatch(shiftCode);
-      if (match != null) {
-        zoneNumber = match.group(1) ?? '1';
-      }
+      final zoneNumber = Zone2Duties.csvZoneNumberForDuty(shiftCode);
       
       // Get the appropriate file based on duty type and service day.
       final assetPath = shiftCode.startsWith(
@@ -2142,9 +2139,10 @@ class _EventCardState extends State<EventCard> {
               // NEW: Report - Sign Off line (for PZ shifts and UNI overtime shifts)
               // Skip for EA Training (no times/locations)
               if (!_isEATraining && (widget.event.title.startsWith('PZ') ||
+                  Zone2Duties.isRoute13Code(widget.event.title) ||
                   JamestownRoad.isShiftCode(widget.event.title) ||
                   widget.event.title.startsWith(DonnybrookFeatureService.shiftPrefix) ||
-                  (widget.event.title.contains('(OT)') && RegExp(r'^\d{2,3}/').hasMatch(widget.event.title.replaceAll(RegExp(r'[AB]? \(OT\)$'), '')))))
+                  (widget.event.title.contains('(OT)') && Zone2Duties.isUniEuroCode(widget.event.title.replaceAll(RegExp(r'[AB]? \(OT\)$'), '')))))
                 Padding(
                   padding: const EdgeInsets.only(bottom: 2.0), // Reduced space - time info goes together
                   child: Row(
@@ -2322,54 +2320,48 @@ class _EventCardState extends State<EventCard> {
                       child: RichText(
                         textScaler: MediaQuery.textScalerOf(context),
                         strutStyle: _detailIconRowStrut,
+                        maxLines: 2,
+                        softWrap: true,
                         overflow: TextOverflow.ellipsis,
                         text: TextSpan(
                           style: _detailIconRowTextStyle(context).copyWith(
                             fontWeight: FontWeight.w500,
                           ),
                           text: () {
-                            // Smart truncation based on screen width
                             final screenWidth = MediaQuery.of(context).size.width;
                             final isSmallScreen = screenWidth < 380;
-                            
-                            String baseText;
-                          // Show break locations for all shifts (PZ, Jamestown, Universal/Euro, Routes 23/24) that are not workouts
-                            if (!breakTime!.toLowerCase().contains('workout')) {
-                              // Check if this shift type should show break locations
-                              final shouldShowLocations = widget.event.title.contains('PZ') || 
-                                                          JamestownRoad.isShiftCode(widget.event.title) || 
-                                                          widget.event.title.startsWith(DonnybrookFeatureService.shiftPrefix) ||
-                                                          RegExp(r'^\d+/').hasMatch(widget.event.title) ||
-                                                          widget.event.title == '23' || 
-                                                          widget.event.title == '24';
-                              
-                              if (shouldShowLocations) {
-                                // On small screens, abbreviate location names
-                                if (isSmallScreen) {
-                                  final startLoc = startBreakLocation != null ? _abbreviateLocation(startBreakLocation!) : '';
-                                  final endLoc = finishBreakLocation != null ? _abbreviateLocation(finishBreakLocation!) : '';
-                                  baseText = '${startLoc.isNotEmpty ? "$startLoc " : ""}${breakTime!}${endLoc.isNotEmpty ? " $endLoc" : ""}';
-                                } else {
-                                  baseText = '${startBreakLocation != null ? "$startBreakLocation " : ""}${breakTime!}${finishBreakLocation != null ? " $finishBreakLocation" : ""}';
-                                }
-                              } else {
-                                baseText = breakTime!;
-                              }
-                            } else {
-                              baseText = 'Workout';
+                            if (breakTime!.toLowerCase().contains('workout')) {
+                              return 'Workout';
                             }
-                            
-                            // Add duration if not a workout
-                            if (!breakTime!.toLowerCase().contains('workout')) {
-                              final duration = _calculateBreakDuration(breakTime!);
-                              if (duration != null) {
-                                // On small screens, use compact duration format
-                                final compactDuration = isSmallScreen ? duration.replaceAll(' ', '').replaceAll('m', '') : duration;
-                                baseText += ' ($compactDuration)';
-                              }
-                            }
-                            
-                            return baseText;
+
+                            final shouldShowLocations = widget.event.title.contains('PZ') ||
+                                JamestownRoad.isShiftCode(widget.event.title) ||
+                                widget.event.title.startsWith(DonnybrookFeatureService.shiftPrefix) ||
+                                RegExp(r'^\d+/').hasMatch(widget.event.title) ||
+                                widget.event.title == '23' ||
+                                widget.event.title == '24';
+
+                            final startLoc = shouldShowLocations
+                                ? (isSmallScreen
+                                    ? (startBreakLocation != null
+                                        ? _abbreviateLocation(startBreakLocation!)
+                                        : null)
+                                    : startBreakLocation)
+                                : null;
+                            final endLoc = shouldShowLocations
+                                ? (isSmallScreen
+                                    ? (finishBreakLocation != null
+                                        ? _abbreviateLocation(finishBreakLocation!)
+                                        : null)
+                                    : finishBreakLocation)
+                                : null;
+
+                            return DutyBreakClock.formatLine(
+                              breakTime: breakTime!,
+                              startLocation: startLoc,
+                              endLocation: endLoc,
+                              compact: isSmallScreen,
+                            );
                           }(),
                         ),
                       ),
@@ -2734,7 +2726,7 @@ class _EventCardState extends State<EventCard> {
             try {
               final dayOfWeek = RosterService.getDayOfWeek(widget.event.startDate);
               final bankHoliday = ShiftService.getBankHoliday(widget.event.startDate, ShiftService.bankHolidays);
-              final zoneNumber = selectedZone.replaceAll('Zone ', '');
+              final zoneNumber = Zone2Duties.fileZoneNumber(selectedZone);
               final nextDuties = <String>[];
               final seenDuties = <String>{};
 
@@ -3985,38 +3977,36 @@ class _EventCardState extends State<EventCard> {
                       hasBreakTimes 
                         ? 'Break: ${_formatTimeString(duty['breakStart'])} - ${_formatTimeString(duty['breakEnd'])}'
                         : () {
-                            // Smart truncation based on screen width
                             final screenWidth = MediaQuery.of(context).size.width;
                             final isSmallScreen = screenWidth < 380;
-                            
-                            String baseText;
-                            // For spare duties, try to get break locations from duty data
-                            if ((widget.event.title.startsWith('SP') || widget.event.title == '22B/01') && duty['startBreakLocation'] != null && duty['finishBreakLocation'] != null) {
-                              if (isSmallScreen) {
-                                // Abbreviate locations on small screens
-                                final startBreakLoc = duty['startBreakLocation']!.isNotEmpty ? '${_abbreviateLocation(duty['startBreakLocation']!)} ' : '';
-                                final endBreakLoc = duty['finishBreakLocation']!.isNotEmpty ? ' ${_abbreviateLocation(duty['finishBreakLocation']!)}' : '';
-                                baseText = '$startBreakLoc${breakTime ?? 'No break info'}$endBreakLoc';
-                              } else {
-                                final startBreakLoc = duty['startBreakLocation']!.isNotEmpty ? '${duty['startBreakLocation']} ' : '';
-                                final endBreakLoc = duty['finishBreakLocation']!.isNotEmpty ? ' ${duty['finishBreakLocation']}' : '';
-                                baseText = '$startBreakLoc${breakTime ?? 'No break info'}$endBreakLoc';
-                              }
-                            } else {
-                              baseText = breakTime ?? 'No break info';
+                            final raw = breakTime ?? 'No break info';
+                            final showLocations =
+                                (widget.event.title.startsWith('SP') ||
+                                    widget.event.title == '22B/01') &&
+                                duty['startBreakLocation'] != null &&
+                                duty['finishBreakLocation'] != null;
+                            if (!showLocations) {
+                              return DutyBreakClock.formatLine(
+                                breakTime: raw,
+                                compact: isSmallScreen,
+                              );
                             }
-                            
-                            // Add duration if not a workout and breakTime is available
-                            if (breakTime != null && !breakTime!.toLowerCase().contains('workout')) {
-                              final duration = _calculateBreakDuration(breakTime!);
-                              if (duration != null) {
-                                // On small screens, use compact duration format
-                                final compactDuration = isSmallScreen ? duration.replaceAll(' ', '').replaceAll('m', '') : duration;
-                                baseText += ' ($compactDuration)';
-                              }
-                            }
-                            
-                            return baseText;
+                            final startRaw = duty['startBreakLocation']!;
+                            final endRaw = duty['finishBreakLocation']!;
+                            return DutyBreakClock.formatLine(
+                              breakTime: raw,
+                              startLocation: startRaw.isNotEmpty
+                                  ? (isSmallScreen
+                                      ? _abbreviateLocation(startRaw)
+                                      : startRaw)
+                                  : null,
+                              endLocation: endRaw.isNotEmpty
+                                  ? (isSmallScreen
+                                      ? _abbreviateLocation(endRaw)
+                                      : endRaw)
+                                  : null,
+                              compact: isSmallScreen,
+                            );
                           }(),
                       style: TextStyle(
                         fontSize: 12,
@@ -4025,7 +4015,8 @@ class _EventCardState extends State<EventCard> {
                             : Colors.black,
                         fontWeight: FontWeight.w400,
                       ),
-                      overflow: TextOverflow.ellipsis, // Use ellipsis if still too long
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 ],
@@ -4403,9 +4394,11 @@ class _EventCardState extends State<EventCard> {
         MediaQuery.textScalerOf(context).scale(1.0) > 1.15 ? 4 : 2;
     
    // For PZ, Jamestown (811/xx), and Universal/Euro duties, show route on a separate line
-    if ((widget.event.title.startsWith('PZ1/') || widget.event.title.startsWith('PZ2/') ||
+    if ((widget.event.title.startsWith('PZ1/') ||
+         Zone2Duties.isRoute13Code(widget.event.title) ||
          widget.event.title.startsWith('PZ3/') || widget.event.title.startsWith('PZ4/') ||
          JamestownRoad.isShiftCode(widget.event.title) ||
+         Zone2Duties.isUniEuroCode(widget.event.title) ||
          RegExp(r'^\d+/').hasMatch(widget.event.title)) &&
         dutyRouteInfo != null && dutyRouteInfo!.isNotEmpty) {
       return Column(
@@ -6776,10 +6769,12 @@ class _EventCardState extends State<EventCard> {
     
     // For PZ shifts, Jamestown Road shifts, Training shifts, and Universal/Euro shifts, use the specialized display format
     if (widget.event.title.startsWith('PZ') ||
+        Zone2Duties.isRoute13Code(widget.event.title) ||
         JamestownRoad.isShiftCode(widget.event.title) ||
         widget.event.title.startsWith(DonnybrookFeatureService.shiftPrefix) ||
         widget.event.title == 'CPC' || widget.event.title == 'Union' || widget.event.title == 'Mentor' ||
         widget.event.isCustomTraining ||
+        Zone2Duties.isUniEuroCode(widget.event.title) ||
         RegExp(r'^\d+/').hasMatch(widget.event.title)) {
       return <TextSpan>[
         if (startLocation != null && startLocation!.isNotEmpty) ...[
@@ -6813,10 +6808,10 @@ class _EventCardState extends State<EventCard> {
       String? breakEndStr;
       
       if (breakTime != null && breakTime!.contains('-')) {
-        final parts = breakTime!.split('-');
-        if (parts.length == 2) {
-          breakStartStr = parts[0].trim();
-          breakEndStr = parts[1].trim();
+        final overlay = DutyBreakClock.overlayTimes(breakTime!);
+        if (overlay != null) {
+          breakStartStr = overlay.$1;
+          breakEndStr = overlay.$2;
         }
       }
       
@@ -6930,61 +6925,4 @@ class _EventCardState extends State<EventCard> {
     return location.length > 3 ? location.substring(0, 3) : location;
   }
 
-  // Helper method to calculate break duration from break time string
-  String? _calculateBreakDuration(String breakTimeString) {
-    try {
-      // Handle workout case
-      if (breakTimeString.toLowerCase().contains('workout')) {
-        return null;
-      }
-      
-      // Extract times from format like "13:30 - 14:00" or "Location 13:30 - 14:00 Location"
-      final timePattern = RegExp(r'(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})');
-      final match = timePattern.firstMatch(breakTimeString);
-      
-      if (match == null) return null;
-      
-      final startTimeStr = match.group(1)!;
-      final endTimeStr = match.group(2)!;
-      
-      // Parse the times
-      final startParts = startTimeStr.split(':');
-      final endParts = endTimeStr.split(':');
-      
-      final startHour = int.parse(startParts[0]);
-      final startMinute = int.parse(startParts[1]);
-      final endHour = int.parse(endParts[0]);
-      final endMinute = int.parse(endParts[1]);
-      
-      // Create DateTime objects for calculation (using same day)
-      final now = DateTime.now();
-      final startDateTime = DateTime(now.year, now.month, now.day, startHour, startMinute);
-      var endDateTime = DateTime(now.year, now.month, now.day, endHour, endMinute);
-      
-      // Handle case where break spans midnight (end time is earlier than start time)
-      if (endDateTime.isBefore(startDateTime)) {
-        endDateTime = endDateTime.add(const Duration(days: 1));
-      }
-      
-      final duration = endDateTime.difference(startDateTime);
-      final minutes = duration.inMinutes;
-      
-      if (minutes <= 0) return null;
-      
-      // Format duration
-      if (minutes < 60) {
-        return '${minutes}m';
-      } else {
-        final hours = minutes ~/ 60;
-        final remainingMinutes = minutes % 60;
-        if (remainingMinutes == 0) {
-          return '${hours}h';
-        } else {
-          return '${hours}h ${remainingMinutes}m';
-        }
-      }
-    } catch (e) {
-      return null;
-    }
-  }
 }

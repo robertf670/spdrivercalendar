@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:spdrivercalendar/features/calendar/services/roster_service.dart';
+import 'package:spdrivercalendar/features/calendar/services/zone2_duties.dart';
 import 'package:spdrivercalendar/features/calendar/utils/jamestown_road.dart';
 import 'package:spdrivercalendar/services/donnybrook_feature_service.dart';
 import 'package:spdrivercalendar/services/jamestown_feature_service.dart';
@@ -181,7 +182,7 @@ class DutyTimeLookupService {
     }
     if (zone == 'Training') return _trainingAsset;
 
-    final zoneNumber = zone.replaceAll('Zone ', '');
+    final zoneNumber = Zone2Duties.fileZoneNumber(zone);
     final dayForFilename = switch (dayOfWeek) {
       'Saturday' => 'SAT',
       'Sunday' => 'SUN',
@@ -294,7 +295,11 @@ class DutyTimeLookupService {
     required String shiftNumber,
     required bool isOvertimeShift,
   }) {
-    if (parts.length < 15 || parts[0].trim() != shiftNumber) return null;
+    if (parts.length < 15) return null;
+    if (!Zone2Duties.codesMatch(parts[0].trim(), shiftNumber) &&
+        parts[0].trim() != shiftNumber) {
+      return null;
+    }
 
     final startTime = _parseClock(
       parts[isOvertimeShift ? 3 : 2].trim(),

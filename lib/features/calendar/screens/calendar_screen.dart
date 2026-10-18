@@ -42,6 +42,7 @@ import 'package:spdrivercalendar/features/calendar/services/overtime_duty_shift_
 import 'package:spdrivercalendar/features/calendar/services/overtime_duty_event_persister.dart';
 import 'package:spdrivercalendar/features/calendar/dialogs/overtime_duty_details_dialog.dart';
 import 'package:spdrivercalendar/features/calendar/services/work_shift_duty_loader.dart';
+import 'package:spdrivercalendar/features/calendar/services/zone2_duties.dart';
 import 'package:spdrivercalendar/features/calendar/services/work_shift_event_persister.dart';
 import 'package:spdrivercalendar/features/calendar/dialogs/work_shift_dialog.dart';
 import 'package:spdrivercalendar/features/calendar/utils/edit_event_display_title.dart';
@@ -134,6 +135,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
   bool _showDutyCodesOnCalendar = true; // Default to true (ON)
   bool _animatedSelectedDay = true; // Default to true (ON) - animated border
   bool _highlightWorkoutDays = false; // Default to false (OFF)
+  bool _hideWeekViewIcon = false;
   Set<DateTime>? _workoutDates; // Cached workout dates for visible month (null = loading)
   final Map<String, Set<DateTime>> _workoutDatesMonthCache = {}; // Per-month cache when no global cache
   final Set<String> _workoutDateLoadsInProgress = {};
@@ -325,7 +327,8 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
         _nightsWeekIndex != nightsWeek ||
         _showDutyCodesOnCalendar != settings.showDutyCodesOnCalendar ||
         _animatedSelectedDay != settings.animatedSelectedDay ||
-        _highlightWorkoutDays != settings.highlightWorkoutDays;
+        _highlightWorkoutDays != settings.highlightWorkoutDays ||
+        _hideWeekViewIcon != settings.hideWeekViewIcon;
 
     _markedInEnabled = settings.markedInEnabled;
     _markedInStatus = settings.markedInStatus;
@@ -334,6 +337,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
     _showDutyCodesOnCalendar = settings.showDutyCodesOnCalendar;
     _animatedSelectedDay = settings.animatedSelectedDay;
     _highlightWorkoutDays = settings.highlightWorkoutDays;
+    _hideWeekViewIcon = settings.hideWeekViewIcon;
 
     if (needsUpdate) {
       setState(() {});
@@ -1557,6 +1561,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
       scrollController: _scrollController,
       onSearch: _showSearchScreen,
       onWeekView: _showWeekView,
+      showWeekViewIcon: !_hideWeekViewIcon,
       onMenuSelected: _onCalendarMenuSelected,
       calendar: Selector<CalendarController, (DateTime?, DateTime, bool)>(
         selector: (_, controller) => (
@@ -1782,18 +1787,8 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
           onCalendarDataChanged: _refreshCalendarAfterDataChange,
         ),
       ),
-    ).then((result) {
-      // Reload marked in settings when returning from settings page
+    ).then((_) {
       _loadMarkedInSettings(refreshWorkoutDates: true);
-      // If Settings cleared future events, refresh calendar and show feedback
-      if (result is int && result >= 0) {
-        _refreshCalendarAfterDataChange();
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Removed $result future event(s).')),
-          );
-        }
-      }
     });
   }
 

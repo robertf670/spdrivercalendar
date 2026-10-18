@@ -35,6 +35,8 @@ void main() {
       jamestownEnabled: false,
       donnybrook1Enabled: false,
     );
+    expect(zones, contains('Route 13'));
+    expect(zones, isNot(contains('Zone 2')));
     expect(zones, isNot(contains('22B/01')));
     expect(zones, isNot(contains(JamestownFeatureService.zoneLabel)));
     expect(zones.last, JamestownRoad.zoneLabel);

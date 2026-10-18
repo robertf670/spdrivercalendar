@@ -11,7 +11,7 @@ class WorkForOthersShiftLoader {
 
   static const List<String> zoneOptions = [
     'Zone 1',
-    'Zone 2',
+    Zone2Duties.zoneLabel,
     'Zone 3',
     'Zone 4',
     'Uni/Euro',
@@ -21,13 +21,13 @@ class WorkForOthersShiftLoader {
     required String selectedZone,
     required DateTime shiftDate,
   }) async {
-    if (selectedZone == Zone2Duties.zoneLabel &&
+    if (Zone2Duties.isZone(selectedZone) &&
         !Zone2Duties.canAddShiftsOn(shiftDate)) {
       return const [];
     }
 
     final dayOfWeek = RosterService.getDayOfWeek(shiftDate);
-    final zoneNumber = selectedZone.replaceAll('Zone ', '');
+    final zoneNumber = Zone2Duties.fileZoneNumber(selectedZone);
 
     final String dayOfWeekForFilename;
     if (dayOfWeek == 'Saturday') {

@@ -65,6 +65,18 @@ void main() {
       expectTime(result!.startTime, 4, 30);
     });
 
+    test('loads Route 13 times from 13/01 and old PZ2/01', () async {
+      final monday = DateTime(2026, 10, 12);
+      final fromNew = await lookup('Route 13', '13/01', monday);
+      final fromLegacy = await lookup('Zone 2', 'PZ2/01', monday);
+
+      expect(fromNew, isNotNull);
+      expect(fromLegacy, isNotNull);
+      expectTime(fromNew!.startTime, 5, 2);
+      expectTime(fromLegacy!.startTime, 5, 2);
+      expect(fromNew.workTime, fromLegacy.workTime);
+    });
+
     test('switches Zone 4 to route 23/24 duties at changeover', () async {
       final before = await lookup(
         'Zone 4',

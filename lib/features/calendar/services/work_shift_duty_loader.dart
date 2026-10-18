@@ -27,13 +27,13 @@ class WorkShiftDutyLoader {
       return const [];
     }
 
-    if (selectedZone == Zone2Duties.zoneLabel &&
+    if (Zone2Duties.isZone(selectedZone) &&
         !Zone2Duties.canAddShiftsOn(shiftDate)) {
       return const [];
     }
 
     final dayOfWeek = RosterService.getDayOfWeek(shiftDate);
-    final zoneNumber = selectedZone.replaceAll('Zone ', '');
+    final zoneNumber = Zone2Duties.fileZoneNumber(selectedZone);
 
     final String dayOfWeekForFilename;
     if (dayOfWeek == 'Saturday') {
@@ -83,7 +83,7 @@ class WorkShiftDutyLoader {
     if (selectedZone == 'Zone 3') {
       await RosterService.loadZone3ShiftRoster();
     }
-    if (selectedZone == Zone2Duties.zoneLabel) {
+    if (Zone2Duties.isZone(selectedZone)) {
       await RosterService.loadZone2ShiftRoster();
     }
 

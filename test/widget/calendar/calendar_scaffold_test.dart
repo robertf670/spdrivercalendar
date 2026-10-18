@@ -128,4 +128,32 @@ void main() {
 
     expect(find.text('Live Updates (2)'), findsOneWidget);
   });
+
+  testWidgets('hides week view icon when showWeekViewIcon is false',
+      (tester) async {
+    final controller = CalendarController(
+      initialFocusedDay: DateTime(2026, 8, 1),
+    );
+
+    await tester.pumpWidget(
+      ChangeNotifierProvider<CalendarController>.value(
+        value: controller,
+        child: MaterialApp(
+          home: CalendarScaffold(
+            scrollController: ScrollController(),
+            calendar: const SizedBox.shrink(),
+            dayDetailBuilder: (_) => const SizedBox.shrink(),
+            onSearch: () {},
+            onWeekView: () {},
+            showWeekViewIcon: false,
+            onMenuSelected: (_) {},
+            activeUpdatesStream: Stream<List<LiveUpdate>>.value([]),
+          ),
+        ),
+      ),
+    );
+
+    expect(find.byIcon(Icons.search), findsOneWidget);
+    expect(find.byIcon(Icons.view_week), findsNothing);
+  });
 }

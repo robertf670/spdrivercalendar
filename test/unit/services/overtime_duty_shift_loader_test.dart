@@ -74,20 +74,20 @@ void main() {
     final loader = OvertimeDutyShiftLoader(
       bundle: _FakeBundle({
         'assets/SUN_DUTIES_PZ2.csv':
-            'shift,a,b,c,d,startbreak\nPZ2/04,x,x,x,x,10:25\n',
+            'shift,a,b,c,d,startbreak\n13/04,x,x,x,x,10:25\n',
       }),
     );
 
     final before = await loader.loadShiftNumbers(
-      selectedZone: 'Zone 2',
+      selectedZone: 'Route 13',
       shiftDate: DateTime(2026, 10, 4),
     );
     expect(before, isEmpty);
 
     final after = await loader.loadShiftNumbers(
-      selectedZone: 'Zone 2',
+      selectedZone: 'Route 13',
       shiftDate: DateTime(2026, 10, 11),
     );
-    expect(after, ['PZ2/04']);
+    expect(after, ['13/04']);
   });
 }

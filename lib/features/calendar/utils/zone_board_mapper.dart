@@ -1,3 +1,4 @@
+import 'package:spdrivercalendar/features/calendar/services/zone2_duties.dart';
 import 'package:spdrivercalendar/models/universal_board.dart';
 
 /// Maps Zone 1/3/4 board JSON (from shift lookup) into [UniversalBoard]
@@ -47,9 +48,18 @@ class ZoneBoardMapper {
       code = pzHalfMatch.group(1)!;
     }
 
+    final route13HalfMatch = RegExp(r'^(13/\d+X?)[AB]$').firstMatch(code);
+    if (route13HalfMatch != null) {
+      code = route13HalfMatch.group(1)!;
+    }
+
     final jamestownHalfMatch = RegExp(r'^(811/\d+)[AB]$').firstMatch(code);
     if (jamestownHalfMatch != null) {
       code = jamestownHalfMatch.group(1)!;
+    }
+
+    if (Zone2Duties.isRoute13Code(code)) {
+      return Zone2Duties.canonical(code);
     }
 
     if (RegExp(r'^PZ[1-4]/\S+$').hasMatch(code) ||
@@ -67,7 +77,7 @@ class ZoneBoardMapper {
     if (dutyCode.startsWith('PZ1/')) {
       return 'assets/Zone1_Boards.json';
     }
-    if (dutyCode.startsWith('PZ2/')) {
+    if (Zone2Duties.isRoute13Code(dutyCode)) {
       return 'assets/Zone2_Boards.json';
     }
     if (dutyCode.startsWith('PZ3/')) {

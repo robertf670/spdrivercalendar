@@ -95,14 +95,14 @@ void main() {
     }
   });
 
-  test('loads PZ2/01 Monday-Friday board from the weekday sheet', () async {
+  test('loads 13/01 Monday-Friday board from the weekday sheet', () async {
     final board = await ZoneBoardService.getBoardForDuty(
-      dutyTitle: 'PZ2/01',
+      dutyTitle: '13/01',
       date: DateTime(2026, 8, 10), // Monday
     );
 
     expect(board, isNotNull);
-    expect(board!.shift, 'PZ2/01');
+    expect(board!.shift, '13/01');
     expect(board.duty, '201');
     expect(board.sections, hasLength(2));
     final first = board.sections[0].entries;
@@ -133,14 +133,25 @@ void main() {
     expect(board.sections[1].entries.last.time, '12:46');
   });
 
-  test('loads PZ2/01 Sunday board from assets', () async {
+  test('loads the 13/01 board from an old PZ2/01 title', () async {
     final board = await ZoneBoardService.getBoardForDuty(
       dutyTitle: 'PZ2/01',
+      date: DateTime(2026, 8, 10),
+    );
+
+    expect(board, isNotNull);
+    expect(board!.shift, '13/01');
+    expect(board.duty, '201');
+  });
+
+  test('loads 13/01 Sunday board from assets', () async {
+    final board = await ZoneBoardService.getBoardForDuty(
+      dutyTitle: '13/01',
       date: DateTime(2026, 10, 4), // Sunday
     );
 
     expect(board, isNotNull);
-    expect(board!.shift, 'PZ2/01');
+    expect(board!.shift, '13/01');
     expect(board.duty, '201');
     final entries = board.sections.first.entries;
     expect(entries.first.action, 'Report');
@@ -167,11 +178,11 @@ void main() {
     );
   });
 
-  test('loads Sunday workout boards for PZ2/02, PZ2/05, and PZ2/07', () async {
+  test('loads Sunday workout boards for 13/02, 13/05, and 13/07', () async {
     final sunday = DateTime(2026, 10, 4);
 
     final duty02 = await ZoneBoardService.getBoardForDuty(
-      dutyTitle: 'PZ2/02',
+      dutyTitle: '13/02',
       date: sunday,
     );
     expect(duty02, isNotNull);
@@ -182,14 +193,14 @@ void main() {
     expect(duty02.sections.first.entries[5].time, '12:00');
 
     final duty05 = await ZoneBoardService.getBoardForDuty(
-      dutyTitle: 'PZ2/05',
+      dutyTitle: '13/05',
       date: sunday,
     );
     expect(duty05!.sections.first.entries[2].time, '08:00');
     expect(duty05.sections.first.entries[5].time, '12:45');
 
     final duty07 = await ZoneBoardService.getBoardForDuty(
-      dutyTitle: 'PZ2/07',
+      dutyTitle: '13/07',
       date: sunday,
     );
     expect(duty07!.sections.first.entries[1].action, 'Route');
@@ -201,12 +212,12 @@ void main() {
     expect(duty07.sections.first.entries[3].time, '13:15');
   });
 
-  test('loads Sunday late workout boards for PZ2/25, PZ2/26, and PZ2/27',
+  test('loads Sunday late workout boards for 13/25, 13/26, and 13/27',
       () async {
     final sunday = DateTime(2026, 10, 4);
 
     final duty25 = await ZoneBoardService.getBoardForDuty(
-      dutyTitle: 'PZ2/25',
+      dutyTitle: '13/25',
       date: sunday,
     );
     expect(duty25, isNotNull);
@@ -228,7 +239,7 @@ void main() {
     expect(entries25.last.time, '00:20');
 
     final duty26 = await ZoneBoardService.getBoardForDuty(
-      dutyTitle: 'PZ2/26',
+      dutyTitle: '13/26',
       date: sunday,
     );
     expect(duty26!.sections.first.entries[2].time, '20:30');
@@ -236,7 +247,7 @@ void main() {
     expect(duty26.sections.first.entries.last.time, '00:25');
 
     final duty27 = await ZoneBoardService.getBoardForDuty(
-      dutyTitle: 'PZ2/27',
+      dutyTitle: '13/27',
       date: sunday,
     );
     expect(duty27!.sections.first.entries[1].time, '19:55');
@@ -245,9 +256,9 @@ void main() {
     expect(duty27.sections.first.entries.last.time, '00:45');
   });
 
-  test('loads PZ2/03 Sunday as a two-half board with Mountjoy meal', () async {
+  test('loads 13/03 Sunday as a two-half board with Mountjoy meal', () async {
     final board = await ZoneBoardService.getBoardForDuty(
-      dutyTitle: 'PZ2/03',
+      dutyTitle: '13/03',
       date: DateTime(2026, 10, 4),
     );
 
@@ -285,9 +296,9 @@ void main() {
     expect(second.last.time, '14:31');
   });
 
-  test('loads PZ2/04 Sunday as a two-half board with Mountjoy meal', () async {
+  test('loads 13/04 Sunday as a two-half board with Mountjoy meal', () async {
     final board = await ZoneBoardService.getBoardForDuty(
-      dutyTitle: 'PZ2/04',
+      dutyTitle: '13/04',
       date: DateTime(2026, 10, 4),
     );
 
@@ -319,9 +330,9 @@ void main() {
     expect(second.last.time, '15:01');
   });
 
-  test('loads PZ2/06 and PZ2/08 Sunday meal boards', () async {
+  test('loads 13/06 and 13/08 Sunday meal boards', () async {
     final duty06 = await ZoneBoardService.getBoardForDuty(
-      dutyTitle: 'PZ2/06',
+      dutyTitle: '13/06',
       date: DateTime(2026, 10, 4),
     );
     expect(duty06, isNotNull);
@@ -338,7 +349,7 @@ void main() {
     expect(duty06.sections[1].entries.last.time, '15:31');
 
     final duty08 = await ZoneBoardService.getBoardForDuty(
-      dutyTitle: 'PZ2/08',
+      dutyTitle: '13/08',
       date: DateTime(2026, 10, 4),
     );
     expect(duty08, isNotNull);
@@ -362,11 +373,11 @@ void main() {
   test('loads every Sunday Zone 2 duty board from the bus sheet', () async {
     final sunday = DateTime(2026, 10, 4);
     const codes = [
-      'PZ2/01', 'PZ2/02', 'PZ2/03', 'PZ2/04', 'PZ2/05', 'PZ2/06', 'PZ2/07',
-      'PZ2/08', 'PZ2/09', 'PZ2/10', 'PZ2/11', 'PZ2/12', 'PZ2/13', 'PZ2/14',
-      'PZ2/15', 'PZ2/16', 'PZ2/17', 'PZ2/18', 'PZ2/19', 'PZ2/20', 'PZ2/21',
-      'PZ2/22', 'PZ2/23', 'PZ2/24', 'PZ2/25', 'PZ2/26', 'PZ2/27',
-      'PZ2/1X', 'PZ2/2X', 'PZ2/3X', 'PZ2/4X', 'PZ2/5X', 'PZ2/6X',
+      '13/01', '13/02', '13/03', '13/04', '13/05', '13/06', '13/07',
+      '13/08', '13/09', '13/10', '13/11', '13/12', '13/13', '13/14',
+      '13/15', '13/16', '13/17', '13/18', '13/19', '13/20', '13/21',
+      '13/22', '13/23', '13/24', '13/25', '13/26', '13/27',
+      '13/1X', '13/2X', '13/3X', '13/4X', '13/5X', '13/6X',
     ];
 
     for (final code in codes) {
@@ -392,7 +403,7 @@ void main() {
     final sunday = DateTime(2026, 10, 4);
 
     final duty11 = await ZoneBoardService.getBoardForDuty(
-      dutyTitle: 'PZ2/11',
+      dutyTitle: '13/11',
       date: sunday,
     );
     expect(duty11!.sections, hasLength(2));
@@ -409,7 +420,7 @@ void main() {
     expect(duty11.sections[1].entries.last.time, '21:00');
 
     final duty19 = await ZoneBoardService.getBoardForDuty(
-      dutyTitle: 'PZ2/19',
+      dutyTitle: '13/19',
       date: sunday,
     );
     expect(duty19!.sections[1].entries[1].location, 'Mountjoy Square');
@@ -423,7 +434,7 @@ void main() {
     expect(duty19.sections[1].entries.last.time, '00:50');
 
     final duty23 = await ZoneBoardService.getBoardForDuty(
-      dutyTitle: 'PZ2/23',
+      dutyTitle: '13/23',
       date: sunday,
     );
     expect(duty23!.sections[1].entries[1].location, 'Mountjoy Square');
@@ -437,7 +448,7 @@ void main() {
     expect(duty23.sections[1].entries[4].time, '00:25');
 
     final duty17 = await ZoneBoardService.getBoardForDuty(
-      dutyTitle: 'PZ2/17',
+      dutyTitle: '13/17',
       date: sunday,
     );
     expect(duty17!.sections[0].entries[3].time, '18:28');
@@ -449,7 +460,7 @@ void main() {
     expect(duty17.sections[1].entries.last.time, '00:17');
 
     final duty1x = await ZoneBoardService.getBoardForDuty(
-      dutyTitle: 'PZ2/1X',
+      dutyTitle: '13/1X',
       date: sunday,
     );
     expect(duty1x!.duty, '251');
@@ -462,14 +473,14 @@ void main() {
     expect(duty1x.sections[1].entries.last.time, '17:10');
   });
 
-  test('loads PZ2/01 Saturday board from the Saturday sheet', () async {
+  test('loads 13/01 Saturday board from the Saturday sheet', () async {
     final board = await ZoneBoardService.getBoardForDuty(
-      dutyTitle: 'PZ2/01',
+      dutyTitle: '13/01',
       date: DateTime(2026, 10, 10), // Saturday
     );
 
     expect(board, isNotNull);
-    expect(board!.shift, 'PZ2/01');
+    expect(board!.shift, '13/01');
     expect(board.duty, '201');
     final entries = board.sections.first.entries;
     expect(entries.first.action, 'Report');
@@ -490,9 +501,9 @@ void main() {
     expect(entries.last.time, '10:31');
   });
 
-  test('loads PZ2/03 Saturday workout Mountjoy-first', () async {
+  test('loads 13/03 Saturday workout Mountjoy-first', () async {
     final board = await ZoneBoardService.getBoardForDuty(
-      dutyTitle: 'PZ2/03',
+      dutyTitle: '13/03',
       date: DateTime(2026, 10, 10),
     );
 
@@ -507,9 +518,9 @@ void main() {
     expect(entries.last.time, '11:46');
   });
 
-  test('loads PZ2/02 Saturday garage-meal board', () async {
+  test('loads 13/02 Saturday garage-meal board', () async {
     final board = await ZoneBoardService.getBoardForDuty(
-      dutyTitle: 'PZ2/02',
+      dutyTitle: '13/02',
       date: DateTime(2026, 10, 10),
     );
 
@@ -536,12 +547,12 @@ void main() {
       () async {
     final saturday = DateTime(2026, 10, 10);
     const codes = [
-      'PZ2/01', 'PZ2/02', 'PZ2/03', 'PZ2/04', 'PZ2/05', 'PZ2/06', 'PZ2/07',
-      'PZ2/08', 'PZ2/09', 'PZ2/10', 'PZ2/11', 'PZ2/12', 'PZ2/13', 'PZ2/14',
-      'PZ2/15', 'PZ2/16', 'PZ2/17', 'PZ2/18', 'PZ2/19', 'PZ2/20', 'PZ2/21',
-      'PZ2/22', 'PZ2/23', 'PZ2/24', 'PZ2/25', 'PZ2/26', 'PZ2/27', 'PZ2/28',
-      'PZ2/29', 'PZ2/30',
-      'PZ2/1X', 'PZ2/2X', 'PZ2/3X', 'PZ2/4X',
+      '13/01', '13/02', '13/03', '13/04', '13/05', '13/06', '13/07',
+      '13/08', '13/09', '13/10', '13/11', '13/12', '13/13', '13/14',
+      '13/15', '13/16', '13/17', '13/18', '13/19', '13/20', '13/21',
+      '13/22', '13/23', '13/24', '13/25', '13/26', '13/27', '13/28',
+      '13/29', '13/30',
+      '13/1X', '13/2X', '13/3X', '13/4X',
     ];
 
     for (final code in codes) {
@@ -567,7 +578,7 @@ void main() {
     final saturday = DateTime(2026, 10, 10);
 
     final duty11 = await ZoneBoardService.getBoardForDuty(
-      dutyTitle: 'PZ2/11',
+      dutyTitle: '13/11',
       date: saturday,
     );
     expect(duty11!.sections, hasLength(2));
@@ -585,7 +596,7 @@ void main() {
     expect(duty11.sections[1].entries.last.time, '16:05');
 
     final duty19 = await ZoneBoardService.getBoardForDuty(
-      dutyTitle: 'PZ2/19',
+      dutyTitle: '13/19',
       date: saturday,
     );
     expect(duty19!.sections[1].entries[1].location, 'Mountjoy Square');
@@ -600,7 +611,7 @@ void main() {
     expect(duty19.sections[1].entries.last.time, '00:05');
 
     final duty27 = await ZoneBoardService.getBoardForDuty(
-      dutyTitle: 'PZ2/27',
+      dutyTitle: '13/27',
       date: saturday,
     );
     expect(duty27!.sections[1].entries.first.action,
@@ -612,7 +623,7 @@ void main() {
     expect(duty27.sections[1].entries.last.time, '00:45');
 
     final duty2x = await ZoneBoardService.getBoardForDuty(
-      dutyTitle: 'PZ2/2X',
+      dutyTitle: '13/2X',
       date: saturday,
     );
     expect(duty2x!.duty, '252');
@@ -630,13 +641,13 @@ void main() {
       () async {
     final monday = DateTime(2026, 8, 10);
     const codes = [
-      'PZ2/01', 'PZ2/02', 'PZ2/03', 'PZ2/04', 'PZ2/05', 'PZ2/06', 'PZ2/07',
-      'PZ2/08', 'PZ2/09', 'PZ2/10', 'PZ2/11', 'PZ2/12', 'PZ2/13', 'PZ2/14',
-      'PZ2/15', 'PZ2/16', 'PZ2/17', 'PZ2/18', 'PZ2/19', 'PZ2/20', 'PZ2/21',
-      'PZ2/22', 'PZ2/23', 'PZ2/24', 'PZ2/25', 'PZ2/26', 'PZ2/27', 'PZ2/28',
-      'PZ2/29', 'PZ2/30', 'PZ2/31', 'PZ2/32', 'PZ2/33', 'PZ2/34',
-      'PZ2/1X', 'PZ2/2X', 'PZ2/3X', 'PZ2/4X', 'PZ2/5X', 'PZ2/6X', 'PZ2/7X',
-      'PZ2/8X', 'PZ2/9X',
+      '13/01', '13/02', '13/03', '13/04', '13/05', '13/06', '13/07',
+      '13/08', '13/09', '13/10', '13/11', '13/12', '13/13', '13/14',
+      '13/15', '13/16', '13/17', '13/18', '13/19', '13/20', '13/21',
+      '13/22', '13/23', '13/24', '13/25', '13/26', '13/27', '13/28',
+      '13/29', '13/30', '13/31', '13/32', '13/33', '13/34',
+      '13/1X', '13/2X', '13/3X', '13/4X', '13/5X', '13/6X', '13/7X',
+      '13/8X', '13/9X',
     ];
 
     for (final code in codes) {
@@ -662,7 +673,7 @@ void main() {
     final monday = DateTime(2026, 8, 10);
 
     final duty05 = await ZoneBoardService.getBoardForDuty(
-      dutyTitle: 'PZ2/05',
+      dutyTitle: '13/05',
       date: monday,
     );
     expect(duty05!.sections[0].entries[4].action, 'Arrive');
@@ -682,7 +693,7 @@ void main() {
     expect(duty05.sections[1].entries.last.time, '13:02');
 
     final duty28 = await ZoneBoardService.getBoardForDuty(
-      dutyTitle: 'PZ2/28',
+      dutyTitle: '13/28',
       date: monday,
     );
     expect(duty28!.sections[0].entries[3].action, 'SPL');
@@ -693,7 +704,7 @@ void main() {
     expect(duty28.sections[1].entries.last.time, '00:15');
 
     final duty1x = await ZoneBoardService.getBoardForDuty(
-      dutyTitle: 'PZ2/1X',
+      dutyTitle: '13/1X',
       date: monday,
     );
     expect(duty1x!.duty, '251');
@@ -704,7 +715,7 @@ void main() {
     expect(duty1x.sections[1].entries.last.time, '15:46');
 
     final duty32 = await ZoneBoardService.getBoardForDuty(
-      dutyTitle: 'PZ2/32',
+      dutyTitle: '13/32',
       date: monday,
     );
     expect(duty32!.sections, hasLength(1));

@@ -1,3 +1,4 @@
+import 'package:spdrivercalendar/features/calendar/services/zone2_duties.dart';
 import 'package:spdrivercalendar/features/calendar/utils/zone_board_mapper.dart';
 import 'package:spdrivercalendar/models/universal_board.dart';
 import 'package:spdrivercalendar/services/universal_board_service.dart';
@@ -17,7 +18,7 @@ class BoardLookup {
       return boards.map((board) => board.shift).toSet();
     }
 
-    final zoneNumber = zone.replaceAll('Zone ', '');
+    final zoneNumber = Zone2Duties.fileZoneNumber(zone);
     if (!['1', '2', '3', '4'].contains(zoneNumber)) return {};
 
     final codes = await ZoneBoardService.listDutyCodes(
@@ -33,7 +34,9 @@ class BoardLookup {
     required String dayType,
     required DateTime date,
   }) async {
-    if (shift.startsWith('PZ') || shift.startsWith('811/')) {
+    if (shift.startsWith('PZ') ||
+        shift.startsWith('811/') ||
+        Zone2Duties.isRoute13Code(shift)) {
       return ZoneBoardService.getBoardForDuty(
         dutyTitle: shift,
         date: date,

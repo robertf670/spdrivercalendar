@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:spdrivercalendar/features/bills/models/bill_duty.dart';
+import 'package:spdrivercalendar/features/calendar/utils/duty_break_clock.dart';
 import 'package:spdrivercalendar/theme/app_theme.dart';
 
 class BillDutyCard extends StatelessWidget {
@@ -133,9 +134,11 @@ class BillDutyCard extends StatelessWidget {
 
   Widget _buildFull(BuildContext context, Map<String, double> sizes) {
     final scheme = Theme.of(context).colorScheme;
+    final walk = DutyBreakClock.walkMinutes(_mealBreakLabel);
     final meta = <String>[
       if (duty.displayWork.isNotEmpty) 'Work ${duty.displayWork}',
       if (duty.displayRelief.isNotEmpty) 'Relief ${duty.displayRelief}',
+      if (walk != null) '${walk}m walk',
     ];
 
     return Column(
@@ -253,14 +256,20 @@ class BillDutyCard extends StatelessWidget {
     );
   }
 
+  String get _mealBreakLabel => DutyBreakClock.fromTimes(
+        startBreak: duty.startBreak,
+        breakReport: duty.breakReport,
+        finishBreak: duty.finishBreak,
+        startLocation: duty.startBreakLocation,
+        finishLocation: duty.finishBreakLocation,
+        shiftCode: duty.shift,
+      );
+
   String get _breakTimes {
-    final start = duty.displayStartBreak;
-    final end = duty.displayFinishBreak.isNotEmpty
-        ? duty.displayFinishBreak
-        : duty.displayBreakReport;
-    if (start.isEmpty) return end;
-    if (end.isEmpty || end == start) return start;
-    return '$start–$end';
+    final label = _mealBreakLabel;
+    if (label.toLowerCase().contains('workout')) return 'Workout';
+    final clock = DutyBreakClock.clockRange(label);
+    return clock.replaceFirst(' - ', '–');
   }
 
   String get _breakLocations {

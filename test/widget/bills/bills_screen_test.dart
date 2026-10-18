@@ -69,7 +69,7 @@ void main() {
       MaterialApp(
         home: BillsScreen(
           now: DateTime(2026, 10, 4),
-          initialZone: 'Zone 2',
+          initialZone: 'Route 13',
           initialDayType: 'Sun',
         ),
       ),
@@ -80,13 +80,13 @@ void main() {
       () => find.text('33 duties').evaluate().isNotEmpty,
     );
 
-    expect(find.text('Zone 2 coming soon'), findsNothing);
+    expect(find.text('Route 13 coming soon'), findsNothing);
     expect(find.text('33 duties'), findsOneWidget);
     expect(find.widgetWithText(ActionChip, '01–20'), findsOneWidget);
 
     await tester.tap(find.text('01').first);
     await tester.pump();
-    expect(find.text('PZ2/01'), findsOneWidget);
+    expect(find.text('13/01'), findsOneWidget);
     expect(find.text('View board'), findsOneWidget);
 
     await tester.ensureVisible(find.text('View board'));

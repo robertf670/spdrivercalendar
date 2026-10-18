@@ -147,4 +147,27 @@ void main() {
       expect(restored.enhancedAssignedDuties![1].assignedBus, '20');
     });
   });
+
+  group('Event.shiftCode', () {
+    Event titled(String title) => Event(
+          id: 'shift-code',
+          title: title,
+          startDate: DateTime(2026, 10, 12),
+          startTime: const TimeOfDay(hour: 5, minute: 0),
+          endDate: DateTime(2026, 10, 12),
+          endTime: const TimeOfDay(hour: 13, minute: 0),
+        );
+
+    test('keeps Route 13 codes as 13/ and does not prefix PZ13', () {
+      expect(titled('13/01').shiftCode, '13/01');
+      expect(titled('PZ2/01').shiftCode, '13/01');
+      expect(titled('2/01').shiftCode, '13/01');
+      expect(titled('13/01').isWorkShift, isTrue);
+      expect(titled('13/01').isEligibleForOvertimeTracking, isTrue);
+    });
+
+    test('still prefixes Zone 1 shorthand with PZ', () {
+      expect(titled('1/03').shiftCode, 'PZ1/03');
+    });
+  });
 }

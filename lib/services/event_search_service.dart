@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:spdrivercalendar/models/event.dart';
 import 'package:spdrivercalendar/features/calendar/services/event_service.dart';
 import 'package:spdrivercalendar/features/calendar/services/shift_service.dart';
+import 'package:spdrivercalendar/features/calendar/services/zone2_duties.dart';
 
 class EventSearchService {
   // Search events by query string
@@ -19,6 +20,7 @@ class EventSearchService {
     bool? holidaysOnly,
     bool? sickDaysOnly,
     bool? workoutOnly,
+    bool? pastOnly,
   }) async {
     List<Event> allEvents = await EventService.getAllEvents();
     
@@ -117,7 +119,9 @@ class EventSearchService {
         final titleLower = event.title.toLowerCase();
         // Remove "Shift: " prefix if present
         final cleanTitle = titleLower.replaceAll('shift: ', '').trim();
-        if (cleanTitle.contains(dutyLower) || cleanTitle.contains(normalizedSearch)) {
+        if (cleanTitle.contains(dutyLower) ||
+            cleanTitle.contains(normalizedSearch) ||
+            Zone2Duties.codesMatch(event.title, dutyCode.trim())) {
           return true;
         }
         
@@ -171,14 +175,26 @@ class EventSearchService {
         return eventDate.isBefore(filterDate) || eventDate.isAtSameMomentAs(filterDate);
       }).toList();
     }
+
+    if (pastOnly == true) {
+      final today = DateTime.now();
+      filtered = filtered
+          .where((event) => isOnOrBeforeDay(event.startDate, today))
+          .toList();
+    }
     
     // Shift type filter
     if (shiftType != null && shiftType.isNotEmpty) {
       filtered = filtered.where((event) {
         final title = event.title.toUpperCase();
         if (shiftType == 'SP' && title.startsWith('SP')) return true;
-        if (shiftType == 'PZ' && title.startsWith('PZ')) return true;
-        if (shiftType == 'UNI' && RegExp(r'^\d{2,3}/').hasMatch(event.title)) return true;
+        if (shiftType == 'PZ' &&
+            (title.startsWith('PZ') || Zone2Duties.isRoute13Code(event.title))) {
+          return true;
+        }
+        if (shiftType == 'UNI' && Zone2Duties.isUniEuroCode(event.title)) {
+          return true;
+        }
         if (shiftType == 'Early' && _isEarlyShift(event.startTime)) return true;
         if (shiftType == 'Late' && _isLateShift(event.startTime)) return true;
         if (shiftType == 'Relief' && _isReliefShift(event.startTime)) return true;
@@ -239,6 +255,13 @@ class EventSearchService {
     }
 
     return filtered;
+  }
+
+  /// Date-only: [eventDate] is today or earlier relative to [day].
+  static bool isOnOrBeforeDay(DateTime eventDate, DateTime day) {
+    final a = DateTime(eventDate.year, eventDate.month, eventDate.day);
+    final b = DateTime(day.year, day.month, day.day);
+    return !a.isAfter(b);
   }
 
   /// Same title gate as [WorkoutHighlightService] so search matches calendar highlights.

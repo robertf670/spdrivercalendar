@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:spdrivercalendar/features/timing_points/utils/timing_points_parser.dart';
 import 'package:spdrivercalendar/models/timing_point.dart';
 import 'package:spdrivercalendar/theme/app_theme.dart';
 
@@ -35,7 +36,7 @@ class TimingPointsScreenState extends State<TimingPointsScreen> {
   Future<void> _loadTimingPoints() async {
     try {
       final String data = await rootBundle.loadString('assets/timingpoints.txt');
-      final List<TimingPointRoute> routes = _parseTimingPoints(data);
+      final List<TimingPointRoute> routes = TimingPointsParser.parse(data);
       
       if (mounted) {
         setState(() {
@@ -63,80 +64,27 @@ class TimingPointsScreenState extends State<TimingPointsScreen> {
     }
   }
 
-  List<TimingPointRoute> _parseTimingPoints(String data) {
-    final lines = data.split('\n').where((line) => line.trim().isNotEmpty).toList();
-    final Map<String, List<List<String>>> routeMap = {};
-
-    for (final line in lines) {
-      if (line.contains(' -> ')) {
-        final parts = line.split(' -> ');
-        if (parts.length == 2) {
-          final routeNumber = parts[0].trim();
-          final timingPoints = parts[1].split(',').map((point) => point.trim()).toList();
-          
-          if (!routeMap.containsKey(routeNumber)) {
-            routeMap[routeNumber] = [];
-          }
-          routeMap[routeNumber]!.add(timingPoints);
-        }
-      }
+  TimingPointRoute? get _selectedRouteData {
+    for (final route in _routes) {
+      if (route.routeNumber == _selectedRoute) return route;
     }
-
-    final List<TimingPointRoute> routes = [];
-    for (final entry in routeMap.entries) {
-      final routeNumber = entry.key;
-      final directions = entry.value;
-      
-      final direction1 = directions.isNotEmpty ? directions[0] : <String>[];
-      final direction2 = directions.length > 1 ? directions[1] : <String>[];
-      
-      routes.add(TimingPointRoute(
-        routeNumber: routeNumber,
-        direction1Points: direction1,
-        direction2Points: direction2,
-      ));
-    }
-
-    // Sort routes by route number, with 13, 23 and 24 at the bottom
-    routes.sort((a, b) {
-      const bottomRoutes = ['13', '23', '24'];
-      final aAtBottom = bottomRoutes.contains(a.routeNumber);
-      final bAtBottom = bottomRoutes.contains(b.routeNumber);
-      if (aAtBottom && bAtBottom) {
-        return a.routeNumber.compareTo(b.routeNumber);
-      }
-      if (aAtBottom) return 1; // a comes after b
-      if (bAtBottom) return -1; // a comes before b
-      return a.routeNumber.compareTo(b.routeNumber);
-    });
-    return routes;
+    return null;
   }
 
   void _updateDestinations() {
-    final selectedRouteData = _routes.firstWhere(
-      (route) => route.routeNumber == _selectedRoute,
-      orElse: () => TimingPointRoute(
-        routeNumber: '',
-        direction1Points: [],
-        direction2Points: [],
-      ),
-    );
-
-    final destinations = <String>[];
-    if (selectedRouteData.direction1Points.isNotEmpty) {
-      final destination = selectedRouteData.direction1Points.first;
-      destinations.add(destination);
-    }
-    if (selectedRouteData.direction2Points.isNotEmpty) {
-      final destination = selectedRouteData.direction2Points.first;
-      destinations.add(destination);
-    }
+    final selectedRouteData = _selectedRouteData;
+    final destinations = selectedRouteData == null
+        ? <String>[]
+        : TimingPointsParser.destinationsOf(selectedRouteData);
 
     setState(() {
       _availableDestinations = destinations;
       if (destinations.isNotEmpty) {
         _selectedDestination = destinations.first;
-        _updateTimingPoints();
+        _currentTimingPoints = TimingPointsParser.pointsForDestination(
+          selectedRouteData!,
+          _selectedDestination,
+        );
       } else {
         _selectedDestination = '';
         _currentTimingPoints = [];
@@ -145,34 +93,14 @@ class TimingPointsScreenState extends State<TimingPointsScreen> {
   }
 
   void _updateTimingPoints() {
-    final selectedRouteData = _routes.firstWhere(
-      (route) => route.routeNumber == _selectedRoute,
-      orElse: () => TimingPointRoute(
-        routeNumber: '',
-        direction1Points: [],
-        direction2Points: [],
-      ),
-    );
-
-    List<String> points = [];
-    
-    if (_selectedDestination.isNotEmpty) {
-      // Determine which direction based on selected destination
-      if (_availableDestinations.isNotEmpty && _selectedDestination == _availableDestinations[0]) {
-        // Skip the first item (destination) and get only the timing points
-        points = selectedRouteData.direction1Points.length > 1 
-            ? selectedRouteData.direction1Points.sublist(1) 
-            : [];
-      } else if (_availableDestinations.length > 1 && _selectedDestination == _availableDestinations[1]) {
-        // Skip the first item (destination) and get only the timing points
-        points = selectedRouteData.direction2Points.length > 1 
-            ? selectedRouteData.direction2Points.sublist(1) 
-            : [];
-      }
-    }
-
+    final selectedRouteData = _selectedRouteData;
     setState(() {
-      _currentTimingPoints = points;
+      _currentTimingPoints = selectedRouteData == null
+          ? <String>[]
+          : TimingPointsParser.pointsForDestination(
+              selectedRouteData,
+              _selectedDestination,
+            );
     });
   }
 
@@ -396,14 +324,50 @@ class TimingPointsScreenState extends State<TimingPointsScreen> {
                     ),
                     
                     SizedBox(height: sizes['spacing']!),
-                    
-                    // Timing Points Display
+                    if (_selectedRouteData?.note != null) ...[
+                      _buildRouteNote(_selectedRouteData!.note!),
+                      SizedBox(height: sizes['spacing']! / 2),
+                    ],
                     Expanded(
                       child: _buildTimingPointsDisplay(),
                     ),
                   ],
                 ),
               ),
+      ),
+    );
+  }
+
+  Widget _buildRouteNote(String note) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: scheme.outline.withValues(alpha: 0.4)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            Icons.info_outline,
+            size: 20,
+            color: scheme.primary,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              note,
+              style: TextStyle(
+                fontSize: 13,
+                height: 1.3,
+                color: scheme.onSurface,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

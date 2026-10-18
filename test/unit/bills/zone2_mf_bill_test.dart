@@ -15,13 +15,13 @@ void main() {
 
   test('Monday-Friday Route 13 bill has 34 numbered duties and 9 bogeys', () {
     expect(duties, hasLength(43));
-    expect(duties.first.shift, 'PZ2/01');
-    expect(duties.last.shift, 'PZ2/9X');
+    expect(duties.first.shift, '13/01');
+    expect(duties.last.shift, '13/9X');
     expect(duties.where((duty) => duty.shift.endsWith('X')), hasLength(9));
   });
 
-  test('PZ2/01 reports at 05:02 with an 08:05 Mountjoy break', () {
-    final duty = duties.singleWhere((row) => row.shift == 'PZ2/01');
+  test('13/01 reports at 05:02 with an 08:05 Mountjoy break', () {
+    final duty = duties.singleWhere((row) => row.shift == '13/01');
     expect(duty.isWorkout, isFalse);
     expect(duty.displayReport, '05:02');
     expect(duty.displayDepart, '05:10');
@@ -34,14 +34,14 @@ void main() {
     expect(duty.displayRelief, '50m');
   });
 
-  test('PZ2/24 overnight finish and PZ2/5X long relief parse', () {
-    final lateDuty = duties.singleWhere((row) => row.shift == 'PZ2/24');
+  test('13/24 overnight finish and 13/5X long relief parse', () {
+    final lateDuty = duties.singleWhere((row) => row.shift == '13/24');
     expect(lateDuty.displayReport, '14:59');
     expect(lateDuty.displayFinish, '00:40');
     expect(lateDuty.endLocation, 'Garage');
     expect(lateDuty.displaySpread, '9h 41m');
 
-    final bogey = duties.singleWhere((row) => row.shift == 'PZ2/5X');
+    final bogey = duties.singleWhere((row) => row.shift == '13/5X');
     expect(bogey.dutyNumber, '007255');
     expect(bogey.displayReport, '07:56');
     expect(bogey.displayStartBreak, '11:47');
@@ -49,8 +49,8 @@ void main() {
     expect(bogey.displayRelief, '3h 02m');
   });
 
-  test('PZ2/32 to PZ2/34 are evening workouts', () {
-    for (final code in ['PZ2/32', 'PZ2/33', 'PZ2/34']) {
+  test('13/32 to 13/34 are evening workouts', () {
+    for (final code in ['13/32', '13/33', '13/34']) {
       expect(
         duties.singleWhere((row) => row.shift == code).isWorkout,
         isTrue,

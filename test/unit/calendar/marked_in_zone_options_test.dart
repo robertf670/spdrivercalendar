@@ -3,10 +3,10 @@ import 'package:spdrivercalendar/features/calendar/utils/marked_in_zone_options.
 import 'package:spdrivercalendar/services/jamestown_feature_service.dart';
 
 void main() {
-  test('Zone 2 is a marked-in option', () {
+  test('Route 13 is a marked-in option and Zone 2 is not listed', () {
     expect(
       markedInZoneOptions(jamestownEnabled: false),
-      ['Zone 1', 'Zone 2', 'Zone 3', 'Zone 4'],
+      ['Zone 1', 'Route 13', 'Zone 3', 'Zone 4'],
     );
   });
 

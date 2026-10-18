@@ -131,6 +131,8 @@ class _WorkShiftDialogState extends State<WorkShiftDialog> {
       _selectedZone = JamestownRoad.zoneLabel;
     } else if (JamestownFeatureService.isZone(_selectedZone)) {
       _selectedZone = JamestownFeatureService.zoneLabel;
+    } else if (Zone2Duties.isZone(_selectedZone)) {
+      _selectedZone = Zone2Duties.zoneLabel;
     }
     if (!zones.contains(_selectedZone)) {
       _selectedZone = zones.first;
@@ -352,7 +354,7 @@ class _WorkShiftDialogState extends State<WorkShiftDialog> {
                 )
               else if (_shiftNumbers.isEmpty)
                 Text(
-                  _selectedZone == Zone2Duties.zoneLabel &&
+                  Zone2Duties.isZone(_selectedZone) &&
                           !Zone2Duties.canAddShiftsOn(widget.shiftDate)
                       ? Zone2Duties.availableFromMessage
                       : 'No shifts available for selected zone and date',
@@ -706,7 +708,7 @@ class _WorkShiftDialogState extends State<WorkShiftDialog> {
   Widget _buildZone2ShiftRosterSection() {
     if (!widget.zone2RosterEnabled ||
         !widget.isShiftMarkedIn ||
-        _selectedZone != Zone2Duties.zoneLabel) {
+        !Zone2Duties.isZone(_selectedZone)) {
       return const SizedBox.shrink();
     }
     final dayIndex = widget.shiftDate.weekday % 7;

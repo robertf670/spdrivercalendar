@@ -23,6 +23,32 @@ void main() {
     expect(header['relief'], '01:00');
   });
 
+  test('PZ4/16 Mon-Fri second half takes up at Broadstone, not Constitution Hill',
+      () {
+    final row = File('assets/M-F_ROUTE2324_20260823.csv')
+        .readAsLinesSync()
+        .firstWhere((line) => line.startsWith('PZ4/16,'));
+    expect(row, contains('11:30:00,Bstone #190(24)'));
+    expect(row, contains('15:35:00,ConHill #1619,15:35:00'));
+
+    final boards = jsonDecode(
+      File('assets/Zone4_Boards_20260823.json').readAsStringSync(),
+    ) as Map<String, dynamic>;
+    final board = boards['PZ4/16']['MON-FRI']['board'] as List<dynamic>;
+    final lines = board
+        .map((row) => (row as List<dynamic>).join(' '))
+        .join('\n');
+    expect(lines, contains('Takes up at 11:30 Broadstone'));
+    expect(lines, contains('Broadstone (Stop #190)'));
+    expect(lines, contains('Merrion Square'));
+    expect(lines, contains('12:00'));
+    expect(lines, contains('13:30'));
+    expect(lines, contains('15:00'));
+    expect(lines, contains('Constitution Hill'));
+    expect(lines, contains('15:35'));
+    expect(lines, isNot(contains('Takes up at 11:30 Constitution Hill')));
+  });
+
   test('PZ4/26 Mon-Fri from 23 Aug has no Takes Bus 17 at 17:15 line', () {
     final boards = jsonDecode(
       File('assets/Zone4_Boards_20260823.json').readAsStringSync(),

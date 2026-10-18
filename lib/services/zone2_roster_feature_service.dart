@@ -3,11 +3,11 @@ import 'package:spdrivercalendar/core/services/storage_service.dart';
 import 'package:spdrivercalendar/features/calendar/utils/zone2_shift_roster.dart';
 import 'package:spdrivercalendar/models/event.dart';
 
-/// Dev Menu access to the Zone 2 35-week Shift roster fill.
+/// Dev Menu access to the Route 13 35-week Shift roster fill.
 class Zone2RosterFeatureService {
   Zone2RosterFeatureService._();
 
-  static const menuLabel = 'Zone 2 Roster';
+  static const menuLabel = 'Route 13 Roster';
 
   static Future<bool> isEnabled() async {
     return StorageService.getBool(AppConstants.zone2RosterEnabledKey);
