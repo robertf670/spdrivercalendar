@@ -1,5 +1,6 @@
 import 'package:flutter/services.dart';
 import 'package:spdrivercalendar/features/calendar/services/roster_service.dart';
+import 'package:spdrivercalendar/features/calendar/utils/euro_duty_revisions.dart';
 import 'package:spdrivercalendar/features/calendar/services/zone2_duties.dart';
 
 class RouteService {
@@ -297,6 +298,19 @@ class RouteService {
       }
       
       for (final fileName in filesToTry) {
+        final revisedRoutes = fileName == 'UNI_M-F.csv'
+            ? EuroDutyRevisions.routesFor(shiftCode, eventDate)
+            : null;
+        if (revisedRoutes != null) {
+          return RouteInfo(
+            firstRoute: revisedRoutes.first,
+            secondRoute: revisedRoutes.length > 1
+                ? revisedRoutes[1]
+                : revisedRoutes.first,
+            isWorkout: false,
+          );
+        }
+
         // Check cache first
         if (_routeCache.containsKey(fileName)) {
           final cached = _routeCache[fileName]![shiftCode];

@@ -168,6 +168,11 @@ void main() {
       expect(first[3].location, 'Adamstown Stn');
       expect(first.last.action, 'Finish');
       expect(first.last.time, '09:39');
+      expect(first.last.location, 'Phibsboro Garage');
+      expect(
+        first.where((e) => e.action == 'Arrive' && e.time == '09:39'),
+        isEmpty,
+      );
     });
 
     test('keeps real second-half content after divider', () {
@@ -321,6 +326,106 @@ void main() {
       expect(entries.last.time, '21:00');
       expect(entries.last.location, 'Garage');
       expect(entries.where((e) => e.action == 'Arrive'), isEmpty);
+    });
+
+    test('Phibs Garage is shown as Phibsboro Garage', () {
+      final board = ZoneBoardMapper.fromDayData('PZ4/40', {
+        'duty': '440',
+        'signoff': '00:40',
+        'board': [
+          ['', '', '', 'Phibsboro Garage', '20:10', ''],
+          ['SPL', '', '', 'Phibs Garage', '00:40', ''],
+          ['', 'Finish', 'Duty', '', '', ''],
+        ],
+      });
+
+      final entries = board!.sections.single.entries;
+      expect(entries.first.location, 'Phibsboro Garage');
+      expect(entries.last.action, 'Finish');
+      expect(entries.last.time, '00:40');
+      expect(entries.last.location, 'Phibsboro Garage');
+    });
+
+    test('same-time garage arrival and finish is one Finish line', () {
+      final board = ZoneBoardMapper.fromDayData('PZ4/34', {
+        'duty': '434',
+        'signoff': '00:35',
+        'board': [
+          ['', '', '', 'Dublin Airport', '00:00', ''],
+          ['', '', '', 'Phibsboro Garage', '00:35', ''],
+          ['', 'Finish', 'Duty', '', '', ''],
+        ],
+      });
+
+      final entries = board!.sections.single.entries;
+      expect(entries[0].action, 'Arrive');
+      expect(entries[0].location, 'Dublin Airport');
+      expect(entries.length, 2);
+      expect(entries.last.action, 'Finish');
+      expect(entries.last.time, '00:35');
+      expect(entries.last.location, 'Phibsboro Garage');
+
+      final earlier = ZoneBoardMapper.fromDayData('PZ4/99', {
+        'duty': '499',
+        'signoff': '00:40',
+        'board': [
+          ['', '', '', 'Phibsboro Garage', '00:35', ''],
+          ['', 'Finish', 'Duty', '', '', ''],
+        ],
+      });
+      final kept = earlier!.sections.single.entries;
+      expect(kept[0].action, 'Arrive');
+      expect(kept[0].time, '00:35');
+      expect(kept[1].action, 'Finish');
+      expect(kept[1].time, '00:40');
+      expect(kept[1].location, isNull);
+    });
+
+    test('Route 13 finish after a garage special is at Phibsboro', () {
+      final board = ZoneBoardMapper.fromDayData('13/31', {
+        'duty': '231',
+        'signoff': '00:25',
+        'board': [
+          ['13', '', '', 'Grange Castle', '', '23:00'],
+          ['SPL', '', '', 'Mountjoy Square', '', '00:10'],
+          ['', 'Finish', 'Duty', '', '', ''],
+        ],
+      });
+
+      final entries = board!.sections.single.entries;
+      expect(entries[1].action, 'SPL');
+      expect(entries[1].location, 'Mountjoy Square');
+      expect(entries.last.action, 'Finish');
+      expect(entries.last.time, '00:25');
+      expect(entries.last.location, 'Phibsboro Garage');
+
+      final split = ZoneBoardMapper.fromDayData('13/32', {
+        'duty': '232',
+        'signoff': '00:30',
+        'board': [
+          ['SPL', '', '', 'Mountjoy Square', '', '00:20'],
+          ['---', '', '', '', '', ''],
+          ['', 'Finish', 'Duty', '', '', ''],
+        ],
+      });
+      expect(split!.sections.single.entries.last.location, 'Phibsboro Garage');
+    });
+
+    test('Route 13 finish on the street stays at that arrival', () {
+      final board = ZoneBoardMapper.fromDayData('13/01', {
+        'duty': '201',
+        'signoff': '12:46',
+        'board': [
+          ['', '', '', 'Mountjoy Square', '12:30', ''],
+          ['', 'Finish', 'Duty', '', '', ''],
+        ],
+      });
+
+      final entries = board!.sections.single.entries;
+      expect(entries.first.action, 'Arrive');
+      expect(entries.first.location, 'Mountjoy Square');
+      expect(entries.last.action, 'Finish');
+      expect(entries.last.location, isNull);
     });
   });
 }

@@ -6,6 +6,7 @@ import 'package:spdrivercalendar/features/bills/services/board_lookup.dart';
 import 'package:spdrivercalendar/features/bills/utils/bills_default_zone.dart';
 import 'package:spdrivercalendar/features/bills/widgets/bill_duty_index_list.dart';
 import 'package:spdrivercalendar/features/calendar/services/roster_service.dart';
+import 'package:spdrivercalendar/features/calendar/widgets/board_share_button.dart';
 import 'package:spdrivercalendar/features/calendar/widgets/universal_board_timeline.dart';
 import 'package:spdrivercalendar/models/universal_board.dart';
 import 'package:spdrivercalendar/theme/app_theme.dart';
@@ -646,6 +647,8 @@ class BillsScreenState extends State<BillsScreen> {
                   ],
                 ),
               ),
+              if (_selectedBoard != null)
+                BoardShareButton(board: _selectedBoard!),
               TextButton(
                 onPressed: () => _showBill(duty),
                 child: const Text('See bill'),

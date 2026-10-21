@@ -1,6 +1,7 @@
 import 'package:flutter/services.dart';
 import 'package:spdrivercalendar/features/bills/models/bill_duty.dart';
 import 'package:spdrivercalendar/features/calendar/services/roster_service.dart';
+import 'package:spdrivercalendar/features/calendar/utils/euro_duty_revisions.dart';
 import 'package:spdrivercalendar/features/calendar/services/zone2_duties.dart';
 
 class BillsLoadResult {
@@ -99,7 +100,10 @@ class BillsCsvService {
     if (zone == 'Uni/Euro') {
       final csv7Days = await rootBundle.loadString('assets/UNI_7DAYs.csv');
       if (dayType == 'M-F') {
-        final csvMF = await rootBundle.loadString('assets/UNI_M-F.csv');
+        final csvMF = EuroDutyRevisions.applyUniMfCsv(
+          await rootBundle.loadString('assets/UNI_M-F.csv'),
+          eraDate,
+        );
         return mergeUniEuroCsvLines(csv7Days, csvMF);
       }
       return csv7Days.split('\n');

@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'dart:convert';
 import 'package:spdrivercalendar/features/calendar/services/roster_service.dart';
 import 'package:spdrivercalendar/features/calendar/services/zone2_duties.dart';
+import 'package:spdrivercalendar/features/calendar/utils/euro_duty_revisions.dart';
 import 'package:spdrivercalendar/features/calendar/services/roster_schedule_service.dart';
 import 'package:spdrivercalendar/core/services/storage_service.dart';
 import 'package:spdrivercalendar/core/constants/app_constants.dart';
@@ -1500,6 +1501,11 @@ class StatisticsScreenState extends State<StatisticsScreen>
         return await _loadDonnybrookWorkTime(shiftCode, event.startDate);
       
       } else if (Zone2Duties.isUniEuroCode(shiftCode)) {
+        final revisedWork = EuroDutyRevisions.workFor(
+          shiftCode,
+          event.startDate,
+        );
+        if (revisedWork != null) return revisedWork;
 
         isUniShift = true;
         
@@ -2080,6 +2086,11 @@ class StatisticsScreenState extends State<StatisticsScreen>
         isBusCheck = true;
         fileName = 'buscheck.csv';
       } else if (Zone2Duties.isUniEuroCode(shiftCode)) {
+        final revisedSpread = EuroDutyRevisions.spreadFor(
+          shiftCode,
+          event.startDate,
+        );
+        if (revisedSpread != null) return revisedSpread;
         return await _calculateUniSpreadTime(shiftCode, dayOfWeek);
       } else {
         zoneNumber = Zone2Duties.csvZoneNumberForDuty(shiftCode);

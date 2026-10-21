@@ -1,4 +1,21 @@
  final Map<String, List<Map<String, String>>> changelogData = {
+  '4.4.3': [
+    {
+      'title': 'Share Board',
+      'description':
+          'Share a board as an image.',
+    },
+    {
+      'title': '307/03 and 307/04 From 8 Nov',
+      'description':
+          'From 8 November 2026, 307/03 is duty 567 on X32 and 307/04 is duty 573 on X26/C1, with new times and boards.',
+    },
+    {
+      'title': 'Board Tidy Up',
+      'description':
+          'Clearer labels for garage specials and finishes on boards.',
+    },
+  ],
   '4.4.2': [
     {
       'title': 'Route 13',

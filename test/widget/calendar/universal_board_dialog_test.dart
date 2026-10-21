@@ -56,6 +56,7 @@ void main() {
     expect(dialogRect.left, greaterThanOrEqualTo(0));
     expect(dialogRect.right, lessThanOrEqualTo(320));
     expect(find.text('Board PZ1/01'), findsOneWidget);
+    expect(find.byTooltip('Share board'), findsOneWidget);
     expect(find.text('Duty 01'), findsOneWidget);
     expect(find.text('First Half'), findsOneWidget);
     expect(find.text('Second Half'), findsOneWidget);

@@ -136,7 +136,7 @@ class ZoneBoardMapper {
 
       final route = cells[0].trim();
       final f1 = cells[1].trim();
-      final place = cells[3].trim();
+      final place = _canonicalPlace(cells[3].trim());
       final arr = cells[4].trim();
       final dep = cells[5].trim();
 
@@ -313,6 +313,10 @@ class ZoneBoardMapper {
     // Fold that into the previous section so the dialog isn't a lone
     // "Second Half" with a single Finish row.
     _mergeTrailingFinishOnlySection(sections);
+    if (Zone2Duties.isRoute13Code(shift)) {
+      _labelRoute13GarageFinishes(sections);
+    }
+    _collapseSameTimeGarageArrive(sections);
 
     return UniversalBoard(
       shift: shift,
@@ -335,6 +339,52 @@ class ZoneBoardMapper {
       entries: [...previous.entries, ...last.entries],
     );
     sections.removeLast();
+  }
+
+  /// The special back to the garage is an SPL from the terminus. The Finish
+  /// after it is sign-off at Phibsboro, not at that terminus.
+  static void _labelRoute13GarageFinishes(List<BoardSection> sections) {
+    BoardEntry? previous;
+    for (final section in sections) {
+      for (var i = 0; i < section.entries.length; i++) {
+        final entry = section.entries[i];
+        if (entry.action == 'Finish' && _isStreetSpl(previous)) {
+          section.entries[i] = BoardEntry(
+            action: 'Finish',
+            time: entry.time,
+            location: 'Phibsboro Garage',
+          );
+        }
+        previous = section.entries[i];
+      }
+    }
+  }
+
+  /// Arrive at the garage and Finish at that same time are one sign-off.
+  static void _collapseSameTimeGarageArrive(List<BoardSection> sections) {
+    for (final section in sections) {
+      final entries = section.entries;
+      for (var i = 0; i < entries.length - 1; i++) {
+        final arrive = entries[i];
+        final finish = entries[i + 1];
+        if (arrive.action != 'Arrive' || finish.action != 'Finish') continue;
+        final place = arrive.location;
+        if (place == null || !place.toLowerCase().contains('garage')) continue;
+        if (arrive.time == null || arrive.time != finish.time) continue;
+        entries[i + 1] = BoardEntry(
+          action: 'Finish',
+          time: finish.time,
+          location: place,
+        );
+        entries.removeAt(i);
+      }
+    }
+  }
+
+  static bool _isStreetSpl(BoardEntry? entry) {
+    if (entry == null || entry.action != 'SPL') return false;
+    final place = entry.location?.toLowerCase() ?? '';
+    return place.isNotEmpty && !place.contains('garage');
   }
 
   static bool _isFinishEntry(BoardEntry entry) {
@@ -406,6 +456,12 @@ class ZoneBoardMapper {
 
   static bool _isGaragePlace(String place) =>
       place.toLowerCase().trim() == 'garage';
+
+  /// Sheets sometimes shorten Phibsboro to Phibs.
+  static String _canonicalPlace(String place) {
+    if (place.toLowerCase() == 'phibs garage') return 'Phibsboro Garage';
+    return place;
+  }
 
   static bool _isTerminusPlace(String place) {
     final lower = place.toLowerCase();

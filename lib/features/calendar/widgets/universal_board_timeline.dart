@@ -8,10 +8,14 @@ class UniversalBoardTimeline extends StatelessWidget {
     super.key,
     required this.board,
     this.padding,
+    this.scrollable = true,
   });
 
   final UniversalBoard board;
   final EdgeInsetsGeometry? padding;
+
+  /// False lays the whole board out at its full height, for a one-shot capture.
+  final bool scrollable;
 
   Map<String, double> _sizes(BuildContext context) {
     final width = MediaQuery.sizeOf(context).width;
@@ -45,14 +49,20 @@ class UniversalBoardTimeline extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final sizes = _sizes(context);
+    final content = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: board.sections
+          .map((section) => _BoardSectionView(section: section, sizes: sizes))
+          .toList(),
+    );
+    final resolvedPadding = padding ?? EdgeInsets.all(sizes['padding']!);
+    if (!scrollable) {
+      return Padding(padding: resolvedPadding, child: content);
+    }
     return SingleChildScrollView(
-      padding: padding ?? EdgeInsets.all(sizes['padding']!),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: board.sections
-            .map((section) => _BoardSectionView(section: section, sizes: sizes))
-            .toList(),
-      ),
+      padding: resolvedPadding,
+      child: content,
     );
   }
 }
@@ -319,7 +329,7 @@ class _BoardEntryRow extends StatelessWidget {
                       child: _metaRow(
                         icon: Icons.location_on,
                         text: entry.action == 'SPL'
-                            ? 'To ${entry.location}'
+                            ? splLocationLabel(entry.location!)
                             : entry.location!,
                       ),
                     ),
@@ -374,4 +384,13 @@ class _BoardEntryRow extends StatelessWidget {
       ],
     );
   }
+}
+
+/// Street SPL rows name the place the special leaves. Garage SPL rows name
+/// the garage it runs to.
+String splLocationLabel(String location) {
+  if (location.toLowerCase().contains('garage')) {
+    return 'To $location';
+  }
+  return 'From $location';
 }

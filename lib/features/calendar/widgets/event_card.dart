@@ -23,6 +23,7 @@ import 'package:spdrivercalendar/services/donnybrook_feature_service.dart';
 import 'package:spdrivercalendar/services/jamestown_feature_service.dart';
 import 'package:spdrivercalendar/features/calendar/utils/shift_rest_gap.dart';
 import 'package:spdrivercalendar/features/calendar/utils/duty_break_clock.dart';
+import 'package:spdrivercalendar/features/calendar/utils/euro_duty_revisions.dart';
 import 'package:spdrivercalendar/features/calendar/utils/work_duration_display.dart';
 import 'package:spdrivercalendar/features/calendar/utils/assigned_duty_zone.dart';
 import 'package:spdrivercalendar/features/calendar/services/zone2_duties.dart';
@@ -743,7 +744,10 @@ class _EventCardState extends State<EventCard> {
       
       // If not found in 7DAYs, check M-F file for weekdays
       if (startTime == null && dayOfWeek != 'Saturday' && dayOfWeek != 'Sunday' && !isBankHoliday) {
-        final fileMF = await rootBundle.loadString('assets/UNI_M-F.csv');
+        final fileMF = EuroDutyRevisions.applyUniMfCsv(
+          await rootBundle.loadString('assets/UNI_M-F.csv'),
+          widget.event.startDate,
+        );
         final linesMF = fileMF.split('\n');
         
         bool headerSkippedMF = false;
@@ -1188,7 +1192,10 @@ class _EventCardState extends State<EventCard> {
           
           // If duty wasn't found and it's a weekday, check UNI_M-F.csv
           if (!dutyFound && isWeekday && bankHoliday == null) {
-            final fileMF = await rootBundle.loadString('assets/UNI_M-F.csv');
+            final fileMF = EuroDutyRevisions.applyUniMfCsv(
+              await rootBundle.loadString('assets/UNI_M-F.csv'),
+              widget.event.startDate,
+            );
             final linesMF = fileMF.split('\n');
             
             bool headerSkippedMF = false;

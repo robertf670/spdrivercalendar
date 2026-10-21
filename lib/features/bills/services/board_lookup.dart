@@ -43,6 +43,6 @@ class BoardLookup {
         dayKey: ZoneBoardMapper.dayKeyForBrowseType(dayType),
       );
     }
-    return UniversalBoardService.getBoardByShift(shift);
+    return UniversalBoardService.getBoardByShift(shift, date: date);
   }
 }

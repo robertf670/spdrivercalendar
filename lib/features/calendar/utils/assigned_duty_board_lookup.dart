@@ -49,7 +49,10 @@ class AssignedDutyBoardLookup {
       return zoneBoard;
     }
 
-    final uniBoard = await UniversalBoardService.getBoardByShift(code);
+    final uniBoard = await UniversalBoardService.getBoardByShift(
+      code,
+      date: date,
+    );
     if (uniBoard != null && uniBoard.sections.isNotEmpty) {
       return uniBoard;
     }
@@ -66,7 +69,10 @@ class AssignedDutyBoardLookup {
       return fromTitle;
     }
 
-    final uniFromTitle = await UniversalBoardService.getBoardByShift(event.title);
+    final uniFromTitle = await UniversalBoardService.getBoardByShift(
+      event.title,
+      date: event.startDate,
+    );
     if (uniFromTitle != null && uniFromTitle.sections.isNotEmpty) {
       return uniFromTitle;
     }

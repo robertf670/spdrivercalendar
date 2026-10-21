@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/services.dart';
+import 'package:spdrivercalendar/features/calendar/utils/euro_duty_revisions.dart';
 import 'package:spdrivercalendar/models/universal_board.dart';
 
 class UniversalBoardService {
@@ -25,7 +26,14 @@ class UniversalBoardService {
     }
   }
 
-  static Future<UniversalBoard?> getBoardByShift(String shift) async {
+  static Future<UniversalBoard?> getBoardByShift(
+    String shift, {
+    DateTime? date,
+  }) async {
+    if (date != null) {
+      final revised = EuroDutyRevisions.boardFor(shift, date);
+      if (revised != null) return revised;
+    }
     final boards = await loadBoards();
     try {
       return boards.firstWhere((board) => board.shift == shift);

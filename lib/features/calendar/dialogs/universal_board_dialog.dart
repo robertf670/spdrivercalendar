@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:spdrivercalendar/features/calendar/widgets/board_share_button.dart';
 import 'package:spdrivercalendar/features/calendar/widgets/universal_board_timeline.dart';
 import 'package:spdrivercalendar/models/universal_board.dart';
 
@@ -101,6 +102,10 @@ class UniversalBoardDialog extends StatelessWidget {
                         ],
                       ],
                     ),
+                  ),
+                  BoardShareButton(
+                    board: board,
+                    color: Theme.of(context).colorScheme.onPrimary,
                   ),
                   IconButton(
                     icon: Icon(

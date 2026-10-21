@@ -6,6 +6,7 @@ import 'package:spdrivercalendar/models/bank_holiday.dart';
 import 'package:spdrivercalendar/models/shift_data.dart';
 import 'package:spdrivercalendar/core/utils/location_utils.dart';
 import 'package:spdrivercalendar/features/calendar/utils/duty_break_clock.dart';
+import 'package:spdrivercalendar/features/calendar/utils/euro_duty_revisions.dart';
 import 'package:spdrivercalendar/features/calendar/utils/jamestown_road.dart';
 import 'package:spdrivercalendar/features/calendar/services/zone2_duties.dart';
 import 'package:spdrivercalendar/services/donnybrook_feature_service.dart';
@@ -127,7 +128,10 @@ class ShiftService {
       }
       
       if (dayOfWeek != 'Saturday' && dayOfWeek != 'Sunday' && !isBankHoliday) {
-        final fileMF = await rootBundle.loadString('assets/UNI_M-F.csv');
+        final fileMF = EuroDutyRevisions.applyUniMfCsv(
+          await rootBundle.loadString('assets/UNI_M-F.csv'),
+          date,
+        );
         final linesMF = fileMF.split('\n');
         
         bool headerSkippedMF = false;

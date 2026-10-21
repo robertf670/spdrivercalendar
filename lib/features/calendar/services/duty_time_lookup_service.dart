@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:spdrivercalendar/features/calendar/services/roster_service.dart';
 import 'package:spdrivercalendar/features/calendar/services/zone2_duties.dart';
+import 'package:spdrivercalendar/features/calendar/utils/euro_duty_revisions.dart';
 import 'package:spdrivercalendar/features/calendar/utils/jamestown_road.dart';
 import 'package:spdrivercalendar/services/donnybrook_feature_service.dart';
 import 'package:spdrivercalendar/services/jamestown_feature_service.dart';
@@ -79,6 +80,7 @@ class DutyTimeLookupService {
         return _lookupUni(
           shiftNumber: shiftNumber,
           dayOfWeek: dayOfWeek,
+          shiftDate: shiftDate,
           loadCsv: loadCsv,
         );
       }
@@ -136,6 +138,7 @@ class DutyTimeLookupService {
   static Future<DutyTimeLookupResult?> _lookupUni({
     required String shiftNumber,
     required String dayOfWeek,
+    required DateTime shiftDate,
     required DutyCsvLoader loadCsv,
   }) async {
     final isWeekend = dayOfWeek == 'Saturday' || dayOfWeek == 'Sunday';
@@ -146,7 +149,10 @@ class DutyTimeLookupService {
 
     for (final filePath in filesToTry) {
       try {
-        final csv = await loadCsv(filePath);
+        final loaded = await loadCsv(filePath);
+        final csv = filePath == _uniWeekdayAsset
+            ? EuroDutyRevisions.applyUniMfCsv(loaded, shiftDate)
+            : loaded;
         final lines = csv.split('\n');
         for (var index = 1; index < lines.length; index++) {
           final line = lines[index].trim().replaceAll('\r', '');
