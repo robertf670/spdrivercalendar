@@ -187,6 +187,7 @@ class BillDutyIndexListState extends State<BillDutyIndexList> {
             label: _labelFor(duty),
             selected: expanded || widget.focusedShift == duty.shift,
             hasBoard: hasBoard && !widget.expandOnTap,
+            showCue: widget.expandOnTap || hasBoard,
             onTap: () => widget.onDutyTap?.call(duty),
           ),
           if (expanded && widget.expandOnTap)

@@ -1,0 +1,198 @@
+{
+  "description": "45-week Zone 4 Shift roster from Sunday 23 August 2026. Rest days rotate by week. Day order: Sun-Sat.",
+  "zone": "4",
+  "scheduleType": "Shift",
+  "anchorSunday": "2026-08-23",
+  "complete": true,
+  "dayNames": [
+    "Sunday",
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday"
+  ],
+  "weeks": [
+    {
+      "weekNumber": 1,
+      "days": ["PZ4/05", "PZ4/26", "PZ4/26", "R", "PZ4/09", "PZ4/10", "R"]
+    },
+    {
+      "weekNumber": 2,
+      "days": ["R", "R", "PZ4/35", "PZ4/35", "PZ4/35", "PZ4/35", "PZ4/26"]
+    },
+    {
+      "weekNumber": 3,
+      "days": ["R", "PZ4/18", "PZ4/18", "PZ4/18", "R", "PZ4/18", "PZ4/09"]
+    },
+    {
+      "weekNumber": 4,
+      "days": ["PZ4/18", "PZ4/35", "R", "PZ4/19", "PZ4/19", "PZ4/19", "R"]
+    },
+    {
+      "weekNumber": 5,
+      "days": ["R", "PZ4/01", "PZ4/01", "PZ4/01", "PZ4/01", "R", "PZ4/10"]
+    },
+    {
+      "weekNumber": 6,
+      "days": ["PZ4/01", "PZ4/19", "PZ4/19", "R", "PZ4/18", "PZ4/01", "R"]
+    },
+    {
+      "weekNumber": 7,
+      "days": ["R", "R", "PZ4/37", "PZ4/37", "PZ4/37", "PZ4/37", "PZ4/27"]
+    },
+    {
+      "weekNumber": 8,
+      "days": ["R", "PZ4/17", "PZ4/17", "PZ4/17", "R", "PZ4/17", "PZ4/16"]
+    },
+    {
+      "weekNumber": 9,
+      "days": ["PZ4/21", "PZ4/37", "R", "PZ4/20", "PZ4/20", "PZ4/20", "R"]
+    },
+    {
+      "weekNumber": 10,
+      "days": ["R", "PZ4/02", "PZ4/02", "PZ4/02", "PZ4/02", "R", "PZ4/07"]
+    },
+    {
+      "weekNumber": 11,
+      "days": ["PZ4/09", "PZ4/20", "PZ4/20", "R", "PZ4/17", "PZ4/02", "R"]
+    },
+    {
+      "weekNumber": 12,
+      "days": ["R", "R", "PZ4/39", "PZ4/39", "PZ4/39", "PZ4/39", "PZ4/29"]
+    },
+    {
+      "weekNumber": 13,
+      "days": ["R", "PZ4/16", "PZ4/16", "PZ4/16", "R", "PZ4/16", "PZ4/11"]
+    },
+    {
+      "weekNumber": 14,
+      "days": ["PZ4/12", "PZ4/39", "R", "PZ4/21", "PZ4/21", "PZ4/21", "R"]
+    },
+    {
+      "weekNumber": 15,
+      "days": ["R", "PZ4/03", "PZ4/03", "PZ4/03", "PZ4/03", "R", "PZ4/05"]
+    },
+    {
+      "weekNumber": 16,
+      "days": ["PZ4/02", "PZ4/21", "PZ4/21", "R", "PZ4/16", "PZ4/03", "R"]
+    },
+    {
+      "weekNumber": 17,
+      "days": ["R", "R", "PZ4/36", "PZ4/36", "PZ4/36", "PZ4/36", "PZ4/28"]
+    },
+    {
+      "weekNumber": 18,
+      "days": ["R", "PZ4/15", "PZ4/15", "PZ4/15", "R", "PZ4/15", "PZ4/17"]
+    },
+    {
+      "weekNumber": 19,
+      "days": ["PZ4/19", "PZ4/36", "R", "PZ4/23", "PZ4/23", "PZ4/23", "R"]
+    },
+    {
+      "weekNumber": 20,
+      "days": ["R", "PZ4/04", "PZ4/04", "PZ4/04", "PZ4/04", "R", "PZ4/03"]
+    },
+    {
+      "weekNumber": 21,
+      "days": ["PZ4/08", "PZ4/23", "PZ4/23", "R", "PZ4/15", "PZ4/04", "R"]
+    },
+    {
+      "weekNumber": 22,
+      "days": ["R", "R", "PZ4/38", "PZ4/38", "PZ4/38", "PZ4/38", "PZ4/24"]
+    },
+    {
+      "weekNumber": 23,
+      "days": ["R", "PZ4/05", "PZ4/05", "PZ4/05", "R", "PZ4/05", "PZ4/12"]
+    },
+    {
+      "weekNumber": 24,
+      "days": ["PZ4/11", "PZ4/38", "R", "PZ4/22", "PZ4/22", "PZ4/22", "R"]
+    },
+    {
+      "weekNumber": 25,
+      "days": ["R", "PZ4/14", "PZ4/14", "PZ4/14", "PZ4/14", "R", "PZ4/01"]
+    },
+    {
+      "weekNumber": 26,
+      "days": ["PZ4/03", "PZ4/22", "PZ4/22", "R", "PZ4/05", "PZ4/14", "R"]
+    },
+    {
+      "weekNumber": 27,
+      "days": ["R", "R", "PZ4/33", "PZ4/33", "PZ4/33", "PZ4/33", "PZ4/25"]
+    },
+    {
+      "weekNumber": 28,
+      "days": ["R", "PZ4/13", "PZ4/13", "PZ4/13", "R", "PZ4/13", "PZ4/18"]
+    },
+    {
+      "weekNumber": 29,
+      "days": ["PZ4/20", "PZ4/33", "R", "PZ4/24", "PZ4/24", "PZ4/24", "R"]
+    },
+    {
+      "weekNumber": 30,
+      "days": ["R", "PZ4/06", "PZ4/06", "PZ4/06", "PZ4/06", "R", "PZ4/02"]
+    },
+    {
+      "weekNumber": 31,
+      "days": ["PZ4/07", "PZ4/24", "PZ4/24", "R", "PZ4/13", "PZ4/06", "R"]
+    },
+    {
+      "weekNumber": 32,
+      "days": ["R", "R", "PZ4/40", "PZ4/40", "PZ4/40", "PZ4/40", "PZ4/23"]
+    },
+    {
+      "weekNumber": 33,
+      "days": ["R", "PZ4/12", "PZ4/12", "PZ4/12", "R", "PZ4/12", "PZ4/13"]
+    },
+    {
+      "weekNumber": 34,
+      "days": ["PZ4/10", "PZ4/40", "R", "PZ4/25", "PZ4/25", "PZ4/25", "R"]
+    },
+    {
+      "weekNumber": 35,
+      "days": ["R", "PZ4/07", "PZ4/07", "PZ4/07", "PZ4/07", "R", "PZ4/04"]
+    },
+    {
+      "weekNumber": 36,
+      "days": ["PZ4/04", "PZ4/25", "PZ4/25", "R", "PZ4/12", "PZ4/07", "R"]
+    },
+    {
+      "weekNumber": 37,
+      "days": ["R", "R", "PZ4/30", "PZ4/30", "PZ4/30", "PZ4/30", "PZ4/22"]
+    },
+    {
+      "weekNumber": 38,
+      "days": ["R", "PZ4/08", "PZ4/08", "PZ4/08", "R", "PZ4/08", "PZ4/19"]
+    },
+    {
+      "weekNumber": 39,
+      "days": ["PZ4/16", "PZ4/30", "R", "PZ4/27", "PZ4/27", "PZ4/27", "R"]
+    },
+    {
+      "weekNumber": 40,
+      "days": ["R", "PZ4/11", "PZ4/11", "PZ4/11", "PZ4/11", "R", "PZ4/06"]
+    },
+    {
+      "weekNumber": 41,
+      "days": ["PZ4/06", "PZ4/27", "PZ4/27", "R", "PZ4/08", "PZ4/11", "R"]
+    },
+    {
+      "weekNumber": 42,
+      "days": ["R", "R", "PZ4/29", "PZ4/29", "PZ4/29", "PZ4/29", "PZ4/20"]
+    },
+    {
+      "weekNumber": 43,
+      "days": ["R", "PZ4/09", "PZ4/09", "PZ4/09", "R", "PZ4/09", "PZ4/14"]
+    },
+    {
+      "weekNumber": 44,
+      "days": ["PZ4/17", "PZ4/29", "R", "PZ4/26", "PZ4/26", "PZ4/26", "R"]
+    },
+    {
+      "weekNumber": 45,
+      "days": ["R", "PZ4/10", "PZ4/10", "PZ4/10", "PZ4/10", "R", "PZ4/08"]
+    }
+  ]
+}

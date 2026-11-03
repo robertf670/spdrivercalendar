@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:spdrivercalendar/core/widgets/dialog_insets.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:intl/intl.dart';
 import 'package:spdrivercalendar/features/calendar/utils/day_color_swatches.dart';
@@ -52,7 +53,7 @@ class DayColorDialog extends StatelessWidget {
         final screenWidth = MediaQuery.sizeOf(context).width;
         return AlertDialog(
           insetPadding: EdgeInsets.symmetric(
-            horizontal: screenWidth < 350 ? 16.0 : 40.0,
+            horizontal: dialogHorizontalInset(context),
             vertical: screenWidth < 350 ? 16.0 : 24.0,
           ),
           title: const Text('Custom colour'),

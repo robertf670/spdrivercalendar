@@ -370,6 +370,7 @@ class BillDutyListRow extends StatelessWidget {
     required this.label,
     this.selected = false,
     this.hasBoard = false,
+    this.showCue = true,
     this.onTap,
   });
 
@@ -377,6 +378,7 @@ class BillDutyListRow extends StatelessWidget {
   final String label;
   final bool selected;
   final bool hasBoard;
+  final bool showCue;
   final VoidCallback? onTap;
 
   @override
@@ -455,11 +457,12 @@ class BillDutyListRow extends StatelessWidget {
                     ),
                   ),
                 ),
-              Icon(
-                hasBoard ? Icons.chevron_right : Icons.expand_more,
-                size: 20,
-                color: scheme.onSurface.withValues(alpha: 0.35),
-              ),
+              if (showCue)
+                Icon(
+                  hasBoard ? Icons.chevron_right : Icons.expand_more,
+                  size: 20,
+                  color: scheme.onSurface.withValues(alpha: 0.35),
+                ),
             ],
           ),
         ),

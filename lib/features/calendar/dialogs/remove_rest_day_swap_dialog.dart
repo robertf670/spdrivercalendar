@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:spdrivercalendar/core/widgets/dialog_insets.dart';
 import 'package:intl/intl.dart';
 import 'package:spdrivercalendar/services/rest_day_swap_service.dart';
 
@@ -16,7 +17,7 @@ class RemoveRestDaySwapDialog extends StatelessWidget {
     final screenWidth = MediaQuery.sizeOf(context).width;
     return AlertDialog(
       insetPadding: EdgeInsets.symmetric(
-        horizontal: screenWidth < 350 ? 16.0 : 40.0,
+        horizontal: dialogHorizontalInset(context),
         vertical: screenWidth < 350 ? 16.0 : 24.0,
       ),
       title: const Text('Remove rest day swap'),

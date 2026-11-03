@@ -10,6 +10,7 @@ import 'package:spdrivercalendar/features/calendar/utils/spare_meal.dart';
 import 'package:spdrivercalendar/features/calendar/utils/work_shift_duty_repeat.dart';
 import 'package:spdrivercalendar/features/calendar/utils/work_shift_title.dart';
 import 'package:spdrivercalendar/features/calendar/utils/zone2_shift_roster.dart';
+import 'package:spdrivercalendar/features/calendar/utils/zone4_shift_roster.dart';
 import 'package:spdrivercalendar/features/calendar/widgets/custom_training_form.dart';
 import 'package:spdrivercalendar/models/bank_holiday.dart';
 import 'package:spdrivercalendar/models/event.dart';
@@ -80,6 +81,8 @@ class WorkShiftEventPersister {
     bool isNightsRoster = false,
     bool zone2RosterEnabled = false,
     List<bool>? zone2CalendarWeekIsRest,
+    bool zone4RosterEnabled = false,
+    List<bool>? zone4CalendarWeekIsRest,
   }) async {
     final selectedZone = selection.selectedZone;
     final selectedShiftNumber = selection.selectedShiftNumber;
@@ -111,7 +114,13 @@ class WorkShiftEventPersister {
     final willFillZone2Roster = zone2RosterEnabled &&
         selection.fillNext35Weeks &&
         isShiftMarkedIn &&
+        Zone2Duties.isZone(markedInZone) &&
         Zone2Duties.isZone(selectedZone);
+    final willFillZone4Roster = zone4RosterEnabled &&
+        selection.fillNextZone4Weeks &&
+        isShiftMarkedIn &&
+        markedInZone == 'Zone 4' &&
+        selectedZone == 'Zone 4';
 
     final customTrainingData = selection.customTrainingData;
     final event = Event(
@@ -129,8 +138,11 @@ class WorkShiftEventPersister {
       routes: shiftTimes['routes'] as List<String>?,
       trainingDescription: customTrainingData?.description,
       startLocation: customTrainingData?.location,
-      rosterFillSource:
-          willFillZone2Roster ? Zone2ShiftRoster.sourceTag : null,
+      rosterFillSource: willFillZone2Roster
+          ? Zone2ShiftRoster.sourceTag
+          : willFillZone4Roster
+              ? Zone4ShiftRoster.sourceTag
+              : null,
     );
 
     await _addEvent(event);
@@ -209,6 +221,15 @@ class WorkShiftEventPersister {
         selectedZone: selectedZone,
         selectedShiftNumber: selectedShiftNumber,
         calendarWeekIsRest: zone2CalendarWeekIsRest,
+      );
+    }
+
+    if (willFillZone4Roster) {
+      await _fillZone4ShiftRoster(
+        shiftDate: shiftDate,
+        selectedZone: selectedZone,
+        selectedShiftNumber: selectedShiftNumber,
+        calendarWeekIsRest: zone4CalendarWeekIsRest,
       );
     }
 
@@ -501,6 +522,61 @@ class WorkShiftEventPersister {
           date: targetDate,
           times: targetShiftTimes,
           rosterFillSource: Zone2ShiftRoster.sourceTag,
+        );
+        await _addEvent(rosterEvent);
+        await _notifyCreated(rosterEvent);
+      }
+    }
+  }
+
+  Future<void> _fillZone4ShiftRoster({
+    required DateTime shiftDate,
+    required String selectedZone,
+    required String selectedShiftNumber,
+    List<bool>? calendarWeekIsRest,
+  }) async {
+    await RosterService.loadZone4ShiftRoster();
+    final dayIndex = shiftDate.weekday % 7;
+    final weekIndex = Zone4ShiftRoster.pinWeekIndex(
+      weeks: RosterService.zone4ShiftWeeks,
+      dayIndex: dayIndex,
+      dutyCode: selectedShiftNumber,
+      calendarWeekIsRest: calendarWeekIsRest,
+    );
+    if (weekIndex == null) return;
+
+    final weekStartSunday = RosterService.getSundayOfWeek(shiftDate);
+    final length = RosterService.zone4ShiftWeeks.length;
+    for (var w = 0; w < length; w++) {
+      final rosterWeek = Zone4ShiftRoster.filledWeekIndex(
+        pinnedWeek: weekIndex,
+        offset: w,
+        length: length,
+        complete: RosterService.zone4RosterComplete,
+      );
+      if (rosterWeek == null) continue;
+      for (var d = 0; d < 7; d++) {
+        final targetDate = _addCalendarDays(weekStartSunday, w * 7 + d);
+        if (_isSameDay(targetDate, shiftDate)) continue;
+        if (targetDate.isBefore(Zone4ShiftRoster.startsOn)) continue;
+        final isWeekend = targetDate.weekday == DateTime.saturday ||
+            targetDate.weekday == DateTime.sunday;
+        if (!isWeekend && RosterService.isSaturdayService(targetDate)) {
+          continue;
+        }
+        if (_bankHolidayForDate(targetDate) != null) continue;
+        if (_eventsForDay(targetDate).any((e) => !e.isHoliday)) continue;
+        final duty = RosterService.getZone4ShiftDayDuty(rosterWeek, d);
+        if (duty == null || duty == 'R') continue;
+        final targetShiftTimes =
+            await _lookupShiftTimes(selectedZone, duty, targetDate);
+        if (targetShiftTimes == null) continue;
+        final rosterEvent = _eventFromTimes(
+          id: '${duty}_z4_${targetDate.millisecondsSinceEpoch}',
+          title: duty,
+          date: targetDate,
+          times: targetShiftTimes,
+          rosterFillSource: Zone4ShiftRoster.sourceTag,
         );
         await _addEvent(rosterEvent);
         await _notifyCreated(rosterEvent);

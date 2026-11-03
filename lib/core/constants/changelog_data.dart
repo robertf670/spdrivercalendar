@@ -1,4 +1,51 @@
  final Map<String, List<Map<String, String>>> changelogData = {
+  '4.4.4': [
+    {
+      'title': 'Duty Compare',
+      'description':
+          'Compare two duties from Bills & Boards, from any zone. See who has more work and who finishes later. May help in swapping duties.',
+    },
+    {
+      'title': 'Route 13 Autofill',
+      'description':
+          'Route 13 Shift drivers can turn this on from Marked In Status. It fills in 35 weeks of duties, based on the roster.',
+    },
+    {
+      'title': 'Zone 4 Autofill',
+      'description':
+          'Zone 4 Shift drivers can turn this on from Marked In Status. It fills in 45 weeks of duties, based on the roster.',
+    },
+    {
+      'title': 'Swipe to Compare',
+      'description':
+          'Swipe a duty card from right to left to compare it with another duty.',
+    },
+    {
+      'title': 'Swipe to Board',
+      'description':
+          'Swipe a duty card from left to right to open its board, when it has one.',
+    },
+    {
+      'title': 'Bus Tracking',
+      'description':
+          'Newer EW and EA buses can be tracked again. You can now report a bus on a spare duty. Track, change, and remove are easier to tap.',
+    },
+    {
+      'title': 'Spare Duties',
+      'description':
+          'Adding a duty stays on the spare screen.',
+    },
+    {
+      'title': 'Zone 1 29X',
+      'description':
+          'Monday to Friday, the 17:21 second half is route C1.',
+    },
+    {
+      'title': 'Phone Layout',
+      'description':
+          'Duties, the week view, boards, and dialogs fit better on small phones and when text is large.',
+    },
+  ],
   '4.4.3': [
     {
       'title': 'Share Board',

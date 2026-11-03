@@ -32,7 +32,13 @@ import 'package:spdrivercalendar/features/calendar/utils/spare_meal.dart';
 import 'package:spdrivercalendar/features/calendar/utils/spare_time_options.dart';
 import 'package:spdrivercalendar/features/calendar/widgets/dialog_action_layout.dart';
 import 'package:spdrivercalendar/features/calendar/widgets/spare_meal_controls.dart';
+import 'package:spdrivercalendar/features/bills/utils/duty_compare_launch.dart';
+import 'package:spdrivercalendar/features/calendar/dialogs/universal_board_dialog.dart';
+import 'package:spdrivercalendar/features/calendar/utils/assigned_duty_board_lookup.dart';
 import 'package:spdrivercalendar/features/calendar/widgets/assigned_duty_board_button.dart';
+import 'package:spdrivercalendar/models/universal_board.dart';
+import 'package:spdrivercalendar/features/calendar/widgets/spare_duty_assignment_card.dart';
+import 'package:spdrivercalendar/features/calendar/widgets/bus_icon_action.dart';
 import 'package:spdrivercalendar/features/ratings/duty_rate_menu_actions.dart';
 import 'package:spdrivercalendar/features/bus_reports/bus_report_row_actions.dart';
 import 'package:spdrivercalendar/features/bus_reports/bus_report_assign_warning.dart';
@@ -97,6 +103,8 @@ class _EventCardState extends State<EventCard> {
   /// Prevents repeated load/save of location data (fixes loop when clicking a duty)
   String? _loadedLocationForEventId;
   String? _restUntilNextLabel;
+  UniversalBoard? _dutyBoard;
+  int _boardLoadGeneration = 0;
 
   final GlobalKey _shareCardRepaintKey = GlobalKey();
 
@@ -194,6 +202,7 @@ class _EventCardState extends State<EventCard> {
     _loadLocationData();
     _loadRouteInfo();
     _loadRestUntilNext();
+    _loadDutyBoard();
     if (widget.event.assignedDuties != null && widget.event.assignedDuties!.isNotEmpty) {
       _loadAssignedDutyDetails();
     }
@@ -248,6 +257,7 @@ class _EventCardState extends State<EventCard> {
       _loadLocationData();
       _loadRouteInfo();
       _loadRestUntilNext();
+      _loadDutyBoard();
       if (widget.event.assignedDuties != null && widget.event.assignedDuties!.isNotEmpty) {
         _loadAssignedDutyDetails();
       } else {
@@ -257,6 +267,17 @@ class _EventCardState extends State<EventCard> {
         });
       }
     }
+  }
+
+  Future<void> _loadDutyBoard() async {
+    final generation = ++_boardLoadGeneration;
+    final board = await AssignedDutyBoardLookup.load(
+      assignedDuty: widget.event.shiftCode,
+      date: widget.event.startDate,
+    );
+    if (!mounted || generation != _boardLoadGeneration) return;
+    if (board == _dutyBoard) return;
+    setState(() => _dutyBoard = board);
   }
 
   Future<void> _loadRestUntilNext() async {
@@ -1886,8 +1907,12 @@ class _EventCardState extends State<EventCard> {
     final double screenWidth = MediaQuery.sizeOf(context).width;
     final bool showWorkTimeInline =
         screenWidth >= 360 && textScaleFactor <= 1.25;
-    
-    return RepaintBoundary(
+    final canCompare =
+        !isSpareShift && DutyCompareLaunch.canCompare(widget.event.shiftCode);
+    final canOpenBoard = _dutyBoard != null;
+    final swipeHint = Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.28);
+
+    final card = RepaintBoundary(
       key: _shareCardRepaintKey,
       child: _shareCaptureShell(
         child: Card(
@@ -1910,7 +1935,9 @@ class _EventCardState extends State<EventCard> {
           }
         },
         borderRadius: BorderRadius.circular(AppTheme.borderRadius),
-        child: Padding(
+        child: Stack(
+          children: [
+            Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -2469,135 +2496,29 @@ class _EventCardState extends State<EventCard> {
                           final isWorkout = snapshot.data?.toLowerCase().contains('workout') ?? false;
                           final isOvertimeShift = widget.event.title.contains('(OT)');
                           final isWorkoutOrOvertime = isWorkout || isOvertimeShift;
-                          
+                          final firstBus = widget.event.firstHalfBus;
+                          final secondBus = widget.event.secondHalfBus;
+
                           return Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              if (isWorkoutOrOvertime)
-                                Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Expanded(
-                                      child: Row(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'Assigned Bus: ${widget.event.firstHalfBus}',
-                                            style: TextStyle(
-                                              color: Theme.of(context).brightness == Brightness.dark
-                                                  ? Colors.white
-                                                  : Colors.black,
-                                              fontSize: 13,
-                                              fontWeight: FontWeight.w400,
-                                            ),
-                                          ),
-                                          // Compact track button for assigned bus
-                                          InkWell(
-                                            onTap: _busTrackingLoading['tracking_${widget.event.firstHalfBus}'] == true
-                                                ? null
-                                                : () => _trackBus(widget.event.firstHalfBus!),
-                                            child: Padding(
-                                              padding: const EdgeInsets.only(left: 4.0),
-                                              child: _busTrackingLoading['tracking_${widget.event.firstHalfBus}'] == true
-                                                  ? const SizedBox(
-                                                      width: 12,
-                                                      height: 12,
-                                                      child: CircularProgressIndicator(strokeWidth: 1.5),
-                                                    )
-                                                  : const Icon(Icons.location_on, size: 14, color: Colors.blue),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
+                              if (isWorkoutOrOvertime &&
+                                  (firstBus != null || secondBus != null))
+                                _assignedBusLine(
+                                  'Assigned Bus: ${firstBus ?? secondBus}',
+                                  (firstBus ?? secondBus)!,
                                 )
                               else ...[
-                                // Compact single-line format for both buses
-                                Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Expanded(
-                                      child: Wrap(
-                                        alignment: WrapAlignment.start,
-                                        spacing: 4.0,
-                                        runSpacing: 4.0,
-                                        crossAxisAlignment: WrapCrossAlignment.start,
-                                        children: [
-                                          // First Half Bus
-                                          if (widget.event.firstHalfBus != null) ...[
-                                            Text(
-                                              'First Half: ${widget.event.firstHalfBus}',
-                                              style: TextStyle(
-                                                color: Theme.of(context).brightness == Brightness.dark
-                                                    ? Colors.white
-                                                    : Colors.black,
-                                                fontSize: 13,
-                                                fontWeight: FontWeight.w400,
-                                              ),
-                                            ),
-                                            // Compact track button for first half
-                                            InkWell(
-                                              onTap: _busTrackingLoading['tracking_${widget.event.firstHalfBus}'] == true
-                                                  ? null
-                                                  : () => _trackBus(widget.event.firstHalfBus!),
-                                              child: Padding(
-                                                padding: const EdgeInsets.only(left: 4.0),
-                                                child: _busTrackingLoading['tracking_${widget.event.firstHalfBus}'] == true
-                                                    ? const SizedBox(
-                                                        width: 12,
-                                                        height: 12,
-                                                        child: CircularProgressIndicator(strokeWidth: 1.5),
-                                                      )
-                                                    : const Icon(Icons.location_on, size: 14, color: Colors.blue),
-                                              ),
-                                            ),
-                                          ],
-                                          // Separator and Second Half Bus
-                                          if (widget.event.firstHalfBus != null && widget.event.secondHalfBus != null)
-                                            Text(
-                                              ' | ',
-                                              style: TextStyle(
-                                                color: Theme.of(context).brightness == Brightness.dark
-                                                    ? Colors.white
-                                                    : Colors.black,
-                                                fontSize: 13,
-                                                fontWeight: FontWeight.w400,
-                                              ),
-                                            ),
-                                          if (widget.event.secondHalfBus != null) ...[
-                                            Text(
-                                              'Second Half: ${widget.event.secondHalfBus}',
-                                              style: TextStyle(
-                                                color: Theme.of(context).brightness == Brightness.dark
-                                                    ? Colors.white
-                                                    : Colors.black,
-                                                fontSize: 13,
-                                                fontWeight: FontWeight.w400,
-                                              ),
-                                            ),
-                                            // Compact track button for second half
-                                            InkWell(
-                                              onTap: _busTrackingLoading['tracking_${widget.event.secondHalfBus}'] == true
-                                                  ? null
-                                                  : () => _trackBus(widget.event.secondHalfBus!),
-                                              child: Padding(
-                                                padding: const EdgeInsets.only(left: 4.0),
-                                                child: _busTrackingLoading['tracking_${widget.event.secondHalfBus}'] == true
-                                                    ? const SizedBox(
-                                                        width: 12,
-                                                        height: 12,
-                                                        child: CircularProgressIndicator(strokeWidth: 1.5),
-                                                      )
-                                                    : const Icon(Icons.location_on, size: 14, color: Colors.blue),
-                                              ),
-                                            ),
-                                          ],
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                                if (firstBus != null)
+                                  _assignedBusLine(
+                                    'First Half: $firstBus',
+                                    firstBus,
+                                  ),
+                                if (secondBus != null)
+                                  _assignedBusLine(
+                                    'Second Half: $secondBus',
+                                    secondBus,
+                                  ),
                               ],
                             ],
                           );
@@ -2672,13 +2593,156 @@ class _EventCardState extends State<EventCard> {
             ],
           ),
         ),
+            if (canOpenBoard)
+              Positioned(
+                left: 0,
+                top: 0,
+                bottom: 0,
+                child: IgnorePointer(
+                  child: Center(
+                    child: Icon(
+                      Icons.chevron_right,
+                      size: 16,
+                      color: swipeHint,
+                    ),
+                  ),
+                ),
+              ),
+            if (canCompare)
+              Positioned(
+                right: 0,
+                top: 0,
+                bottom: 0,
+                child: IgnorePointer(
+                  child: Center(
+                    child: Icon(
+                      Icons.chevron_left,
+                      size: 16,
+                      color: swipeHint,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
+        ),
+      ),
+    );
+
+    if (!canCompare && !canOpenBoard) return card;
+
+    final DismissDirection swipeDirection;
+    if (canCompare && canOpenBoard) {
+      swipeDirection = DismissDirection.horizontal;
+    } else if (canOpenBoard) {
+      swipeDirection = DismissDirection.startToEnd;
+    } else {
+      swipeDirection = DismissDirection.endToStart;
+    }
+
+    return Dismissible(
+      key: ValueKey(
+        'swipe-${widget.event.id}-${widget.event.shiftCode}-${widget.event.startDate.toIso8601String()}',
+      ),
+      direction: swipeDirection,
+      confirmDismiss: (direction) {
+        if (direction == DismissDirection.startToEnd) {
+          final board = _dutyBoard;
+          if (board != null) {
+            showDialog<void>(
+              context: context,
+              builder: (_) => UniversalBoardDialog(board: board),
+            );
+          }
+        } else {
+          DutyCompareLaunch.open(
+            context,
+            dutyCode: widget.event.shiftCode,
+            date: widget.event.startDate,
+          ).then((opened) {
+            if (!opened && context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('No bill for this duty on this day.'),
+                ),
+              );
+            }
+          });
+        }
+        return Future<bool>.value(false);
+      },
+      background: canOpenBoard
+          ? _swipeAction(
+              color: AppTheme.secondaryColor,
+              label: 'Board',
+              icon: Icons.description,
+              iconFirst: true,
+            )
+          : const SizedBox.shrink(),
+      secondaryBackground: canCompare
+          ? _swipeAction(
+              color: AppTheme.primaryColor,
+              label: 'Compare',
+              icon: Icons.compare_arrows,
+              iconFirst: false,
+            )
+          : const SizedBox.shrink(),
+      child: card,
+    );
+  }
+
+  Widget _swipeAction({
+    required Color color,
+    required String label,
+    required IconData icon,
+    required bool iconFirst,
+  }) {
+    final labelWidget = Flexible(
+      child: Text(
+        label,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        textAlign: iconFirst ? TextAlign.start : TextAlign.end,
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(AppTheme.borderRadius),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Row(
+            children: [
+              if (iconFirst) ...[
+                Icon(icon, color: Colors.white),
+                const SizedBox(width: 8),
+                labelWidget,
+              ] else ...[
+                labelWidget,
+                const SizedBox(width: 8),
+                Icon(icon, color: Colors.white),
+              ],
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Future<void> _showDutySelectionDialog(BuildContext context, [String? halfIndicator, String? preSelectedZone]) async {
+  Future<void> _showDutySelectionDialog(
+    BuildContext context, [
+    String? halfIndicator,
+    String? preSelectedZone,
+    VoidCallback? onAdded,
+  ]) async {
     String selectedZone = preSelectedZone ?? 'Zone 1';
     String selectedDuty = '';
     List<String> duties = [];
@@ -3130,10 +3194,11 @@ class _EventCardState extends State<EventCard> {
                         }
                       }
                       
-                      // Close the dialog
+                      // Close only the duty picker. The spare dialog stays open.
                       if (context.mounted) {
                         Navigator.of(dialogContext).pop();
                       }
+                      onAdded?.call();
                       
                       // Load the duty details and refresh UI safely
                       if (mounted) {
@@ -3363,8 +3428,12 @@ class _EventCardState extends State<EventCard> {
                         label: 'Full Duty',
                         color: AppTheme.primaryColor,
                         onPressed: () {
-                          Navigator.of(context).pop();
-                          _showDutySelectionDialog(context);
+                          _showDutySelectionDialog(
+                            context,
+                            null,
+                            null,
+                            () => dialogSetState(() {}),
+                          );
                         },
                       ),
                       const SizedBox(height: 20),
@@ -3375,8 +3444,12 @@ class _EventCardState extends State<EventCard> {
                               label: 'First Half',
                               color: Colors.orange,
                               onPressed: () {
-                                Navigator.of(context).pop();
-                                _showDutySelectionDialog(context, 'A');
+                                _showDutySelectionDialog(
+                                  context,
+                                  'A',
+                                  null,
+                                  () => dialogSetState(() {}),
+                                );
                               },
                             ),
                           ),
@@ -3386,8 +3459,12 @@ class _EventCardState extends State<EventCard> {
                               label: 'Second Half',
                               color: Colors.teal,
                               onPressed: () {
-                                Navigator.of(context).pop();
-                                _showDutySelectionDialog(context, 'B');
+                                _showDutySelectionDialog(
+                                  context,
+                                  'B',
+                                  null,
+                                  () => dialogSetState(() {}),
+                                );
                               },
                             ),
                           ),
@@ -3401,8 +3478,12 @@ class _EventCardState extends State<EventCard> {
                               label: 'First Half',
                               color: Colors.orange,
                               onPressed: () {
-                                Navigator.of(context).pop();
-                                _showDutySelectionDialog(context, 'A');
+                                _showDutySelectionDialog(
+                                  context,
+                                  'A',
+                                  null,
+                                  () => dialogSetState(() {}),
+                                );
                               },
                             ),
                           ),
@@ -3412,8 +3493,12 @@ class _EventCardState extends State<EventCard> {
                               label: 'Second Half',
                               color: Colors.teal,
                               onPressed: () {
-                                Navigator.of(context).pop();
-                                _showDutySelectionDialog(context, 'B');
+                                _showDutySelectionDialog(
+                                  context,
+                                  'B',
+                                  null,
+                                  () => dialogSetState(() {}),
+                                );
                               },
                             ),
                           ),
@@ -3482,35 +3567,26 @@ class _EventCardState extends State<EventCard> {
                 }).toList()
                   ..sort((a, b) => (a['startTime'] ?? '').compareTo(b['startTime'] ?? ''));
 
-                return sortedDuties.map((duty) => Padding(
+                return sortedDuties.map((duty) {
+                  final dutyCode = duty['dutyCode'] as String;
+                  final bus = widget.event.getBusForDuty(dutyCode);
+                  return Padding(
                   padding: const EdgeInsets.only(bottom: 8.0),
-                                       child: Column(
-                       crossAxisAlignment: CrossAxisAlignment.start,
-                       children: [
-                         // Duty info row
-                         Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          '${duty['dutyCode']} | ${_formatTimeString(duty['startTime'])} to ${_formatTimeString(duty['endTime'])}',
-                          style: TextStyle(
-                            color: Theme.of(context).brightness == Brightness.dark
-                                ? Colors.white
-                                : Colors.black,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      AssignedDutyBoardButton(
-                        dutyCode: duty['dutyCode'] as String,
-                        date: widget.event.startDate,
-                        compact: MediaQuery.sizeOf(context).width < 450,
-                      ),
-                             IconButton(
-                        onPressed: () async {
+                  child: SpareDutyAssignmentCard(
+                    dutyCode: dutyCode,
+                    timeLabel:
+                        '${_formatTimeString(duty['startTime'])}–${_formatTimeString(duty['endTime'])}',
+                    date: widget.event.startDate,
+                    busNumber: bus,
+                    tracking:
+                        bus != null && _busTrackingLoading['tracking_$bus'] == true,
+                    onTrack: () => _trackBus(bus!),
+                    onEditBus: () => _showDutyBusAssignmentDialog(
+                      context,
+                      dutyCode,
+                      dialogSetState,
+                    ),
+                    onRemoveDuty: () async {
                           // Capture navigator before async operations
                           final navigator = Navigator.of(context);
                           
@@ -3538,8 +3614,6 @@ class _EventCardState extends State<EventCard> {
                           );
                           
                                  // Remove the specific duty and its bus assignment
-                                 final dutyCode = duty['dutyCode'] as String;
-                                 
                                  // Create a new list without the removed duty
                                  final newAssignedDuties = List<String>.from(widget.event.assignedDuties!);
                                  newAssignedDuties.remove(dutyCode);
@@ -3611,146 +3685,9 @@ class _EventCardState extends State<EventCard> {
                             navigator.pop();
                           }
                         },
-                               icon: const Icon(Icons.delete_outline),
-                               color: Colors.red,
-                               iconSize: 20,
-                               constraints: const BoxConstraints(
-                                 minWidth: 32,
-                                 minHeight: 32,
-                               ),
-                               padding: EdgeInsets.zero,
-                               tooltip: 'Remove duty',
-                             ),
-                           ],
-                         ),
-                         const SizedBox(height: 8),
-                         // Bus assignment row
-                         Container(
-                           padding: const EdgeInsets.all(10),
-                           decoration: BoxDecoration(
-                             color: Theme.of(context).brightness == Brightness.dark
-                                 ? (widget.event.getBusForDuty(duty['dutyCode'] ?? '') != null 
-                                     ? Colors.green.shade900.withValues(alpha: 0.3)
-                                     : Colors.orange.shade900.withValues(alpha: 0.3))
-                                 : (widget.event.getBusForDuty(duty['dutyCode'] ?? '') != null 
-                                     ? Colors.green.withValues(alpha: 0.1)
-                                     : Colors.orange.withValues(alpha: 0.1)),
-                             borderRadius: BorderRadius.circular(8),
-                             border: Border.all(
-                               color: Theme.of(context).brightness == Brightness.dark
-                                   ? (widget.event.getBusForDuty(duty['dutyCode'] ?? '') != null 
-                                       ? Colors.green.shade700
-                                       : Colors.orange.shade700)
-                                   : (widget.event.getBusForDuty(duty['dutyCode'] ?? '') != null 
-                                       ? Colors.green.withValues(alpha: 0.3)
-                                       : Colors.orange.withValues(alpha: 0.3)),
-                             ),
-                           ),
-                           child: Row(
-                             children: [
-                               Icon(
-                                 widget.event.getBusForDuty(duty['dutyCode'] ?? '') != null 
-                                     ? Icons.directions_bus 
-                                     : Icons.bus_alert_outlined,
-                                 color: widget.event.getBusForDuty(duty['dutyCode'] ?? '') != null 
-                                     ? Colors.green 
-                                     : Colors.orange,
-                                 size: 18,
-                               ),
-                               const SizedBox(width: 8),
-                               Expanded(
-                                 child: Column(
-                                   crossAxisAlignment: CrossAxisAlignment.start,
-                                   children: [
-                                     Text(
-                                       widget.event.getBusForDuty(duty['dutyCode'] ?? '') != null 
-                                           ? 'Assigned Bus'
-                                           : 'No Bus Assigned',
-                                       style: TextStyle(
-                                         fontSize: 11,
-                                         fontWeight: FontWeight.w600,
-                                         color: widget.event.getBusForDuty(duty['dutyCode'] ?? '') != null 
-                                             ? Colors.green 
-                                             : Colors.orange,
-                                       ),
-                                     ),
-                                     if (widget.event.getBusForDuty(duty['dutyCode'] ?? '') != null)
-                                       Text(
-                                         widget.event.getBusForDuty(duty['dutyCode'] ?? '')!,
-                                         style: TextStyle(
-                                           fontSize: 13,
-                                           fontWeight: FontWeight.bold,
-                                           color: Colors.green[700],
-                        ),
-                                       ),
-                                     if (widget.event.getBusForDuty(duty['dutyCode'] ?? '') != null)
-                                       BusReportRowActions(
-                                         busNumber: widget.event.getBusForDuty(duty['dutyCode'] ?? '')!,
-                                         date: widget.event.startDate,
-                                         slot: BusReportSlot.forDutyCode(
-                                           duty['dutyCode'] ?? '',
-                                         ),
-                                       ),
-                                   ],
-                                 ),
-                               ),
-                               // Track button for duty bus (only show if bus is assigned)
-                               if (widget.event.getBusForDuty(duty['dutyCode'] ?? '') != null) 
-                                 IconButton(
-                                   icon: _busTrackingLoading['tracking_${widget.event.getBusForDuty(duty['dutyCode'] ?? '')}'] == true
-                                       ? const SizedBox(
-                                           width: 16,
-                                           height: 16,
-                                           child: CircularProgressIndicator(strokeWidth: 2),
-                                         )
-                                       : const Icon(Icons.location_on, size: 18, color: Colors.blue),
-                                   onPressed: _busTrackingLoading['tracking_${widget.event.getBusForDuty(duty['dutyCode'] ?? '')}'] == true
-                                       ? null
-                                       : () => _trackBus(widget.event.getBusForDuty(duty['dutyCode'] ?? '')!),
-                                   tooltip: 'Track ${widget.event.getBusForDuty(duty['dutyCode'] ?? '')}',
-                                 ),
-                                                                ElevatedButton(
-                                   onPressed: () async {
-                                     final currentContext = context;
-                                     await _showDutyBusAssignmentDialog(currentContext, duty['dutyCode'] ?? '', dialogSetState);
-                                   },
-                                                                    style: ElevatedButton.styleFrom(
-                                   backgroundColor: widget.event.getBusForDuty(duty['dutyCode'] ?? '') != null 
-                                       ? Colors.orange 
-                                       : AppTheme.primaryColor,
-                                   foregroundColor: Colors.white,
-                                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                   minimumSize: Size.zero,
-                                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                   shape: RoundedRectangleBorder(
-                                     borderRadius: BorderRadius.circular(6),
-                                   ),
-                                 ),
-                                 child: Row(
-                                   mainAxisSize: MainAxisSize.min,
-                                   children: [
-                                     Icon(
-                                       widget.event.getBusForDuty(duty['dutyCode'] ?? '') != null 
-                                           ? Icons.edit 
-                                           : Icons.add,
-                                       size: 12,
-                                     ),
-                                     const SizedBox(width: 4),
-                                     Text(
-                                       widget.event.getBusForDuty(duty['dutyCode'] ?? '') != null 
-                                           ? 'Edit' 
-                                           : 'Add',
-                                       style: const TextStyle(fontSize: 11),
-                                     ),
-                                   ],
-                                 ),
-                               ),
-                             ],
-                           ),
-                      ),
-                    ],
                   ),
-                )).toList();
+                );
+                }).toList();
               })(),
               ],
             ],
@@ -4566,6 +4503,59 @@ class _EventCardState extends State<EventCard> {
       // Ignore parsing errors
     }
     return timeStr;
+  }
+
+  Widget _assignedBusLine(String label, String busNumber) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Flexible(
+          child: Text(
+            label,
+            style: _detailIconRowTextStyle(context),
+            strutStyle: _detailIconRowStrut,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+        _busTrackButton(busNumber),
+      ],
+    );
+  }
+
+  /// Same 16px size as the other card icons. The hit area is larger, but it
+  /// does not stretch the row.
+  Widget _busTrackButton(String busNumber) {
+    final loading = _busTrackingLoading['tracking_$busNumber'] == true;
+    return SizedBox(
+      width: 24,
+      height: 16,
+      child: OverflowBox(
+        minWidth: 32,
+        maxWidth: 32,
+        minHeight: 32,
+        maxHeight: 32,
+        alignment: Alignment.centerLeft,
+        child: IconButton(
+          tooltip: 'Track $busNumber',
+          onPressed: loading ? null : () => _trackBus(busNumber),
+          iconSize: 16,
+          style: IconButton.styleFrom(
+            foregroundColor: Colors.blue,
+            fixedSize: const Size(32, 32),
+            padding: EdgeInsets.zero,
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
+          icon: loading
+              ? const SizedBox(
+                  width: 14,
+                  height: 14,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.location_on),
+        ),
+      ),
+    );
   }
 
   /// Track a bus using bustimes.org
@@ -5840,7 +5830,11 @@ class _EventCardState extends State<EventCard> {
                     : Colors.green.shade200,
               ),
             ),
-            child: Row(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
               children: [
                 Icon(Icons.check_circle, size: iconS, color: Colors.green),
                 SizedBox(width: isSmall ? 4 : 8),
@@ -5855,26 +5849,24 @@ class _EventCardState extends State<EventCard> {
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
+              ],
+                ),
                 Row(
-                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    GestureDetector(
-                      onTap: _busTrackingLoading['tracking_$_firstHalfBus'] == true
-                          ? null
-                          : () => _trackBus(_firstHalfBus!),
-                      child: Padding(
-                        padding: EdgeInsets.all(isSmall ? 2 : 4),
-                        child: _busTrackingLoading['tracking_$_firstHalfBus'] == true
-                            ? SizedBox(
-                                width: iconS - 2,
-                                height: iconS - 2,
-                                child: const CircularProgressIndicator(strokeWidth: 2),
-                              )
-                            : Icon(Icons.location_on, size: iconS, color: Colors.blue),
+                    Expanded(
+                      child: BusIconAction(
+                        tooltip: 'Track $_firstHalfBus',
+                        icon: Icons.near_me,
+                        loading: _busTrackingLoading['tracking_$_firstHalfBus'] == true,
+                        onPressed: () => _trackBus(_firstHalfBus!),
                       ),
                     ),
-                    GestureDetector(
-                      onTap: () async {
+                    Expanded(
+                      child: BusIconAction(
+                        tooltip: 'Change bus',
+                        icon: Icons.swap_horiz,
+                        color: Colors.orange,
+                        onPressed: () async {
                         final result = await _showBusAssignmentDialog(
                           context,
                           '',
@@ -5912,13 +5904,14 @@ class _EventCardState extends State<EventCard> {
                           }
                         }
                       },
-                      child: Padding(
-                        padding: EdgeInsets.all(isSmall ? 2 : 4),
-                        child: Icon(Icons.swap_horiz, size: iconS, color: Colors.orange),
                       ),
                     ),
-                    GestureDetector(
-                      onTap: () async {
+                    Expanded(
+                      child: BusIconAction(
+                        tooltip: 'Remove bus',
+                        icon: Icons.delete_outline,
+                        color: Colors.red,
+                        onPressed: () async {
                         final oldEvent = Event(
                           id: widget.event.id,
                           title: widget.event.title,
@@ -5948,12 +5941,14 @@ class _EventCardState extends State<EventCard> {
                           dialogSetState(() {});
                         }
                       },
-                      child: Padding(
-                        padding: EdgeInsets.all(isSmall ? 2 : 4),
-                        child: Icon(Icons.remove_circle_outline, size: iconS, color: Colors.red),
                       ),
                     ),
                   ],
+                ),
+                BusReportRowActions(
+                  busNumber: _firstHalfBus!,
+                  date: widget.event.startDate,
+                  slot: BusReportSlot.full,
                 ),
               ],
             ),
@@ -6190,8 +6185,6 @@ class _EventCardState extends State<EventCard> {
                       builder: (context) {
                         final screenWidth = MediaQuery.of(context).size.width;
                         final isSmallScreen = screenWidth < 350;
-                        final iconSize = isSmallScreen ? 16.0 : 18.0;
-                        final iconPadding = isSmallScreen ? 2.0 : 4.0;
                         final labelFontSize = isSmallScreen ? 11.0 : 12.0;
                         final busFontSize = isSmallScreen ? 14.0 : 16.0;
                         final containerPadding = isSmallScreen ? 6.0 : 8.0;
@@ -6211,7 +6204,11 @@ class _EventCardState extends State<EventCard> {
                                   : Colors.green.shade200,
                             ),
                           ),
-                          child: Row(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Row(
                             children: [
                               Icon(Icons.check_circle, size: checkIconSize, color: Colors.green),
                               SizedBox(width: isSmallScreen ? 4 : 8),
@@ -6252,30 +6249,24 @@ class _EventCardState extends State<EventCard> {
                                   ],
                                 ),
                               ),
-                              SizedBox(width: isSmallScreen ? 2 : 4),
-                              // Group icons together tightly - use GestureDetector for tighter control
+                              ],
+                              ),
                               Row(
-                                mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  // Track button for first half bus
-                                  GestureDetector(
-                                    onTap: _busTrackingLoading['tracking_$_firstHalfBus'] == true
-                                        ? null
-                                        : () => _trackBus(_firstHalfBus!),
-                                    child: Container(
-                                      padding: EdgeInsets.all(iconPadding),
-                                      child: _busTrackingLoading['tracking_$_firstHalfBus'] == true
-                                          ? SizedBox(
-                                              width: iconSize - 2,
-                                              height: iconSize - 2,
-                                              child: const CircularProgressIndicator(strokeWidth: 2),
-                                            )
-                                          : Icon(Icons.location_on, size: iconSize, color: Colors.blue),
+                                  Expanded(
+                                    child: BusIconAction(
+                                      tooltip: 'Track $_firstHalfBus',
+                                      icon: Icons.near_me,
+                                      loading: _busTrackingLoading['tracking_$_firstHalfBus'] == true,
+                                      onPressed: () => _trackBus(_firstHalfBus!),
                                     ),
                                   ),
-                              // Change bus button (swap/recycle icon)
-                              GestureDetector(
-                                onTap: () async {
+                                  Expanded(
+                                    child: BusIconAction(
+                                      tooltip: 'Change bus',
+                                      icon: Icons.swap_horiz,
+                                      color: Colors.orange,
+                                      onPressed: () async {
                               final result = await _showBusAssignmentDialog(context, 'First Half', _firstHalfBus);
                               if (result != null) {
                                 final oldEvent = Event(
@@ -6310,14 +6301,14 @@ class _EventCardState extends State<EventCard> {
                                 }
                               }
                                 },
-                                    child: Container(
-                                      padding: EdgeInsets.all(iconPadding),
-                                      child: Icon(Icons.swap_horiz, size: iconSize, color: Colors.orange),
                                     ),
                                   ),
-                                  // Remove bus button
-                                  GestureDetector(
-                                    onTap: () async {
+                                  Expanded(
+                                    child: BusIconAction(
+                                      tooltip: 'Remove bus',
+                                      icon: Icons.delete_outline,
+                                      color: Colors.red,
+                                      onPressed: () async {
                                       final oldEvent = Event(
                                         id: widget.event.id,
                                         title: widget.event.title,
@@ -6347,9 +6338,6 @@ class _EventCardState extends State<EventCard> {
                                         dialogSetState(() {});
                                       }
                                     },
-                                    child: Container(
-                                      padding: EdgeInsets.all(iconPadding),
-                                      child: Icon(Icons.remove_circle_outline, size: iconSize, color: Colors.red),
                                     ),
                                   ),
                                 ],
@@ -6364,8 +6352,6 @@ class _EventCardState extends State<EventCard> {
                       builder: (context) {
                         final screenWidth = MediaQuery.of(context).size.width;
                         final isSmallScreen = screenWidth < 350;
-                        final iconSize = isSmallScreen ? 16.0 : 18.0;
-                        final iconPadding = isSmallScreen ? 2.0 : 4.0;
                         final labelFontSize = isSmallScreen ? 11.0 : 12.0;
                         final busFontSize = isSmallScreen ? 14.0 : 16.0;
                         final containerPadding = isSmallScreen ? 6.0 : 8.0;
@@ -6385,7 +6371,11 @@ class _EventCardState extends State<EventCard> {
                                   : Colors.green.shade200,
                             ),
                           ),
-                          child: Row(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Row(
                             children: [
                               Icon(Icons.check_circle, size: checkIconSize, color: Colors.green),
                               SizedBox(width: isSmallScreen ? 4 : 8),
@@ -6426,30 +6416,24 @@ class _EventCardState extends State<EventCard> {
                                   ],
                                 ),
                               ),
-                              SizedBox(width: isSmallScreen ? 2 : 4),
-                              // Group icons together tightly - use GestureDetector for tighter control
+                              ],
+                              ),
                               Row(
-                                mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  // Track button for second half bus
-                                  GestureDetector(
-                                    onTap: _busTrackingLoading['tracking_$_secondHalfBus'] == true
-                                        ? null
-                                        : () => _trackBus(_secondHalfBus!),
-                                    child: Container(
-                                      padding: EdgeInsets.all(iconPadding),
-                                      child: _busTrackingLoading['tracking_$_secondHalfBus'] == true
-                                          ? SizedBox(
-                                              width: iconSize - 2,
-                                              height: iconSize - 2,
-                                              child: const CircularProgressIndicator(strokeWidth: 2),
-                                            )
-                                          : Icon(Icons.location_on, size: iconSize, color: Colors.blue),
+                                  Expanded(
+                                    child: BusIconAction(
+                                      tooltip: 'Track $_secondHalfBus',
+                                      icon: Icons.near_me,
+                                      loading: _busTrackingLoading['tracking_$_secondHalfBus'] == true,
+                                      onPressed: () => _trackBus(_secondHalfBus!),
                                     ),
                                   ),
-                                  // Change bus button (swap/recycle icon)
-                                  GestureDetector(
-                                    onTap: () async {
+                                  Expanded(
+                                    child: BusIconAction(
+                                      tooltip: 'Change bus',
+                                      icon: Icons.swap_horiz,
+                                      color: Colors.orange,
+                                      onPressed: () async {
                                       final result = await _showBusAssignmentDialog(context, 'Second Half', _secondHalfBus);
                                       if (result != null) {
                                         final oldEvent = Event(
@@ -6484,14 +6468,14 @@ class _EventCardState extends State<EventCard> {
                                         }
                                       }
                                     },
-                                    child: Container(
-                                      padding: EdgeInsets.all(iconPadding),
-                                      child: Icon(Icons.swap_horiz, size: iconSize, color: Colors.orange),
                                     ),
                                   ),
-                                  // Remove bus button
-                                  GestureDetector(
-                                    onTap: () async {
+                                  Expanded(
+                                    child: BusIconAction(
+                                      tooltip: 'Remove bus',
+                                      icon: Icons.delete_outline,
+                                      color: Colors.red,
+                                      onPressed: () async {
                                       final oldEvent = Event(
                                         id: widget.event.id,
                                         title: widget.event.title,
@@ -6521,9 +6505,6 @@ class _EventCardState extends State<EventCard> {
                                         dialogSetState(() {});
                                       }
                                     },
-                                    child: Container(
-                                      padding: EdgeInsets.all(iconPadding),
-                                      child: Icon(Icons.remove_circle_outline, size: iconSize, color: Colors.red),
                                     ),
                                   ),
                                 ],

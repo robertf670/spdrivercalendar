@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:spdrivercalendar/core/widgets/correction_note.dart';
 import 'package:spdrivercalendar/features/bills/models/bill_duty.dart';
 import 'package:spdrivercalendar/features/bills/services/bills_csv_service.dart';
+import 'package:spdrivercalendar/features/bills/screens/duty_compare_screen.dart';
 import 'package:spdrivercalendar/features/bills/services/board_lookup.dart';
 import 'package:spdrivercalendar/features/bills/utils/bills_default_zone.dart';
 import 'package:spdrivercalendar/features/bills/widgets/bill_duty_index_list.dart';
@@ -190,6 +191,20 @@ class BillsScreenState extends State<BillsScreen> {
     });
   }
 
+  void _openCompare() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (context) => DutyCompareScreen(
+          duties: _duties,
+          zone: _selectedZone,
+          dayType: _selectedDayType,
+          date: _now,
+          initialYoursShift: _expandedShift ?? _focusedShift,
+        ),
+      ),
+    );
+  }
+
   void _clearBoardSelection() {
     setState(() {
       _selectedBoardDuty = null;
@@ -221,6 +236,11 @@ class BillsScreenState extends State<BillsScreen> {
         title: const Text('Bills & Boards'),
         elevation: 0,
         actions: [
+          IconButton(
+            tooltip: 'Compare duties',
+            icon: const Icon(Icons.compare_arrows),
+            onPressed: _openCompare,
+          ),
           IconButton(
             tooltip: _searchOpen ? 'Close search' : 'Search',
             icon: Icon(_searchOpen ? Icons.close : Icons.search),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:spdrivercalendar/core/widgets/dialog_insets.dart';
 import 'package:spdrivercalendar/features/calendar/widgets/holiday_balance_item.dart';
 import 'package:spdrivercalendar/services/color_customization_service.dart';
 
@@ -96,15 +97,9 @@ class _AddHolidaysDialogState extends State<AddHolidaysDialog> {
             ? screenWidth * 0.85
             : 600.0;
 
-    final horizontalInset = screenWidth < 350
-        ? 12.0
-        : screenWidth < 400
-            ? 16.0
-            : 40.0;
-
     return Dialog(
       insetPadding: EdgeInsets.symmetric(
-        horizontal: horizontalInset,
+        horizontal: dialogHorizontalInset(context),
         vertical: screenWidth < 350 ? 16.0 : 24.0,
       ),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),

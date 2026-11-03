@@ -140,6 +140,60 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('Zone 4 marked in does not offer the Route 13 fill',
+      (tester) async {
+    await tester.binding.setSurfaceSize(const Size(320, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    expect(await RosterService.loadZone4ShiftRoster(), isTrue);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: WorkShiftDialog(
+            shiftDate: DateTime(2026, 8, 23),
+            isMFMarkedIn: false,
+            isShiftMarkedIn: true,
+            markedInZone: 'Zone 4',
+            jamestownEnabled: false,
+            donnybrook1Enabled: false,
+            zone2RosterEnabled: true,
+            zone4RosterEnabled: true,
+            loadShiftNumbers: (zone) async =>
+                zone == 'Zone 4' ? const ['PZ4/05'] : const ['13/01'],
+            dayHasBlockingEvent: (_) => false,
+            onAddShift: (_) async {},
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Auto-fill the next 45 weeks from my roster?'),
+      findsOneWidget,
+    );
+    expect(
+      find.text('Auto-fill the next 35 weeks from my roster?'),
+      findsNothing,
+    );
+
+    await tester.tap(find.byType(DropdownButton<String>).first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Route 13').last);
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Auto-fill the next 35 weeks from my roster?'),
+      findsNothing,
+    );
+    expect(
+      find.text('Auto-fill the next 45 weeks from my roster?'),
+      findsNothing,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('nights roster offers duty repeat on a weekday work day',
       (tester) async {
     await tester.binding.setSurfaceSize(const Size(320, 800));

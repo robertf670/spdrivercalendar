@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:spdrivercalendar/core/widgets/dialog_insets.dart';
 import 'package:intl/intl.dart';
 import 'package:spdrivercalendar/features/calendar/utils/assigned_duty_board_lookup.dart';
 import 'package:spdrivercalendar/features/calendar/utils/spare_shift_duties.dart';
@@ -92,7 +93,7 @@ class EditEventDialog extends StatelessWidget {
 
     return AlertDialog(
       insetPadding: EdgeInsets.symmetric(
-        horizontal: sizes['insetH']!,
+        horizontal: dialogHorizontalInset(context),
         vertical: sizes['insetV']!,
       ),
       title: Text(

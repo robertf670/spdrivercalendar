@@ -6,6 +6,7 @@ import 'package:spdrivercalendar/features/calendar/services/roster_service.dart'
 import 'package:spdrivercalendar/features/calendar/services/work_shift_event_persister.dart';
 import 'package:spdrivercalendar/features/calendar/utils/jamestown_road.dart';
 import 'package:spdrivercalendar/features/calendar/utils/zone2_shift_roster.dart';
+import 'package:spdrivercalendar/features/calendar/utils/zone4_shift_roster.dart';
 import 'package:spdrivercalendar/models/event.dart';
 import 'package:spdrivercalendar/models/bank_holiday.dart';
 
@@ -18,6 +19,7 @@ void main() {
     bool repeatUniEuroThisWeek = false,
     Map<int, bool>? uniEuroSelectedDays,
     bool fillNext35Weeks = false,
+    bool fillNextZone4Weeks = false,
   }) {
     return WorkShiftDialogSelection(
       selectedZone: zone,
@@ -30,6 +32,7 @@ void main() {
       fillNext15Weeks: false,
       fillNext10Weeks: false,
       fillNext35Weeks: fillNext35Weeks,
+      fillNextZone4Weeks: fillNextZone4Weeks,
     );
   }
 
@@ -471,5 +474,122 @@ void main() {
     expect(onDay(2026, 10, 30)?.title, '13/24');
     expect(onDay(2026, 10, 31)?.title, '13/22');
     expect(onDay(2026, 11, 1), isNull);
+  });
+
+  test('Zone 4 fill writes the loaded weeks and does not wrap', () async {
+    TestWidgetsFlutterBinding.ensureInitialized();
+    expect(await RosterService.loadZone4ShiftRoster(), isTrue);
+
+    final created = <Event>[];
+    final persister = WorkShiftEventPersister(
+      lookupShiftTimes: (zone, shift, date) async => {
+        'startTime': const TimeOfDay(hour: 6, minute: 0),
+        'endTime': const TimeOfDay(hour: 14, minute: 0),
+        'isNextDay': false,
+      },
+      addEvent: (event) async {
+        created.add(event);
+      },
+      eventsForDay: (_) => const [],
+      bankHolidayForDate: (_) => null,
+      now: () => DateTime(2026, 8, 23, 12),
+    );
+
+    final result = await persister.persist(
+      shiftDate: DateTime(2026, 8, 23),
+      selection: selection(
+        zone: 'Zone 4',
+        shift: 'PZ4/05',
+        fillNextZone4Weeks: true,
+      ),
+      isMFMarkedIn: false,
+      isShiftMarkedIn: true,
+      markedInZone: 'Zone 4',
+      jamestownEnabled: false,
+      zone4RosterEnabled: true,
+    );
+
+    expect(result.status, WorkShiftPersistStatus.success);
+
+    Event? onDay(int year, int month, int day) {
+      final matches = created.where((e) =>
+          e.startDate.year == year &&
+          e.startDate.month == month &&
+          e.startDate.day == day);
+      return matches.isEmpty ? null : matches.single;
+    }
+
+    expect(onDay(2026, 8, 24)?.title, 'PZ4/26');
+    expect(onDay(2026, 8, 25)?.title, 'PZ4/26');
+    expect(onDay(2026, 8, 26), isNull);
+    expect(onDay(2026, 8, 28)?.title, 'PZ4/10');
+    expect(onDay(2026, 9, 1)?.title, 'PZ4/35');
+    expect(onDay(2026, 11, 1)?.title, 'PZ4/09');
+    expect(onDay(2026, 11, 2)?.title, 'PZ4/20');
+    expect(onDay(2026, 11, 6)?.title, 'PZ4/02');
+    expect(onDay(2026, 11, 8), isNull);
+    expect(onDay(2026, 11, 10)?.title, 'PZ4/39');
+    expect(onDay(2027, 2, 1)?.title, 'PZ4/38');
+    expect(onDay(2027, 2, 7), isNull);
+    expect(onDay(2027, 2, 8)?.title, 'PZ4/14');
+    expect(onDay(2027, 4, 26)?.title, 'PZ4/25');
+    expect(onDay(2027, 5, 2), isNull);
+    expect(onDay(2027, 5, 4)?.title, 'PZ4/30');
+    expect(onDay(2027, 6, 28)?.title, 'PZ4/10');
+    expect(onDay(2027, 7, 3)?.title, 'PZ4/08');
+    expect(onDay(2027, 7, 4), isNull);
+    expect(
+      created.where((e) => e.id.contains('_z4_')).every(
+            (e) => e.rosterFillSource == Zone4ShiftRoster.sourceTag,
+          ),
+      isTrue,
+    );
+  });
+
+  test('Zone 4 fill wraps from the last week back to week 1', () async {
+    TestWidgetsFlutterBinding.ensureInitialized();
+    expect(await RosterService.loadZone4ShiftRoster(), isTrue);
+
+    final created = <Event>[];
+    final persister = WorkShiftEventPersister(
+      lookupShiftTimes: (zone, shift, date) async => {
+        'startTime': const TimeOfDay(hour: 6, minute: 0),
+        'endTime': const TimeOfDay(hour: 14, minute: 0),
+        'isNextDay': false,
+      },
+      addEvent: (event) async {
+        created.add(event);
+      },
+      eventsForDay: (_) => const [],
+      bankHolidayForDate: (_) => null,
+      now: () => DateTime(2027, 6, 28, 12),
+    );
+
+    await persister.persist(
+      shiftDate: DateTime(2027, 6, 28),
+      selection: selection(
+        zone: 'Zone 4',
+        shift: 'PZ4/10',
+        fillNextZone4Weeks: true,
+      ),
+      isMFMarkedIn: false,
+      isShiftMarkedIn: true,
+      markedInZone: 'Zone 4',
+      jamestownEnabled: false,
+      zone4RosterEnabled: true,
+    );
+
+    Event? onDay(int year, int month, int day) {
+      final matches = created.where((e) =>
+          e.startDate.year == year &&
+          e.startDate.month == month &&
+          e.startDate.day == day);
+      return matches.isEmpty ? null : matches.single;
+    }
+
+    expect(onDay(2027, 6, 29)?.title, 'PZ4/10');
+    expect(onDay(2027, 7, 3)?.title, 'PZ4/08');
+    expect(onDay(2027, 7, 4)?.title, 'PZ4/05');
+    expect(onDay(2027, 7, 5)?.title, 'PZ4/26');
   });
 }

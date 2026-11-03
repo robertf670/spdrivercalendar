@@ -3,7 +3,7 @@ description: Calendar application for spare drivers.
 
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 
-version: 4.4.3
+version: 4.4.4
 
 environment:
   sdk: '>=3.1.5 <4.0.0'
@@ -88,6 +88,7 @@ flutter:
     - assets/zone1_shift_86week_roster.json
     - assets/zone3_shift_10week_roster.json
     - assets/zone2_shift_35week_roster.json
+    - assets/zone4_shift_roster.json
     - pay/
 
 flutter_launcher_icons:

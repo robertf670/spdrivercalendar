@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:spdrivercalendar/models/universal_board.dart';
 import 'package:spdrivercalendar/theme/app_theme.dart';
@@ -19,18 +21,25 @@ class UniversalBoardTimeline extends StatelessWidget {
 
   Map<String, double> _sizes(BuildContext context) {
     final width = MediaQuery.sizeOf(context).width;
-    if (width < 350) {
+    final scale =
+        MediaQuery.textScalerOf(context).scale(1.0).clamp(1.0, 2.0).toDouble();
+    final narrow = width < 350;
+    final mid = width < 400;
+    final baseTime = narrow ? 56.0 : mid ? 62.0 : 70.0;
+    // "17:21" plus the pill padding, so large text does not spill the column.
+    final timeWidth = math.min(110.0, math.max(baseTime, 13 * scale * 3.4 + 12));
+    if (narrow) {
       return {
-        'timeWidth': 56.0,
+        'timeWidth': timeWidth,
         'padding': 12.0,
         'title': 15.0,
         'action': 14.0,
         'body': 13.0,
       };
     }
-    if (width < 400) {
+    if (mid) {
       return {
-        'timeWidth': 62.0,
+        'timeWidth': timeWidth,
         'padding': 16.0,
         'title': 16.0,
         'action': 15.0,
@@ -38,7 +47,7 @@ class UniversalBoardTimeline extends StatelessWidget {
       };
     }
     return {
-      'timeWidth': 70.0,
+      'timeWidth': timeWidth,
       'padding': 20.0,
       'title': 17.0,
       'action': 16.0,
@@ -204,15 +213,19 @@ class _BoardEntryRow extends StatelessWidget {
                         color: accent.withValues(alpha: 0.35),
                       ),
                     ),
-                    child: Text(
-                      entry.time!,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
-                        color: accentText,
-                        height: 1.2,
-                        fontFeatures: const [FontFeature.tabularFigures()],
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        entry.time!,
+                        textAlign: TextAlign.center,
+                        maxLines: 1,
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                          color: accentText,
+                          height: 1.2,
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                        ),
                       ),
                     ),
                   )
@@ -235,57 +248,54 @@ class _BoardEntryRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                SizedBox(
-                  height: entry.time != null ? 30 : null,
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: isRouteAction
-                        ? Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                'Route ',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: sizes['action'],
-                                  color: onSurface,
-                                ),
-                              ),
-                              Flexible(
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                    vertical: 4,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: primaryContainer,
-                                    borderRadius: BorderRadius.circular(6),
-                                  ),
-                                  child: Text(
-                                    entry.route!,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
-                                      fontSize: sizes['action'],
-                                      color: onPrimaryContainer,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          )
-                        : Text(
-                            entry.action,
+                isRouteAction
+                    ? Row(
+                        children: [
+                          Text(
+                            'Route ',
                             style: TextStyle(
                               fontWeight: FontWeight.w600,
                               fontSize: sizes['action'],
                               color: onSurface,
                             ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
                           ),
-                  ),
-                ),
+                          Expanded(
+                            child: Align(
+                              alignment: Alignment.centerLeft,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: primaryContainer,
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  entry.route!,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: sizes['action'],
+                                    color: onPrimaryContainer,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      )
+                    : Text(
+                        entry.action,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: sizes['action'],
+                          color: onSurface,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                 if (hasDetails) const SizedBox(height: 6),
                 if (isRouteAction && entry.location != null) ...[
                   _metaRow(

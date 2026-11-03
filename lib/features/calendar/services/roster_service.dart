@@ -507,4 +507,43 @@ class RosterService {
     }
     return _zone2ShiftWeeks![weekIndex][dayIndex];
   }
+
+  // --- Zone 4 Shift 45-week roster ---
+  static List<List<String>>? _zone4ShiftWeeks;
+  static bool _zone4RosterComplete = false;
+
+  static List<List<String>> get zone4ShiftWeeks =>
+      _zone4ShiftWeeks ?? const <List<String>>[];
+
+  static bool get zone4RosterComplete => _zone4RosterComplete;
+
+  static Future<bool> loadZone4ShiftRoster() async {
+    try {
+      final jsonString =
+          await rootBundle.loadString('assets/zone4_shift_roster.json');
+      final Map<String, dynamic> data = json.decode(jsonString);
+      final List<dynamic> weeks = data['weeks'] as List<dynamic>;
+      _zone4ShiftWeeks = weeks
+          .map((w) => (w as Map<String, dynamic>)['days'] as List<dynamic>)
+          .map((d) => d.map((e) => e.toString()).toList())
+          .toList();
+      _zone4RosterComplete = data['complete'] == true;
+      return true;
+    } catch (e) {
+      _zone4ShiftWeeks = null;
+      _zone4RosterComplete = false;
+      return false;
+    }
+  }
+
+  static String? getZone4ShiftDayDuty(int weekIndex, int dayIndex) {
+    if (_zone4ShiftWeeks == null ||
+        weekIndex < 0 ||
+        weekIndex >= _zone4ShiftWeeks!.length ||
+        dayIndex < 0 ||
+        dayIndex >= 7) {
+      return null;
+    }
+    return _zone4ShiftWeeks![weekIndex][dayIndex];
+  }
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:spdrivercalendar/core/widgets/dialog_insets.dart';
 import 'package:spdrivercalendar/services/self_certified_sick_days_service.dart';
 
 /// Warns that a self-certified limit is reached, but still lets the user add.
@@ -42,7 +43,7 @@ class SelfCertifiedLimitDialog extends StatelessWidget {
 
     return AlertDialog(
       insetPadding: EdgeInsets.symmetric(
-        horizontal: screenWidth < 350 ? 16.0 : 40.0,
+        horizontal: dialogHorizontalInset(context),
         vertical: screenWidth < 350 ? 16.0 : 24.0,
       ),
       title: const Row(

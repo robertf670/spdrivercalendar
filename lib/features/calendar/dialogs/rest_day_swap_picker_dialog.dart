@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:spdrivercalendar/core/widgets/dialog_insets.dart';
 import 'package:intl/intl.dart';
 
 class RestDaySwapCandidateOption {
@@ -27,7 +28,7 @@ class RestDaySwapPickerDialog extends StatelessWidget {
     final screenWidth = MediaQuery.sizeOf(context).width;
     return AlertDialog(
       insetPadding: EdgeInsets.symmetric(
-        horizontal: screenWidth < 350 ? 16.0 : 40.0,
+        horizontal: dialogHorizontalInset(context),
         vertical: screenWidth < 350 ? 16.0 : 24.0,
       ),
       title: Text(isWorkDay ? 'Swap with rest day' : 'Swap with work day'),

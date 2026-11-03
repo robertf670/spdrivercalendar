@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:spdrivercalendar/core/widgets/dialog_insets.dart';
 import 'package:flutter/material.dart';
 import 'package:spdrivercalendar/core/config/platform_utils.dart';
 import 'package:spdrivercalendar/core/constants/app_constants.dart';
@@ -33,6 +34,8 @@ import 'package:spdrivercalendar/features/calendar/utils/nights_roster.dart';
 import 'package:spdrivercalendar/features/calendar/dialogs/nights_rest_day_dialog.dart';
 import 'package:spdrivercalendar/features/calendar/services/zone2_duties.dart';
 import 'package:spdrivercalendar/services/jamestown_feature_service.dart';
+import 'package:spdrivercalendar/services/zone2_roster_feature_service.dart';
+import 'package:spdrivercalendar/services/zone4_roster_feature_service.dart';
 
 // Define Preference Keys for Notifications (Consider moving to AppConstants if not already there)
 const String kNotificationsEnabledKey = 'notificationsEnabled';
@@ -100,6 +103,9 @@ class SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObser
   int _annualLeaveRemaining = 0;
 
   bool _jamestownEnabled = false;
+  bool _zone2RosterEnabled = false;
+  bool _zone4RosterEnabled = false;
+  bool _isRemovingRosterFills = false;
   
   // Expandable sections state
   final Map<String, bool> _expandedSections = {
@@ -247,6 +253,8 @@ class SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObser
     final markedInEnabled = await StorageService.getBool(AppConstants.markedInEnabledKey);
     final oldStatus = await StorageService.getString(AppConstants.markedInStatusKey) ?? 'Shift';
     final zone = await StorageService.getString(AppConstants.markedInZoneKey) ?? 'Zone 1';
+    final zone2RosterEnabled = await Zone2RosterFeatureService.isEnabled();
+    final zone4RosterEnabled = await Zone4RosterFeatureService.isEnabled();
     final nightsAnchor = NightsRosterAnchor.tryParse(
       sunday: await StorageService.getString(AppConstants.nightsAnchorSundayKey),
       weekIndex: await StorageService.getInt(AppConstants.nightsWeekIndexKey),
@@ -267,6 +275,8 @@ class SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObser
         _markedInStatus = 'Spare';
       }
       _markedInZone = Zone2Duties.normalizeZoneLabel(zone);
+      _zone2RosterEnabled = zone2RosterEnabled;
+      _zone4RosterEnabled = zone4RosterEnabled;
       if (nightsAnchor != null) {
         _nightsWeekIndex = nightsAnchor.weekIndex;
         _nightsAnchorSunday = nightsAnchor.sunday;
@@ -1104,6 +1114,7 @@ class SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObser
                             _markedInZone = newValue;
                           });
                           await _saveMarkedInSettings();
+                          await _clearRosterForOtherZone(newValue);
                         }
                       },
                     ),
@@ -1114,6 +1125,95 @@ class SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObser
                         Zone2Duties.availableFromMessage,
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
+                    ],
+                    if (Zone2RosterFeatureService.showsForMarkedIn(
+                      status: _markedInStatus,
+                      zone: _markedInZone,
+                    )) ...[
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text(Zone2RosterFeatureService.menuLabel),
+                        subtitle: const Text(
+                          'Fill 35 weeks from Add Work Shift',
+                        ),
+                        value: _zone2RosterEnabled,
+                        onChanged: _setZone2RosterEnabled,
+                      ),
+                      if (_zone2RosterEnabled) ...[
+                        const SizedBox(height: 4),
+                        SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton(
+                            onPressed: _isRemovingRosterFills
+                                ? null
+                                : _removeZone2RosterFills,
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor:
+                                  Theme.of(context).colorScheme.error,
+                              minimumSize: const Size.fromHeight(48),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 12,
+                              ),
+                            ),
+                            child: Text(
+                              _isRemovingRosterFills
+                                  ? 'Removing…'
+                                  : 'Remove autofilled duties',
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                    if (Zone4RosterFeatureService.showsForMarkedIn(
+                      status: _markedInStatus,
+                      zone: _markedInZone,
+                    )) ...[
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text(Zone4RosterFeatureService.menuLabel),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Text('Fill 45 weeks from Add Work Shift'),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Autofilled duties are flagged. Remove deletes only those, and leaves the rest.',
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                          ],
+                        ),
+                        value: _zone4RosterEnabled,
+                        onChanged: _setZone4RosterEnabled,
+                      ),
+                      if (_zone4RosterEnabled) ...[
+                        const SizedBox(height: 4),
+                        SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton(
+                            onPressed: _isRemovingRosterFills
+                                ? null
+                                : _removeZone4RosterFills,
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor:
+                                  Theme.of(context).colorScheme.error,
+                              minimumSize: const Size.fromHeight(48),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 12,
+                              ),
+                            ),
+                            child: Text(
+                              _isRemovingRosterFills
+                                  ? 'Removing…'
+                                  : 'Remove autofilled duties',
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        ),
+                      ],
                     ],
                   ],
                   if (_markedInStatus == MarkedInStatus.nights) ...[
@@ -1161,6 +1261,106 @@ class SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObser
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _setZone2RosterEnabled(bool enabled) async {
+    await Zone2RosterFeatureService.setEnabled(enabled);
+    if (!mounted) return;
+    setState(() {
+      _zone2RosterEnabled = enabled;
+      if (enabled) _zone4RosterEnabled = false;
+    });
+  }
+
+  Future<void> _setZone4RosterEnabled(bool enabled) async {
+    await Zone4RosterFeatureService.setEnabled(enabled);
+    if (!mounted) return;
+    setState(() {
+      _zone4RosterEnabled = enabled;
+      if (enabled) _zone2RosterEnabled = false;
+    });
+  }
+
+  /// Route 13 and Zone 4 each have their own fill. Leaving that zone turns
+  /// its fill off, so the other one is not still offered later.
+  Future<void> _clearRosterForOtherZone(String zone) async {
+    if (!Zone2Duties.isZone(zone) && _zone2RosterEnabled) {
+      await Zone2RosterFeatureService.setEnabled(false);
+      if (mounted) setState(() => _zone2RosterEnabled = false);
+    }
+    if (zone != 'Zone 4' && _zone4RosterEnabled) {
+      await Zone4RosterFeatureService.setEnabled(false);
+      if (mounted) setState(() => _zone4RosterEnabled = false);
+    }
+  }
+
+  Future<void> _removeZone2RosterFills() {
+    return _removeAutofilledDuties(
+      select: Zone2RosterFeatureService.filledEvents,
+      onlyThese: 'This deletes only Route 13 duties added by the 35-week fill.',
+    );
+  }
+
+  Future<void> _removeZone4RosterFills() {
+    return _removeAutofilledDuties(
+      select: Zone4RosterFeatureService.filledEvents,
+      onlyThese: 'This deletes only Zone 4 duties added by the roster fill.',
+    );
+  }
+
+  Future<void> _removeAutofilledDuties({
+    required List<Event> Function(List<Event> events) select,
+    required String onlyThese,
+  }) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          insetPadding: EdgeInsets.symmetric(
+            horizontal: dialogHorizontalInset(dialogContext),
+          ),
+          title: const Text('Remove autofilled duties?'),
+          content: Text(onlyThese),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('Remove'),
+            ),
+          ],
+        );
+      },
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _isRemovingRosterFills = true);
+    final events = select(
+      await EventService.getAllEvents(),
+    );
+    final deletion = EventDeletionService();
+    for (final event in events) {
+      if (!mounted) return;
+      await deletion.deleteEvent(
+        event: event,
+        context: context,
+        isMounted: () => mounted,
+      );
+    }
+    if (!mounted) return;
+    setState(() => _isRemovingRosterFills = false);
+    widget.onCalendarDataChanged?.call();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          events.isEmpty
+              ? 'No autofilled duties to remove.'
+              : 'Removed ${events.length} autofilled duties.',
         ),
       ),
     );

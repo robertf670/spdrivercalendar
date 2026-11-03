@@ -158,11 +158,19 @@ class CalendarDayCell extends StatelessWidget {
   }) {
     return Stack(
       children: [
-        Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            mainAxisSize: MainAxisSize.min,
-            children: [
+        Positioned.fill(
+          child: Padding(
+            padding: const EdgeInsets.all(2),
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: screenWidth / 7 > 16 ? screenWidth / 7 - 8 : 16,
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
               Text(
                 '${date.day}',
                 style: TextStyle(
@@ -196,30 +204,40 @@ class CalendarDayCell extends StatelessWidget {
                   screenWidth: screenWidth,
                   color: textColor,
                 ),
-            ],
+                  ],
+                ),
+              ),
+            ),
           ),
         ),
         if (isSaturdayService)
           Positioned(
             top: badgeSizes.top,
             left: badgeSizes.left,
-            child: Container(
-              key: const ValueKey('calendar_day_sat_badge'),
-              padding: EdgeInsets.symmetric(
-                horizontal: badgeSizes.horizontalPadding,
-                vertical: badgeSizes.verticalPadding,
-              ),
-              decoration: BoxDecoration(
-                color: Colors.orange.shade600,
-                borderRadius: BorderRadius.circular(badgeSizes.radius),
-              ),
-              child: Text(
-                'SAT',
-                style: TextStyle(
-                  fontSize: badgeSizes.fontSize,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                  height: 1,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: screenWidth / 7 * 0.72),
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.topLeft,
+                child: Container(
+                  key: const ValueKey('calendar_day_sat_badge'),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: badgeSizes.horizontalPadding,
+                    vertical: badgeSizes.verticalPadding,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.shade600,
+                    borderRadius: BorderRadius.circular(badgeSizes.radius),
+                  ),
+                  child: Text(
+                    'SAT',
+                    style: TextStyle(
+                      fontSize: badgeSizes.fontSize,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                      height: 1,
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -282,7 +300,8 @@ class CalendarDayCell extends StatelessWidget {
         height: 1,
       ),
       maxLines: 1,
-      overflow: TextOverflow.clip,
+      softWrap: false,
+      overflow: TextOverflow.ellipsis,
     );
   }
 }

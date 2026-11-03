@@ -86,6 +86,9 @@ class WorkShiftDutyLoader {
     if (Zone2Duties.isZone(selectedZone)) {
       await RosterService.loadZone2ShiftRoster();
     }
+    if (selectedZone == 'Zone 4') {
+      await RosterService.loadZone4ShiftRoster();
+    }
 
     return shiftNumbers;
   }

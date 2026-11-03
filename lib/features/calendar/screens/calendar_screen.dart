@@ -86,6 +86,7 @@ import 'package:spdrivercalendar/models/holiday.dart';
 import 'package:spdrivercalendar/features/calendar/services/shift_service.dart';
 import 'package:spdrivercalendar/services/jamestown_feature_service.dart';
 import 'package:spdrivercalendar/services/zone2_roster_feature_service.dart';
+import 'package:spdrivercalendar/services/zone4_roster_feature_service.dart';
 import 'package:spdrivercalendar/services/donnybrook_feature_service.dart';
 
 import 'package:spdrivercalendar/services/rest_days_service.dart';
@@ -577,7 +578,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
     );
   }
 
-  List<bool>? _zone2CalendarWeekIsRest(DateTime shiftDate) {
+  List<bool>? _calendarWeekIsRest(DateTime shiftDate) {
     final sunday = RosterService.getSundayOfWeek(shiftDate);
     final restDays = List<bool>.generate(7, (d) {
       return _isRosteredRestDay(sunday.add(Duration(days: d)));
@@ -673,6 +674,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
     final jamestownEnabled = await JamestownFeatureService.isEnabled();
     final donnybrook1Enabled = await DonnybrookFeatureService.isEnabled();
     final zone2RosterEnabled = await Zone2RosterFeatureService.isEnabled();
+    final zone4RosterEnabled = await Zone4RosterFeatureService.isEnabled();
 
     if (!mounted) return;
 
@@ -688,6 +690,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
         jamestownEnabled: jamestownEnabled,
         donnybrook1Enabled: donnybrook1Enabled,
         zone2RosterEnabled: zone2RosterEnabled,
+        zone4RosterEnabled: zone4RosterEnabled,
         isRosteredRestDay: _isRosteredRestDay,
         isNightsRoster: _markedInStatus == MarkedInStatus.nights,
         isNightsWorkDay: _nightsAnchorSunday == null
@@ -713,6 +716,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
           markedInZone: markedInZone,
           jamestownEnabled: jamestownEnabled,
           zone2RosterEnabled: zone2RosterEnabled,
+          zone4RosterEnabled: zone4RosterEnabled,
           isNightsRoster: _markedInStatus == MarkedInStatus.nights,
         ),
       ),
@@ -728,6 +732,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
     required String markedInZone,
     required bool jamestownEnabled,
     bool zone2RosterEnabled = false,
+    bool zone4RosterEnabled = false,
     bool isNightsRoster = false,
   }) async {
     var googleSyncCount = 0;
@@ -754,7 +759,9 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
       jamestownEnabled: jamestownEnabled,
       isNightsRoster: isNightsRoster,
       zone2RosterEnabled: zone2RosterEnabled,
-      zone2CalendarWeekIsRest: _zone2CalendarWeekIsRest(shiftDate),
+      zone2CalendarWeekIsRest: _calendarWeekIsRest(shiftDate),
+      zone4RosterEnabled: zone4RosterEnabled,
+      zone4CalendarWeekIsRest: _calendarWeekIsRest(shiftDate),
     );
 
     if (result.status == WorkShiftPersistStatus.missingCustomTrainingTimes) {

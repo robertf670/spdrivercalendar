@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:spdrivercalendar/core/widgets/dialog_insets.dart';
 import 'package:spdrivercalendar/theme/app_theme.dart';
 
 /// Presentation-only break and late-finish status picker.
@@ -111,7 +112,7 @@ class BreakStatusDialog extends StatelessWidget {
 
     return AlertDialog(
       insetPadding: EdgeInsets.symmetric(
-        horizontal: screenWidth < 350 ? 16.0 : 40.0,
+        horizontal: dialogHorizontalInset(context),
         vertical: screenWidth < 350 ? 16.0 : 24.0,
       ),
       title: const Row(

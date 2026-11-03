@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:spdrivercalendar/core/widgets/dialog_insets.dart';
 
 /// Presentation picker for first/second overtime half.
 class OvertimeHalfTypeDialog extends StatelessWidget {
@@ -16,7 +17,7 @@ class OvertimeHalfTypeDialog extends StatelessWidget {
     final screenWidth = MediaQuery.sizeOf(context).width;
     return AlertDialog(
       insetPadding: EdgeInsets.symmetric(
-        horizontal: screenWidth < 350 ? 16.0 : 40.0,
+        horizontal: dialogHorizontalInset(context),
         vertical: screenWidth < 350 ? 16.0 : 24.0,
       ),
       title: const Text('Select Overtime Half'),

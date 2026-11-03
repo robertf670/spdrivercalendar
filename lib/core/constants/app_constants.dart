@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 class AppConstants {
   static const String appName = 'Spare Driver Shift Calendar';
-  static const String appVersion = '4.4.3';
+  static const String appVersion = '4.4.4';
   
   // Storage Keys
   static const String eventsStorageKey = 'events';
@@ -81,6 +81,7 @@ class AppConstants {
   static const String jamestownUnlockedKey = 'jamestownUnlocked';
   static const String donnybrook1EnabledKey = 'donnybrook1Enabled';
   static const String zone2RosterEnabledKey = 'zone2RosterEnabled';
+  static const String zone4RosterEnabledKey = 'zone4RosterEnabled';
 
   // PWA Web Access (Web only)
   static const String workAccessGrantedKey = 'workAccessGranted';

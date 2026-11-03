@@ -65,4 +65,45 @@ void main() {
     expect(find.text('via Quay'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('large text does not overflow the board', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(320, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final board = UniversalBoard(
+      shift: 'PZ1/29X',
+      sections: [
+        BoardSection(
+          type: 'secondHalf',
+          entries: [
+            BoardEntry(
+              action: 'Route',
+              time: '17:21',
+              location: 'Ringsend',
+              route: 'C1',
+            ),
+          ],
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      MediaQuery(
+        data: const MediaQueryData(
+          size: Size(320, 800),
+          textScaler: TextScaler.linear(2),
+        ),
+        child: MaterialApp(
+          home: Scaffold(
+            body: UniversalBoardDialog(board: board),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('17:21'), findsOneWidget);
+    expect(find.text('C1'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 }

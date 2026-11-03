@@ -5,6 +5,7 @@ import 'package:spdrivercalendar/features/calendar/widgets/calendar_day_cell.dar
 
 void main() {
   Widget buildSubject({
+    TextScaler? textScaler,
     String displayText = 'PZ1/03',
     String shift = 'E',
     bool isDayInLieu = false,
@@ -18,13 +19,23 @@ void main() {
     bool isOutsideDay = false,
     bool isSelected = false,
     bool animatedSelection = true,
+    double cellWidth = 46,
+    double cellHeight = 64,
   }) {
     return MaterialApp(
+      builder: textScaler == null
+          ? null
+          : (context, child) {
+              return MediaQuery(
+                data: MediaQuery.of(context).copyWith(textScaler: textScaler),
+                child: child!,
+              );
+            },
       home: Scaffold(
         body: Center(
           child: SizedBox(
-            width: 46,
-            height: 64,
+            width: cellWidth,
+            height: cellHeight,
             child: CalendarDayCell(
               date: DateTime(2026, 7, 23),
               displayText: displayText,
@@ -52,6 +63,25 @@ void main() {
 
   setUp(() {
     TestWidgetsFlutterBinding.ensureInitialized();
+  });
+
+  testWidgets('large text does not overflow a month cell', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(320, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      buildSubject(
+        textScaler: const TextScaler.linear(2),
+        isDayInLieu: true,
+        isSaturdayService: true,
+        displayText: 'PZ1/03',
+        cellHeight: 140,
+      ),
+    );
+
+    expect(find.text('Lieu'), findsOneWidget);
+    expect(find.text('SAT'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('renders duty content without overflow at 320px', (tester) async {

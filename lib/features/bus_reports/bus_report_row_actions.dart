@@ -10,11 +10,15 @@ class BusReportRowActions extends StatefulWidget {
     required this.busNumber,
     required this.date,
     required this.slot,
+    this.compact = false,
   });
 
   final String busNumber;
   final DateTime date;
   final BusReportSlot slot;
+
+  /// Sits under a bus number that is already shown, so the label stays short.
+  final bool compact;
 
   @override
   State<BusReportRowActions> createState() => _BusReportRowActionsState();
@@ -84,26 +88,43 @@ class _BusReportRowActionsState extends State<BusReportRowActions> {
         if (data == null || _target == null) return const SizedBox.shrink();
 
         final bus = _target!.busNumber;
-        final label = data.own != null
-            ? 'Your report: ${data.own!.categoryLabel} · $bus'
-            : data.canWrite
-                ? (data.reportCount == 0
-                    ? 'Report $bus'
-                    : 'Reports (${data.reportCount}) · $bus')
-                : (data.reportCount == 0
-                    ? 'Reports · $bus'
-                    : 'Reports (${data.reportCount}) · $bus');
+        final label = widget.compact
+            ? _compactLabel(data)
+            : _fullLabel(data, bus);
 
         return Align(
           alignment: Alignment.centerLeft,
           child: TextButton(
             onPressed: _open,
+            style: widget.compact
+                ? TextButton.styleFrom(
+                    padding: EdgeInsets.zero,
+                    minimumSize: const Size(48, 48),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    alignment: Alignment.centerLeft,
+                    visualDensity: VisualDensity.compact,
+                  )
+                : null,
             child: Text(label),
           ),
         );
       },
     );
   }
+}
+
+String _compactLabel(_BusReportRowData data) {
+  if (data.own != null) return 'Your report: ${data.own!.categoryLabel}';
+  if (data.reportCount == 0) return data.canWrite ? 'Report' : 'Reports';
+  return 'Reports (${data.reportCount})';
+}
+
+String _fullLabel(_BusReportRowData data, String bus) {
+  if (data.own != null) return 'Your report: ${data.own!.categoryLabel} · $bus';
+  if (data.canWrite) {
+    return data.reportCount == 0 ? 'Report $bus' : 'Reports (${data.reportCount}) · $bus';
+  }
+  return data.reportCount == 0 ? 'Reports · $bus' : 'Reports (${data.reportCount}) · $bus';
 }
 
 class _BusReportRowData {

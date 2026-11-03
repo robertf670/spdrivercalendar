@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:spdrivercalendar/core/widgets/dialog_insets.dart';
 import 'package:intl/intl.dart';
 import 'package:spdrivercalendar/features/calendar/services/work_for_others_shift_loader.dart';
 import 'package:spdrivercalendar/features/calendar/services/zone2_duties.dart';
@@ -86,7 +87,7 @@ class _WorkForOthersDialogState extends State<WorkForOthersDialog> {
 
     return AlertDialog(
       insetPadding: EdgeInsets.symmetric(
-        horizontal: screenWidth < 350 ? 16.0 : 40.0,
+        horizontal: dialogHorizontalInset(context),
         vertical: screenWidth < 350 ? 16.0 : 24.0,
       ),
       title: Text(

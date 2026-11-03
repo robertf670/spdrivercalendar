@@ -1,9 +1,16 @@
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
 
 class BusTrackingService {
   static const String _fleetUrl = 'https://bustimes.org/operators/dublin-bus/vehicles';
   static const String _baseVehicleUrl = 'https://bustimes.org/vehicles/';
+
+  /// Older vehicles are `ie-5503`. Newer ones, including some EA and EW
+  /// buses, are `none-7423`.
+  static final RegExp _vehicleIdInPath = RegExp(
+    r'/vehicles/((?:ie|none)-\d+)(?!\d)',
+  );
 
   /// Gets the bustimes.org URL for a bus without launching it
   /// Returns the URL string if found, null if not found
@@ -146,15 +153,13 @@ class BusTrackingService {
       ];
 
       for (final pattern in exactPatterns) {
-        if (htmlContent.contains(pattern)) {
-          // Extract vehicle ID from this exact match
-          final vehicleId = _extractVehicleIdFromExactMatch(htmlContent, pattern, busNumber);
-          if (vehicleId != null) {
-            // Validate that this vehicle ID actually corresponds to our bus number
-            if (_isVehicleIdValid(vehicleId, busNumber, htmlContent)) {
-              return vehicleId;
-            }
-          }
+        var from = 0;
+        while (from < htmlContent.length) {
+          final index = htmlContent.indexOf(pattern, from);
+          if (index == -1) break;
+          final vehicleId = _vehicleIdWrapping(htmlContent, index);
+          if (vehicleId != null) return vehicleId;
+          from = index + pattern.length;
         }
       }
       
@@ -164,102 +169,16 @@ class BusTrackingService {
     }
   }
 
-  /// Extract vehicle ID from exact match with strict validation
-  static String? _extractVehicleIdFromExactMatch(String htmlContent, String pattern, String busNumber) {
-    try {
-      final index = htmlContent.indexOf(pattern);
-      if (index == -1) return null;
-
-      // Search in a reasonable area around the match (±800 characters)
-      final start = (index - 800).clamp(0, htmlContent.length);
-      final end = (index + 800).clamp(0, htmlContent.length);
-      final searchArea = htmlContent.substring(start, end);
-
-      // Try multiple regex patterns for vehicle links
-      final regexPatterns = [
-        RegExp(r'href="[^"]*\/vehicles\/(ie-\d+)"'),
-        RegExp(r"href='[^']*\/vehicles\/(ie-\d+)'"),
-        RegExp(r'\/vehicles\/(ie-\d+)'),
-      ];
-
-      for (final regex in regexPatterns) {
-        final matches = regex.allMatches(searchArea);
-        for (final match in matches) {
-          if (match.groupCount >= 1) {
-            final vehicleId = match.group(1);
-            if (vehicleId != null) {
-              // Ensure this vehicle ID is actually associated with our bus number
-              final vehicleContext = _getVehicleContext(htmlContent, vehicleId, 200);
-              if (vehicleContext.contains(busNumber)) {
-                return vehicleId;
-              }
-            }
-          }
-        }
-      }
-
-      return null;
-    } catch (e) {
-      return null;
-    }
-  }
-
-  /// Finds the index of an exact vehicle ID path, avoiding prefix collisions
-  /// (e.g. vehicles/ie-538 must not match vehicles/ie-5384).
-  static int _indexOfExactVehicleId(String htmlContent, String vehicleId) {
-    final pattern = RegExp('${RegExp.escape('vehicles/$vehicleId')}(?!\\d)');
-    final match = pattern.firstMatch(htmlContent);
-    return match?.start ?? -1;
-  }
-
-  /// Get context around a vehicle ID to validate it matches our bus number
-  static String _getVehicleContext(String htmlContent, String vehicleId, int contextSize) {
-    try {
-      final index = _indexOfExactVehicleId(htmlContent, vehicleId);
-      if (index == -1) return '';
-
-      final start = (index - contextSize).clamp(0, htmlContent.length);
-      final end = (index + contextSize).clamp(0, htmlContent.length);
-      return htmlContent.substring(start, end);
-    } catch (e) {
-      return '';
-    }
-  }
-
-  /// Validate that a vehicle ID actually corresponds to our bus number
-  static bool _isVehicleIdValid(String vehicleId, String busNumber, String htmlContent) {
-    try {
-      // Get context around this vehicle ID
-      final context = _getVehicleContext(htmlContent, vehicleId, 300);
-      
-      // The context should contain our exact bus number
-      if (!context.contains(busNumber)) {
-        return false;
-      }
-
-      // Make sure it's not just a partial match (e.g., PA155 shouldn't match PA154)
-      // Check for word boundaries around our bus number
-      final exactPatterns = [
-        '>$busNumber<',
-        '"$busNumber"',
-        "'$busNumber'",
-        ' $busNumber ',
-        '\t$busNumber\t',
-        '\n$busNumber\n',
-        '<td>$busNumber</td>',
-        '<span>$busNumber</span>',
-      ];
-
-      for (final pattern in exactPatterns) {
-        if (context.contains(pattern)) {
-          return true;
-        }
-      }
-
-      return false;
-    } catch (e) {
-      return false;
-    }
+  /// The fleet number sits inside `<a href="/vehicles/none-7423">`.
+  /// Take that link, not a neighbouring vehicle a few dozen characters away.
+  static String? _vehicleIdWrapping(String htmlContent, int fleetIndex) {
+    final before = htmlContent.substring(0, fleetIndex);
+    final matches = _vehicleIdInPath.allMatches(before);
+    if (matches.isEmpty) return null;
+    final match = matches.last;
+    final between = htmlContent.substring(match.end, fleetIndex);
+    if (between.contains('</a>')) return null;
+    return match.group(1);
   }
 
   /// Validate vehicle ID by checking its actual page (async validation)
@@ -310,12 +229,11 @@ class BusTrackingService {
           }
 
           if (hasExactMatch) {
-            // Found a table row with exact bus number match
-            // Look for vehicle links in this row
-            final vehiclePattern = RegExp(r'\/vehicles\/(ie-\d+)');
-            final vehicleMatch = vehiclePattern.firstMatch(rowContent);
-            if (vehicleMatch != null && vehicleMatch.groupCount >= 1) {
-              return vehicleMatch.group(1);
+            for (final pattern in exactPatterns) {
+              final index = rowContent.indexOf(pattern);
+              if (index == -1) continue;
+              final vehicleId = _vehicleIdWrapping(rowContent, index);
+              if (vehicleId != null) return vehicleId;
             }
           }
         }
@@ -325,6 +243,14 @@ class BusTrackingService {
     } catch (e) {
       return null;
     }
+  }
+
+  /// Fleet-page lookup used by tests. Does not call the network.
+  @visibleForTesting
+  static String? findVehicleIdInFleetHtml(String htmlContent, String busNumber) {
+    final clean = busNumber.trim().toUpperCase().replaceAll(' ', '');
+    return _searchForExactMatch(htmlContent, clean) ??
+        _searchInTableStructure(htmlContent, clean);
   }
 
   /// Launch URL using url_launcher

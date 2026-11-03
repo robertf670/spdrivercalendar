@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:spdrivercalendar/core/widgets/dialog_insets.dart';
 import 'package:intl/intl.dart';
 import 'package:spdrivercalendar/features/calendar/services/event_service.dart';
 import 'package:spdrivercalendar/features/calendar/utils/duties_in_date_range.dart';
@@ -86,10 +87,9 @@ class _RemoveDutiesRangeDialogState extends State<RemoveDutiesRangeDialog> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) {
-        final width = MediaQuery.sizeOf(dialogContext).width;
         return AlertDialog(
           insetPadding: EdgeInsets.symmetric(
-            horizontal: width < 350 ? 16 : 40,
+            horizontal: dialogHorizontalInset(dialogContext),
           ),
           title: const Text('Remove duties?'),
           content: Text(
@@ -120,7 +120,7 @@ class _RemoveDutiesRangeDialogState extends State<RemoveDutiesRangeDialog> {
 
     return AlertDialog(
       insetPadding: EdgeInsets.symmetric(
-        horizontal: width < 350 ? 16 : 40,
+        horizontal: dialogHorizontalInset(context),
         vertical: 24,
       ),
       title: const Text('Remove duties'),

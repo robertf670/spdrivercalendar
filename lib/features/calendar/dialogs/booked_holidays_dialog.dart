@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:spdrivercalendar/core/widgets/dialog_insets.dart';
 import 'package:intl/intl.dart';
 import 'package:spdrivercalendar/features/calendar/utils/holiday_type_presentation.dart';
 import 'package:spdrivercalendar/models/holiday.dart';
@@ -53,15 +54,9 @@ class _BookedHolidaysDialogState extends State<BookedHolidaysDialog> {
         ? Theme.of(context).colorScheme.primary
         : ColorCustomizationService.getColorForShift('DAY_IN_LIEU');
 
-    final horizontalInset = screenWidth < 350
-        ? 12.0
-        : screenWidth < 400
-            ? 16.0
-            : 40.0;
-
     return Dialog(
       insetPadding: EdgeInsets.symmetric(
-        horizontal: horizontalInset,
+        horizontal: dialogHorizontalInset(context),
         vertical: screenWidth < 350 ? 16.0 : 24.0,
       ),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),

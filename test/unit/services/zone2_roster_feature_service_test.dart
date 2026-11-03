@@ -32,6 +32,37 @@ void main() {
     expect(await Zone2RosterFeatureService.isEnabled(), isTrue);
   });
 
+  test('shows for a Shift driver marked in on Route 13', () {
+    expect(
+      Zone2RosterFeatureService.showsForMarkedIn(
+        status: 'Shift',
+        zone: 'Route 13',
+      ),
+      isTrue,
+    );
+    expect(
+      Zone2RosterFeatureService.showsForMarkedIn(
+        status: 'Shift',
+        zone: 'Zone 2',
+      ),
+      isTrue,
+    );
+    expect(
+      Zone2RosterFeatureService.showsForMarkedIn(
+        status: 'M-F',
+        zone: 'Route 13',
+      ),
+      isFalse,
+    );
+    expect(
+      Zone2RosterFeatureService.showsForMarkedIn(
+        status: 'Shift',
+        zone: 'Zone 1',
+      ),
+      isFalse,
+    );
+  });
+
   test('filledEvents keeps only tagged Zone 2 roster fills', () {
     final tagged = _event(rosterFillSource: Zone2ShiftRoster.sourceTag);
     final other = _event();

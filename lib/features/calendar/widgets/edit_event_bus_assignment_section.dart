@@ -5,6 +5,7 @@ import 'package:spdrivercalendar/models/event.dart';
 import 'package:spdrivercalendar/theme/app_theme.dart';
 import 'package:spdrivercalendar/features/bus_reports/bus_report_key.dart';
 import 'package:spdrivercalendar/features/bus_reports/bus_report_row_actions.dart';
+import 'package:spdrivercalendar/features/calendar/widgets/bus_icon_action.dart';
 
 /// Bus assignment controls for the Edit Event dialog.
 ///
@@ -78,8 +79,6 @@ class EditEventBusAssignmentSection extends StatelessWidget {
                           builder: (context, snapshot) {
                             final screenWidth = MediaQuery.of(context).size.width;
                             final isSmallScreen = screenWidth < 350;
-                            final iconSize = isSmallScreen ? 16.0 : 18.0;
-                            final iconPadding = isSmallScreen ? 2.0 : 4.0;
                             final textFontSize = isSmallScreen ? 12.0 : 14.0;
                             final containerPadding = isSmallScreen ? 6.0 : 8.0;
                             final checkIconSize = isSmallScreen ? 14.0 : 16.0;
@@ -97,44 +96,42 @@ class EditEventBusAssignmentSection extends StatelessWidget {
                                       : Colors.grey.shade300,
                                 ),
                               ),
-                              child: Row(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(Icons.check_circle, size: checkIconSize, color: Colors.green),
-                                  SizedBox(width: isSmallScreen ? 4 : 8),
-                                  Expanded(
-                                    child: Text(
-                                      event.title.contains('(OT)') ? 'Assigned Bus: ${event.firstHalfBus}' : '1: ${event.firstHalfBus}',
-                                      style: TextStyle(
-                                        fontSize: textFontSize,
-                                        color: Theme.of(context).textTheme.bodyMedium?.color,
-                                      ),
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                  SizedBox(width: isSmallScreen ? 2 : 4),
-                                  // Group icons together tightly
                                   Row(
-                                    mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      // Track button for first half bus
-                                      GestureDetector(
-                                        onTap: isTrackingBus(event.firstHalfBus)
-                                            ? null
-                                            : () => onTrackBus(event.firstHalfBus!),
-                                        child: Container(
-                                          padding: EdgeInsets.all(iconPadding),
-                                          child: isTrackingBus(event.firstHalfBus)
-                                              ? SizedBox(
-                                                  width: iconSize - 2,
-                                                  height: iconSize - 2,
-                                                  child: const CircularProgressIndicator(strokeWidth: 2),
-                                                )
-                                              : Icon(Icons.location_on, size: iconSize, color: Colors.blue),
+                                      Icon(Icons.check_circle, size: checkIconSize, color: Colors.green),
+                                      SizedBox(width: isSmallScreen ? 4 : 8),
+                                      Expanded(
+                                        child: Text(
+                                          event.title.contains('(OT)') ? 'Assigned Bus: ${event.firstHalfBus}' : '1: ${event.firstHalfBus}',
+                                          style: TextStyle(
+                                            fontSize: textFontSize,
+                                            color: Theme.of(context).textTheme.bodyMedium?.color,
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
                                         ),
                                       ),
-                                      // Change bus button (swap/recycle icon)
-                                      GestureDetector(
-                                        onTap: () async {
+                                    ],
+                                  ),
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: BusIconAction(
+                                          tooltip: 'Track ${event.firstHalfBus}',
+                                          icon: Icons.near_me,
+                                          loading: isTrackingBus(event.firstHalfBus),
+                                          onPressed: () => onTrackBus(event.firstHalfBus!),
+                                        ),
+                                      ),
+                                      Expanded(
+                                        child: BusIconAction(
+                                          tooltip: 'Change bus',
+                                          icon: Icons.swap_horiz,
+                                          color: Colors.orange,
+                                          onPressed: () async {
                                           // Show the bus assignment dialog
                                           final hasCurrentBus = event.firstHalfBus != null && event.firstHalfBus!.isNotEmpty;
                                       final TextEditingController controller = TextEditingController(text: event.firstHalfBus ?? '');
@@ -238,14 +235,14 @@ class EditEventBusAssignmentSection extends StatelessWidget {
                                         await onBusAssignmentChanged(oldEvent, updatedEvent);
                                       }
                                     },
-                                    child: Container(
-                                      padding: EdgeInsets.all(iconPadding),
-                                      child: Icon(Icons.swap_horiz, size: iconSize, color: Colors.orange),
-                                    ),
-                                  ),
-                                    // Remove bus button
-                                    GestureDetector(
-                                      onTap: () async {
+                                        ),
+                                      ),
+                                    Expanded(
+                                      child: BusIconAction(
+                                        tooltip: 'Remove bus',
+                                        icon: Icons.delete_outline,
+                                        color: Colors.red,
+                                        onPressed: () async {
                                           // Create a copy of the old event
                                           final oldEvent = Event(
                                             id: event.id,
@@ -296,11 +293,8 @@ class EditEventBusAssignmentSection extends StatelessWidget {
                                           // Save the updated event
                                           await onBusAssignmentChanged(oldEvent, updatedEvent);
                                         },
-                                        child: Container(
-                                          padding: EdgeInsets.all(iconPadding),
-                                          child: Icon(Icons.remove_circle_outline, size: iconSize, color: Colors.red),
-                                        ),
                                       ),
+                                    ),
                                     ],
                                   ),
                                 ],
@@ -323,8 +317,6 @@ class EditEventBusAssignmentSection extends StatelessWidget {
                           builder: (context, snapshot) {
                             final screenWidth = MediaQuery.of(context).size.width;
                             final isSmallScreen = screenWidth < 350;
-                            final iconSize = isSmallScreen ? 16.0 : 18.0;
-                            final iconPadding = isSmallScreen ? 2.0 : 4.0;
                             final textFontSize = isSmallScreen ? 12.0 : 14.0;
                             final containerPadding = isSmallScreen ? 6.0 : 8.0;
                             final checkIconSize = isSmallScreen ? 14.0 : 16.0;
@@ -342,44 +334,42 @@ class EditEventBusAssignmentSection extends StatelessWidget {
                                       : Colors.grey.shade300,
                                 ),
                               ),
-                              child: Row(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(Icons.check_circle, size: checkIconSize, color: Colors.green),
-                                  SizedBox(width: isSmallScreen ? 4 : 8),
-                                  Expanded(
-                                    child: Text(
-                                      event.title.contains('(OT)') ? 'Assigned Bus: ${event.secondHalfBus}' : '2: ${event.secondHalfBus}',
-                                      style: TextStyle(
-                                        fontSize: textFontSize,
-                                        color: Theme.of(context).textTheme.bodyMedium?.color,
-                                      ),
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                  SizedBox(width: isSmallScreen ? 2 : 4),
-                                  // Group icons together tightly
                                   Row(
-                                    mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      // Track button for second half bus
-                                      GestureDetector(
-                                        onTap: isTrackingBus(event.secondHalfBus)
-                                            ? null
-                                            : () => onTrackBus(event.secondHalfBus!),
-                                        child: Container(
-                                          padding: EdgeInsets.all(iconPadding),
-                                          child: isTrackingBus(event.secondHalfBus)
-                                              ? SizedBox(
-                                                  width: iconSize - 2,
-                                                  height: iconSize - 2,
-                                                  child: const CircularProgressIndicator(strokeWidth: 2),
-                                                )
-                                              : Icon(Icons.location_on, size: iconSize, color: Colors.blue),
+                                      Icon(Icons.check_circle, size: checkIconSize, color: Colors.green),
+                                      SizedBox(width: isSmallScreen ? 4 : 8),
+                                      Expanded(
+                                        child: Text(
+                                          event.title.contains('(OT)') ? 'Assigned Bus: ${event.secondHalfBus}' : '2: ${event.secondHalfBus}',
+                                          style: TextStyle(
+                                            fontSize: textFontSize,
+                                            color: Theme.of(context).textTheme.bodyMedium?.color,
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
                                         ),
                                       ),
-                                      // Change bus button (swap/recycle icon)
-                                      GestureDetector(
-                                        onTap: () async {
+                                    ],
+                                  ),
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: BusIconAction(
+                                          tooltip: 'Track ${event.secondHalfBus}',
+                                          icon: Icons.near_me,
+                                          loading: isTrackingBus(event.secondHalfBus),
+                                          onPressed: () => onTrackBus(event.secondHalfBus!),
+                                        ),
+                                      ),
+                                      Expanded(
+                                        child: BusIconAction(
+                                          tooltip: 'Change bus',
+                                          icon: Icons.swap_horiz,
+                                          color: Colors.orange,
+                                          onPressed: () async {
                                           // Show the bus assignment dialog
                                           final hasCurrentBus = event.secondHalfBus != null && event.secondHalfBus!.isNotEmpty;
                                       final TextEditingController controller = TextEditingController(text: event.secondHalfBus ?? '');
@@ -483,14 +473,14 @@ class EditEventBusAssignmentSection extends StatelessWidget {
                                         await onBusAssignmentChanged(oldEvent, updatedEvent);
                                       }
                                     },
-                                    child: Container(
-                                      padding: EdgeInsets.all(iconPadding),
-                                      child: Icon(Icons.swap_horiz, size: iconSize, color: Colors.orange),
-                                    ),
-                                  ),
-                                  // Remove bus button
-                                  GestureDetector(
-                                    onTap: () async {
+                                        ),
+                                      ),
+                                    Expanded(
+                                      child: BusIconAction(
+                                        tooltip: 'Remove bus',
+                                        icon: Icons.delete_outline,
+                                        color: Colors.red,
+                                        onPressed: () async {
                                       // Create a copy of the old event
                                       final oldEvent = Event(
                                         id: event.id,
@@ -541,11 +531,8 @@ class EditEventBusAssignmentSection extends StatelessWidget {
                                       // Save the updated event
                                       await onBusAssignmentChanged(oldEvent, updatedEvent);
                                     },
-                                    child: Container(
-                                      padding: EdgeInsets.all(iconPadding),
-                                      child: Icon(Icons.remove_circle_outline, size: iconSize, color: Colors.red),
+                                      ),
                                     ),
-                                  ),
                                 ],
                               ),
                             ],

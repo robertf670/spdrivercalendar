@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:spdrivercalendar/core/widgets/dialog_insets.dart';
 import 'package:intl/intl.dart';
 import 'package:spdrivercalendar/features/calendar/services/overtime_duty_shift_loader.dart';
 import 'package:spdrivercalendar/features/calendar/services/zone2_duties.dart';
@@ -101,7 +102,7 @@ class _OvertimeDutyDetailsDialogState extends State<OvertimeDutyDetailsDialog> {
 
     return AlertDialog(
       insetPadding: EdgeInsets.symmetric(
-        horizontal: sizes['insetH']!,
+        horizontal: dialogHorizontalInset(context),
         vertical: sizes['insetV']!,
       ),
       title: Text(

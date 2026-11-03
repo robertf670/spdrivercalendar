@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:spdrivercalendar/core/widgets/dialog_insets.dart';
 import 'package:spdrivercalendar/features/calendar/utils/sick_day_display.dart';
 
 /// Presentation-only sick-day status picker.
@@ -53,7 +54,7 @@ class SickDayStatusDialog extends StatelessWidget {
 
     return AlertDialog(
       insetPadding: EdgeInsets.symmetric(
-        horizontal: screenWidth < 350 ? 16.0 : 40.0,
+        horizontal: dialogHorizontalInset(context),
         vertical: screenWidth < 350 ? 16.0 : 24.0,
       ),
       title: const Row(
