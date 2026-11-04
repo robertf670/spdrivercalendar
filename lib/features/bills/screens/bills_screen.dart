@@ -213,6 +213,21 @@ class BillsScreenState extends State<BillsScreen> {
     });
   }
 
+  bool get _showingBoard =>
+      _tab == _BillsHubTab.boards && _selectedBoardDuty != null;
+
+  bool get _showingDuty => _expandedShift != null;
+
+  void _stepBack() {
+    if (_showingBoard) {
+      _clearBoardSelection();
+      return;
+    }
+    if (_showingDuty) {
+      setState(() => _expandedShift = null);
+    }
+  }
+
   Map<String, double> _sizes(BuildContext context) {
     final width = MediaQuery.sizeOf(context).width;
     if (width < 350) {
@@ -231,8 +246,25 @@ class BillsScreenState extends State<BillsScreen> {
   Widget build(BuildContext context) {
     final sizes = _sizes(context);
 
-    return Scaffold(
+    return PopScope(
+      canPop: !_showingBoard && !_showingDuty,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        _stepBack();
+      },
+      child: Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          tooltip: 'Back',
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            if (_showingBoard || _showingDuty) {
+              _stepBack();
+              return;
+            }
+            Navigator.of(context).maybePop();
+          },
+        ),
         title: const Text('Bills & Boards'),
         elevation: 0,
         actions: [
@@ -276,6 +308,7 @@ class BillsScreenState extends State<BillsScreen> {
             ],
           ),
         ),
+      ),
       ),
     );
   }

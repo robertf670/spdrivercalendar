@@ -99,6 +99,61 @@ void main() {
     expect(find.textContaining('Mountjoy Square'), findsWidgets);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('back from a duty or board returns to the list', (tester) async {
+    tester.view.physicalSize = const Size(320, 800);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: BillsScreen(
+          now: DateTime(2026, 9, 11),
+          initialZone: 'Zone 1',
+          initialDayType: 'M-F',
+        ),
+      ),
+    );
+
+    await _pumpUntil(
+      tester,
+      () => find.text('01–20').evaluate().isNotEmpty,
+    );
+
+    await tester.ensureVisible(find.widgetWithText(ActionChip, '61–80'));
+    await tester.tap(find.widgetWithText(ActionChip, '61–80'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 350));
+    expect(find.text('67'), findsOneWidget);
+    await tester.tap(find.text('67'));
+    await tester.pump();
+    expect(find.text('View board'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Back'));
+    await tester.pump();
+    expect(find.text('Bills & Boards'), findsOneWidget);
+    expect(find.text('View board'), findsNothing);
+
+    await tester.tap(find.widgetWithText(ActionChip, '61–80'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 350));
+    await tester.tap(find.text('67'));
+    await tester.pump();
+    await tester.ensureVisible(find.text('View board'));
+    await tester.tap(find.text('View board'));
+    await _pumpUntil(
+      tester,
+      () => find.text('First Half').evaluate().isNotEmpty,
+    );
+
+    await tester.tap(find.byTooltip('Back'));
+    await tester.pump();
+    expect(find.text('Bills & Boards'), findsOneWidget);
+    expect(find.text('Pick a duty'), findsOneWidget);
+    expect(find.text('First Half'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
 }
 
 Future<void> _pumpUntil(WidgetTester tester, bool Function() condition) async {

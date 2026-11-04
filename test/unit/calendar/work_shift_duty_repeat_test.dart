@@ -100,4 +100,20 @@ void main() {
       isTrue,
     );
   });
+
+  test('a rest day does not offer repeat', () {
+    expect(
+      WorkShiftDutyRepeat.shouldShow(
+        selectedZone: 'Zone 1',
+        shiftDate: DateTime(2026, 11, 3),
+        isMFMarkedIn: false,
+        isShiftMarkedIn: true,
+        isNightsRoster: false,
+        markedInZone: 'Zone 1',
+        jamestownEnabled: false,
+        isRestDay: true,
+      ),
+      isFalse,
+    );
+  });
 }

@@ -25,6 +25,7 @@ class Zone2RosterFeatureService {
   static Future<void> setEnabled(bool enabled) async {
     await StorageService.saveBool(AppConstants.zone2RosterEnabledKey, enabled);
     if (enabled) {
+      await StorageService.saveBool(AppConstants.zone1RosterEnabledKey, false);
       await StorageService.saveBool(AppConstants.zone4RosterEnabledKey, false);
     }
   }

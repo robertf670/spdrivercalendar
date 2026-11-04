@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 class AppConstants {
   static const String appName = 'Spare Driver Shift Calendar';
-  static const String appVersion = '4.4.4';
+  static const String appVersion = '4.4.5';
   
   // Storage Keys
   static const String eventsStorageKey = 'events';
@@ -45,8 +45,6 @@ class AppConstants {
   static const String nightsWeekIndexKey = 'nightsWeekIndex';
   static const String nightsAnchorSundayKey = 'nightsAnchorSunday';
 
-  /// When false, the add-duty dialog does not offer Shift Zone 1 15-week roster auto-fill.
-  static const bool enableZone1ShiftDutyRosterAutoFill = false;
 
   // Bank holidays (persisted for home screen widget - JSON array of "yyyy-MM-dd" strings)
   static const String bankHolidayDatesKey = 'bankHolidayDates';
@@ -80,6 +78,7 @@ class AppConstants {
   // Legacy key retained so existing unlocks can migrate to the Dev Menu.
   static const String jamestownUnlockedKey = 'jamestownUnlocked';
   static const String donnybrook1EnabledKey = 'donnybrook1Enabled';
+  static const String zone1RosterEnabledKey = 'zone1RosterEnabled';
   static const String zone2RosterEnabledKey = 'zone2RosterEnabled';
   static const String zone4RosterEnabledKey = 'zone4RosterEnabled';
 

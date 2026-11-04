@@ -2698,17 +2698,21 @@ class _EventCardState extends State<EventCard> {
     required IconData icon,
     required bool iconFirst,
   }) {
-    final labelWidget = Flexible(
-      child: Text(
-        label,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        textAlign: iconFirst ? TextAlign.start : TextAlign.end,
-        style: const TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.w700,
+    final action = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, color: Colors.white),
+        const SizedBox(width: 8),
+        Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w700,
+          ),
         ),
-      ),
+      ],
     );
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
@@ -2719,18 +2723,9 @@ class _EventCardState extends State<EventCard> {
         ),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Row(
-            children: [
-              if (iconFirst) ...[
-                Icon(icon, color: Colors.white),
-                const SizedBox(width: 8),
-                labelWidget,
-              ] else ...[
-                labelWidget,
-                const SizedBox(width: 8),
-                Icon(icon, color: Colors.white),
-              ],
-            ],
+          child: Align(
+            alignment: iconFirst ? Alignment.centerLeft : Alignment.centerRight,
+            child: action,
           ),
         ),
       ),

@@ -5,6 +5,7 @@ import 'package:spdrivercalendar/features/calendar/dialogs/work_shift_dialog.dar
 import 'package:spdrivercalendar/features/calendar/services/roster_service.dart';
 import 'package:spdrivercalendar/features/calendar/services/work_shift_event_persister.dart';
 import 'package:spdrivercalendar/features/calendar/utils/jamestown_road.dart';
+import 'package:spdrivercalendar/features/calendar/utils/zone1_shift_roster.dart';
 import 'package:spdrivercalendar/features/calendar/utils/zone2_shift_roster.dart';
 import 'package:spdrivercalendar/features/calendar/utils/zone4_shift_roster.dart';
 import 'package:spdrivercalendar/models/event.dart';
@@ -19,6 +20,7 @@ void main() {
     bool repeatUniEuroThisWeek = false,
     Map<int, bool>? uniEuroSelectedDays,
     bool fillNext35Weeks = false,
+    bool fillNextZone1Weeks = false,
     bool fillNextZone4Weeks = false,
   }) {
     return WorkShiftDialogSelection(
@@ -32,6 +34,7 @@ void main() {
       fillNext15Weeks: false,
       fillNext10Weeks: false,
       fillNext35Weeks: fillNext35Weeks,
+      fillNextZone1Weeks: fillNextZone1Weeks,
       fillNextZone4Weeks: fillNextZone4Weeks,
     );
   }
@@ -591,5 +594,180 @@ void main() {
     expect(onDay(2027, 7, 3)?.title, 'PZ4/08');
     expect(onDay(2027, 7, 4)?.title, 'PZ4/05');
     expect(onDay(2027, 7, 5)?.title, 'PZ4/26');
+  });
+
+  test('does not fill Zone 1 roster unless the setting is on', () async {
+    final created = <Event>[];
+    final persister = WorkShiftEventPersister(
+      lookupShiftTimes: (zone, shift, date) async => {
+        'startTime': const TimeOfDay(hour: 5, minute: 0),
+        'endTime': const TimeOfDay(hour: 13, minute: 0),
+        'isNextDay': false,
+      },
+      addEvent: (event) async {
+        created.add(event);
+      },
+      eventsForDay: (_) => const [],
+      bankHolidayForDate: (_) => null,
+      now: () => DateTime(2026, 11, 3, 12),
+    );
+
+    await persister.persist(
+      shiftDate: DateTime(2026, 11, 3),
+      selection: selection(
+        zone: 'Zone 1',
+        shift: 'PZ1/65',
+        fillNextZone1Weeks: true,
+      ),
+      isMFMarkedIn: false,
+      isShiftMarkedIn: true,
+      markedInZone: 'Zone 1',
+      jamestownEnabled: false,
+    );
+
+    expect(created, hasLength(1));
+    expect(created.single.rosterFillSource, isNull);
+  });
+
+  test('fills 85 weeks of Zone 1 duties, skips rest, BH and sat-service',
+      () async {
+    TestWidgetsFlutterBinding.ensureInitialized();
+    expect(await RosterService.loadZone1ShiftRoster(), isTrue);
+
+    final created = <Event>[];
+    final occupied = Event(
+      id: 'existing',
+      title: 'Keep me',
+      startDate: DateTime(2026, 11, 5),
+      endDate: DateTime(2026, 11, 5),
+      startTime: const TimeOfDay(hour: 8, minute: 0),
+      endTime: const TimeOfDay(hour: 16, minute: 0),
+    );
+    final christmas = BankHoliday(
+      name: 'Christmas Day',
+      date: DateTime(2026, 12, 25),
+    );
+    final persister = WorkShiftEventPersister(
+      lookupShiftTimes: (zone, shift, date) async => {
+        'startTime': const TimeOfDay(hour: 5, minute: 0),
+        'endTime': const TimeOfDay(hour: 13, minute: 0),
+        'isNextDay': false,
+      },
+      addEvent: (event) async {
+        created.add(event);
+      },
+      eventsForDay: (date) {
+        if (date.year == 2026 && date.month == 11 && date.day == 5) {
+          return [occupied];
+        }
+        return const [];
+      },
+      bankHolidayForDate: (date) {
+        if (date.year == christmas.date.year &&
+            date.month == christmas.date.month &&
+            date.day == christmas.date.day) {
+          return christmas;
+        }
+        return null;
+      },
+      now: () => DateTime(2026, 11, 3, 12),
+    );
+
+    final result = await persister.persist(
+      shiftDate: DateTime(2026, 11, 3),
+      selection: selection(
+        zone: 'Zone 1',
+        shift: 'PZ1/65',
+        fillNextZone1Weeks: true,
+      ),
+      isMFMarkedIn: false,
+      isShiftMarkedIn: true,
+      markedInZone: 'Zone 1',
+      jamestownEnabled: false,
+      zone1RosterEnabled: true,
+      zone1CalendarWeekIsRest: const [
+        true,
+        true,
+        false,
+        false,
+        false,
+        false,
+        false,
+      ],
+    );
+
+    expect(result.status, WorkShiftPersistStatus.success);
+    expect(
+      created.every((e) => e.rosterFillSource == Zone1ShiftRoster.sourceTag),
+      isTrue,
+    );
+    expect(created.length, greaterThan(300));
+
+    Event? onDay(int year, int month, int day) {
+      final matches = created.where((e) =>
+          e.startDate.year == year &&
+          e.startDate.month == month &&
+          e.startDate.day == day);
+      return matches.isEmpty ? null : matches.single;
+    }
+
+    expect(onDay(2026, 11, 3)?.title, 'PZ1/65');
+    expect(onDay(2026, 11, 1), isNull);
+    expect(onDay(2026, 11, 2), isNull);
+    expect(onDay(2026, 11, 4)?.title, 'PZ1/65');
+    expect(onDay(2026, 11, 5), isNull);
+    expect(onDay(2026, 11, 7)?.title, 'PZ1/57');
+    expect(onDay(2026, 11, 9)?.title, 'PZ1/21');
+    expect(onDay(2026, 11, 12), isNull);
+    expect(onDay(2026, 12, 24), isNull);
+    expect(onDay(2026, 12, 25), isNull);
+  });
+
+  test('Zone 1 fill wraps from the last week back to week 1', () async {
+    TestWidgetsFlutterBinding.ensureInitialized();
+    expect(await RosterService.loadZone1ShiftRoster(), isTrue);
+
+    final created = <Event>[];
+    final persister = WorkShiftEventPersister(
+      lookupShiftTimes: (zone, shift, date) async => {
+        'startTime': const TimeOfDay(hour: 5, minute: 0),
+        'endTime': const TimeOfDay(hour: 13, minute: 0),
+        'isNextDay': false,
+      },
+      addEvent: (event) async {
+        created.add(event);
+      },
+      eventsForDay: (_) => const [],
+      bankHolidayForDate: (_) => null,
+      now: () => DateTime(2026, 11, 3, 12),
+    );
+
+    await persister.persist(
+      shiftDate: DateTime(2026, 11, 3),
+      selection: selection(
+        zone: 'Zone 1',
+        shift: 'PZ1/64',
+        fillNextZone1Weeks: true,
+      ),
+      isMFMarkedIn: false,
+      isShiftMarkedIn: true,
+      markedInZone: 'Zone 1',
+      jamestownEnabled: false,
+      zone1RosterEnabled: true,
+    );
+
+    Event? onDay(int year, int month, int day) {
+      final matches = created.where((e) =>
+          e.startDate.year == year &&
+          e.startDate.month == month &&
+          e.startDate.day == day);
+      return matches.isEmpty ? null : matches.single;
+    }
+
+    expect(onDay(2026, 11, 2)?.title, 'PZ1/64');
+    expect(onDay(2026, 11, 3)?.title, 'PZ1/64');
+    expect(onDay(2026, 11, 4), isNull);
+    expect(onDay(2026, 11, 5)?.title, 'PZ1/39');
+    expect(onDay(2026, 11, 10)?.title, 'PZ1/65');
   });
 }

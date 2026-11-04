@@ -312,4 +312,88 @@ void main() {
     expect(saved!.selectedDays[5], isTrue);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('zone 1 fill note wraps at 320px with large text', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(320, 800));
+    tester.platformDispatcher.textScaleFactorTestValue = 1.6;
+    addTearDown(() {
+      tester.platformDispatcher.clearTextScaleFactorTestValue();
+      tester.binding.setSurfaceSize(null);
+    });
+    expect(await RosterService.loadZone1ShiftRoster(), isTrue);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: WorkShiftDialog(
+            shiftDate: DateTime(2026, 11, 3),
+            isMFMarkedIn: false,
+            isShiftMarkedIn: true,
+            markedInZone: 'Zone 1',
+            jamestownEnabled: false,
+            donnybrook1Enabled: false,
+            zone1RosterEnabled: true,
+            loadShiftNumbers: (_) async => const ['PZ1/65'],
+            dayHasBlockingEvent: (_) => false,
+            onAddShift: (_) async {},
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final label = find.text('Auto-fill the next 85 weeks from my roster?');
+    expect(label, findsOneWidget);
+    await tester.ensureVisible(label);
+    await tester.tap(
+      find.descendant(
+        of: find.ancestor(of: label, matching: find.byType(Row)).first,
+        matching: find.byType(Checkbox),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Google Calendar sync'), findsOneWidget);
+    final dialogRect = tester.getRect(find.byType(AlertDialog));
+    expect(dialogRect.left, greaterThanOrEqualTo(0));
+    expect(dialogRect.right, lessThanOrEqualTo(320));
+    final note = tester.getRect(find.textContaining('Google Calendar sync'));
+    expect(note.left, greaterThanOrEqualTo(dialogRect.left));
+    expect(note.right, lessThanOrEqualTo(dialogRect.right));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('rest day hides repeat and autofill', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(320, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    expect(await RosterService.loadZone1ShiftRoster(), isTrue);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: WorkShiftDialog(
+            shiftDate: DateTime(2026, 11, 3),
+            isMFMarkedIn: false,
+            isShiftMarkedIn: true,
+            markedInZone: 'Zone 1',
+            jamestownEnabled: false,
+            donnybrook1Enabled: false,
+            zone1RosterEnabled: true,
+            isRosteredRestDay: (date) =>
+                date.year == 2026 && date.month == 11 && date.day == 3,
+            loadShiftNumbers: (_) async => const ['PZ1/65'],
+            dayHasBlockingEvent: (_) => false,
+            onAddShift: (_) async {},
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Would you like to repeat this duty this week?'),
+        findsNothing);
+    expect(find.text('Auto-fill the next 85 weeks from my roster?'),
+        findsNothing);
+    expect(tester.takeException(), isNull);
+  });
 }

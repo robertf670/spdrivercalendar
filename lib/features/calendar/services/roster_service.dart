@@ -364,11 +364,14 @@ class RosterService {
     return DateTime(date.year, date.month, date.day - daysToSunday);
   }
 
-  // --- Zone 1 Shift 86-week roster (variable rest days per week) ---
+  // --- Zone 1 Shift 85-week roster (variable rest days per week) ---
   static List<List<String>>? _zone1ShiftWeeks;
   static Map<String, int>? _zone1ShiftLookup; // key: "dayIndex_dutyCode" -> weekIndex (0-based)
 
-  /// Load Zone 1 Shift 86-week roster from assets. Returns true if loaded successfully.
+  static List<List<String>> get zone1ShiftWeeks =>
+      _zone1ShiftWeeks ?? const <List<String>>[];
+
+  /// Load Zone 1 Shift 85-week roster from assets. Returns true if loaded successfully.
   static Future<bool> loadZone1ShiftRoster() async {
     try {
       final jsonString = await rootBundle.loadString('assets/zone1_shift_86week_roster.json');

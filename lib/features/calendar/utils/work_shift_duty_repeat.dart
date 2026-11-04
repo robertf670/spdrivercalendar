@@ -31,7 +31,9 @@ class WorkShiftDutyRepeat {
     required String markedInZone,
     required bool jamestownEnabled,
     bool Function(DateTime date)? isNightsWorkDay,
+    bool isRestDay = false,
   }) {
+    if (isRestDay) return false;
     if (!isRepeatableZone(
       selectedZone,
       jamestownEnabled: jamestownEnabled,

@@ -85,6 +85,7 @@ import 'package:spdrivercalendar/models/shift_info.dart';
 import 'package:spdrivercalendar/models/holiday.dart';
 import 'package:spdrivercalendar/features/calendar/services/shift_service.dart';
 import 'package:spdrivercalendar/services/jamestown_feature_service.dart';
+import 'package:spdrivercalendar/services/zone1_roster_feature_service.dart';
 import 'package:spdrivercalendar/services/zone2_roster_feature_service.dart';
 import 'package:spdrivercalendar/services/zone4_roster_feature_service.dart';
 import 'package:spdrivercalendar/services/donnybrook_feature_service.dart';
@@ -673,6 +674,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
 
     final jamestownEnabled = await JamestownFeatureService.isEnabled();
     final donnybrook1Enabled = await DonnybrookFeatureService.isEnabled();
+    final zone1RosterEnabled = await Zone1RosterFeatureService.isEnabled();
     final zone2RosterEnabled = await Zone2RosterFeatureService.isEnabled();
     final zone4RosterEnabled = await Zone4RosterFeatureService.isEnabled();
 
@@ -689,6 +691,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
         markedInZone: markedInZone,
         jamestownEnabled: jamestownEnabled,
         donnybrook1Enabled: donnybrook1Enabled,
+        zone1RosterEnabled: zone1RosterEnabled,
         zone2RosterEnabled: zone2RosterEnabled,
         zone4RosterEnabled: zone4RosterEnabled,
         isRosteredRestDay: _isRosteredRestDay,
@@ -715,6 +718,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
           isShiftMarkedIn: isShiftMarkedIn,
           markedInZone: markedInZone,
           jamestownEnabled: jamestownEnabled,
+          zone1RosterEnabled: zone1RosterEnabled,
           zone2RosterEnabled: zone2RosterEnabled,
           zone4RosterEnabled: zone4RosterEnabled,
           isNightsRoster: _markedInStatus == MarkedInStatus.nights,
@@ -731,6 +735,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
     required bool isShiftMarkedIn,
     required String markedInZone,
     required bool jamestownEnabled,
+    bool zone1RosterEnabled = false,
     bool zone2RosterEnabled = false,
     bool zone4RosterEnabled = false,
     bool isNightsRoster = false,
@@ -758,6 +763,8 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
       markedInZone: markedInZone,
       jamestownEnabled: jamestownEnabled,
       isNightsRoster: isNightsRoster,
+      zone1RosterEnabled: zone1RosterEnabled,
+      zone1CalendarWeekIsRest: _calendarWeekIsRest(shiftDate),
       zone2RosterEnabled: zone2RosterEnabled,
       zone2CalendarWeekIsRest: _calendarWeekIsRest(shiftDate),
       zone4RosterEnabled: zone4RosterEnabled,

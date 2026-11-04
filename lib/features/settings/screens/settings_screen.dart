@@ -34,6 +34,7 @@ import 'package:spdrivercalendar/features/calendar/utils/nights_roster.dart';
 import 'package:spdrivercalendar/features/calendar/dialogs/nights_rest_day_dialog.dart';
 import 'package:spdrivercalendar/features/calendar/services/zone2_duties.dart';
 import 'package:spdrivercalendar/services/jamestown_feature_service.dart';
+import 'package:spdrivercalendar/services/zone1_roster_feature_service.dart';
 import 'package:spdrivercalendar/services/zone2_roster_feature_service.dart';
 import 'package:spdrivercalendar/services/zone4_roster_feature_service.dart';
 
@@ -103,6 +104,7 @@ class SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObser
   int _annualLeaveRemaining = 0;
 
   bool _jamestownEnabled = false;
+  bool _zone1RosterEnabled = false;
   bool _zone2RosterEnabled = false;
   bool _zone4RosterEnabled = false;
   bool _isRemovingRosterFills = false;
@@ -253,6 +255,7 @@ class SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObser
     final markedInEnabled = await StorageService.getBool(AppConstants.markedInEnabledKey);
     final oldStatus = await StorageService.getString(AppConstants.markedInStatusKey) ?? 'Shift';
     final zone = await StorageService.getString(AppConstants.markedInZoneKey) ?? 'Zone 1';
+    final zone1RosterEnabled = await Zone1RosterFeatureService.isEnabled();
     final zone2RosterEnabled = await Zone2RosterFeatureService.isEnabled();
     final zone4RosterEnabled = await Zone4RosterFeatureService.isEnabled();
     final nightsAnchor = NightsRosterAnchor.tryParse(
@@ -275,6 +278,7 @@ class SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObser
         _markedInStatus = 'Spare';
       }
       _markedInZone = Zone2Duties.normalizeZoneLabel(zone);
+      _zone1RosterEnabled = zone1RosterEnabled;
       _zone2RosterEnabled = zone2RosterEnabled;
       _zone4RosterEnabled = zone4RosterEnabled;
       if (nightsAnchor != null) {
@@ -1126,6 +1130,46 @@ class SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObser
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
                     ],
+                    if (Zone1RosterFeatureService.showsForMarkedIn(
+                      status: _markedInStatus,
+                      zone: _markedInZone,
+                    )) ...[
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text(Zone1RosterFeatureService.menuLabel),
+                        subtitle: const Text(
+                          'Fill 85 weeks from Add Work Shift',
+                        ),
+                        value: _zone1RosterEnabled,
+                        onChanged: _setZone1RosterEnabled,
+                      ),
+                      if (_zone1RosterEnabled) ...[
+                        const SizedBox(height: 4),
+                        SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton(
+                            onPressed: _isRemovingRosterFills
+                                ? null
+                                : _removeZone1RosterFills,
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor:
+                                  Theme.of(context).colorScheme.error,
+                              minimumSize: const Size.fromHeight(48),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 12,
+                              ),
+                            ),
+                            child: Text(
+                              _isRemovingRosterFills
+                                  ? 'Removing…'
+                                  : 'Remove autofilled duties',
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
                     if (Zone2RosterFeatureService.showsForMarkedIn(
                       status: _markedInStatus,
                       zone: _markedInZone,
@@ -1266,12 +1310,27 @@ class SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObser
     );
   }
 
+  Future<void> _setZone1RosterEnabled(bool enabled) async {
+    await Zone1RosterFeatureService.setEnabled(enabled);
+    if (!mounted) return;
+    setState(() {
+      _zone1RosterEnabled = enabled;
+      if (enabled) {
+        _zone2RosterEnabled = false;
+        _zone4RosterEnabled = false;
+      }
+    });
+  }
+
   Future<void> _setZone2RosterEnabled(bool enabled) async {
     await Zone2RosterFeatureService.setEnabled(enabled);
     if (!mounted) return;
     setState(() {
       _zone2RosterEnabled = enabled;
-      if (enabled) _zone4RosterEnabled = false;
+      if (enabled) {
+        _zone1RosterEnabled = false;
+        _zone4RosterEnabled = false;
+      }
     });
   }
 
@@ -1280,13 +1339,19 @@ class SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObser
     if (!mounted) return;
     setState(() {
       _zone4RosterEnabled = enabled;
-      if (enabled) _zone2RosterEnabled = false;
+      if (enabled) {
+        _zone1RosterEnabled = false;
+        _zone2RosterEnabled = false;
+      }
     });
   }
 
-  /// Route 13 and Zone 4 each have their own fill. Leaving that zone turns
-  /// its fill off, so the other one is not still offered later.
+  /// Each zone fill is its own. Leaving that zone turns its fill off.
   Future<void> _clearRosterForOtherZone(String zone) async {
+    if (zone != 'Zone 1' && _zone1RosterEnabled) {
+      await Zone1RosterFeatureService.setEnabled(false);
+      if (mounted) setState(() => _zone1RosterEnabled = false);
+    }
     if (!Zone2Duties.isZone(zone) && _zone2RosterEnabled) {
       await Zone2RosterFeatureService.setEnabled(false);
       if (mounted) setState(() => _zone2RosterEnabled = false);
@@ -1295,6 +1360,13 @@ class SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObser
       await Zone4RosterFeatureService.setEnabled(false);
       if (mounted) setState(() => _zone4RosterEnabled = false);
     }
+  }
+
+  Future<void> _removeZone1RosterFills() {
+    return _removeAutofilledDuties(
+      select: Zone1RosterFeatureService.filledEvents,
+      onlyThese: 'This deletes only Zone 1 duties added by the 85-week fill.',
+    );
   }
 
   Future<void> _removeZone2RosterFills() {

@@ -1,9 +1,36 @@
  final Map<String, List<Map<String, String>>> changelogData = {
+  '4.4.5': [
+    {
+      'title': 'Zone 1 Autofill',
+      'description':
+          'Zone 1 Shift drivers can turn this on from Marked In Status. It fills in 85 weeks of duties, based on the roster.',
+    },
+    {
+      'title': 'Rest Day',
+      'description':
+          'Adding a duty on a rest day does not offer repeat or autofill.',
+    },
+    {
+      'title': 'Saturday 13/29',
+      'description':
+          'Saturday 13/29 reports at the garage at 17:22 and leaves at 17:30.',
+    },
+    {
+      'title': 'Compare Swipe',
+      'description':
+          'The Compare label shows on the right as soon as you swipe a duty card.',
+    },
+    {
+      'title': 'Bills & Boards Back',
+      'description':
+          'Back from an open duty or board returns to the duty list.',
+    },
+  ],
   '4.4.4': [
     {
       'title': 'Duty Compare',
       'description':
-          'Compare two duties from Bills & Boards, from any zone. See who has more work and who finishes later. May help in swapping duties.',
+          'Compare two duties from Bills & Boards, from any zone. See who has more work and who finishes later. May help in swapping duties.small ',
     },
     {
       'title': 'Route 13 Autofill',
