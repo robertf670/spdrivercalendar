@@ -1,4 +1,16 @@
  final Map<String, List<Map<String, String>>> changelogData = {
+  '4.4.6': [
+    {
+      'title': 'Monday to Friday 13/25',
+      'description':
+          'Monday to Friday 13/25 breaks in the garage.',
+    },
+    {
+      'title': 'Zone 1 21X',
+      'description':
+          'On duty 171, the first half special is to Phibsboro Garage.',
+    },
+  ],
   '4.4.5': [
     {
       'title': 'Zone 1 Autofill',
