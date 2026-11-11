@@ -1,4 +1,26 @@
  final Map<String, List<Map<String, String>>> changelogData = {
+  '4.4.7': [
+    {
+      'title': 'Route 13 Spare',
+      'description':
+          'A Route 13 duty added to a spare shows its depart and finish times.',
+    },
+    {
+      'title': 'Zone 4 Take-up',
+      'description':
+          'Zone 4 boards say Takes Route 23/24 at a take-up.',
+    },
+    {
+      'title': 'Zone 4 Stops on Boards',
+      'description':
+          'Broadstone and Constitution Hill no longer show their stop numbers.',
+    },
+    {
+      'title': 'Jamestown Duties',
+      'description':
+          '11 Jamestown duties updated to match the 8 Nov sheet',
+    },
+  ],
   '4.4.6': [
     {
       'title': 'Monday to Friday 13/25',

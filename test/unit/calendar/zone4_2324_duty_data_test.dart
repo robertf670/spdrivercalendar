@@ -38,8 +38,8 @@ void main() {
     final lines = board
         .map((row) => (row as List<dynamic>).join(' '))
         .join('\n');
-    expect(lines, contains('Takes up at 11:30 Broadstone'));
-    expect(lines, contains('Broadstone (Stop #190)'));
+    expect(lines, contains('Takes Route 24 at 11:30 Broadstone'));
+    expect(lines, contains('Broadstone'));
     expect(lines, contains('Merrion Square'));
     expect(lines, contains('12:00'));
     expect(lines, contains('13:30'));
@@ -58,7 +58,7 @@ void main() {
         .map((row) => (row as List<dynamic>).join(' '))
         .join('\n');
     expect(lines, isNot(contains('Takes Bus 17 at 17:15')));
-    expect(lines, contains('Takes up at 18:05 Constitution Hill'));
+    expect(lines, contains('Takes Route 23 at 18:05 Constitution Hill'));
   });
 
   test('PZ4/05 boards keep the garage report before the take-up half', () {
@@ -72,7 +72,7 @@ void main() {
           .map((row) => (row as List<dynamic>)[3].toString())
           .toList();
       final reportsAt = lines.indexWhere((line) => line.contains('Reports at'));
-      final takesUp = lines.indexWhere((line) => line.contains('Takes up at'));
+      final takesUp = lines.indexWhere((line) => line.contains('Takes Route'));
       expect(reportsAt, greaterThanOrEqualTo(0), reason: 'PZ4/05 $day');
       expect(takesUp, greaterThan(reportsAt), reason: 'PZ4/05 $day');
     }
@@ -87,7 +87,7 @@ void main() {
         .map((row) => (row as List<dynamic>)[3].toString())
         .toList();
     expect(
-      lines.indexWhere((line) => line.contains('Takes up at 12:45')),
+      lines.indexWhere((line) => line.contains('Takes Route 24 at 12:45')),
       lessThan(lines.indexWhere((line) => line.contains('Reports at 16:17'))),
     );
   });

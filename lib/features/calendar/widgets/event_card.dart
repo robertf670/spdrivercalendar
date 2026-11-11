@@ -29,6 +29,7 @@ import 'package:spdrivercalendar/features/calendar/utils/assigned_duty_zone.dart
 import 'package:spdrivercalendar/features/calendar/services/zone2_duties.dart';
 import 'package:spdrivercalendar/features/calendar/utils/jamestown_road.dart';
 import 'package:spdrivercalendar/features/calendar/utils/spare_meal.dart';
+import 'package:spdrivercalendar/features/calendar/utils/spare_duty_bill.dart';
 import 'package:spdrivercalendar/features/calendar/utils/spare_time_options.dart';
 import 'package:spdrivercalendar/features/calendar/widgets/dialog_action_layout.dart';
 import 'package:spdrivercalendar/features/calendar/widgets/spare_meal_controls.dart';
@@ -1322,26 +1323,11 @@ class _EventCardState extends State<EventCard> {
       } else {
         // Handle regular zone duties
         try {
-          // Fix zone duty parsing for duties that include PZ prefix
-          String codeWithoutPrefix = codeWithoutHalf;
-          String zone = '1'; // Default to zone 1
-          
-          // Check for PZx/ format first
-          final pzMatch = RegExp(r'^PZ(\d+)/').firstMatch(codeWithoutHalf);
-          if (pzMatch != null) {
-            zone = pzMatch.group(1) ?? '1';
-            // Extract the part after the PZx/ prefix
-            codeWithoutPrefix = codeWithoutHalf.substring(pzMatch.end);
-          } else {
-            // Otherwise, try to determine zone from the first digit of the numeric part
-            final zoneMatch = RegExp(r'^(\d+)').firstMatch(codeWithoutHalf);
-            final firstDigit = zoneMatch?.group(1)?.substring(0, 1);
-            
-            if (firstDigit != null) {
-              // Determine the zone based on the first digit
-              zone = firstDigit == '1' ? '1' : firstDigit == '3' ? '3' : firstDigit == '4' ? '4' : '1';
-            }
-          }
+          // Route 13 codes start with 13/, so the old first-digit rule
+          // treated them as Zone 1 and the times came back as 00:00.
+          final bill = SpareDutyBill.resolve(codeWithoutHalf);
+          final zone = bill.zone;
+          final dutyCodes = bill.codes;
           
           // Determine the filename based on the day of the week and zone
           // Use RosterService to get the correct filename (handles Route 23/24 changeover for Zone 4)
@@ -1371,9 +1357,8 @@ class _EventCardState extends State<EventCard> {
             final parts = line.split(',');
             if (parts.length < 8) continue; // Need at least columns for code, start, end
             
-            // Try to match both with and without the PZ prefix
             final dutyInFile = parts[0].trim();
-            if (dutyInFile == codeWithoutPrefix || dutyInFile == codeWithoutHalf) {
+            if (dutyCodes.contains(dutyInFile)) {
               // Found the duty
               // CSV format: shift,duty,report,depart,location,startbreak,startbreaklocation,breakreport,finishbreak,finishbreaklocation,finish,finishlocation,signoff,spread,work,relief,routes
               final dutyStartTime = parts.length > 3 ? parts[3].trim() : ''; // Column 3: depart (actual start time at location)
