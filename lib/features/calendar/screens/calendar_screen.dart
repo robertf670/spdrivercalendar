@@ -20,6 +20,7 @@ import 'package:spdrivercalendar/features/calendar/services/roster_schedule_serv
 import 'package:spdrivercalendar/features/calendar/services/event_service.dart';
 import 'package:spdrivercalendar/features/calendar/services/holiday_service.dart';
 import 'package:spdrivercalendar/features/calendar/services/holiday_day_exclusion_service.dart';
+import 'package:spdrivercalendar/features/calendar/services/holiday_duty_review.dart';
 import 'package:spdrivercalendar/features/calendar/dialogs/cancel_holiday_day_dialog.dart';
 import 'package:spdrivercalendar/services/annual_leave_service.dart';
 import 'package:spdrivercalendar/services/bus_tracking_service.dart';
@@ -231,7 +232,10 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
       initiallyLoading: true,
     );
     _initializeShiftColors();
-    _loadMarkedInSettings();
+    final calendarReady = Future.wait([
+      _initializeCurrentMonth(),
+      _loadMarkedInSettings(),
+    ]);
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 300),
       vsync: this,
@@ -243,8 +247,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
     ColorCustomizationService.setColorChangeCallback(refreshShiftColors);
     
     // Initialize with current month's events with error handling
-    _initializeCurrentMonth().catchError((error) {
-
+    calendarReady.catchError((error) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -253,6 +256,7 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
           ),
         );
       }
+      return <void>[];
     });
 
     // Load day notes and bank-holiday redundant (day-only) flags
@@ -267,7 +271,16 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
     });
 
     // Defer non-critical startup work until after the first calendar frame.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      try {
+        await calendarReady;
+      } catch (_) {}
+      if (!mounted) return;
+      await reviewExistingHolidayDuties(
+        context,
+        isRestDay: _isRosteredRestDay,
+      );
       if (!mounted) return;
       _scheduleAutomaticUpdateCheck();
       _checkDaysInLieuSetup();
@@ -461,7 +474,10 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
   }
 
   /// After a duty is saved on a holiday, offer to take that day off the booking.
+  /// Rest days are left on the holiday.
   Future<void> _offerToClearHolidayOnDutyDay(DateTime date) async {
+    if (_isRosteredRestDay(date)) return;
+
     final holidays = await HolidayService.getHolidays();
     final covering =
         holidays.where((holiday) => holiday.containsDate(date)).toList();

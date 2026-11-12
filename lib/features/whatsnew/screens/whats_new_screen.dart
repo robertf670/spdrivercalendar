@@ -4,7 +4,6 @@ import 'package:spdrivercalendar/core/constants/app_constants.dart';
 import 'package:spdrivercalendar/core/services/storage_service.dart';
 import 'package:spdrivercalendar/theme/app_theme.dart';
 import 'package:spdrivercalendar/core/constants/changelog_data.dart';
-import 'package:spdrivercalendar/features/calendar/services/holiday_duty_review.dart';
 
 class WhatsNewScreen extends StatefulWidget {
   final VoidCallback onContinue;
@@ -22,7 +21,6 @@ class _WhatsNewScreenState extends State<WhatsNewScreen> {
   String _currentVersion = '';
   String? _lastSeenVersion;
   bool _isLoading = true;
-  bool _isContinuing = false;
   final ScrollController _scrollController = ScrollController();
 
   @override
@@ -147,17 +145,12 @@ class _WhatsNewScreenState extends State<WhatsNewScreen> {
                     child: SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: _isContinuing
-                            ? null
-                            : () async {
-                                setState(() => _isContinuing = true);
-                                try {
-                                  await reviewExistingHolidayDuties(context);
-                                } catch (_) {}
-                                await _updateLastSeenVersion();
-                                if (!mounted) return;
-                                widget.onContinue();
-                              },
+                        onPressed: () {
+                          _updateLastSeenVersion().then((_) {
+                            if (!mounted) return;
+                            widget.onContinue();
+                          });
+                        },
                         style: ElevatedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 16.0),
                         ),

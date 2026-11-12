@@ -1,4 +1,11 @@
  final Map<String, List<Map<String, String>>> changelogData = {
+  '4.4.9': [
+    {
+      'title': 'Holiday Duty Fix',
+      'description':
+          'The holiday prompt only asks on days you were due in.',
+    },
+  ],
   '4.4.8': [
     {
       'title': 'Christmas Service',

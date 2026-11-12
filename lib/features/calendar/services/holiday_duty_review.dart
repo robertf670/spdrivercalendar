@@ -8,10 +8,13 @@ import 'package:spdrivercalendar/features/calendar/services/holiday_service.dart
 import 'package:spdrivercalendar/features/calendar/utils/holiday_duty_overlap.dart';
 import 'package:spdrivercalendar/services/annual_leave_service.dart';
 
-/// After the changelog, ask about duties already saved on a holiday.
+/// After the changelog has closed, ask about duties already saved on a holiday.
 ///
-/// Does nothing when no duty sits on a booked holiday.
-Future<void> reviewExistingHolidayDuties(BuildContext context) async {
+/// Rest days are skipped. Does nothing when no work day has a duty on a holiday.
+Future<void> reviewExistingHolidayDuties(
+  BuildContext context, {
+  bool Function(DateTime date)? isRestDay,
+}) async {
   final alreadyReviewed = await StorageService.getBool(
     AppConstants.holidayDutyReviewKey,
     defaultValue: false,
@@ -25,7 +28,11 @@ Future<void> reviewExistingHolidayDuties(BuildContext context) async {
   }
 
   final events = await EventService.getAllEvents();
-  final dates = dutyDatesOnHolidays(holidays: holidays, events: events);
+  final dates = dutyDatesOnHolidays(
+    holidays: holidays,
+    events: events,
+    isRestDay: isRestDay,
+  );
 
   for (final date in dates) {
     if (!context.mounted) return;

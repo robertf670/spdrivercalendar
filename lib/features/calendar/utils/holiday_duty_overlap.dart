@@ -10,14 +10,18 @@ bool eventIsAddedDuty(Event event) {
 }
 
 /// Dates, oldest first, where a saved duty sits on a booked holiday.
+///
+/// [isRestDay] skips days the driver was not due in.
 List<DateTime> dutyDatesOnHolidays({
   required List<Holiday> holidays,
   required List<Event> events,
+  bool Function(DateTime date)? isRestDay,
 }) {
   final dates = <DateTime>{};
   for (final event in events) {
     if (!eventIsAddedDuty(event)) continue;
     final day = holidayDateOnly(event.startDate);
+    if (isRestDay != null && isRestDay(day)) continue;
     if (holidays.any((holiday) => holiday.containsDate(day))) {
       dates.add(day);
     }

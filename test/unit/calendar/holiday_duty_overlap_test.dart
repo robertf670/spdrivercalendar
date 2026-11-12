@@ -48,6 +48,19 @@ void main() {
     expect(dates, isEmpty);
   });
 
+  test('skips a rest day even when a duty is saved on it', () {
+    final dates = dutyDatesOnHolidays(
+      holidays: [winterWeek],
+      events: [
+        _duty('PZ1/20', DateTime(2026, 11, 8)),
+        _duty('PZ1/21', DateTime(2026, 11, 9)),
+      ],
+      isRestDay: (date) => date.day == 8,
+    );
+
+    expect(dates, [DateTime(2026, 11, 9)]);
+  });
+
   test('includes overtime on a holiday and skips the same duty twice', () {
     final dates = dutyDatesOnHolidays(
       holidays: [winterWeek],
