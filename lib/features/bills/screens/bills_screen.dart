@@ -77,10 +77,10 @@ class BillsScreenState extends State<BillsScreen> {
   }
 
   static String _dayTypeForDate(DateTime date) {
-    if (RosterService.isSaturdayService(date) ||
-        date.weekday == DateTime.saturday) {
+    if (RosterService.runsSaturdayDuties(date)) {
       return 'Sat';
     }
+    if (RosterService.isStStephensSaturday(date)) return 'Sun';
     if (date.weekday == DateTime.sunday) return 'Sun';
     return 'M-F';
   }

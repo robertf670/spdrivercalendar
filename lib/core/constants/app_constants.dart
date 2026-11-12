@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 class AppConstants {
   static const String appName = 'Spare Driver Shift Calendar';
-  static const String appVersion = '4.4.7';
+  static const String appVersion = '4.4.8';
   
   // Storage Keys
   static const String eventsStorageKey = 'events';
@@ -24,6 +24,7 @@ class AppConstants {
   static const String includeBusAssignmentsInGoogleCalendarKey = 'includeBusAssignmentsInGoogleCalendar';
   static const String includeBustimesLinksInGoogleCalendarKey = 'includeBustimesLinksInGoogleCalendar';
   static const String lastSeenVersionKey = 'lastSeenVersion';
+  static const String holidayDutyReviewKey = 'holidayDutyReview448';
 
   // Auto-Backup Setting
   static const String autoBackupEnabledKey = 'autoBackupEnabled';

@@ -1,4 +1,16 @@
  final Map<String, List<Map<String, String>>> changelogData = {
+  '4.4.8': [
+    {
+      'title': 'Christmas Service',
+      'description':
+          'Service around Christmas updated to follow the Saturday and Sunday day types.',
+    },
+    {
+      'title': 'Duty on a Holiday',
+      'description':
+          'Adding a duty on a holiday can take that day off the booking and keep it as a day in lieu.',
+    },
+  ],
   '4.4.7': [
     {
       'title': 'Route 13 Spare',

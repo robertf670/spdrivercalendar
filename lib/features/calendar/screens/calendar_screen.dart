@@ -19,6 +19,9 @@ import 'package:spdrivercalendar/features/calendar/services/roster_service.dart'
 import 'package:spdrivercalendar/features/calendar/services/roster_schedule_service.dart';
 import 'package:spdrivercalendar/features/calendar/services/event_service.dart';
 import 'package:spdrivercalendar/features/calendar/services/holiday_service.dart';
+import 'package:spdrivercalendar/features/calendar/services/holiday_day_exclusion_service.dart';
+import 'package:spdrivercalendar/features/calendar/dialogs/cancel_holiday_day_dialog.dart';
+import 'package:spdrivercalendar/services/annual_leave_service.dart';
 import 'package:spdrivercalendar/services/bus_tracking_service.dart';
 import 'package:spdrivercalendar/features/calendar/dialogs/event_duty_notes_dialog.dart';
 import 'package:spdrivercalendar/features/calendar/dialogs/universal_board_dialog.dart';
@@ -457,6 +460,38 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
     }
   }
 
+  /// After a duty is saved on a holiday, offer to take that day off the booking.
+  Future<void> _offerToClearHolidayOnDutyDay(DateTime date) async {
+    final holidays = await HolidayService.getHolidays();
+    final covering =
+        holidays.where((holiday) => holiday.containsDate(date)).toList();
+    if (covering.isEmpty || !mounted) return;
+
+    final creditsDayInLieu =
+        await AnnualLeaveService.consumesAnnualLeaveOn(date);
+    if (!mounted) return;
+
+    final remove = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => CancelHolidayDayDialog(
+        date: date,
+        holidays: covering,
+        creditsDayInLieu: creditsDayInLieu,
+      ),
+    );
+    if (remove != true || !mounted) return;
+
+    try {
+      await HolidayDayExclusionService().excludeDay(date);
+      await _reloadHolidays();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not update the holiday.')),
+      );
+    }
+  }
+
   Future<void> _reloadHolidays() async {
     try {
       final holidays = await _holidayCache.reloadHolidays();
@@ -792,6 +827,8 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
       Navigator.of(dialogContext).pop();
     }
     if (!mounted) return;
+    await _offerToClearHolidayOnDutyDay(shiftDate);
+    if (!mounted) return;
     if (googleSyncCount > 0) {
       ScaffoldMessenger.of(context).clearSnackBars();
       ScaffoldMessenger.of(context).showSnackBar(
@@ -905,6 +942,8 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
           if (dialogContext.mounted) {
             Navigator.of(dialogContext).pop();
           }
+          if (!mounted) return;
+          await _offerToClearHolidayOnDutyDay(shiftDate);
           if (!mounted) return;
 
           _checkAndSyncToGoogleCalendar(event, context);
@@ -2349,6 +2388,8 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
       Navigator.of(dialogContext).pop();
     }
 
+    if (!mounted) return;
+    await _offerToClearHolidayOnDutyDay(shiftDate);
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(

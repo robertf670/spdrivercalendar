@@ -36,7 +36,7 @@ class ShiftDetailsCard extends StatelessWidget {
     final accentColor = colorOverride ?? shiftInfo?.color ?? Colors.blue;
     
     // Determine if it's a Saturday or Saturday service date
-    final isSaturday = RosterService.isSaturdayService(date) || date.weekday == DateTime.saturday;
+    final isSaturday = RosterService.runsSaturdayDuties(date);
     final isSaturdayService = RosterService.isSaturdayService(date);
     
     // Get display name for the shift - show "Relief Shift" for Middle shifts on Saturdays

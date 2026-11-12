@@ -1,3 +1,4 @@
+import 'package:spdrivercalendar/features/calendar/services/roster_service.dart';
 import 'package:spdrivercalendar/features/calendar/services/zone2_duties.dart';
 import 'package:spdrivercalendar/models/universal_board.dart';
 
@@ -12,6 +13,9 @@ class ZoneBoardMapper {
     required bool isSaturdayService,
     required bool isBankHoliday,
   }) {
+    if (RosterService.isStStephensSaturday(date)) {
+      return 'SUN';
+    }
     if (isSaturdayService || date.weekday == DateTime.saturday) {
       return 'SAT';
     }

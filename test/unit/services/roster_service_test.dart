@@ -79,6 +79,11 @@ void main() {
       expect(RosterService.isSaturdayService(DateTime(2025, 12, 24)), isTrue);
       expect(RosterService.isSaturdayService(DateTime(2023, 12, 24)), isFalse);
       expect(RosterService.getDayOfWeek(DateTime(2025, 12, 24)), 'Saturday');
+      expect(RosterService.isSaturdayService(DateTime(2026, 12, 28)), isTrue);
+      expect(RosterService.getDayOfWeek(DateTime(2026, 12, 28)), 'Saturday');
+      expect(RosterService.isStStephensSaturday(DateTime(2026, 12, 26)), isTrue);
+      expect(RosterService.getDayOfWeek(DateTime(2026, 12, 26)), 'Sunday');
+      expect(RosterService.runsSaturdayDuties(DateTime(2026, 12, 26)), isFalse);
     });
   });
 
@@ -133,6 +138,17 @@ void main() {
           'SAT',
           DateTime(2026, 8, 29),
         ),
+        'SAT_ROUTE2324_20260823.csv',
+      );
+    });
+
+    test('St Stephen\'s Saturday uses Sunday duties and 28 December uses Saturday', () {
+      expect(
+        RosterService.getShiftFilename('1', 'SAT', DateTime(2026, 12, 26)),
+        'SUN_DUTIES_PZ1.csv',
+      );
+      expect(
+        RosterService.getShiftFilename('4', 'M-F', DateTime(2026, 12, 28)),
         'SAT_ROUTE2324_20260823.csv',
       );
     });

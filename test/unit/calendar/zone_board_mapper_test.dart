@@ -111,6 +111,17 @@ void main() {
       );
     });
 
+    test('St Stephen\'s Day on a Saturday uses SUN', () {
+      expect(
+        ZoneBoardMapper.dayKeyForDate(
+          DateTime(2026, 12, 26),
+          isSaturdayService: false,
+          isBankHoliday: true,
+        ),
+        'SUN',
+      );
+    });
+
     test('Saturday service wins over bank holiday', () {
       expect(
         ZoneBoardMapper.dayKeyForDate(

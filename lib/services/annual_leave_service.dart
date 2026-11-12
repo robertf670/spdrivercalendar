@@ -178,6 +178,11 @@ class AnnualLeaveService {
     return DateTime(int.parse(parts[0]), int.parse(parts[1]), int.parse(parts[2]));
   }
 
+  /// True if [date] is inside a winter, summer, or other booking and counts as leave.
+  static Future<bool> consumesAnnualLeaveOn(DateTime date) {
+    return _isDateAnnualLeaveConsumingDay(date);
+  }
+
   /// True if [d] (date-only) counts as one annual-leave day using the same rules as [getFutureBookedAnnualLeaveDays].
   static Future<bool> _isDateAnnualLeaveConsumingDay(DateTime d) async {
     final holidays = await HolidayService.getHolidays();

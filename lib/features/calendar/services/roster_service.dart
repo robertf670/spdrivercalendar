@@ -131,8 +131,14 @@ class RosterService {
     final day = date.day;
     final weekday = date.weekday; // 1=Monday, 7=Sunday
     
-    // December 24, 27, 29, 30, 31 run Saturday service, but NOT if they're on a Sunday
-    if (month == 12 && (day == 24 || day == 27 || day == 29 || day == 30 || day == 31)) {
+    // December 24 and 27–31 run Saturday service, but not if that date is a Sunday.
+    if (month == 12 &&
+        (day == 24 ||
+            day == 27 ||
+            day == 28 ||
+            day == 29 ||
+            day == 30 ||
+            day == 31)) {
       // Don't show Saturday service if it's actually a Sunday
       if (weekday == DateTime.sunday) {
         return false;
@@ -142,12 +148,29 @@ class RosterService {
     
     return false;
   }
+
+  /// St Stephen's Day on a Saturday runs Sunday duties, not the Saturday bill.
+  static bool isStStephensSaturday(DateTime date) {
+    return date.month == 12 &&
+        date.day == 26 &&
+        date.weekday == DateTime.saturday;
+  }
+
+  /// Saturday bill: a real Saturday, or a Saturday-service weekday.
+  /// St Stephen's Day on a Saturday is the exception.
+  static bool runsSaturdayDuties(DateTime date) {
+    if (isSaturdayService(date)) return true;
+    return date.weekday == DateTime.saturday && !isStStephensSaturday(date);
+  }
   
   // Helper method to determine the day of week string
   static String getDayOfWeek(DateTime date) {
     // Check if this date should run Saturday service
     if (isSaturdayService(date)) {
       return 'Saturday';
+    }
+    if (isStStephensSaturday(date)) {
+      return 'Sunday';
     }
     
     // Modified to handle Sunday properly
@@ -173,6 +196,11 @@ class RosterService {
     // Check if this date should run Saturday service (takes precedence over bank holiday)
     // Special dates like Dec 29-31 run Saturday service even if they're bank holidays
     final isSaturdayServiceDate = isSaturdayService(date);
+    final saturdayBill = isSaturdayServiceDate ||
+        (dayOfWeek == 'SAT' && !isStStephensSaturday(date));
+    final sundayBill = isStStephensSaturday(date) ||
+        isBankHoliday ||
+        dayOfWeek == 'SUN';
     
     // Zone 4 schedule eras (date on the event selects the bill):
     // - before 19 Oct 2025: legacy PZ4 (9/122)
@@ -182,9 +210,9 @@ class RosterService {
     final route2324Aug2026BillDate = DateTime(2026, 8, 23);
 
     if (zoneNumber == '4' && !date.isBefore(route2324Aug2026BillDate)) {
-      if (isSaturdayServiceDate || dayOfWeek == 'SAT') {
+      if (saturdayBill) {
         return 'SAT_ROUTE2324_20260823.csv';
-      } else if (isBankHoliday || dayOfWeek == 'SUN') {
+      } else if (sundayBill) {
         return 'SUN_ROUTE2324_20260823.csv';
       } else {
         return 'M-F_ROUTE2324_20260823.csv';
@@ -192,9 +220,9 @@ class RosterService {
     }
 
     if (zoneNumber == '4' && !date.isBefore(route2324ChangeoverDate)) {
-      if (isSaturdayServiceDate || dayOfWeek == 'SAT') {
+      if (saturdayBill) {
         return 'SAT_ROUTE2324.csv';
-      } else if (isBankHoliday || dayOfWeek == 'SUN') {
+      } else if (sundayBill) {
         return 'SUN_ROUTE2324.csv';
       } else {
         return 'M-F_ROUTE2324.csv';
@@ -213,9 +241,9 @@ class RosterService {
     }
     
     // Saturday service dates take precedence over bank holidays
-    if (isSaturdayServiceDate || dayOfWeek == 'SAT') {
+    if (saturdayBill) {
       return 'SAT_DUTIES_$pzFileSuffix.csv';
-    } else if (isBankHoliday || dayOfWeek == 'SUN') {
+    } else if (sundayBill) {
       // Use Sunday duties for bank holidays, with the direct PZ suffix
       return 'SUN_DUTIES_$pzFileSuffix.csv';
     } else {
