@@ -31,7 +31,7 @@ class JamestownFeatureService {
     }
   }
 
-  /// Shift codes from the secret 30hr roster (811/36 … 811/40).
+  /// Shift codes from the secret 30hr roster.
   static Future<List<String>> load30HrShiftCodes() async {
     return _loadShiftCodesFromAsset(duties30HrCsvAsset);
   }

@@ -29,4 +29,34 @@ void main() {
       lessThan(picker.indexOf('311/01')),
     );
   });
+
+  test('30hr Jamestown CSV matches the 8 Nov 30hr list', () {
+    final csv = File('assets/jamestown_30hr.csv').readAsLinesSync();
+    final rows = csv
+        .skip(1)
+        .where((line) => line.trim().isNotEmpty)
+        .map((line) => line.split(','))
+        .toList();
+    final codes = rows.map((row) => row.first).toList();
+
+    expect(codes, [
+      '811/03',
+      '811/36',
+      '811/37',
+      '811/38',
+      '811/39',
+      '811/40',
+      '811/50',
+      '811/51',
+      '811/52',
+      '811/53',
+      '811/54',
+      '811/55',
+      '811/56',
+      '811/57',
+    ]);
+    expect(rows.firstWhere((row) => row.first == '811/36')[16], '39A/37');
+    expect(rows.firstWhere((row) => row.first == '811/03')[10], '20:15:00');
+    expect(rows.firstWhere((row) => row.first == '811/57')[12], '19:52:00');
+  });
 }
