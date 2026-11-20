@@ -33,6 +33,7 @@ import 'package:spdrivercalendar/features/calendar/utils/marked_in_status.dart';
 import 'package:spdrivercalendar/features/calendar/utils/nights_roster.dart';
 import 'package:spdrivercalendar/features/calendar/dialogs/nights_rest_day_dialog.dart';
 import 'package:spdrivercalendar/features/calendar/services/zone2_duties.dart';
+import 'package:spdrivercalendar/services/jamestown_december_bank_holiday_gate.dart';
 import 'package:spdrivercalendar/services/jamestown_feature_service.dart';
 import 'package:spdrivercalendar/services/zone1_roster_feature_service.dart';
 import 'package:spdrivercalendar/services/zone2_roster_feature_service.dart';
@@ -318,6 +319,8 @@ class SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObser
     if (_markedInStatus == 'Shift' || _markedInStatus == 'M-F') {
       await StorageService.saveString(AppConstants.markedInZoneKey, _markedInZone);
     }
+    JamestownDecemberBankHolidayGate.markedInJamestown =
+        enabled && _markedInStatus == MarkedInStatus.jamestown;
   }
 
   Future<void> _saveNightsAnchor(int weekIndex) async {

@@ -1,4 +1,21 @@
  final Map<String, List<Map<String, String>>> changelogData = {
+  '4.4.11': [
+    {
+      'title': 'Duty PZ3/2X L58',
+      'description':
+          'The Monday–Friday 08:55 Hazelhatch trip is an L58, not L59',
+    },
+    {
+      'title': 'Jamestown Bank Holiday',
+      'description':
+          '28 December 2026 is a bank holiday for Jamestown.',
+    },
+    {
+      'title': 'Duty 4/01 Finish',
+      'description':
+          'Monday–Friday 4/01 finishes at Con Hill.',
+    },
+  ],
   '4.4.10': [
     {
       'title': 'Jamestown 30hr',

@@ -1,6 +1,7 @@
 import 'package:flutter/services.dart';
 import 'package:spdrivercalendar/core/constants/app_constants.dart';
 import 'package:spdrivercalendar/core/services/storage_service.dart';
+import 'package:spdrivercalendar/services/jamestown_december_bank_holiday_gate.dart';
 
 /// Controls access to the secret Jamestown duties.
 class JamestownFeatureService {
@@ -23,6 +24,7 @@ class JamestownFeatureService {
 
   static Future<void> setEnabled(bool enabled) async {
     await StorageService.saveBool(AppConstants.jamestownEnabledKey, enabled);
+    JamestownDecemberBankHolidayGate.devMenuEnabled = enabled;
     if (enabled) {
       await StorageService.saveBool(
         AppConstants.donnybrook1EnabledKey,

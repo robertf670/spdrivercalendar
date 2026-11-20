@@ -13,6 +13,7 @@ import 'package:spdrivercalendar/features/calendar/services/holiday_service.dart
 import 'package:spdrivercalendar/models/holiday.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:spdrivercalendar/theme/app_theme.dart';
+import 'package:spdrivercalendar/services/jamestown_december_bank_holiday_gate.dart';
 import 'package:spdrivercalendar/services/jamestown_feature_service.dart';
 import 'package:spdrivercalendar/services/donnybrook_feature_service.dart';
 
@@ -1919,6 +1920,7 @@ class StatisticsScreenState extends State<StatisticsScreen>
   }
 
   Future<bool> isBankHoliday(DateTime date) async {
+    if (JamestownDecemberBankHolidayGate.forDate(date) != null) return true;
     try {
       final bankHolidaysData = await rootBundle.loadString('assets/bank_holidays.json');
       final bankHolidays = json.decode(bankHolidaysData);

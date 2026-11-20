@@ -14,6 +14,7 @@ import 'package:spdrivercalendar/features/calendar/services/shift_service.dart';
 import 'package:spdrivercalendar/firebase_options.dart';
 import 'package:spdrivercalendar/google_calendar_service.dart';
 import 'package:spdrivercalendar/services/color_customization_service.dart';
+import 'package:spdrivercalendar/services/jamestown_december_bank_holiday_gate.dart';
 import 'package:spdrivercalendar/services/notification_service.dart';
 import 'package:spdrivercalendar/services/rest_day_swap_service.dart';
 import 'package:spdrivercalendar/services/rest_days_service.dart';
@@ -59,6 +60,7 @@ class AppStartup {
     ]);
 
     await EventService.initializeService();
+    await JamestownDecemberBankHolidayGate.refreshFlags();
     if (!isWeb) {
       await persistBankHolidaysForWidget();
     }
@@ -78,6 +80,10 @@ class AppStartup {
                 '${h.date.year.toString().padLeft(4, '0')}-${h.date.month.toString().padLeft(2, '0')}-${h.date.day.toString().padLeft(2, '0')}',
           )
           .toList();
+      if (JamestownDecemberBankHolidayGate.applies &&
+          !dateStrings.contains('2026-12-28')) {
+        dateStrings.add('2026-12-28');
+      }
       await StorageService.saveString(
         AppConstants.bankHolidayDatesKey,
         jsonEncode(dateStrings),

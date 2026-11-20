@@ -10,6 +10,7 @@ import 'package:spdrivercalendar/features/calendar/utils/euro_duty_revisions.dar
 import 'package:spdrivercalendar/features/calendar/utils/jamestown_road.dart';
 import 'package:spdrivercalendar/features/calendar/services/zone2_duties.dart';
 import 'package:spdrivercalendar/services/donnybrook_feature_service.dart';
+import 'package:spdrivercalendar/services/jamestown_december_bank_holiday_gate.dart';
 import 'package:spdrivercalendar/services/jamestown_feature_service.dart';
 
 class ShiftService {
@@ -347,7 +348,7 @@ class ShiftService {
         return holiday;
       }
     }
-    return null;
+    return JamestownDecemberBankHolidayGate.forDate(date);
   }
 
   // Convert shift code to a human-readable title

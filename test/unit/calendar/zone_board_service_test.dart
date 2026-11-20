@@ -1251,6 +1251,20 @@ void main() {
     expect(entries.where((e) => e.time == '23:30').single.location, 'Riverforest');
   });
 
+  test('loads PZ3/2X Monday-Friday board for duty 352', () async {
+    final board = await ZoneBoardService.getBoardForDuty(
+      dutyTitle: 'PZ3/2X',
+      date: DateTime(2026, 8, 7),
+    );
+
+    expect(board, isNotNull);
+    expect(board!.duty, '352');
+
+    final first = board.sections.first.entries;
+    expect(first.where((e) => e.time == '08:55').single.route, 'L58');
+    expect(first.where((e) => e.time == '08:55').single.location, 'Hazelhatch');
+  });
+
   test('loads PZ3/2X Saturday board for duty 352', () async {
     final board = await ZoneBoardService.getBoardForDuty(
       dutyTitle: 'PZ3/2X',

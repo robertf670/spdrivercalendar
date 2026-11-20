@@ -3,6 +3,7 @@ import 'package:spdrivercalendar/core/constants/app_constants.dart';
 import 'package:spdrivercalendar/core/services/storage_service.dart';
 import 'package:spdrivercalendar/features/calendar/services/roster_service.dart';
 import 'package:spdrivercalendar/features/calendar/services/shift_service.dart';
+import 'package:spdrivercalendar/services/jamestown_december_bank_holiday_gate.dart';
 
 class DonnybrookFeatureService {
   static const String menuLabel = 'Donnybrook 1';
@@ -24,6 +25,7 @@ class DonnybrookFeatureService {
     );
     if (enabled) {
       await StorageService.saveBool(AppConstants.jamestownEnabledKey, false);
+      JamestownDecemberBankHolidayGate.devMenuEnabled = false;
     }
   }
 

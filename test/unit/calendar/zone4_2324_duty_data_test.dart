@@ -4,6 +4,23 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test('PZ4/01 Mon-Fri from 23 Aug finishes at Constitution Hill', () {
+    final row = File('assets/M-F_ROUTE2324_20260823.csv')
+        .readAsLinesSync()
+        .firstWhere((line) => line.startsWith('PZ4/01,'));
+    expect(row, contains('09:50:00,ConHill #1619,09:50:00'));
+
+    final boards = jsonDecode(
+      File('assets/Zone4_Boards_20260823.json').readAsStringSync(),
+    ) as Map<String, dynamic>;
+    final board = boards['PZ4/01']['MON-FRI']['board'] as List<dynamic>;
+    final lines = board
+        .map((row) => (row as List<dynamic>).join(' '))
+        .join('\n');
+    expect(lines, contains('Constitution Hill'));
+    expect(lines, contains('09:50'));
+  });
+
   test('PZ4/24 Mon-Fri from 23 Aug matches 17:00 break and 21:55 finish', () {
     final row = File('assets/M-F_ROUTE2324_20260823.csv')
         .readAsLinesSync()

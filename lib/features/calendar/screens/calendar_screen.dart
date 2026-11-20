@@ -88,6 +88,7 @@ import 'package:spdrivercalendar/models/bank_holiday.dart';
 import 'package:spdrivercalendar/models/shift_info.dart';
 import 'package:spdrivercalendar/models/holiday.dart';
 import 'package:spdrivercalendar/features/calendar/services/shift_service.dart';
+import 'package:spdrivercalendar/services/jamestown_december_bank_holiday_gate.dart';
 import 'package:spdrivercalendar/services/jamestown_feature_service.dart';
 import 'package:spdrivercalendar/services/zone1_roster_feature_service.dart';
 import 'package:spdrivercalendar/services/zone2_roster_feature_service.dart';
@@ -650,13 +651,15 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
 
   // Get bank holiday for a specific date
   BankHoliday? getBankHoliday(DateTime date) {
-    if (_bankHolidays == null) return null;
-    for (final holiday in _bankHolidays!) {
-      if (holiday.matchesDate(date)) {
-        return holiday;
+    final holidays = _bankHolidays;
+    if (holidays != null) {
+      for (final holiday in holidays) {
+        if (holiday.matchesDate(date)) {
+          return holiday;
+        }
       }
     }
-    return null;
+    return JamestownDecemberBankHolidayGate.forDate(date);
   }
   
   void _showAddEventDialog() {

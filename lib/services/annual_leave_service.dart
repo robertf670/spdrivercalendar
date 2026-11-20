@@ -4,6 +4,7 @@ import 'package:spdrivercalendar/core/constants/app_constants.dart';
 import 'package:spdrivercalendar/core/services/storage_service.dart';
 import 'package:spdrivercalendar/features/calendar/services/holiday_service.dart';
 import 'package:spdrivercalendar/features/calendar/utils/marked_in_status.dart';
+import 'package:spdrivercalendar/services/jamestown_december_bank_holiday_gate.dart';
 import 'package:spdrivercalendar/models/holiday.dart';
 
 class AnnualLeaveService {
@@ -38,6 +39,7 @@ class AnnualLeaveService {
 
   /// Check if a date is a bank holiday
   static Future<bool> _isBankHoliday(DateTime date) async {
+    if (JamestownDecemberBankHolidayGate.forDate(date) != null) return true;
     try {
       final bankHolidaysData = await rootBundle.loadString('assets/bank_holidays.json');
       final bankHolidays = json.decode(bankHolidaysData);
