@@ -19,6 +19,23 @@ void main() {
     expect(board.sections.first.entries.first.time, '04:08');
   });
 
+  test('Monday-Friday PZ4/33 second half leaves the garage', () async {
+    final board = await ZoneBoardService.getBoardForDuty(
+      dutyTitle: 'PZ4/33',
+      date: DateTime(2026, 8, 24), // Monday
+    );
+
+    expect(board, isNotNull);
+    final second = board!.sections.last.entries;
+    expect(second.map((e) => '${e.action}|${e.route ?? ''}|${e.location ?? ''}|${e.time ?? ''}').toList(), [
+      'Report|||21:22',
+      'Depart Garage||Garage|21:25',
+      'Route|23|Merrion Square|21:50',
+      'SPL||Charlestown SC|22:55',
+      'Finish||Phibsboro Garage|23:25',
+    ]);
+  });
+
   test('loads Saturday board for PZ1/01', () async {
     final board = await ZoneBoardService.getBoardForDuty(
       dutyTitle: 'PZ1/01',
@@ -27,6 +44,19 @@ void main() {
 
     expect(board, isNotNull);
     expect(board!.sections.first.entries.first.time, '04:20');
+  });
+
+  test('Sunday PZ1/47 second half leaves Belfield at 22:45', () async {
+    final board = await ZoneBoardService.getBoardForDuty(
+      dutyTitle: 'PZ1/47',
+      date: DateTime(2026, 8, 9), // Sunday
+    );
+
+    expect(board, isNotNull);
+    final belfield = board!.sections
+        .expand((section) => section.entries)
+        .where((entry) => entry.location == 'Belfield' && entry.time == '22:45');
+    expect(belfield, isNotEmpty);
   });
 
   test('resolves OT title to base duty board', () async {

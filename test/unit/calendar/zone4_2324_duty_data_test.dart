@@ -4,6 +4,36 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test('PZ4/33 Mon-Fri from 23 Aug matches the August running board', () {
+    final row = File('assets/M-F_ROUTE2324_20260823.csv')
+        .readAsLinesSync()
+        .firstWhere((line) => line.startsWith('PZ4/33,'));
+    expect(
+      row,
+      'PZ4/33,007433,15:32:00,15:35:00,ConHill #1619(24),20:15:00,Bstone #190(24),21:22:00,21:25:00,Garage(23),23:25:00,Garage,23:25:00,07:53:00,06:46:00,01:07:00',
+    );
+
+    final boards = jsonDecode(
+      File('assets/Zone4_Boards_20260823.json').readAsStringSync(),
+    ) as Map<String, dynamic>;
+    final day = boards['PZ4/33']['MON-FRI'] as Map<String, dynamic>;
+    expect(day['depart'], '15:35');
+    expect(day['signoff'], '23:25');
+    final lines = (day['board'] as List<dynamic>)
+        .map((row) => (row as List<dynamic>).join(' '))
+        .join('\n');
+    expect(lines, contains('Takes Route 24 at 15:35 Constitution Hill'));
+    expect(lines, contains('Dublin Airport  16:50'));
+    expect(lines, contains('Merrion Square  18:30'));
+    expect(lines, contains('Charlestown SC  19:40'));
+    expect(lines, contains('Broadstone 20:15'));
+    expect(lines, contains('Hands over to Duty 438 at 20:15 Broadstone'));
+    expect(lines, contains('Departs Garage  21:25'));
+    expect(lines, contains('Merrion Square  21:50'));
+    expect(lines, contains('SPL   Charlestown SC  22:55'));
+    expect(lines, contains('Phibsboro Garage 23:25'));
+  });
+
   test('PZ4/01 Mon-Fri from 23 Aug finishes at Constitution Hill', () {
     final row = File('assets/M-F_ROUTE2324_20260823.csv')
         .readAsLinesSync()
