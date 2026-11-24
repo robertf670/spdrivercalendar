@@ -27,6 +27,10 @@ import 'package:spdrivercalendar/features/calendar/utils/euro_duty_revisions.dar
 import 'package:spdrivercalendar/features/calendar/utils/work_duration_display.dart';
 import 'package:spdrivercalendar/features/calendar/utils/assigned_duty_zone.dart';
 import 'package:spdrivercalendar/features/calendar/services/zone2_duties.dart';
+import 'package:spdrivercalendar/features/calendar/utils/zone_board_mapper.dart';
+import 'package:spdrivercalendar/features/duty_corrections/duty_correction.dart';
+import 'package:spdrivercalendar/features/duty_corrections/duty_correction_apply.dart';
+import 'package:spdrivercalendar/features/duty_corrections/duty_correction_service.dart';
 import 'package:spdrivercalendar/features/calendar/utils/jamestown_road.dart';
 import 'package:spdrivercalendar/features/calendar/utils/spare_meal.dart';
 import 'package:spdrivercalendar/features/calendar/utils/spare_duty_bill.dart';
@@ -90,6 +94,8 @@ class _EventCardState extends State<EventCard> {
   String? routeInfo; // For Jamestown Road shifts only
   String? dutyRouteInfo; // For duty route information (PZ1–PZ4, UNI, etc.)
   String? _departTimeStr;
+  String? _billReportStr;
+  String? _billSignOffStr;
   String? _finishTimeStr;
   String? _reportTimeStr;  // For 807/07: Report line above main
   String? _signoffTimeStr; // For 807/06: Sign Off line below main
@@ -494,12 +500,23 @@ class _EventCardState extends State<EventCard> {
       // Load the CSV file
       final file = await rootBundle.loadString(assetPath);
       final lines = file.split('\n');
+      DutyCorrection? route13Correction;
+      if (DutyCorrection.supports(shiftCode)) {
+        route13Correction = await DutyCorrectionService.forDuty(
+          shiftCode,
+          ZoneBoardMapper.dayKeyForBrowseType(dayOfWeekForFilename),
+          era: DutyCorrection.eraFor(shiftCode, widget.event.startDate),
+        );
+      }
       
       // Find the matching shift
       bool shiftFound = false;
       for (final line in lines) {
         if (line.trim().isEmpty) continue;
-        final parts = line.split(',');
+        final parts = DutyCorrectionApply.csvParts(
+          line.split(','),
+          route13Correction,
+        );
         if (parts.length < 15) continue; // Need at least 15 parts to get the work time
         
         final shift = parts[0];
@@ -534,6 +551,12 @@ class _EventCardState extends State<EventCard> {
           
           final departFormatted = _formatTimeWithoutSeconds(departTimeRaw);
           final finishFormatted = _formatTimeWithoutSeconds(finishTimeRaw);
+          final reportFormatted = _formatTimeWithoutSeconds(
+            parts.length > 2 ? parts[2].trim() : '',
+          );
+          final signOffFormatted = _formatTimeWithoutSeconds(
+            parts.length > 12 ? parts[12].trim() : '',
+          );
           
           // Format break locations only if not a workout
           String? breakStart;
@@ -554,6 +577,8 @@ class _EventCardState extends State<EventCard> {
               workTime = work.isNotEmpty ? _formatWorkDurationForDisplay(work) : null;
               _departTimeStr = departFormatted;
               _finishTimeStr = finishFormatted;
+              _billReportStr = reportFormatted.isEmpty ? null : reportFormatted;
+              _billSignOffStr = signOffFormatted.isEmpty ? null : signOffFormatted;
             });
           }
           
@@ -2191,7 +2216,9 @@ class _EventCardState extends State<EventCard> {
                                 style: const TextStyle(fontWeight: FontWeight.w500),
                               ),
                               TextSpan(
-                                text: widget.event.formattedStartTime,
+                                text: widget.event.title.contains('(OT)')
+                                    ? widget.event.formattedStartTime
+                                    : (_billReportStr ?? widget.event.formattedStartTime),
                                 style: const TextStyle(fontWeight: FontWeight.w600),
                               ),
                               // Add location for overtime shifts if available - with correct locations based on shift type
@@ -2213,7 +2240,9 @@ class _EventCardState extends State<EventCard> {
                               ],
                               const TextSpan(text: ' - '),
                               TextSpan(
-                                text: widget.event.formattedEndTime,
+                                text: widget.event.title.contains('(OT)')
+                                    ? widget.event.formattedEndTime
+                                    : (_billSignOffStr ?? widget.event.formattedEndTime),
                                 style: const TextStyle(fontWeight: FontWeight.w600),
                               ),
                               TextSpan(

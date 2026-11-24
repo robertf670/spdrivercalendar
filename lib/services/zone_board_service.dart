@@ -4,6 +4,9 @@ import 'package:flutter/services.dart';
 import 'package:spdrivercalendar/features/calendar/services/roster_service.dart';
 import 'package:spdrivercalendar/features/calendar/services/shift_service.dart';
 import 'package:spdrivercalendar/features/calendar/utils/zone_board_mapper.dart';
+import 'package:spdrivercalendar/features/duty_corrections/duty_correction.dart';
+import 'package:spdrivercalendar/features/duty_corrections/duty_correction_apply.dart';
+import 'package:spdrivercalendar/features/duty_corrections/duty_correction_service.dart';
 import 'package:spdrivercalendar/models/universal_board.dart';
 
 /// Loads Zone 1/2/3/4 and Jamestown duty boards from bundled JSON and maps
@@ -53,10 +56,49 @@ class ZoneBoardService {
     final dayData = dutyMap[resolvedDayKey];
     if (dayData is! Map) return null;
 
-    return ZoneBoardMapper.fromDayData(
+    var day = Map<String, dynamic>.from(dayData);
+    if (DutyCorrection.supports(dutyCode)) {
+      final correction = await DutyCorrectionService.forDuty(
+        dutyCode,
+        resolvedDayKey,
+        era: DutyCorrection.eraFor(dutyCode, date),
+      );
+      day = DutyCorrectionApply.boardDay(day, correction);
+    }
+
+    return ZoneBoardMapper.fromDayData(dutyCode, day);
+  }
+
+  /// Bundled board day, before any Route 13 correction is applied.
+  static Future<Map<String, dynamic>?> rawDay({
+    required String dutyTitle,
+    required String dayKey,
+    DateTime? date,
+  }) async {
+    final dutyCode = ZoneBoardMapper.normalizeDutyCode(dutyTitle);
+    if (dutyCode == null) return null;
+    final assetPath = ZoneBoardMapper.assetPathForDuty(
       dutyCode,
-      Map<String, dynamic>.from(dayData),
+      date: date,
     );
+    if (assetPath == null) return null;
+    final zoneData = await _loadAsset(assetPath);
+    final dutyData = zoneData[dutyCode];
+    if (dutyData is! Map) return null;
+    final dayData = dutyData[dayKey];
+    if (dayData is! Map) return null;
+    final day = Map<String, dynamic>.from(dayData);
+    final board = day['board'];
+    if (board is List) {
+      day['board'] = [
+        for (final row in board)
+          if (row is List)
+            row.map((cell) => cell?.toString() ?? '').toList()
+          else
+            <String>[],
+      ];
+    }
+    return day;
   }
 
   static Future<Map<String, dynamic>> _loadAsset(String assetPath) async {

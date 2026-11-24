@@ -6,6 +6,7 @@ import 'package:spdrivercalendar/features/contacts/screens/contacts_management_s
 import 'package:spdrivercalendar/features/toilet_codes/screens/toilet_codes_management_screen.dart';
 import 'duty_ratings_admin_screen.dart';
 import 'bus_reports_admin_screen.dart';
+import 'route13_corrections_screen.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -160,6 +161,14 @@ class AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         color: Colors.orange.shade800,
                         onTap: () => _navigateToBusReports(context),
                       ),
+                      _buildAdminCard(
+                        context,
+                        title: 'Duty times',
+                        subtitle: 'Correct a bill or board',
+                        icon: Icons.edit_road,
+                        color: Colors.teal.shade800,
+                        onTap: () => _navigateToRoute13(context),
+                      ),
                     ],
                   ),
                 ),
@@ -288,6 +297,15 @@ class AdminDashboardScreenState extends State<AdminDashboardScreen> {
       context,
       MaterialPageRoute(
         builder: (context) => const BusReportsAdminScreen(),
+      ),
+    );
+  }
+
+  void _navigateToRoute13(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const Route13CorrectionsScreen(),
       ),
     );
   }

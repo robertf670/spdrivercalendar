@@ -38,6 +38,12 @@ void main() {
     ]);
   });
 
+  test('sorts numbered duties before X duties and nights', () {
+    final codes = ['13/2X', '13/10', '13/1N', '13/1X', '13/02', 'PZ1/21X'];
+    codes.sort(BillsDutyGrouping.compareShifts);
+    expect(codes, ['13/02', '13/10', '13/1X', '13/2X', 'PZ1/21X', '13/1N']);
+  });
+
   test('keeps X duties out of the surrounding numeric ranges', () {
     final groups = BillsDutyGrouping.group([
       _duty('PZ1/87'),

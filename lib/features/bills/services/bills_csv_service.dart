@@ -3,6 +3,10 @@ import 'package:spdrivercalendar/features/bills/models/bill_duty.dart';
 import 'package:spdrivercalendar/features/calendar/services/roster_service.dart';
 import 'package:spdrivercalendar/features/calendar/utils/euro_duty_revisions.dart';
 import 'package:spdrivercalendar/features/calendar/services/zone2_duties.dart';
+import 'package:spdrivercalendar/features/calendar/utils/zone_board_mapper.dart';
+import 'package:spdrivercalendar/features/duty_corrections/duty_correction.dart';
+import 'package:spdrivercalendar/features/duty_corrections/duty_correction_apply.dart';
+import 'package:spdrivercalendar/features/duty_corrections/duty_correction_service.dart';
 
 class BillsLoadResult {
   const BillsLoadResult({
@@ -24,6 +28,7 @@ class BillsCsvService {
     required String zone,
     required String dayType,
     DateTime? eraDate,
+    bool applyCorrections = true,
   }) async {
     try {
       final lines = await _loadLines(
@@ -38,7 +43,29 @@ class BillsCsvService {
         );
       }
 
-      return BillsLoadResult(duties: parseLines(lines));
+      final duties = parseLines(lines);
+      final zoneNumber = Zone2Duties.fileZoneNumber(zone);
+      final canCorrect = zoneNumber == '1' ||
+          zoneNumber == '2' ||
+          zoneNumber == '3' ||
+          zoneNumber == '4';
+      if (!applyCorrections || !canCorrect) {
+        return BillsLoadResult(duties: duties);
+      }
+      final dayKey = ZoneBoardMapper.dayKeyForBrowseType(dayType);
+      final era = zoneNumber == '4'
+          ? DutyCorrection.eraFor('PZ4/01', eraDate ?? DateTime.now())
+          : null;
+      final corrected = <BillDuty>[];
+      for (final duty in duties) {
+        final correction = await DutyCorrectionService.forDuty(
+          duty.shift,
+          dayKey,
+          era: era,
+        );
+        corrected.add(DutyCorrectionApply.billDuty(duty, correction));
+      }
+      return BillsLoadResult(duties: corrected);
     } catch (e) {
       return BillsLoadResult(
         duties: const [],

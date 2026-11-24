@@ -3,6 +3,10 @@ import 'package:flutter/services.dart';
 import 'package:spdrivercalendar/features/calendar/services/roster_service.dart';
 import 'package:spdrivercalendar/features/calendar/services/zone2_duties.dart';
 import 'package:spdrivercalendar/features/calendar/utils/euro_duty_revisions.dart';
+import 'package:spdrivercalendar/features/calendar/utils/zone_board_mapper.dart';
+import 'package:spdrivercalendar/features/duty_corrections/duty_correction.dart';
+import 'package:spdrivercalendar/features/duty_corrections/duty_correction_apply.dart';
+import 'package:spdrivercalendar/features/duty_corrections/duty_correction_service.dart';
 import 'package:spdrivercalendar/features/calendar/utils/jamestown_road.dart';
 import 'package:spdrivercalendar/services/donnybrook_feature_service.dart';
 import 'package:spdrivercalendar/services/jamestown_feature_service.dart';
@@ -92,11 +96,27 @@ class DutyTimeLookupService {
       );
       final csv = await loadCsv(csvPath);
       final lines = csv.split('\n');
+      final dayForFilename = switch (dayOfWeek) {
+        'Saturday' => 'SAT',
+        'Sunday' => 'SUN',
+        _ => 'M-F',
+      };
+      DutyCorrection? route13Correction;
+      if (DutyCorrection.supports(shiftNumber)) {
+        route13Correction = await DutyCorrectionService.forDuty(
+          shiftNumber,
+          ZoneBoardMapper.dayKeyForBrowseType(dayForFilename),
+          era: DutyCorrection.eraFor(shiftNumber, shiftDate),
+        );
+      }
 
       for (var index = 1; index < lines.length; index++) {
         final line = lines[index].trim().replaceAll('\r', '');
         if (line.isEmpty) continue;
-        final parts = line.split(',');
+        final parts = DutyCorrectionApply.csvParts(
+          line.split(','),
+          route13Correction,
+        );
 
         if (zone == 'Bus Check') {
           final result = _parseBusCheck(

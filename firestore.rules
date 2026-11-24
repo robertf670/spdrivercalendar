@@ -80,6 +80,13 @@ service cloud.firestore {
       allow read: if true;
       allow write: if true;
     }
+
+    // Route 13 bill and board corrections. Read by every phone.
+    // Writes are limited to the admin screen in the app.
+    match /duty_corrections/{document} {
+      allow read: if true;
+      allow write: if true;
+    }
     
     // Deny all other collections by default
     match /{document=**} {

@@ -46,6 +46,19 @@ void main() {
     expect(board!.sections.first.entries.first.time, '04:20');
   });
 
+  test('Sunday PZ1/43 second half leaves Adamstown at 21:36', () async {
+    final board = await ZoneBoardService.getBoardForDuty(
+      dutyTitle: 'PZ1/43',
+      date: DateTime(2026, 8, 9), // Sunday
+    );
+
+    expect(board, isNotNull);
+    final adamstown = board!.sections
+        .expand((section) => section.entries)
+        .where((entry) => entry.location == 'Adamstown Stn' && entry.time == '21:36');
+    expect(adamstown, isNotEmpty);
+  });
+
   test('Sunday PZ1/47 second half leaves Belfield at 22:45', () async {
     final board = await ZoneBoardService.getBoardForDuty(
       dutyTitle: 'PZ1/47',

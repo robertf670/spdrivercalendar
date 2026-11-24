@@ -35,6 +35,28 @@ class BillsDutyGrouping {
     return prefix;
   }
 
+  /// Numbered duties, then X duties, then nights, matching a paper bill.
+  static int compareShifts(String a, String b) {
+    final aMatch = _codePattern.firstMatch(a.trim());
+    final bMatch = _codePattern.firstMatch(b.trim());
+    if (aMatch == null || bMatch == null) return a.compareTo(b);
+    final aSuffix = aMatch.group(3)!.toUpperCase();
+    final bSuffix = bMatch.group(3)!.toUpperCase();
+    final rank = _suffixRank(aSuffix).compareTo(_suffixRank(bSuffix));
+    if (rank != 0) return rank;
+    final aNumber = int.tryParse(aMatch.group(2)!) ?? 0;
+    final bNumber = int.tryParse(bMatch.group(2)!) ?? 0;
+    if (aNumber != bNumber) return aNumber.compareTo(bNumber);
+    return aSuffix.compareTo(bSuffix);
+  }
+
+  static int _suffixRank(String suffix) {
+    if (suffix.isEmpty) return 0;
+    if (suffix == 'X') return 1;
+    if (suffix == 'N') return 2;
+    return 3;
+  }
+
   static String sectionKey(String shift) {
     final match = _codePattern.firstMatch(shift.trim());
     if (match == null) return 'other:$shift';
