@@ -184,52 +184,9 @@ class EditEventBusAssignmentSection extends StatelessWidget {
                                       );
                                       
                                       if (result != null) {
-                                        // Create a copy of the old event
-                                        final oldEvent = Event(
-                                          id: event.id,
-                                          title: event.title,
-                                          startDate: event.startDate,
-                                          startTime: event.startTime,
-                                          endDate: event.endDate,
-                                          endTime: event.endTime,
-                                          workTime: event.workTime,
-                                          breakStartTime: event.breakStartTime,
-                                          breakEndTime: event.breakEndTime,
-                                          assignedDuties: event.assignedDuties,
-                                          firstHalfBus: event.firstHalfBus,
-                                          secondHalfBus: event.secondHalfBus,
-                                          busAssignments: event.busAssignments,
-                                          additionalBusesUsed: event.additionalBusesUsed?.map((b) => b).toList(),
-                                          firstHalfAdditionalBuses: event.firstHalfAdditionalBuses?.map((b) => b).toList(),
-                                          secondHalfAdditionalBuses: event.secondHalfAdditionalBuses?.map((b) => b).toList(),
-                                          additionalBusesByDuty: event.additionalBusesByDuty?.map((k, v) => MapEntry(k, List<String>.from(v))),
-                                          notes: event.notes,
-                                        );
-                                        
-                                        // Create updated event with all bus breakdown fields
-                                        final updatedEvent = Event(
-                                          id: event.id,
-                                          title: event.title,
-                                          startDate: event.startDate,
-                                          startTime: event.startTime,
-                                          endDate: event.endDate,
-                                          endTime: event.endTime,
-                                          workTime: event.workTime,
-                                          breakStartTime: event.breakStartTime,
-                                          breakEndTime: event.breakEndTime,
-                                          assignedDuties: event.assignedDuties,
-                                          busAssignments: event.busAssignments,
-                                          firstHalfBus: event.firstHalfBus,
-                                          secondHalfBus: event.secondHalfBus,
-                                          additionalBusesUsed: event.additionalBusesUsed?.map((b) => b).toList(),
-                                          firstHalfAdditionalBuses: event.firstHalfAdditionalBuses?.map((b) => b).toList(),
-                                          secondHalfAdditionalBuses: event.secondHalfAdditionalBuses?.map((b) => b).toList(),
-                                          additionalBusesByDuty: event.additionalBusesByDuty?.map((k, v) => MapEntry(k, List<String>.from(v))),
-                                          notes: event.notes,
-                                        );
-                                        
-                                        // Use change bus method to track breakdown buses
-                                        updatedEvent.changeBusForFirstHalf(result);
+                                        final oldEvent = event.detachedCopy();
+                                        final updatedEvent = event.detachedCopy()
+                                          ..changeBusForFirstHalf(result);
                                         
                                         // Save the updated event
                                         await onBusAssignmentChanged(oldEvent, updatedEvent);
@@ -243,52 +200,9 @@ class EditEventBusAssignmentSection extends StatelessWidget {
                                         icon: Icons.delete_outline,
                                         color: Colors.red,
                                         onPressed: () async {
-                                          // Create a copy of the old event
-                                          final oldEvent = Event(
-                                            id: event.id,
-                                            title: event.title,
-                                            startDate: event.startDate,
-                                            startTime: event.startTime,
-                                            endDate: event.endDate,
-                                            endTime: event.endTime,
-                                            workTime: event.workTime,
-                                            breakStartTime: event.breakStartTime,
-                                            breakEndTime: event.breakEndTime,
-                                            assignedDuties: event.assignedDuties,
-                                            firstHalfBus: event.firstHalfBus,
-                                            secondHalfBus: event.secondHalfBus,
-                                            busAssignments: event.busAssignments,
-                                            additionalBusesUsed: event.additionalBusesUsed?.map((b) => b).toList(),
-                                            firstHalfAdditionalBuses: event.firstHalfAdditionalBuses?.map((b) => b).toList(),
-                                            secondHalfAdditionalBuses: event.secondHalfAdditionalBuses?.map((b) => b).toList(),
-                                            additionalBusesByDuty: event.additionalBusesByDuty?.map((k, v) => MapEntry(k, List<String>.from(v))),
-                                            notes: event.notes,
-                                          );
-                                          
-                                          // Create a new event and use remove method to clear primary bus and breakdown history
-                                          final updatedEvent = Event(
-                                            id: event.id,
-                                            title: event.title,
-                                            startDate: event.startDate,
-                                            startTime: event.startTime,
-                                            endDate: event.endDate,
-                                            endTime: event.endTime,
-                                            workTime: event.workTime,
-                                            breakStartTime: event.breakStartTime,
-                                            breakEndTime: event.breakEndTime,
-                                            assignedDuties: event.assignedDuties,
-                                            busAssignments: event.busAssignments,
-                                            firstHalfBus: event.firstHalfBus,
-                                            secondHalfBus: event.secondHalfBus,
-                                            additionalBusesUsed: event.additionalBusesUsed?.map((b) => b).toList(),
-                                            firstHalfAdditionalBuses: event.firstHalfAdditionalBuses?.map((b) => b).toList(),
-                                            secondHalfAdditionalBuses: event.secondHalfAdditionalBuses?.map((b) => b).toList(),
-                                            additionalBusesByDuty: event.additionalBusesByDuty?.map((k, v) => MapEntry(k, List<String>.from(v))),
-                                            notes: event.notes,
-                                          );
-                                          
-                                          // Use remove method to clear primary bus and breakdown history
-                                          updatedEvent.removeBusForFirstHalf();
+                                          final oldEvent = event.detachedCopy();
+                                          final updatedEvent = event.detachedCopy()
+                                            ..removeBusForFirstHalf();
                                           
                                           // Save the updated event
                                           await onBusAssignmentChanged(oldEvent, updatedEvent);
@@ -422,52 +336,9 @@ class EditEventBusAssignmentSection extends StatelessWidget {
                                       );
                                       
                                       if (result != null) {
-                                        // Create a copy of the old event
-                                        final oldEvent = Event(
-                                          id: event.id,
-                                          title: event.title,
-                                          startDate: event.startDate,
-                                          startTime: event.startTime,
-                                          endDate: event.endDate,
-                                          endTime: event.endTime,
-                                          workTime: event.workTime,
-                                          breakStartTime: event.breakStartTime,
-                                          breakEndTime: event.breakEndTime,
-                                          assignedDuties: event.assignedDuties,
-                                          firstHalfBus: event.firstHalfBus,
-                                          secondHalfBus: event.secondHalfBus,
-                                          busAssignments: event.busAssignments,
-                                          additionalBusesUsed: event.additionalBusesUsed?.map((b) => b).toList(),
-                                          firstHalfAdditionalBuses: event.firstHalfAdditionalBuses?.map((b) => b).toList(),
-                                          secondHalfAdditionalBuses: event.secondHalfAdditionalBuses?.map((b) => b).toList(),
-                                          additionalBusesByDuty: event.additionalBusesByDuty?.map((k, v) => MapEntry(k, List<String>.from(v))),
-                                          notes: event.notes,
-                                        );
-                                        
-                                        // Create updated event with all bus breakdown fields
-                                        final updatedEvent = Event(
-                                          id: event.id,
-                                          title: event.title,
-                                          startDate: event.startDate,
-                                          startTime: event.startTime,
-                                          endDate: event.endDate,
-                                          endTime: event.endTime,
-                                          workTime: event.workTime,
-                                          breakStartTime: event.breakStartTime,
-                                          breakEndTime: event.breakEndTime,
-                                          assignedDuties: event.assignedDuties,
-                                          busAssignments: event.busAssignments,
-                                          firstHalfBus: event.firstHalfBus,
-                                          secondHalfBus: event.secondHalfBus,
-                                          additionalBusesUsed: event.additionalBusesUsed?.map((b) => b).toList(),
-                                          firstHalfAdditionalBuses: event.firstHalfAdditionalBuses?.map((b) => b).toList(),
-                                          secondHalfAdditionalBuses: event.secondHalfAdditionalBuses?.map((b) => b).toList(),
-                                          additionalBusesByDuty: event.additionalBusesByDuty?.map((k, v) => MapEntry(k, List<String>.from(v))),
-                                          notes: event.notes,
-                                        );
-                                        
-                                        // Use change bus method to track breakdown buses
-                                        updatedEvent.changeBusForSecondHalf(result);
+                                        final oldEvent = event.detachedCopy();
+                                        final updatedEvent = event.detachedCopy()
+                                          ..changeBusForSecondHalf(result);
                                         
                                         // Save the updated event
                                         await onBusAssignmentChanged(oldEvent, updatedEvent);
@@ -481,52 +352,9 @@ class EditEventBusAssignmentSection extends StatelessWidget {
                                         icon: Icons.delete_outline,
                                         color: Colors.red,
                                         onPressed: () async {
-                                      // Create a copy of the old event
-                                      final oldEvent = Event(
-                                        id: event.id,
-                                        title: event.title,
-                                        startDate: event.startDate,
-                                        startTime: event.startTime,
-                                        endDate: event.endDate,
-                                        endTime: event.endTime,
-                                        workTime: event.workTime,
-                                        breakStartTime: event.breakStartTime,
-                                        breakEndTime: event.breakEndTime,
-                                        assignedDuties: event.assignedDuties,
-                                        firstHalfBus: event.firstHalfBus,
-                                        secondHalfBus: event.secondHalfBus,
-                                        busAssignments: event.busAssignments,
-                                        additionalBusesUsed: event.additionalBusesUsed?.map((b) => b).toList(),
-                                        firstHalfAdditionalBuses: event.firstHalfAdditionalBuses?.map((b) => b).toList(),
-                                        secondHalfAdditionalBuses: event.secondHalfAdditionalBuses?.map((b) => b).toList(),
-                                        additionalBusesByDuty: event.additionalBusesByDuty?.map((k, v) => MapEntry(k, List<String>.from(v))),
-                                        notes: event.notes,
-                                      );
-                                      
-                                      // Create a new event and use remove method to clear primary bus and breakdown history
-                                      final updatedEvent = Event(
-                                        id: event.id,
-                                        title: event.title,
-                                        startDate: event.startDate,
-                                        startTime: event.startTime,
-                                        endDate: event.endDate,
-                                        endTime: event.endTime,
-                                        workTime: event.workTime,
-                                        breakStartTime: event.breakStartTime,
-                                        breakEndTime: event.breakEndTime,
-                                        assignedDuties: event.assignedDuties,
-                                        busAssignments: event.busAssignments,
-                                        firstHalfBus: event.firstHalfBus,
-                                        secondHalfBus: event.secondHalfBus,
-                                        additionalBusesUsed: event.additionalBusesUsed?.map((b) => b).toList(),
-                                        firstHalfAdditionalBuses: event.firstHalfAdditionalBuses?.map((b) => b).toList(),
-                                        secondHalfAdditionalBuses: event.secondHalfAdditionalBuses?.map((b) => b).toList(),
-                                        additionalBusesByDuty: event.additionalBusesByDuty?.map((k, v) => MapEntry(k, List<String>.from(v))),
-                                        notes: event.notes,
-                                      );
-                                      
-                                      // Use remove method to clear primary bus and breakdown history
-                                      updatedEvent.removeBusForSecondHalf();
+                                      final oldEvent = event.detachedCopy();
+                                      final updatedEvent = event.detachedCopy()
+                                        ..removeBusForSecondHalf();
                                       
                                       // Save the updated event
                                       await onBusAssignmentChanged(oldEvent, updatedEvent);
@@ -613,50 +441,9 @@ class EditEventBusAssignmentSection extends StatelessWidget {
                               );
                               
                               if (result != null) {
-                                // Create a copy of the old event
-                                final oldEvent = Event(
-                                  id: event.id,
-                                  title: event.title,
-                                  startDate: event.startDate,
-                                  startTime: event.startTime,
-                                  endDate: event.endDate,
-                                  endTime: event.endTime,
-                                  workTime: event.workTime,
-                                  breakStartTime: event.breakStartTime,
-                                  breakEndTime: event.breakEndTime,
-                                  assignedDuties: event.assignedDuties,
-                                  busAssignments: event.busAssignments,
-                                  firstHalfBus: event.firstHalfBus,
-                                  secondHalfBus: event.secondHalfBus,
-                                  additionalBusesUsed: event.additionalBusesUsed?.map((b) => b).toList(),
-                                  firstHalfAdditionalBuses: event.firstHalfAdditionalBuses?.map((b) => b).toList(),
-                                  secondHalfAdditionalBuses: event.secondHalfAdditionalBuses?.map((b) => b).toList(),
-                                  additionalBusesByDuty: event.additionalBusesByDuty?.map((k, v) => MapEntry(k, List<String>.from(v))),
-                                );
-                                
-                                // Create updated event and use change bus method
-                                final updatedEvent = Event(
-                                  id: event.id,
-                                  title: event.title,
-                                  startDate: event.startDate,
-                                  startTime: event.startTime,
-                                  endDate: event.endDate,
-                                  endTime: event.endTime,
-                                  workTime: event.workTime,
-                                  breakStartTime: event.breakStartTime,
-                                  breakEndTime: event.breakEndTime,
-                                  assignedDuties: event.assignedDuties,
-                                  busAssignments: event.busAssignments,
-                                  firstHalfBus: event.firstHalfBus,
-                                  secondHalfBus: event.secondHalfBus,
-                                  additionalBusesUsed: event.additionalBusesUsed?.map((b) => b).toList(),
-                                  firstHalfAdditionalBuses: event.firstHalfAdditionalBuses?.map((b) => b).toList(),
-                                  secondHalfAdditionalBuses: event.secondHalfAdditionalBuses?.map((b) => b).toList(),
-                                  additionalBusesByDuty: event.additionalBusesByDuty?.map((k, v) => MapEntry(k, List<String>.from(v))),
-                                );
-                                
-                                // Use change bus method to track breakdown buses
-                                updatedEvent.changeBusForSingleShift(result);
+                                final oldEvent = event.detachedCopy();
+                                final updatedEvent = event.detachedCopy()
+                                  ..changeBusForSingleShift(result);
                                 
                                 // Save the updated event
                                 await onBusAssignmentChanged(oldEvent, updatedEvent);
@@ -696,28 +483,8 @@ class EditEventBusAssignmentSection extends StatelessWidget {
                                   width: double.infinity,
                                   child: ElevatedButton(
                                     onPressed: () async {
-                                      // Create a copy of the old event
-                                      final oldEvent = Event(
-                                        id: event.id,
-                                        title: event.title,
-                                        startDate: event.startDate,
-                                        startTime: event.startTime,
-                                        endDate: event.endDate,
-                                        endTime: event.endTime,
-                                        workTime: event.workTime,
-                                        breakStartTime: event.breakStartTime,
-                                        breakEndTime: event.breakEndTime,
-                                        assignedDuties: event.assignedDuties,
-                                        firstHalfBus: event.firstHalfBus,
-                                        secondHalfBus: event.secondHalfBus,
-                                        busAssignments: event.busAssignments,
-                                        additionalBusesUsed: event.additionalBusesUsed?.map((b) => b).toList(),
-                                        firstHalfAdditionalBuses: event.firstHalfAdditionalBuses?.map((b) => b).toList(),
-                                        secondHalfAdditionalBuses: event.secondHalfAdditionalBuses?.map((b) => b).toList(),
-                                        additionalBusesByDuty: event.additionalBusesByDuty?.map((k, v) => MapEntry(k, List<String>.from(v))),
-                                        notes: event.notes,
-                                      );
-                                      
+                                      final oldEvent = event.detachedCopy();
+
                                       // Show the bus assignment dialog
                                       final TextEditingController controller = TextEditingController();
                                       final result = await showDialog<String>(
@@ -758,29 +525,8 @@ class EditEventBusAssignmentSection extends StatelessWidget {
                                       );
                                       
                                       if (result != null) {
-                                        // Create updated event
-                                        final updatedEvent = Event(
-                                          id: event.id,
-                                          title: event.title,
-                                          startDate: event.startDate,
-                                          startTime: event.startTime,
-                                          endDate: event.endDate,
-                                          endTime: event.endTime,
-                                          workTime: event.workTime,
-                                          breakStartTime: event.breakStartTime,
-                                          breakEndTime: event.breakEndTime,
-                                          assignedDuties: event.assignedDuties,
-                                          busAssignments: event.busAssignments,
-                                          firstHalfBus: result,
-                                          secondHalfBus: event.secondHalfBus,
-                                          additionalBusesUsed: event.additionalBusesUsed?.map((b) => b).toList(),
-                                          firstHalfAdditionalBuses: event.firstHalfAdditionalBuses?.map((b) => b).toList(),
-                                          secondHalfAdditionalBuses: event.secondHalfAdditionalBuses?.map((b) => b).toList(),
-                                          additionalBusesByDuty: event.additionalBusesByDuty?.map((k, v) => MapEntry(k, List<String>.from(v))),
-                                          notes: event.notes,
-                                        );
-                                        
-                                        // Save the updated event
+                                        final updatedEvent = event.detachedCopy()
+                                          ..changeBusForFirstHalf(result);
                                         await onBusAssignmentChanged(oldEvent, updatedEvent);
                                       }
                                     },
@@ -816,28 +562,8 @@ class EditEventBusAssignmentSection extends StatelessWidget {
                                   width: double.infinity,
                                   child: ElevatedButton(
                                     onPressed: () async {
-                                      // Create a copy of the old event
-                                      final oldEvent = Event(
-                                        id: event.id,
-                                        title: event.title,
-                                        startDate: event.startDate,
-                                        startTime: event.startTime,
-                                        endDate: event.endDate,
-                                        endTime: event.endTime,
-                                        workTime: event.workTime,
-                                        breakStartTime: event.breakStartTime,
-                                        breakEndTime: event.breakEndTime,
-                                        assignedDuties: event.assignedDuties,
-                                        firstHalfBus: event.firstHalfBus,
-                                        secondHalfBus: event.secondHalfBus,
-                                        busAssignments: event.busAssignments,
-                                        additionalBusesUsed: event.additionalBusesUsed?.map((b) => b).toList(),
-                                        firstHalfAdditionalBuses: event.firstHalfAdditionalBuses?.map((b) => b).toList(),
-                                        secondHalfAdditionalBuses: event.secondHalfAdditionalBuses?.map((b) => b).toList(),
-                                        additionalBusesByDuty: event.additionalBusesByDuty?.map((k, v) => MapEntry(k, List<String>.from(v))),
-                                        notes: event.notes,
-                                      );
-                                      
+                                      final oldEvent = event.detachedCopy();
+
                                       // Show the bus assignment dialog
                                       final TextEditingController controller = TextEditingController();
                                       final result = await showDialog<String>(
@@ -878,29 +604,8 @@ class EditEventBusAssignmentSection extends StatelessWidget {
                                       );
                                       
                                       if (result != null) {
-                                        // Create updated event
-                                        final updatedEvent = Event(
-                                          id: event.id,
-                                          title: event.title,
-                                          startDate: event.startDate,
-                                          startTime: event.startTime,
-                                          endDate: event.endDate,
-                                          endTime: event.endTime,
-                                          workTime: event.workTime,
-                                          breakStartTime: event.breakStartTime,
-                                          breakEndTime: event.breakEndTime,
-                                          assignedDuties: event.assignedDuties,
-                                          busAssignments: event.busAssignments,
-                                          firstHalfBus: event.firstHalfBus,
-                                          secondHalfBus: result,
-                                          additionalBusesUsed: event.additionalBusesUsed?.map((b) => b).toList(),
-                                          firstHalfAdditionalBuses: event.firstHalfAdditionalBuses?.map((b) => b).toList(),
-                                          secondHalfAdditionalBuses: event.secondHalfAdditionalBuses?.map((b) => b).toList(),
-                                          additionalBusesByDuty: event.additionalBusesByDuty?.map((k, v) => MapEntry(k, List<String>.from(v))),
-                                          notes: event.notes,
-                                        );
-                                        
-                                        // Save the updated event
+                                        final updatedEvent = event.detachedCopy()
+                                          ..changeBusForSecondHalf(result);
                                         await onBusAssignmentChanged(oldEvent, updatedEvent);
                                       }
                                     },

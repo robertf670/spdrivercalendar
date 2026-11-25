@@ -21,6 +21,11 @@ class MarkedInStatus {
   static bool isFixedWorkPattern(String status) =>
       status == mf || status == fourDay || status == jamestown;
 
+  /// Same duty title can repeat across the week.
+  /// Spare, 4 day, and nights are a different duty each day.
+  static bool showsWeekDutySwap(String status) =>
+      status == jamestown || status == mf || status == shift;
+
   static bool usesWorkRestColors(String status) =>
       isFixedWorkPattern(status) || status == nights;
 

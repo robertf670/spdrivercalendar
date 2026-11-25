@@ -5,7 +5,7 @@ import 'package:spdrivercalendar/features/ratings/duty_rating_service.dart';
 import 'package:spdrivercalendar/features/ratings/duty_rating_vote.dart';
 import 'package:spdrivercalendar/models/event.dart';
 
-enum DutyRateMenuStyle { column, compact }
+enum DutyRateMenuStyle { column, compact, list }
 
 class DutyRateMenuActions extends StatefulWidget {
   const DutyRateMenuActions({
@@ -136,6 +136,35 @@ class _DutyRateMenuActionsState extends State<DutyRateMenuActions> {
           return TextButton(
             onPressed: () => _openFromCompact(data),
             child: Text(label),
+          );
+        }
+
+        if (widget.style == DutyRateMenuStyle.list) {
+          final anyRated = data.targets.any(
+            (target) => data.votes.containsKey(target.summaryId),
+          );
+          final label = data.targets.length == 1
+              ? _labelFor(
+                  data.targets.single,
+                  data.votes[data.targets.single.summaryId],
+                  showDuty: false,
+                )
+              : anyRated
+                  ? 'Your ratings'
+                  : 'Rate Duty';
+          return TextButton.icon(
+            onPressed: () => _openFromCompact(data),
+            icon: const Icon(Icons.star_outline, size: 20),
+            label: Text(
+              label,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            style: TextButton.styleFrom(
+              minimumSize: const Size(48, 48),
+              alignment: Alignment.centerLeft,
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+            ),
           );
         }
 

@@ -18,6 +18,9 @@ class AddEventTypeDialog extends StatelessWidget {
     required this.onOvertime,
     required this.onWorkForOthers,
     required this.onSwapRestDay,
+    required this.onHolidayDay,
+    required this.onUnpaidLeave,
+    required this.onDayInLieu,
   });
 
   final bool showBankHolidaySection;
@@ -31,6 +34,9 @@ class AddEventTypeDialog extends StatelessWidget {
   final VoidCallback onOvertime;
   final VoidCallback onWorkForOthers;
   final VoidCallback onSwapRestDay;
+  final VoidCallback onHolidayDay;
+  final VoidCallback onUnpaidLeave;
+  final VoidCallback onDayInLieu;
 
   Map<String, double> _getResponsiveSizes(BuildContext context) {
     final screenWidth = MediaQuery.sizeOf(context).width;
@@ -114,6 +120,26 @@ class AddEventTypeDialog extends StatelessWidget {
                 onToggleDayOnlyRedundant: onToggleDayOnlyRedundant,
               ),
             ],
+            const SizedBox(height: 12),
+            const Divider(height: 1),
+            const SizedBox(height: 8),
+            const Text('Holiday for this day'),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _HolidayDayButton(label: 'Holiday', onPressed: onHolidayDay),
+                _HolidayDayButton(
+                  label: 'Unpaid Leave',
+                  onPressed: onUnpaidLeave,
+                ),
+                _HolidayDayButton(
+                  label: 'Day In Lieu',
+                  onPressed: onDayInLieu,
+                ),
+              ],
+            ),
           ],
         ),
       ),
@@ -141,6 +167,29 @@ class AddEventTypeDialog extends StatelessWidget {
             child: const Text('Swap Rest Day'),
           ),
       ],
+    );
+  }
+}
+
+class _HolidayDayButton extends StatelessWidget {
+  const _HolidayDayButton({
+    required this.label,
+    required this.onPressed,
+  });
+
+  final String label;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return OutlinedButton(
+      onPressed: onPressed,
+      style: OutlinedButton.styleFrom(
+        minimumSize: const Size(48, 48),
+        tapTargetSize: MaterialTapTargetSize.padded,
+        visualDensity: VisualDensity.compact,
+      ),
+      child: Text(label),
     );
   }
 }

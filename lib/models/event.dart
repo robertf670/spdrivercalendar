@@ -496,6 +496,27 @@ class Event {
     );
   }
 
+  /// Full copy with its own bus lists. A bus edit can change those lists
+  /// without wiping a late break or any other field on the original.
+  Event detachedCopy() {
+    return copyWith(
+      assignedDuties: assignedDuties?.toList(),
+      enhancedAssignedDuties:
+          enhancedAssignedDuties?.map((duty) => duty.copyWith()).toList(),
+      busAssignments: busAssignments == null
+          ? null
+          : Map<String, String>.from(busAssignments!),
+      additionalBusesUsed: additionalBusesUsed?.toList(),
+      firstHalfAdditionalBuses: firstHalfAdditionalBuses?.toList(),
+      secondHalfAdditionalBuses: secondHalfAdditionalBuses?.toList(),
+      additionalBusesByDuty: additionalBusesByDuty?.map(
+        (duty, buses) => MapEntry(duty, List<String>.from(buses)),
+      ),
+      routes: routes?.toList(),
+      noteImagePaths: noteImagePaths?.toList(),
+    );
+  }
+
   // Convert to map for storage
   Map<String, dynamic> toMap() {
     // CRITICAL FIX: Sync duty formats before saving to ensure persistence

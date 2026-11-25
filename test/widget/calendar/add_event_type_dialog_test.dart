@@ -17,6 +17,9 @@ void main() {
     VoidCallback? onOvertime,
     VoidCallback? onWorkForOthers,
     VoidCallback? onSwapRestDay,
+    VoidCallback? onHolidayDay,
+    VoidCallback? onUnpaidLeave,
+    VoidCallback? onDayInLieu,
   }) async {
     await tester.binding.setSurfaceSize(surfaceSize);
     addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -37,6 +40,9 @@ void main() {
             onOvertime: onOvertime ?? () {},
             onWorkForOthers: onWorkForOthers ?? () {},
             onSwapRestDay: onSwapRestDay ?? () {},
+            onHolidayDay: onHolidayDay ?? () {},
+            onUnpaidLeave: onUnpaidLeave ?? () {},
+            onDayInLieu: onDayInLieu ?? () {},
           ),
         ),
       ),
@@ -54,6 +60,10 @@ void main() {
     expect(find.text('Normal Event'), findsOneWidget);
     expect(find.text('Work Shift'), findsOneWidget);
     expect(find.text('Overtime'), findsOneWidget);
+    expect(find.text('Holiday for this day'), findsOneWidget);
+    expect(find.text('Holiday'), findsOneWidget);
+    expect(find.text('Unpaid Leave'), findsOneWidget);
+    expect(find.text('Day In Lieu'), findsOneWidget);
     expect(find.text('Work For Others'), findsNothing);
     expect(find.text('Swap Rest Day'), findsNothing);
     expect(tester.takeException(), isNull);
@@ -65,6 +75,9 @@ void main() {
     var overtimeCalls = 0;
     var workForOthersCalls = 0;
     var swapCalls = 0;
+    var holidayCalls = 0;
+    var unpaidCalls = 0;
+    var lieuCalls = 0;
 
     await pumpDialog(
       tester,
@@ -76,6 +89,9 @@ void main() {
       onOvertime: () => overtimeCalls++,
       onWorkForOthers: () => workForOthersCalls++,
       onSwapRestDay: () => swapCalls++,
+      onHolidayDay: () => holidayCalls++,
+      onUnpaidLeave: () => unpaidCalls++,
+      onDayInLieu: () => lieuCalls++,
     );
 
     await tester.tap(find.text('Normal Event'));
@@ -83,6 +99,10 @@ void main() {
     await tester.tap(find.text('Overtime'));
     await tester.tap(find.text('Work For Others'));
     await tester.tap(find.text('Swap Rest Day'));
+    await tester.ensureVisible(find.text('Holiday'));
+    await tester.tap(find.text('Holiday'));
+    await tester.tap(find.text('Unpaid Leave'));
+    await tester.tap(find.text('Day In Lieu'));
     await tester.pump();
 
     expect(normalCalls, 1);
@@ -90,6 +110,9 @@ void main() {
     expect(overtimeCalls, 1);
     expect(workForOthersCalls, 1);
     expect(swapCalls, 1);
+    expect(holidayCalls, 1);
+    expect(unpaidCalls, 1);
+    expect(lieuCalls, 1);
   });
 
   testWidgets('shows bank-holiday guidance when a work shift exists', (

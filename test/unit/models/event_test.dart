@@ -170,4 +170,31 @@ void main() {
       expect(titled('1/03').shiftCode, 'PZ1/03');
     });
   });
+
+  test('a bus change keeps the late break on its own copy', () {
+    final event = minimalEvent()
+      ..hasLateBreak = true
+      ..tookFullBreak = false
+      ..overtimeDuration = 20
+      ..hasLateFinish = true
+      ..lateFinishDuration = 15
+      ..firstHalfBus = 'PA100'
+      ..firstHalfAdditionalBuses = ['PA90'];
+
+    final updated = event.detachedCopy()..changeBusForFirstHalf('PA200');
+    final removed = event.detachedCopy()..removeBusForFirstHalf();
+
+    expect(updated.hasLateBreak, isTrue);
+    expect(updated.tookFullBreak, isFalse);
+    expect(updated.overtimeDuration, 20);
+    expect(updated.hasLateFinish, isTrue);
+    expect(updated.lateFinishDuration, 15);
+    expect(updated.firstHalfBus, 'PA200');
+    expect(updated.firstHalfAdditionalBuses, ['PA90', 'PA100']);
+    expect(removed.hasLateBreak, isTrue);
+    expect(removed.firstHalfBus, isNull);
+    expect(event.firstHalfBus, 'PA100');
+    expect(event.firstHalfAdditionalBuses, ['PA90']);
+    expect(event.hasLateBreak, isTrue);
+  });
 }

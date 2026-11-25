@@ -1,4 +1,25 @@
  final Map<String, List<Map<String, String>>> changelogData = {
+  '4.4.14': [
+    {
+      'title': 'Bus change bug',
+      'description':
+          'Fixed a bug where removing and adding a bus removed a late break or late finish.',
+    },
+    {
+      'title': 'Holiday for this day',
+      'description':
+          'Holiday, unpaid leave, and a day in lieu can be added from Add Event or Add Holidays.',
+    },
+    {
+      'title': 'Swap duty',
+      'description':
+          'Edit Event can swap a duty, rather than removing a duty to add a new one.',
+    },
+    {
+      'title': 'Edit Event layout',
+      'description': 'Tidied the Edit Event dialog.',
+    },
+  ],
   '4.4.13': [
     {
       'title': 'Sunday 1/43',

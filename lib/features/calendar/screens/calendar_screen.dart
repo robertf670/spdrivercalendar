@@ -52,6 +52,8 @@ import 'package:spdrivercalendar/features/calendar/dialogs/work_shift_dialog.dar
 import 'package:spdrivercalendar/features/calendar/utils/edit_event_display_title.dart';
 import 'package:spdrivercalendar/features/calendar/widgets/edit_event_bus_assignment_section.dart';
 import 'package:spdrivercalendar/features/calendar/dialogs/edit_event_dialog.dart';
+import 'package:spdrivercalendar/features/calendar/dialogs/swap_duty_dialog.dart';
+import 'package:spdrivercalendar/features/calendar/utils/duty_swap.dart';
 import 'package:spdrivercalendar/features/calendar/utils/holiday_dates.dart';
 import 'package:spdrivercalendar/features/calendar/utils/booked_holidays_filter.dart';
 import 'package:spdrivercalendar/features/calendar/services/holiday_balance_loader.dart';
@@ -700,6 +702,72 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
           Navigator.of(dialogContext).pop();
           _showRestDaySwapDialog();
         },
+        onHolidayDay: () {
+          Navigator.of(dialogContext).pop();
+          _addHolidayForSelectedDay(
+            type: 'other',
+            idPrefix: 'other',
+            successMessage: 'Holiday added successfully',
+            backgroundColor: Colors.green,
+          );
+        },
+        onUnpaidLeave: () {
+          Navigator.of(dialogContext).pop();
+          _addHolidayForSelectedDay(
+            type: 'unpaid_leave',
+            idPrefix: 'unpaid_leave',
+            successMessage: 'Unpaid leave added successfully',
+            backgroundColor: Colors.purple,
+          );
+        },
+        onDayInLieu: () {
+          Navigator.of(dialogContext).pop();
+          _addHolidayForSelectedDay(
+            type: 'day_in_lieu',
+            idPrefix: 'day_in_lieu',
+            successMessage: 'Day In Lieu added successfully',
+            backgroundColor:
+                ColorCustomizationService.getColorForShift('DAY_IN_LIEU'),
+            notifyDayInLieu: true,
+          );
+        },
+      ),
+    );
+  }
+
+  Future<void> _addHolidayForSelectedDay({
+    required String type,
+    required String idPrefix,
+    required String successMessage,
+    required Color backgroundColor,
+    bool notifyDayInLieu = false,
+  }) async {
+    final selected = _selectedDay ?? DateTime.now();
+    final date = DateTime(selected.year, selected.month, selected.day);
+    final holidays = await HolidayService.getHolidays();
+    if (holidays.any((holiday) => holiday.containsDate(date))) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('This day is already a holiday.')),
+      );
+      return;
+    }
+
+    final added = await _holidayBookingService.addSingleDayHolidays(
+      sortedDates: [date],
+      type: type,
+      idPrefix: idPrefix,
+      notifyDayInLieu: notifyDayInLieu,
+    );
+    await _reloadHolidays();
+    if (!mounted) return;
+    setState(() {});
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          added == 0 ? 'Could not add the holiday.' : successMessage,
+        ),
+        backgroundColor: added == 0 ? null : backgroundColor,
       ),
     );
   }
@@ -1155,6 +1223,120 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
     if (mounted) setState(() {});
   }
 
+  Future<void> _showSwapDutyDialog(Event event) async {
+    final jamestown30hr = await JamestownFeatureService.isEnabled();
+    final zone = dutySwapZoneLabel(
+      event.title,
+      jamestown30hr: jamestown30hr,
+    );
+    if (zone == null || !mounted) return;
+
+    final markedInEnabled =
+        await StorageService.getBool(AppConstants.markedInEnabledKey);
+    final status =
+        await StorageService.getString(AppConstants.markedInStatusKey) ?? '';
+    final donnybrook = await DonnybrookFeatureService.isEnabled();
+    if (!mounted) return;
+
+    final choice = await showDialog<SwapDutyChoice>(
+      context: context,
+      builder: (context) => SwapDutyDialog(
+        currentDuty: event.title,
+        showWeekCheckbox: showDutySwapWeekCheckbox(
+          markedInEnabled: markedInEnabled,
+          status: status,
+          jamestownDevMenu: jamestown30hr,
+        ),
+        loadDuties: () async {
+          final duties = await WorkShiftDutyLoader().loadShiftNumbers(
+            selectedZone: zone,
+            shiftDate: event.startDate,
+            donnybrook1Enabled: donnybrook,
+          );
+          return [
+            for (final duty in duties)
+              if (duty != event.title &&
+                  !Zone2Duties.codesMatch(duty, event.title))
+                duty,
+          ];
+        },
+      ),
+    );
+    if (choice == null || !mounted) return;
+    await _applyDutySwap(event, choice, zone);
+  }
+
+  Future<void> _applyDutySwap(
+    Event event,
+    SwapDutyChoice choice,
+    String zone,
+  ) async {
+    final originalTitle = event.title;
+    final openedDay = DateTime(
+      event.startDate.year,
+      event.startDate.month,
+      event.startDate.day,
+    );
+    final days = <DateTime>[openedDay];
+    if (choice.applyToWeek) {
+      for (final day in dutySwapWeekDays(event.startDate)) {
+        if (day == openedDay) continue;
+        days.add(day);
+      }
+    }
+    final targets = <Event>[];
+    final seen = <String>{};
+    for (final day in days) {
+      await EventService.preloadMonth(day);
+      for (final candidate in EventService.getEventsForDay(day)) {
+        if (candidate.title != originalTitle || !seen.add(candidate.id)) {
+          continue;
+        }
+        targets.add(candidate);
+      }
+    }
+    if (targets.isEmpty) targets.add(event);
+
+    var swapped = 0;
+    var missing = 0;
+    for (final target in targets) {
+      final times = await _getShiftTimes(zone, choice.duty, target.startDate);
+      if (times == null) {
+        missing++;
+        continue;
+      }
+      final routes = times['routes'];
+      final updated = eventWithSwappedDuty(
+        event: target,
+        title: choice.duty,
+        startTime: times['startTime'] as TimeOfDay,
+        endTime: times['endTime'] as TimeOfDay,
+        isNextDay: times['isNextDay'] == true,
+        breakStartTime: times['breakStartTime'] as TimeOfDay?,
+        breakEndTime: times['breakEndTime'] as TimeOfDay?,
+        workTime: times['workTime'] as Duration?,
+        routes: routes is List
+            ? routes.map((route) => route.toString()).toList()
+            : null,
+      );
+      await EventService.updateEvent(target, updated);
+      swapped++;
+    }
+
+    if (!mounted) return;
+    setState(() {});
+    final message = swapped == 0
+        ? 'Could not find times for that duty.'
+        : missing == 0
+            ? (choice.applyToWeek
+                ? 'Swapped $swapped duties this week.'
+                : 'Duty swapped.')
+            : 'Swapped $swapped duties. $missing had no times.';
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+
   void _editEvent(Event event) {
     final openAction = resolveEditEventOpenAction(event);
     if (openAction == EditEventOpenAction.refreshMonth) {
@@ -1194,6 +1376,9 @@ class CalendarScreenState extends State<CalendarScreen> with TickerProviderState
         onEditTraining: () => _editCustomTrainingEvent(event),
         onBreakFinish: () => _showBreakStatusDialog(event),
         onSickDayStatus: () => _showSickDayStatusDialog(event),
+        onSwapDuty: dutySwapZoneLabel(event.title) == null
+            ? null
+            : () => _showSwapDutyDialog(event),
         onBankHolidayRedundantChanged: (value) async {
           final oldEvent = event.copyWith();
           event.bankHolidayRedundant = value;
